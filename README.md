@@ -1,36 +1,51 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# TeoDoc - Analizador Teológico Ministerial 🕊️
 
-## Getting Started
+TeoDoc es una herramienta web de alto rendimiento impulsada por Inteligencia Artificial, diseñada específicamente para servir al entorno ministerial y eclesiástico. 
 
-First, run the development server:
+## 🎯 Objetivo de la Aplicación
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+El propósito de TeoDoc es resolver un desafío común en las iglesias: transformar horas de contenido hablado (prédicas, enseñanzas, conferencias) en material escrito de estudio estructurado, profundo y visualmente útil. 
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+TeoDoc procesa grabaciones de audio y, mediante inteligencia artificial avanzada, extrae una estructura teológica coherente, identifica los versículos bíblicos utilizados y prepara el contenido para la generación de infografías y materiales de estudio. Todo esto, operando bajo un modelo de **costo cero (Cost-Zero Architecture)**, cumpliendo con el principio de mayordomía de recursos ministeriales.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 🧠 Arquitectura de Inteligencia Artificial Implementada
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Para garantizar que TeoDoc sea gratuito, extremadamente rápido y resistente a caídas, hemos diseñado una arquitectura de **Enrutamiento Dinámico con Tolerancia a Fallos (Failover) de dos fases**:
 
-## Learn More
+### 1. Transcripción de Audio de Alta Precisión (Speech-to-Text)
 
-To learn more about Next.js, take a look at the following resources:
+- **Motor Principal:** **AssemblyAI**. Se encarga de procesar audios pesados (hasta ~40MB) con alta fidelidad.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- **Motor de Respaldo:** **Deepgram**. Si AssemblyAI experimenta saturación, el sistema conmuta automáticamente al modelo `nova-2` de Deepgram, garantizando que la transcripción no se interrumpa.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### 2. Análisis Teológico Profundo (LLMs)
 
-## Deploy on Vercel
+Dada la magnitud del texto (transcripciones que superan los 35,000 caracteres), la IA debe extraer un formato JSON estricto que incluye título, idea principal, desglose progresivo, versículos en Reina-Valera 1960 y aplicaciones prácticas.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- **Fase 1 (Motor Principal Híbrido):** Integración con la API de **OpenRouter**. El servidor busca en tiempo real y selecciona dinámicamente modelos que sean 100% gratuitos y posean un contexto amplio (ej. `google/gemini-2.0-flash-exp:free` o `qwen/qwen-2.5-72b-instruct:free`). 
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **Fase 2 (Motor Nativo de Respaldo):** Si OpenRouter agota sus opciones, el sistema activa automáticamente la API nativa de **Google Gemini `gemini-3.6-flash`)**, un modelo altamente estable y capaz de procesar hasta un millón de tokens de forma gratuita.
+
+### 🛡️ Tolerancia a Fallos y Exponential Backoff
+
+Implementamos lógica de **Retroceso Exponencial (Exponential Backoff)**. Si los servidores de IA experimentan cuellos de botella (errores 429 Too Many Requests o 503 Service Unavailable), TeoDoc no colapsa. El código lee las cabeceras `Retry-After` o calcula matemáticamente pausas incrementales (2s, 4s, 8s) antes de reintentar, comportándose como un software de nivel *Enterprise*.
+
+## 🛠️ Tecnologías Utilizadas
+
+- **Frontend & Backend:** [Next.js (App Router)]([https://nextjs.org/](https://nextjs.org/)) + React 18 + Tailwind CSS.
+
+- **Generación de Archivos:** 
+
+  - `jspdf` para exportar el bosquejo de estudio a PDF de manera estructurada.
+
+  - `dom-to-image-more` para renderizar el póster digital (infografía) directamente en el navegador del usuario en alta calidad.
+
+- **APIs:** OpenRouter (OpenAI SDK), Google GenAI SDK, AssemblyAI SDK.
+
+## 📦 Instalación y Desarrollo Local
+
+1. Clona el repositorio:
+
+   ```bash
+
+   git clone [[https://github.com/rpmministry/teodoc-app.git](https://github.com/rpmministry/teodoc-app.git)](https://github.com/rpmministry/teodoc-app.git](https://github.com/rpmministry/teodoc-app.git))
