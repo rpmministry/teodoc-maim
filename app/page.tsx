@@ -17,9 +17,7 @@ const promesasBiblicas = [
   { cita: "Isaías 41:10", texto: "No temas, porque yo estoy contigo; no desmayes, porque yo soy tu Dios que te esfuerzo..." },
   { cita: "Jeremías 29:11", texto: "Porque yo sé los pensamientos que tengo acerca de vosotros, dice Jehová, pensamientos de paz..." },
   { cita: "Romanos 8:28", texto: "Y sabemos que a los que aman a Dios, todas las cosas les ayudan a bien..." },
-  { cita: "Josué 1:9", texto: "Mira que te mando que te esfuerces y seas valiente; no temas ni desmayes..." },
-  { cita: "Filipenses 4:19", texto: "Mi Dios, pues, suplirá todo lo que os falta conforme a sus riquezas en gloria..." },
-  { cita: "Salmos 27:1", texto: "Jehová es mi luz y mi salvación; ¿de quién temeré? Jehová es la fortaleza de mi vida..." }
+  { cita: "Josué 1:9", texto: "Mira que te mando que te esfuerces y seas valiente; no temas ni desmayes..." }
 ];
 
 export default function Home() {
@@ -54,16 +52,15 @@ export default function Home() {
     setVersoIndex(0);
 
     try {
-      // --- FASE 1: Nube de Paso (Cloudinary) ---
       const timerCloud = setInterval(() => {
         setProgress((prev) => (prev >= 25 ? 25 : prev + 1));
       }, 500);
 
       const formDataCloud = new FormData();
       formDataCloud.append('file', file);
-      formDataCloud.append('upload_preset', 'teodoc_preset'); // Tu preset Unsigned
+      formDataCloud.append('upload_preset', 'teodoc_preset');
 
-      // REEMPLAZA "TU_CLOUD_NAME" AQUÍ ABAJO
+      // ⚠️ REEMPLAZA "TU_CLOUD_NAME" POR TU NOMBRE DE NUBE DE CLOUDINARY
       const resCloud = await fetch('https://api.cloudinary.com/v1_1/antbfat3/auto/upload', {
         method: 'POST',
         body: formDataCloud
@@ -72,15 +69,13 @@ export default function Home() {
 
       if (!resCloud.ok) throw new Error('Error al subir el archivo a la nube de paso.');
       const cloudData = await resCloud.json();
-      const audioUrl = cloudData.secure_url; // ¡Tenemos el enlace limpio!
+      const audioUrl = cloudData.secure_url;
 
-      // --- FASE 2: Transcripción (Sube hasta 50%) ---
       setProgress(30);
       const timerTranscribe = setInterval(() => {
         setProgress((prev) => (prev >= 49 ? 49 : prev + 1));
       }, 800);
 
-      // Solo enviamos el enlace a Vercel, no el archivo pesado
       const resTranscribe = await fetch('/api/transcribe', { 
         method: 'POST', 
         headers: { 'Content-Type': 'application/json' },
@@ -91,74 +86,15 @@ export default function Home() {
 
       let dataTranscribe;
       try { 
-  dataTranscribe = JSON.parse(rawTextTranscribe); 
-} catch (e) { 
-  throw new Error(`Error en el servidor: ${rawTextTranscribe.substring(0, 150)}`); 
-}
-      
-      const textoTranscrito = dataTranscribe.text;
-      setProgress(50);
-
-      // --- FASE 3: Análisis (Sube hasta 98%) ---
-      const timerAnalyze = setInterval(() => {
-        setProgress((prev) => {
-          if (prev >= 98) return 98;
-          const restante = 99 - prev;
-          return prev + Math.max(1, Math.floor(restante * 0.05));
-        });
-      }, 1000);
-
-      const resAnalyze = await fetch('/api/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: textoTranscrito })
-      });
-      const rawTextAnalyze = await resAnalyze.text();
-      clearInterval(timerAnalyze);
-
-      let dataAnalyze;
-      try { dataAnalyze = JSON.parse(rawTextAnalyze); } catch (e) { throw new Error('Error al interpretar el análisis teológico.'); }
-      if (!resAnalyze.ok) throw new Error(dataAnalyze.error || 'Error en el análisis.');
-
-      setProgress(100);
-      setTimeout(() => {
-        setResultado(dataAnalyze);
-        setLoading(false);
-      }, 500);
-
-    } catch (err: any) {
-      setError(err.message || 'Ocurrió un error inesperado en el proceso.');
-      setLoading(false);
-      setProgress(0);
-    }
-  };
-
-    const formData = new FormData();
-    formData.append('file', file);
-
-    try {
-      // Fase 1: Transcribir (Sube suave hasta 49%, se clava en 50%)
-      const timerTranscribe = setInterval(() => {
-        setProgress((prev) => (prev >= 49 ? 49 : prev + 1));
-      }, 800);
-
-      const resTranscribe = await fetch('/api/transcribe', { method: 'POST', body: formData });
-      const rawTextTranscribe = await resTranscribe.text();
-      clearInterval(timerTranscribe);
-
-      let dataTranscribe;
-      try {
-        dataTranscribe = JSON.parse(rawTextTranscribe);
-      } catch (e) {
-        throw new Error(dataTranscribe?.error || 'Error al conectar con el servicio de transcripción.');
+        dataTranscribe = JSON.parse(rawTextTranscribe); 
+      } catch (e) { 
+        throw new Error(`Error en el servidor de transcripción: ${rawTextTranscribe.substring(0, 100)}`); 
       }
-
       if (!resTranscribe.ok) throw new Error(dataTranscribe.error || 'Error en la transcripción.');
       
       const textoTranscrito = dataTranscribe.text;
       setProgress(50);
 
-      // Fase 2: Analizar (Sube pausado de 50% a 98%)
       const timerAnalyze = setInterval(() => {
         setProgress((prev) => {
           if (prev >= 98) return 98;
@@ -176,13 +112,12 @@ export default function Home() {
       clearInterval(timerAnalyze);
 
       let dataAnalyze;
-      try {
-        dataAnalyze = JSON.parse(rawTextAnalyze);
-      } catch (e) {
-        throw new Error('Error al interpretar el análisis teológico.');
+      try { 
+        dataAnalyze = JSON.parse(rawTextAnalyze); 
+      } catch (e) { 
+        throw new Error('Error al interpretar el análisis teológico.'); 
       }
-
-      if (!resAnalyze.ok) throw new Error(dataAnalyze.error || 'Error en el análisis teológico.');
+      if (!resAnalyze.ok) throw new Error(dataAnalyze.error || 'Error en el análisis.');
 
       setProgress(100);
       setTimeout(() => {
@@ -212,7 +147,6 @@ export default function Home() {
       link.href = dataUrl;
       link.click();
     } catch (err) {
-      console.error("Error al exportar la infografía:", err);
       alert("No se pudo generar la imagen.");
     }
   };
@@ -330,7 +264,7 @@ export default function Home() {
             {loading ? (
               <div className="flex flex-col items-center text-center mt-2 max-w-lg animate-fade-in w-full px-2">
                 <span className="text-xs sm:text-sm font-bold text-purple-400 uppercase tracking-widest mb-4 sm:mb-6">
-                  {progress <= 50 ? 'Paso 1/2: Transcribiendo audio lentamente...' : 'Paso 2/2: Analizando teología y bosquejo...'}
+                  {progress <= 50 ? 'Paso 1/2: Subiendo y transcribiendo...' : 'Paso 2/2: Analizando teología y bosquejo...'}
                 </span>
                 <div className="bg-[#1A1D27]/80 backdrop-blur-sm border border-purple-500/20 rounded-2xl p-5 sm:p-6 shadow-xl transition-all duration-500 w-full">
                   <p className="text-gray-200 text-sm sm:text-base md:text-lg font-medium italic mb-3 sm:mb-4 leading-relaxed">"{promesasBiblicas[versoIndex].texto}"</p>
