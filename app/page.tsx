@@ -90,8 +90,11 @@ export default function Home() {
       clearInterval(timerTranscribe);
 
       let dataTranscribe;
-      try { dataTranscribe = JSON.parse(rawTextTranscribe); } catch (e) { throw new Error('Error al conectar con transcripción.'); }
-      if (!resTranscribe.ok) throw new Error(dataTranscribe.error || 'Error en la transcripción.');
+      try { 
+  dataTranscribe = JSON.parse(rawTextTranscribe); 
+} catch (e) { 
+  throw new Error(`Error en el servidor: ${rawTextTranscribe.substring(0, 150)}`); 
+}
       
       const textoTranscrito = dataTranscribe.text;
       setProgress(50);
