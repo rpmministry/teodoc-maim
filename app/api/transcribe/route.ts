@@ -4,6 +4,19 @@ import { writeFile, unlink, readFile } from 'fs/promises';
 import { join } from 'path';
 import { tmpdir } from 'os';
 import { v4 as uuidv4 } from 'uuid';
+import { AssemblyAI } from 'assemblyai';
+import { NextRequest, NextResponse } from 'next/server';
+import { writeFile, unlink, readFile } from 'fs/promises';
+import { join } from 'path';
+import { tmpdir } from 'os';
+import { v4 as uuidv4 } from 'uuid';
+
+// Agrega estas dos líneas para configurar Vercel
+export const maxDuration = 60; // Extiende el límite de Vercel al máximo gratuito (60 segundos)
+export const dynamic = 'force-dynamic';
+
+const aai = new AssemblyAI({ apiKey: process.env.ASSEMBLYAI_API_KEY as string });
+// ... (el resto de tu código se queda igual)
 
 const aai = new AssemblyAI({ apiKey: process.env.ASSEMBLYAI_API_KEY as string });
 

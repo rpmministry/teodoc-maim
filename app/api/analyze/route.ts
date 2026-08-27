@@ -1,5 +1,13 @@
 import { GoogleGenAI, Type } from '@google/genai';
 import { NextRequest, NextResponse } from 'next/server';
+import { GoogleGenAI, Type } from '@google/genai';
+import { NextRequest, NextResponse } from 'next/server';
+
+// Agrega estas dos líneas para configurar Vercel
+export const maxDuration = 60; // Extiende el límite de Vercel a 60 segundos
+export const dynamic = 'force-dynamic';
+
+// ... (el resto de tu código se queda igual)
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
