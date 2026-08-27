@@ -53,6 +53,83 @@ export default function Home() {
     setResultado(null);
     setVersoIndex(0);
 
+    try {
+      // --- FASE 1: Nube de Paso (Cloudinary) ---
+      const timerCloud = setInterval(() => {
+        setProgress((prev) => (prev >= 25 ? 25 : prev + 1));
+      }, 500);
+
+      const formDataCloud = new FormData();
+      formDataCloud.append('file', file);
+      formDataCloud.append('upload_preset', 'teodoc_preset'); // Tu preset Unsigned
+
+      // REEMPLAZA "TU_CLOUD_NAME" AQUÍ ABAJO
+      const resCloud = await fetch('https://api.cloudinary.com/v1_1/antbfat3/auto/upload', {
+        method: 'POST',
+        body: formDataCloud
+      });
+      clearInterval(timerCloud);
+
+      if (!resCloud.ok) throw new Error('Error al subir el archivo a la nube de paso.');
+      const cloudData = await resCloud.json();
+      const audioUrl = cloudData.secure_url; // ¡Tenemos el enlace limpio!
+
+      // --- FASE 2: Transcripción (Sube hasta 50%) ---
+      setProgress(30);
+      const timerTranscribe = setInterval(() => {
+        setProgress((prev) => (prev >= 49 ? 49 : prev + 1));
+      }, 800);
+
+      // Solo enviamos el enlace a Vercel, no el archivo pesado
+      const resTranscribe = await fetch('/api/transcribe', { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ audioUrl }) 
+      });
+      const rawTextTranscribe = await resTranscribe.text();
+      clearInterval(timerTranscribe);
+
+      let dataTranscribe;
+      try { dataTranscribe = JSON.parse(rawTextTranscribe); } catch (e) { throw new Error('Error al conectar con transcripción.'); }
+      if (!resTranscribe.ok) throw new Error(dataTranscribe.error || 'Error en la transcripción.');
+      
+      const textoTranscrito = dataTranscribe.text;
+      setProgress(50);
+
+      // --- FASE 3: Análisis (Sube hasta 98%) ---
+      const timerAnalyze = setInterval(() => {
+        setProgress((prev) => {
+          if (prev >= 98) return 98;
+          const restante = 99 - prev;
+          return prev + Math.max(1, Math.floor(restante * 0.05));
+        });
+      }, 1000);
+
+      const resAnalyze = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: textoTranscrito })
+      });
+      const rawTextAnalyze = await resAnalyze.text();
+      clearInterval(timerAnalyze);
+
+      let dataAnalyze;
+      try { dataAnalyze = JSON.parse(rawTextAnalyze); } catch (e) { throw new Error('Error al interpretar el análisis teológico.'); }
+      if (!resAnalyze.ok) throw new Error(dataAnalyze.error || 'Error en el análisis.');
+
+      setProgress(100);
+      setTimeout(() => {
+        setResultado(dataAnalyze);
+        setLoading(false);
+      }, 500);
+
+    } catch (err: any) {
+      setError(err.message || 'Ocurrió un error inesperado en el proceso.');
+      setLoading(false);
+      setProgress(0);
+    }
+  };
+
     const formData = new FormData();
     formData.append('file', file);
 
