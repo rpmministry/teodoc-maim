@@ -30,6 +30,11 @@ export default function Home() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const infografiaRef = useRef<HTMLDivElement>(null);
 
+  // Estados para el formulario de sugerencias
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [feedbackMsg, setFeedbackMsg] = useState('');
+  const [feedbackStatus, setFeedbackStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
+
   useEffect(() => {
     let intervaloVerso: NodeJS.Timeout;
     if (loading) {
@@ -39,6 +44,34 @@ export default function Home() {
     }
     return () => clearInterval(intervaloVerso);
   }, [loading]);
+
+  const enviarSugerencia = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!feedbackMsg.trim()) return;
+    setFeedbackStatus('sending');
+    try {
+      const res = await fetch("https://formsubmit.co/ajax/recursosparaministerios@gmail.com", {
+        method: "POST",
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({
+          _subject: "💡 Nueva Sugerencia - TeoDoc",
+          mensaje: feedbackMsg
+        })
+      });
+      if (res.ok) {
+        setFeedbackStatus('success');
+        setTimeout(() => {
+          setShowFeedbackModal(false);
+          setFeedbackStatus('idle');
+          setFeedbackMsg('');
+        }, 3000);
+      } else {
+        throw new Error("Error en servidor");
+      }
+    } catch (err) {
+      setFeedbackStatus('error');
+    }
+  };
 
   const manejarAnalisis = async () => {
     if (!file) {
@@ -60,7 +93,6 @@ export default function Home() {
       formDataCloud.append('file', file);
       formDataCloud.append('upload_preset', 'teodoc_preset');
 
-      // ⚠️ REEMPLAZA "TU_CLOUD_NAME" POR TU NOMBRE DE NUBE DE CLOUDINARY
       const resCloud = await fetch('https://api.cloudinary.com/v1_1/antbfat3/auto/upload', {
         method: 'POST',
         body: formDataCloud
@@ -220,13 +252,11 @@ export default function Home() {
         </div>
         
         <div className="flex items-center gap-1.5 sm:gap-3">
-          {/* Botón Sugerencias CORREGIDO: mailto clásico, sin espacios extraños y SIN target="_blank" */}
-          <a href="mailto:recursosparaministerios@gmail.com?subject=Sugerencias%20y%20Feedback%20-%20TeoDoc" className="group flex items-center gap-1.5 sm:gap-2 px-2 py-1.5 sm:px-4 sm:py-2 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white text-[10px] sm:text-sm font-medium transition-all">
+          <button onClick={() => setShowFeedbackModal(true)} className="group flex items-center gap-1.5 sm:gap-2 px-2 py-1.5 sm:px-4 sm:py-2 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white text-[10px] sm:text-sm font-medium transition-all">
             <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
             <span className="hidden md:inline">Sugerencias</span>
-          </a>
+          </button>
           
-          {/* ⚠️ REEMPLAZA EL ENLACE DE CLOUDINARY AQUÍ ABAJO */}
           <a href="https://collection.cloudinary.com/antbfat3/ee4582aa2bac515291b5d02c058e9c4d" target="_blank" rel="noopener noreferrer" className="group flex items-center gap-1.5 sm:gap-2 px-2 py-1.5 sm:px-4 sm:py-2 rounded-full bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-300 hover:text-blue-200 text-[10px] sm:text-sm font-medium transition-all">
             <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
             <span className="hidden md:inline">Manual</span>
@@ -496,6 +526,44 @@ export default function Home() {
           </div>
         )}
       </main>
+
+      {/* MODAL DE SUGERENCIAS */}
+      {showFeedbackModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="bg-[#1A1D27] border border-gray-800 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-bold text-white">Enviar Sugerencia</h3>
+              <button onClick={() => setShowFeedbackModal(false)} className="text-gray-400 hover:text-white transition-colors">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+              </button>
+            </div>
+            
+            {feedbackStatus === 'success' ? (
+              <div className="text-green-400 text-center py-8 font-medium">
+                ¡Gracias! Tu mensaje ha sido enviado correctamente.
+              </div>
+            ) : (
+              <form onSubmit={enviarSugerencia} className="flex flex-col gap-4">
+                <textarea
+                  required
+                  value={feedbackMsg}
+                  onChange={(e) => setFeedbackMsg(e.target.value)}
+                  placeholder="Escribe tu sugerencia, reporte de error o comentario aquí..."
+                  className="w-full bg-[#13161F] border border-gray-700 rounded-xl p-3 text-sm text-gray-200 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 min-h-[120px] resize-none"
+                ></textarea>
+                {feedbackStatus === 'error' && <p className="text-red-400 text-xs">Ocurrió un error de conexión. Inténtalo de nuevo.</p>}
+                <button
+                  type="submit"
+                  disabled={feedbackStatus === 'sending'}
+                  className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold py-2.5 rounded-xl text-sm transition-all disabled:opacity-50"
+                >
+                  {feedbackStatus === 'sending' ? 'Enviando...' : 'Enviar Mensaje'}
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
 
       <footer className="w-full text-center py-5 sm:py-6 text-[10px] sm:text-xs text-gray-500 font-medium tracking-wide z-10 mt-auto px-4">
         <p>© 2026 TeoDoc — Desarrollada por RPM Ministry</p>
