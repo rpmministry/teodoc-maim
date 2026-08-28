@@ -243,7 +243,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-[#0B0C10] bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#1C1635] via-[#0B0C10] to-[#070709] text-white font-sans selection:bg-purple-500/30 flex flex-col relative overflow-x-hidden">
       
-      <nav className="w-full flex justify-between items-center px-4 sm:px-8 py-4 sm:py-6 z-10">
+      <nav className="w-full flex flex-wrap gap-4 justify-between items-center px-4 sm:px-8 py-4 sm:py-6 z-10">
         <div className="flex items-center gap-2 sm:gap-3">
           <div className="w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-tr from-purple-600 to-indigo-500 rounded-xl flex items-center justify-center shadow-lg shadow-purple-500/30 border border-white/10 shrink-0">
             <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
@@ -251,18 +251,18 @@ export default function Home() {
           <span className="font-extrabold text-xl sm:text-2xl tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-gray-100 to-gray-400">TeoDoc</span>
         </div>
         
-        <div className="flex items-center gap-1.5 sm:gap-3">
-          <button onClick={() => setShowFeedbackModal(true)} className="group flex items-center gap-1.5 sm:gap-2 px-2 py-1.5 sm:px-4 sm:py-2 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white text-[10px] sm:text-sm font-medium transition-all">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 justify-end">
+          <button onClick={() => setShowFeedbackModal(true)} className="group flex items-center gap-1.5 sm:gap-2 px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white text-[10px] sm:text-sm font-medium transition-all">
             <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
-            <span className="hidden md:inline">Sugerencias</span>
+            <span>Sugerencias</span>
           </button>
           
-          <a href="https://collection.cloudinary.com/antbfat3/ee4582aa2bac515291b5d02c058e9c4d" target="_blank" rel="noopener noreferrer" className="group flex items-center gap-1.5 sm:gap-2 px-2 py-1.5 sm:px-4 sm:py-2 rounded-full bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-300 hover:text-blue-200 text-[10px] sm:text-sm font-medium transition-all">
+          <a href="https://collection.cloudinary.com/antbfat3/ee4582aa2bac515291b5d02c058e9c4d" target="_blank" rel="noopener noreferrer" className="group flex items-center gap-1.5 sm:gap-2 px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-full bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-300 hover:text-blue-200 text-[10px] sm:text-sm font-medium transition-all">
             <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-            <span className="hidden md:inline">Manual</span>
+            <span>Manual</span>
           </a>
 
-          <a href="https://www.paypal.com/ncp/payment/9T82JLFMZQ73U" target="_blank" rel="noopener noreferrer" className="group flex items-center gap-1.5 sm:gap-2 px-2 py-1.5 sm:px-5 sm:py-2 rounded-full bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white text-[10px] sm:text-sm font-bold shadow-lg shadow-pink-500/25 transition-all hover:scale-105 border border-white/10">
+          <a href="https://www.paypal.com/ncp/payment/9T82JLFMZQ73U" target="_blank" rel="noopener noreferrer" className="group flex items-center gap-1.5 sm:gap-2 px-2.5 py-1.5 sm:px-5 sm:py-2 rounded-full bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white text-[10px] sm:text-sm font-bold shadow-lg shadow-pink-500/25 transition-all hover:scale-105 border border-white/10">
             <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:animate-pulse" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
             <span className="hidden lg:inline">Apoyar Proyecto</span>
             <span className="lg:hidden">Apoyar</span>
