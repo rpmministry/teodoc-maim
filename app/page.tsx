@@ -27,7 +27,6 @@ export default function Home() {
   const [resultado, setResultado] = useState<PredicaAnalisis | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [versoIndex, setVersoIndex] = useState(0);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const infografiaRef = useRef<HTMLDivElement>(null);
 
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
@@ -165,7 +164,6 @@ export default function Home() {
 
   const nuevoAnalisis = () => {
     setFile(null); setResultado(null); setError(null); setProgress(0);
-    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const descargarInfografia = async () => {
@@ -319,32 +317,28 @@ export default function Home() {
               <div className="flex flex-col items-center gap-3 sm:gap-4 w-full px-4">
                 <span className="text-[10px] sm:text-xs md:text-sm font-semibold tracking-widest text-gray-400 uppercase">{file ? 'Toca el círculo para analizar' : 'Esperando archivo'}</span>
                 
-                {/* SOLUCIÓN ANTI-CRASH PARA IOS SAFARI */}
-                <div className="relative flex items-center justify-center gap-2 px-5 py-2 sm:px-6 sm:py-2.5 rounded-full bg-[#1A1C23]/60 hover:bg-[#232630] border border-gray-700/50 hover:border-gray-600 transition-all text-xs sm:text-sm font-medium text-gray-300 backdrop-blur-sm w-full max-w-[280px] overflow-hidden">
+                {/* SOLUCIÓN ANTI-CRASH ESTRUCTURAL PARA IOS SAFARI */}
+                <div className="relative w-full max-w-[280px] h-10 sm:h-11">
+                  
+                  {/* El input nativo, completamente independiente de los estilos visuales */}
                   <input 
                     type="file" 
-                    accept=".mp3,.wav,.m4a,audio/*" 
-                    className="absolute top-0 left-0 w-full h-full opacity-0 cursor-pointer z-50" 
-                    ref={fileInputRef} 
+                    accept="audio/*, .mp3, .wav, .m4a, .ogg, .aac" 
+                    className="absolute top-0 left-0 w-full h-full opacity-0 z-50 cursor-pointer" 
                     onChange={(e) => {
                       const selectedFile = e.target.files?.[0];
                       if (selectedFile) {
-                        // EL SECRETO PARA IOS: Retrasar la actualización de React
-                        // Esto permite a Safari cerrar el selector de archivos
-                        // y limpiar la memoria RAM antes de renderizar la app.
-                        setTimeout(() => {
-                          setFile(selectedFile);
-                        }, 300);
+                        setFile(selectedFile);
                       }
                     }} 
                   />
-                  {/* pointer-events-none asegura que iOS no se confunda con los elementos debajo */}
-                  <svg className="w-4 h-4 text-gray-400 transition-colors shrink-0 relative z-10 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
-                  {file ? (
-                    <span className="truncate relative z-10 pointer-events-none">{file.name}</span>
-                  ) : (
-                    <span className="relative z-10 pointer-events-none">Subir archivo de audio</span>
-                  )}
+                  
+                  {/* El botón visual bloqueado por debajo (pointer-events-none) */}
+                  <div className="absolute top-0 left-0 w-full h-full flex items-center justify-center gap-2 px-5 rounded-full bg-[#1A1C23]/60 hover:bg-[#232630] border border-gray-700/50 transition-colors text-xs sm:text-sm font-medium text-gray-300 backdrop-blur-sm pointer-events-none">
+                    <svg className="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                    <span className="truncate">{file ? file.name : 'Subir archivo de audio'}</span>
+                  </div>
+
                 </div>
 
               </div>
