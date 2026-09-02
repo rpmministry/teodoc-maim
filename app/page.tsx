@@ -71,15 +71,13 @@ export default function Home() {
     }
   };
 
-  // FLUJO ADOBE PODCAST: Se activa instantáneamente al seleccionar el archivo
-  const manejarSeleccionYAnalisis = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // PASO 1: Detectar el archivo y actualizar la UI inmediatamente
+  const manejarSeleccion = (e: React.ChangeEvent<HTMLInputElement>) => {
     const archivoDetectado = e.target.files?.[0];
     
-    if (!archivoDetectado) {
-      return; // Si el usuario cancela la selección, no hacemos nada
-    }
+    if (!archivoDetectado) return; // Si cancela, no hacemos nada
 
-    // Iniciamos la interfaz de carga y análisis Inmediatamente
+    // 1. Mostrar estado de "Procesando" Inmediatamente
     setFile(archivoDetectado);
     setLoading(true);
     setProgress(5);
@@ -87,13 +85,21 @@ export default function Home() {
     setResultado(null);
     setVersoIndex(0);
 
+    // 2. EL TRUCO ADOBE: Darle 300ms a iOS para que cierre la carpeta ANTES de bloquear el celular procesando
+    setTimeout(() => {
+      iniciarProcesoPesado(archivoDetectado);
+    }, 300);
+  };
+
+  // PASO 2: El proceso pesado que se ejecuta una vez que la pantalla ya mostró la animación de carga
+  const iniciarProcesoPesado = async (archivoParaProcesar: File) => {
     try {
       const timerCloud = setInterval(() => {
         setProgress((prev) => (prev >= 25 ? 25 : prev + 1));
       }, 500);
 
       const formDataCloud = new FormData();
-      formDataCloud.append('file', archivoDetectado); // Enviamos el archivo fresco de la memoria
+      formDataCloud.append('file', archivoParaProcesar);
       formDataCloud.append('upload_preset', 'teodoc_preset');
 
       const resCloud = await fetch('https://api.cloudinary.com/v1_1/antbfat3/auto/upload', {
@@ -160,7 +166,7 @@ export default function Home() {
       }, 500);
 
     } catch (err: any) {
-      setError(err.message || 'Ocurrió un error inesperado en el proceso. Intenta de nuevo.');
+      setError(err.message || 'Ocurrió un error inesperado. El archivo puede ser muy pesado.');
       setLoading(false);
       setProgress(0);
     }
@@ -283,31 +289,21 @@ export default function Home() {
         {!resultado && (
           <div className="flex flex-col items-center w-full max-w-lg relative z-20">
             
-            <div className="relative flex items-center justify-center mb-6">
+            {/* EL BOTÓN VIBRANTE E IRROMPIBLE */}
+            <div className="relative flex flex-col items-center justify-center w-32 h-32 sm:w-40 sm:h-40 md:w-44 md:h-44 rounded-full bg-gradient-to-br from-[#8E44AD] to-[#5B2C6F] shadow-[0_0_40px_rgba(147,51,234,0.6)] transition-all duration-300 z-10 hover:scale-105 hover:shadow-[0_0_60px_rgba(147,51,234,0.8)] active:scale-95 mb-6">
               
-              {/* EL BOTÓN VIBRANTE: Siempre brillante como solicitaste */}
-              <label
-                className={`relative flex flex-col items-center justify-center w-32 h-32 sm:w-40 sm:h-40 md:w-44 md:h-44 rounded-full bg-gradient-to-br from-[#8E44AD] to-[#5B2C6F] shadow-[0_0_40px_rgba(147,51,234,0.6)] transition-all duration-300 z-10 ${loading ? 'cursor-wait opacity-80 pointer-events-none' : 'cursor-pointer hover:scale-105 hover:shadow-[0_0_60px_rgba(147,51,234,0.8)] active:scale-95'}`}
-              >
-                {/* El input oculto dentro del botón (al estilo Adobe Podcast) */}
-                <input 
-                  type="file" 
-                  className="hidden" 
-                  accept="audio/*,video/*,.mp3,.wav,.m4a,.aac,.ogg,.mp4,.caf" 
-                  onChange={manejarSeleccionYAnalisis}
-                  disabled={loading}
-                />
-
+              {/* Contenido Visual del Botón */}
+              <div className="pointer-events-none flex flex-col items-center justify-center text-center">
                 {loading ? (
-                  <div className="flex flex-col items-center justify-center animate-fade-in">
+                  <>
                     <span className="text-3xl sm:text-4xl font-black text-white tracking-tight">{progress}%</span>
                     <span className="text-[10px] sm:text-[11px] uppercase tracking-widest text-purple-200/80 font-semibold mt-1">
-                      {progress <= 50 ? 'Subiendo' : 'Analizando'}
+                      Procesando
                     </span>
-                  </div>
+                  </>
                 ) : (
                   <>
-                    <svg className="w-12 h-12 text-white mb-1 transition-colors drop-shadow-lg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-10 h-10 sm:w-12 sm:h-12 text-white mb-2 transition-colors drop-shadow-lg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
                     </svg>
                     <span className="text-[11px] sm:text-xs font-bold text-white uppercase tracking-widest drop-shadow-md">
@@ -315,7 +311,19 @@ export default function Home() {
                     </span>
                   </>
                 )}
-              </label>
+              </div>
+
+              {/* El imput invisible estilo capa transparente que NO causa cuadro negro */}
+              {!loading && (
+                <input 
+                  type="file" 
+                  accept="audio/*,video/*,.mp3,.wav,.m4a,.aac,.ogg,.mp4,.caf" 
+                  className="absolute inset-0 w-full h-full opacity-0 z-50 cursor-pointer bg-transparent" 
+                  style={{ WebkitTapHighlightColor: 'transparent' }} // Previene el flash negro en iOS
+                  title="" // Oculta el tooltip por defecto
+                  onChange={manejarSeleccion}
+                />
+              )}
             </div>
 
             {loading ? (
@@ -329,7 +337,7 @@ export default function Home() {
                 </div>
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center w-full px-4 text-center mt-4">
+              <div className="flex flex-col items-center justify-center w-full px-4 text-center mt-2">
                 <span className="text-[11px] sm:text-xs md:text-sm font-bold tracking-[0.2em] text-gray-400 uppercase leading-relaxed inline-block">
                   Toca el círculo para subir tu archivo <br/> y comenzar automáticamente
                 </span>
@@ -559,9 +567,9 @@ export default function Home() {
         </div>
       )}
 
-      {/* FOOTER ACTUALIZADO PARA ASEGURAR QUE ESTAS EN LA VERSION CORRECTA */}
+      {/* FOOTER ACTUALIZADO - VERIFICA QUE VEAS EL 5.0 */}
       <footer className="w-full text-center py-5 sm:py-6 text-[10px] sm:text-xs text-gray-500 font-medium tracking-wide z-10 mt-auto px-4 space-y-1">
-        <p>Versión 4.0 (Flujo Adobe Podcast) - Creado por RPM Ministry</p>
+        <p>Versión 5.0 (Carga Inmediata) - Creado por RPM Ministry</p>
         <p>Diseño y desarrollo por Mauricio Andrade Luna</p>
       </footer>
     </div>
