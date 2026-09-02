@@ -317,11 +317,11 @@ export default function Home() {
               <div className="flex flex-col items-center gap-3 sm:gap-4 w-full px-4">
                 <span className="text-[10px] sm:text-xs md:text-sm font-semibold tracking-widest text-gray-400 uppercase">{file ? 'Toca el círculo para analizar' : 'Esperando archivo'}</span>
                 
-                {/* SOLUCIÓN FINAL: Reglas estrictas para Safari iOS aplicadas */}
+                {/* SOLUCIÓN SUGERIDA: Comodín audio/* junto a lista MIME detallada estricta, sin espacios */}
                 <div className="relative w-full max-w-[280px]">
                   <input 
                     type="file" 
-                    accept=".mp3,.wav,.m4a,.aac,.caf,.ogg,.mp4" 
+                    accept="audio/*,audio/mpeg,audio/ogg,audio/wav,audio/x-m4a,audio/aac,audio/mp4,audio/m4a,application/octet-stream,.mp3,.wav,.m4a,.ogg,.aac" 
                     className="absolute inset-0 w-full h-full opacity-0 z-50 cursor-pointer" 
                     onChange={(e) => {
                       if (e.target.files && e.target.files.length > 0) {
