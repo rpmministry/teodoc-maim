@@ -323,9 +323,13 @@ export default function Home() {
                 <div className="relative flex items-center justify-center gap-2 px-5 py-2 sm:px-6 sm:py-2.5 rounded-full bg-[#1A1C23]/60 hover:bg-[#232630] border border-gray-700/50 hover:border-gray-600 transition-all text-xs sm:text-sm font-medium text-gray-300 backdrop-blur-sm w-full max-w-[280px] overflow-hidden">
                   <input 
                     type="file" 
-                    accept=".mp3, .wav, .m4a, .aac, .ogg, audio/mpeg, audio/wav, audio/x-m4a, audio/mp4" 
+                    name="audioFile"
+                    accept=".mp3,.wav,.m4a,.aac,.ogg,audio/mpeg,audio/wav,audio/x-m4a,audio/mp4,audio/m4a,application/octet-stream" 
                     className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" 
                     ref={fileInputRef} 
+                    onClick={(e) => {
+                      (e.target as HTMLInputElement).value = '';
+                    }}
                     onChange={(e) => {
                       if (e.target.files && e.target.files.length > 0) {
                         setFile(e.target.files[0]);
