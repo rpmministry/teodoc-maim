@@ -27,7 +27,6 @@ export default function Home() {
   const [resultado, setResultado] = useState<PredicaAnalisis | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [versoIndex, setVersoIndex] = useState(0);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const infografiaRef = useRef<HTMLDivElement>(null);
 
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
@@ -165,7 +164,6 @@ export default function Home() {
 
   const nuevoAnalisis = () => {
     setFile(null); setResultado(null); setError(null); setProgress(0);
-    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const descargarInfografia = async () => {
@@ -319,23 +317,20 @@ export default function Home() {
               <div className="flex flex-col items-center gap-3 sm:gap-4 w-full px-4">
                 <span className="text-[10px] sm:text-xs md:text-sm font-semibold tracking-widest text-gray-400 uppercase">{file ? 'Toca el círculo para analizar' : 'Esperando archivo'}</span>
                 
-                <div className="relative w-full max-w-[280px] h-10 sm:h-11 overflow-hidden rounded-full">
-                  {/* SIN ESPACIOS EN ACCEPT Y PERMITIENDO VIDEO PARA ENGAÑAR A IOS */}
+                {/* SOLUCIÓN FINAL: Estructura directa y sincrónica para iOS */}
+                <div className="relative w-full max-w-[280px]">
                   <input 
                     type="file" 
-                    accept=".mp3,.wav,.m4a,.mp4,.aac,.ogg,audio/*,video/*" 
-                    className="absolute top-0 left-0 w-full h-full opacity-0 z-50 cursor-pointer" 
+                    accept="audio/*,video/*,.mp3,.wav,.m4a,.mp4,.aac,.ogg" 
+                    className="absolute inset-0 w-full h-full opacity-0 z-50 cursor-pointer" 
                     onChange={(e) => {
-                      const selectedFile = e.target.files?.[0];
-                      if (selectedFile) {
-                        setTimeout(() => {
-                          setFile(selectedFile);
-                        }, 300);
+                      if (e.target.files && e.target.files.length > 0) {
+                        // Cambio sincrónico inmediato, sin tiempos de espera que Apple bloquee
+                        setFile(e.target.files[0]);
                       }
                     }} 
                   />
-                  
-                  <div className="absolute top-0 left-0 w-full h-full flex items-center justify-center gap-2 px-5 bg-[#1A1C23]/60 hover:bg-[#232630] border border-gray-700/50 transition-colors text-xs sm:text-sm font-medium text-gray-300 backdrop-blur-sm pointer-events-none">
+                  <div className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-full bg-[#1A1C23]/60 hover:bg-[#232630] border border-gray-700/50 transition-colors text-xs sm:text-sm font-medium text-gray-300 backdrop-blur-sm w-full pointer-events-none">
                     <svg className="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
                     <span className="truncate">{file ? file.name : 'Subir archivo de audio'}</span>
                   </div>
