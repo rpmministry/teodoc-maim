@@ -34,6 +34,7 @@ export default function Home() {
   const [feedbackMsg, setFeedbackMsg] = useState('');
   const [feedbackStatus, setFeedbackStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
 
+  // 1. Efecto para los versículos
   useEffect(() => {
     let intervaloVerso: NodeJS.Timeout;
     if (loading) {
@@ -43,6 +44,24 @@ export default function Home() {
     }
     return () => clearInterval(intervaloVerso);
   }, [loading]);
+
+  // 2. NUEVO: Vigilante silencioso para obligar a iOS a reconocer el archivo
+  useEffect(() => {
+    const vigilanteArchivo = setInterval(() => {
+      if (fileInputRef.current && fileInputRef.current.files && fileInputRef.current.files.length > 0) {
+        const archivoDetectado = fileInputRef.current.files[0];
+        setFile((archivoActual) => {
+          // Si no había archivo, o si el nombre es diferente, lo actualiza forzosamente
+          if (!archivoActual || archivoActual.name !== archivoDetectado.name) {
+            return archivoDetectado;
+          }
+          return archivoActual;
+        });
+      }
+    }, 500); // Revisa el botón nativo cada medio segundo
+
+    return () => clearInterval(vigilanteArchivo);
+  }, []);
 
   const enviarSugerencia = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -282,7 +301,6 @@ export default function Home() {
           <div className="flex flex-col items-center gap-6 sm:gap-8 relative z-20 w-full">
             
             <div className="relative flex items-center justify-center">
-              {/* Se eliminan los desenfoques pesados (blur-xl) por simples sombras sólidas */}
               <div className={`absolute inset-0 rounded-full shadow-[0_0_40px_rgba(147,51,234,0.3)] transition-all duration-500 ${file && !loading ? 'hover:shadow-[0_0_60px_rgba(147,51,234,0.5)]' : ''}`}></div>
               
               <button
@@ -317,14 +335,15 @@ export default function Home() {
               </div>
             ) : (
               <div className="flex flex-col items-center gap-3 sm:gap-4 w-full px-4">
-                <span className="text-[10px] sm:text-xs md:text-sm font-semibold tracking-widest text-gray-400 uppercase">{file ? 'Toca el círculo para analizar' : 'Esperando archivo'}</span>
+                <span className="text-[10px] sm:text-xs md:text-sm font-semibold tracking-widest text-gray-400 uppercase">
+                  {file ? 'Toca el círculo para analizar' : 'Esperando archivo'}
+                </span>
                 
-                {/* SOLUCIÓN ANTI-CRASHEO GRÁFICO (JETSAM): Input 100% nativo estilizado, sin capas ocultas. */}
                 <div className="w-full max-w-[320px] bg-[#1A1C23] rounded-2xl border border-gray-700/50 p-1.5 shadow-lg">
                   <input
                     type="file"
                     ref={fileInputRef}
-                    accept="audio/*,video/*,audio/mpeg,audio/ogg,audio/wav,audio/x-m4a,audio/aac,audio/mp4,audio/m4a,application/octet-stream,.mp3,.wav,.m4a,.ogg,.aac,.mp4"
+                    accept=".mp3,.wav,.m4a,.aac,.caf,.ogg,.mp4,audio/*,video/*"
                     className="block w-full text-xs sm:text-sm text-gray-300
                       file:mr-4 file:py-3 file:px-6
                       file:rounded-xl file:border-0
