@@ -294,45 +294,39 @@ export default function Home() {
         {!resultado && (
           <div className="flex flex-col items-center w-full max-w-lg relative z-20">
             <div className="relative flex items-center justify-center mb-6">
-              <div className={`absolute inset-0 rounded-full transition-all duration-500 ${loading ? 'shadow-[0_0_60px_rgba(16,185,129,0.5)]' : 'shadow-[0_0_40px_rgba(147,51,234,0.4)]'}`}></div>
-              
-              <label
-                htmlFor="audio-upload-v16"
-                className={`relative flex flex-col items-center justify-center w-28 h-28 sm:w-32 sm:h-32 md:w-36 md:h-36 rounded-full bg-[#8E44AD] bg-gradient-to-br from-[#8E44AD] to-[#5B2C6F] transition-all duration-300 z-10 shadow-xl ${loading ? 'bg-gradient-to-br from-emerald-600 to-teal-600 cursor-wait animate-pulse' : 'cursor-pointer hover:scale-105 hover:shadow-[0_0_60px_rgba(147,51,234,0.6)] active:scale-95'}
-                `}
-              >
+              <div className="relative w-28 h-28 sm:w-32 sm:h-32 md:w-36 md:h-36">
+                {/* Visual button - the gradient circle */}
+                <div className={`absolute inset-0 rounded-full bg-[#8E44AD] bg-gradient-to-br from-[#8E44AD] to-[#5B2C6F] transition-all duration-300 z-0 shadow-xl ${loading ? 'bg-gradient-to-br from-emerald-600 to-teal-600 cursor-wait animate-pulse' : 'cursor-pointer hover:scale-105 hover:shadow-[0_0_60px_rgba(147,51,234,0.6)] active:scale-95'}`}></div>
+                
+                {/* Shadow/glow effect */}
+                <div className={`absolute inset-0 rounded-full transition-all duration-500 ${loading ? 'shadow-[0_0_60px_rgba(16,185,129,0.5)]' : 'shadow-[0_0_40px_rgba(147,51,234,0.4)]'}`}></div>
+                
+                {/* Content inside button (progress or icon) */}
+                <div className="relative z-10 flex flex-col items-center justify-center w-full h-full pointer-events-none">
+                  {loading ? (
+                    <div className="flex flex-col items-center justify-center animate-fade-in text-center px-2">
+                      <span className="text-2xl sm:text-3xl font-black text-white tracking-tight">{progress}%</span>
+                      <span className="text-[9px] sm:text-[10px] uppercase tracking-widest text-emerald-200 font-semibold mt-0.5">
+                        {progress <= 50 ? 'Subiendo' : 'Analizando'}
+                      </span>
+                    </div>
+                  ) : (
+                    <svg className="w-8 h-8 sm:w-10 sm:h-10 text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
+                    </svg>
+                  )}
+                </div>
+
+                {/* Transparent file input - positioned exactly over the button */}
                 <input 
                   ref={fileInputRef}
                   id="audio-upload-v16"
                   type="file" 
                   accept={platform === 'android' ? '.mp3,.wav,.m4a,.aac,.ogg,.mp4,.flac,.wma,.opus,.caf' : 'audio/*,.mp3,.wav,.m4a,.aac,.ogg,.mp4,.flac,.wma,.opus,.caf'}
-                  className="sr-only"
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
                   onChange={manejarSeleccionYAnalisis}
-                  onClick={(e) => {
-                    // iOS Safari: Reset value to allow selecting the same file again
-                    // This prevents the "file already selected" issue
-                    if (isIOS()) {
-                      setTimeout(() => {
-                        if (fileInputRef.current) {
-                          fileInputRef.current.value = '';
-                        }
-                      }, 0);
-                    }
-                  }}
                 />
-                {loading ? (
-                  <div className="flex flex-col items-center justify-center animate-fade-in text-center px-2">
-                    <span className="text-2xl sm:text-3xl font-black text-white tracking-tight">{progress}%</span>
-                    <span className="text-[9px] sm:text-[10px] uppercase tracking-widest text-emerald-200 font-semibold mt-0.5">
-                      {progress <= 50 ? 'Subiendo' : 'Analizando'}
-                    </span>
-                  </div>
-                ) : (
-                  <svg className="w-8 h-8 sm:w-10 sm:h-10 text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
-                  </svg>
-                )}
-              </label>
+              </div>
             </div>
 
             {loading ? (
