@@ -27,6 +27,7 @@ export default function Home() {
   const [resultado, setResultado] = useState<PredicaAnalisis | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [versoIndex, setVersoIndex] = useState(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const infografiaRef = useRef<HTMLDivElement>(null);
 
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
@@ -164,6 +165,7 @@ export default function Home() {
 
   const nuevoAnalisis = () => {
     setFile(null); setResultado(null); setError(null); setProgress(0);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const descargarInfografia = async () => {
@@ -280,13 +282,13 @@ export default function Home() {
           <div className="flex flex-col items-center gap-6 sm:gap-8 relative z-20 w-full">
             
             <div className="relative flex items-center justify-center">
-              <div className={`absolute inset-0 rounded-full bg-purple-600/20 blur-xl transition-all duration-500 ${file && !loading ? 'hover:bg-purple-500/40 hover:blur-2xl' : ''}`}></div>
-              <div className={`absolute -inset-2 rounded-full bg-gradient-to-b from-purple-500/30 to-transparent blur-md transition-all ${loading ? 'animate-pulse' : ''}`}></div>
+              {/* Se eliminan los desenfoques pesados (blur-xl) por simples sombras sólidas */}
+              <div className={`absolute inset-0 rounded-full shadow-[0_0_40px_rgba(147,51,234,0.3)] transition-all duration-500 ${file && !loading ? 'hover:shadow-[0_0_60px_rgba(147,51,234,0.5)]' : ''}`}></div>
               
               <button
                 onClick={manejarAnalisis}
                 disabled={loading || !file}
-                className={`relative flex flex-col items-center justify-center w-28 h-28 sm:w-32 sm:h-32 md:w-36 md:h-36 rounded-full bg-gradient-to-br from-[#8E44AD] to-[#5B2C6F] shadow-[inset_0_2px_20px_rgba(255,255,255,0.2),_0_0_40px_rgba(142,68,173,0.4)] transition-all duration-300 ${!file || loading ? 'cursor-default' : 'cursor-pointer hover:scale-105'}`}
+                className={`relative flex flex-col items-center justify-center w-28 h-28 sm:w-32 sm:h-32 md:w-36 md:h-36 rounded-full bg-gradient-to-br from-[#8E44AD] to-[#5B2C6F] transition-all duration-300 ${!file || loading ? 'cursor-default' : 'cursor-pointer hover:scale-105'}`}
               >
                 {loading ? (
                   <div className="flex flex-col items-center justify-center animate-fade-in">
@@ -308,7 +310,7 @@ export default function Home() {
                 <span className="text-xs sm:text-sm font-bold text-purple-400 uppercase tracking-widest mb-4 sm:mb-6">
                   {progress <= 50 ? 'Paso 1/2: Subiendo y transcribiendo...' : 'Paso 2/2: Analizando teología y bosquejo...'}
                 </span>
-                <div className="bg-[#1A1D27]/80 backdrop-blur-sm border border-purple-500/20 rounded-2xl p-5 sm:p-6 shadow-xl transition-all duration-500 w-full">
+                <div className="bg-[#1A1D27]/90 border border-purple-500/20 rounded-2xl p-5 sm:p-6 shadow-xl transition-all duration-500 w-full">
                   <p className="text-gray-200 text-sm sm:text-base md:text-lg font-medium italic mb-3 sm:mb-4 leading-relaxed">"{promesasBiblicas[versoIndex].texto}"</p>
                   <p className="text-purple-400/80 font-bold text-xs sm:text-sm tracking-wide">— {promesasBiblicas[versoIndex].cita}</p>
                 </div>
@@ -317,22 +319,25 @@ export default function Home() {
               <div className="flex flex-col items-center gap-3 sm:gap-4 w-full px-4">
                 <span className="text-[10px] sm:text-xs md:text-sm font-semibold tracking-widest text-gray-400 uppercase">{file ? 'Toca el círculo para analizar' : 'Esperando archivo'}</span>
                 
-                {/* SOLUCIÓN SUGERIDA: Comodín audio/* junto a lista MIME detallada estricta, sin espacios */}
-                <div className="relative w-full max-w-[280px]">
-                  <input 
-                    type="file" 
-                    accept="audio/*,audio/mpeg,audio/ogg,audio/wav,audio/x-m4a,audio/aac,audio/mp4,audio/m4a,application/octet-stream,.mp3,.wav,.m4a,.ogg,.aac" 
-                    className="absolute inset-0 w-full h-full opacity-0 z-50 cursor-pointer" 
+                {/* SOLUCIÓN ANTI-CRASHEO GRÁFICO (JETSAM): Input 100% nativo estilizado, sin capas ocultas. */}
+                <div className="w-full max-w-[320px] bg-[#1A1C23] rounded-2xl border border-gray-700/50 p-1.5 shadow-lg">
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    accept="audio/*,video/*,audio/mpeg,audio/ogg,audio/wav,audio/x-m4a,audio/aac,audio/mp4,audio/m4a,application/octet-stream,.mp3,.wav,.m4a,.ogg,.aac,.mp4"
+                    className="block w-full text-xs sm:text-sm text-gray-300
+                      file:mr-4 file:py-3 file:px-6
+                      file:rounded-xl file:border-0
+                      file:text-xs file:sm:text-sm file:font-bold file:tracking-wide
+                      file:bg-gradient-to-r file:from-purple-600 file:to-indigo-600 file:text-white
+                      hover:file:from-purple-500 hover:file:to-indigo-500 file:cursor-pointer file:transition-all
+                      cursor-pointer focus:outline-none"
                     onChange={(e) => {
                       if (e.target.files && e.target.files.length > 0) {
                         setFile(e.target.files[0]);
                       }
-                    }} 
+                    }}
                   />
-                  <div className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-full bg-[#1A1C23]/60 hover:bg-[#232630] border border-gray-700/50 transition-colors text-xs sm:text-sm font-medium text-gray-300 backdrop-blur-sm w-full pointer-events-none">
-                    <svg className="w-4 h-4 text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
-                    <span className="truncate">{file ? file.name : 'Subir archivo de audio'}</span>
-                  </div>
                 </div>
 
               </div>
@@ -416,7 +421,7 @@ export default function Home() {
                 <div className="grid md:grid-cols-2 gap-5 sm:gap-6">
                   <section className="bg-blue-900/10 p-5 sm:p-8 rounded-xl sm:rounded-2xl border border-blue-900/30">
                     <h3 className="text-xs sm:text-sm font-bold text-blue-400 mb-4 sm:mb-6 uppercase tracking-[0.15em] flex items-center gap-2 sm:gap-3">
-                      <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+                      <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
                       Aplicación Práctica
                     </h3>
                     <ul className="space-y-3 sm:space-y-4">
