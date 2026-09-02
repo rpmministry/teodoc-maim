@@ -268,7 +268,6 @@ export default function Home() {
                     : 'cursor-pointer hover:scale-105 hover:shadow-[0_0_60px_rgba(147,51,234,0.6)] active:scale-95'
                 }`}
               >
-                {/* accept="*/*" obliga a las tablets Samsung y Android a abrir el explorador general de archivos */}
                 <input 
                   id="audio-upload-universal-samsung"
                   type="file" 
@@ -422,7 +421,7 @@ export default function Home() {
                   </p>
                 </div>
 
-                <div className="w-full px-2 sm:px-0">
+<div className="w-full px-2 sm:px-0">
                   <div 
                     ref={infografiaRef} 
                     style={{ backgroundColor: '#F8F5EE', color: '#2C3E50' }}
@@ -536,7 +535,7 @@ export default function Home() {
 
       {/* FOOTER */}
       <footer className="w-full text-center py-5 sm:py-6 text-[10px] sm:text-xs text-gray-500 font-medium tracking-wide z-10 mt-auto px-4 space-y-1">
-        <p>Versión 13.0 - Creado por RPM Ministry</p>
+        <p>Versión 14.0 - Creado por RPM Ministry</p>
         <p>Diseño y desarrollo por Mauricio Andrade Luna</p>
       </footer>
     </div>
