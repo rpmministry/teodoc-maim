@@ -140,7 +140,7 @@ export default function Home() {
 
   const nuevoAnalisis = () => {
     setResultado(null); setError(null); setProgress(0);
-    const fileInput = document.getElementById('audio-upload-fantasma') as HTMLInputElement;
+    const fileInput = document.getElementById('audio-upload-universal') as HTMLInputElement;
     if (fileInput) fileInput.value = '';
   };
 
@@ -257,41 +257,39 @@ export default function Home() {
         {!resultado && (
           <div className="flex flex-col items-center w-full max-w-lg relative z-20">
             
-            {/* CONTENEDOR DEL CÍRCULO CON CAPA FANTASMA SEGURA PARA IOS Y TABLETS ANDROID */}
             <div className="relative flex items-center justify-center mb-6">
-              <div className={`absolute inset-0 rounded-full transition-all duration-500 ${loading ? 'shadow-[0_0_60px_rgba(16,185,129,0.5)]' : 'shadow-[0_0_40px_rgba(147,51,234,0.6)]'}`}></div>
+              <div className={`absolute inset-0 rounded-full transition-all duration-500 ${loading ? 'shadow-[0_0_60px_rgba(16,185,129,0.5)]' : 'shadow-[0_0_40px_rgba(147,51,234,0.4)]'}`}></div>
               
-              {/* Círculo visual sólido garantizado (con fondo fijo #8E44AD para evitar la caja negra de Safari) */}
-              <div
+              <label
+                htmlFor="audio-upload-universal"
                 className={`relative flex flex-col items-center justify-center w-28 h-28 sm:w-32 sm:h-32 md:w-36 md:h-36 rounded-full bg-[#8E44AD] bg-gradient-to-br from-[#8E44AD] to-[#5B2C6F] transition-all duration-300 z-10 shadow-xl ${
                   loading 
                     ? 'bg-gradient-to-br from-emerald-600 to-teal-600 cursor-wait animate-pulse' 
-                    : 'cursor-pointer hover:scale-105 hover:shadow-[0_0_60px_rgba(147,51,234,0.8)] active:scale-95'
+                    : 'cursor-pointer hover:scale-105 hover:shadow-[0_0_60px_rgba(147,51,234,0.6)] active:scale-95'
                 }`}
               >
-                {/* Input nativo estirado por encima con opacidad 0: Garantiza que en iOS (cualquier navegador) y Tablets Android se abra el explorador de archivos y carpetas */}
+                {/* Input sin atributo accept: Obliga a Android (tablets) y iOS a abrir el administrador general de archivos/carpetas */}
                 <input 
-                  id="audio-upload-fantasma"
+                  id="audio-upload-universal"
                   type="file" 
-                  accept=".mp3,.wav,.m4a,.aac,.caf,.ogg,.mp4,.flac,.wma,.opus" 
-                  className="absolute inset-0 w-full h-full opacity-0 z-50 cursor-pointer" 
+                  className="hidden" 
                   onChange={manejarSeleccionYAnalisis}
                   disabled={loading}
                 />
 
                 {loading ? (
-                  <div className="flex flex-col items-center justify-center animate-fade-in text-center px-2 pointer-events-none">
+                  <div className="flex flex-col items-center justify-center animate-fade-in text-center px-2">
                     <span className="text-2xl sm:text-3xl font-black text-white tracking-tight">{progress}%</span>
                     <span className="text-[9px] sm:text-[10px] uppercase tracking-widest text-emerald-200 font-semibold mt-0.5">
                       {progress <= 50 ? 'Subiendo' : 'Analizando'}
                     </span>
                   </div>
                 ) : (
-                  <svg className="w-8 h-8 sm:w-10 sm:h-10 text-white transition-colors pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-8 h-8 sm:w-10 sm:h-10 text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
                   </svg>
                 )}
-              </div>
+              </label>
             </div>
 
             {loading ? (
@@ -307,7 +305,7 @@ export default function Home() {
             ) : (
               <div className="flex flex-col items-center justify-center w-full px-4 text-center mt-2">
                 <span className="text-[11px] sm:text-xs md:text-sm font-bold tracking-[0.15em] text-gray-400 uppercase leading-relaxed inline-block">
-                  Toca el círculo para seleccionar tu archivo de audio <br/> y comenzar el análisis automáticamente
+                  Toca el círculo para buscar tu archivo <br/> y comenzar el análisis automáticamente
                 </span>
               </div>
             )}
@@ -390,7 +388,7 @@ export default function Home() {
                 <div className="grid md:grid-cols-2 gap-5 sm:gap-6">
                   <section className="bg-blue-900/10 p-5 sm:p-8 rounded-xl sm:rounded-2xl border border-blue-900/30">
                     <h3 className="text-xs sm:text-sm font-bold text-blue-400 mb-4 sm:mb-6 uppercase tracking-[0.15em] flex items-center gap-2 sm:gap-3">
-                      <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+                      <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
                       Aplicación Práctica
                     </h3>
                     <ul className="space-y-3 sm:space-y-4">
@@ -510,7 +508,7 @@ export default function Home() {
             
             {feedbackStatus === 'success' ? (
               <div className="text-green-400 text-center py-8 font-medium">
-                ¡Gracias! Tu mensaje ha sido enviado correctamente.
+                ¡Gracias! Sesión completada con éxito.
               </div>
             ) : (
               <form onSubmit={enviarSugerencia} className="flex flex-col gap-4">
@@ -537,7 +535,7 @@ export default function Home() {
 
       {/* FOOTER */}
       <footer className="w-full text-center py-5 sm:py-6 text-[10px] sm:text-xs text-gray-500 font-medium tracking-wide z-10 mt-auto px-4 space-y-1">
-        <p>Versión 11.0 (Capa Fantasma Definitiva) - Creado por RPM Ministry</p>
+        <p>Versión 12.0 (Selector Universal sin Restricción) - Creado por RPM Ministry</p>
         <p>Diseño y desarrollo por Mauricio Andrade Luna</p>
       </footer>
     </div>
