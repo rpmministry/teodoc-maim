@@ -45,7 +45,7 @@ export default function Home() {
     return () => clearInterval(intervaloVerso);
   }, [loading]);
 
-  // VIGILANTE AGRESIVO: Intenta detectar el archivo si Safari no avisa
+  // VIGILANTE SILENCIOSO PARA IOS SAFARI
   useEffect(() => {
     const chequearArchivo = () => {
       if (fileInputRef.current?.files && fileInputRef.current.files.length > 0) {
@@ -56,16 +56,8 @@ export default function Home() {
         });
       }
     };
-
     const intervalo = setInterval(chequearArchivo, 500);
-    window.addEventListener('focus', chequearArchivo);
-    document.addEventListener('visibilitychange', chequearArchivo);
-
-    return () => {
-      clearInterval(intervalo);
-      window.removeEventListener('focus', chequearArchivo);
-      document.removeEventListener('visibilitychange', chequearArchivo);
-    };
+    return () => clearInterval(intervalo);
   }, []);
 
   const enviarSugerencia = async (e: React.FormEvent) => {
@@ -76,19 +68,28 @@ export default function Home() {
       const res = await fetch("https://formsubmit.co/ajax/recursosparaministerios@gmail.com", {
         method: "POST",
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body: JSON.stringify({ _subject: "💡 Nueva Sugerencia - TeoDoc", mensaje: feedbackMsg })
+        body: JSON.stringify({
+          _subject: "💡 Nueva Sugerencia - TeoDoc",
+          mensaje: feedbackMsg
+        })
       });
       if (res.ok) {
         setFeedbackStatus('success');
-        setTimeout(() => { setShowFeedbackModal(false); setFeedbackStatus('idle'); setFeedbackMsg(''); }, 3000);
-      } else throw new Error("Error");
+        setTimeout(() => {
+          setShowFeedbackModal(false);
+          setFeedbackStatus('idle');
+          setFeedbackMsg('');
+        }, 3000);
+      } else {
+        throw new Error("Error en servidor");
+      }
     } catch (err) {
       setFeedbackStatus('error');
     }
   };
 
   const manejarAnalisis = async () => {
-    // EL TRUCO DEFINITIVO: Tomar el archivo directamente del elemento HTML ignorando el estado de React
+    // EL TRUCO DEFINITIVO: Tomar el archivo directamente del elemento HTML físico ignorando el estado visual.
     const archivoFinal = fileInputRef.current?.files?.[0] || file;
 
     if (!archivoFinal) {
@@ -109,7 +110,7 @@ export default function Home() {
       }, 500);
 
       const formDataCloud = new FormData();
-      formDataCloud.append('file', archivoFinal); // Usamos el archivo forzado
+      formDataCloud.append('file', archivoFinal); // Enviamos archivoFinal directamente
       formDataCloud.append('upload_preset', 'teodoc_preset');
 
       const resCloud = await fetch('https://api.cloudinary.com/v1_1/antbfat3/auto/upload', {
@@ -149,7 +150,8 @@ export default function Home() {
       const timerAnalyze = setInterval(() => {
         setProgress((prev) => {
           if (prev >= 98) return 98;
-          return prev + Math.max(1, Math.floor((99 - prev) * 0.05));
+          const restante = 99 - prev;
+          return prev + Math.max(1, Math.floor(restante * 0.05));
         });
       }, 1000);
 
@@ -301,13 +303,13 @@ export default function Home() {
           <div className="flex flex-col items-center gap-6 sm:gap-8 relative z-20 w-full">
             
             <div className="relative flex items-center justify-center">
-              <div className={`absolute inset-0 rounded-full shadow-[0_0_40px_rgba(147,51,234,0.3)] transition-all duration-500 hover:shadow-[0_0_60px_rgba(147,51,234,0.5)]`}></div>
+              <div className={`absolute inset-0 rounded-full shadow-[0_0_40px_rgba(147,51,234,0.4)] transition-all duration-500 hover:shadow-[0_0_60px_rgba(147,51,234,0.6)]`}></div>
               
               <button
                 onClick={manejarAnalisis}
-                // ¡AQUÍ ESTÁ EL CAMBIO! Ya no se bloquea si no hay archivo, siempre se puede oprimir
+                // ¡AQUÍ ESTÁ LA MAGIA! El botón nunca se bloquea por falta de archivo. Siempre está encendido.
                 disabled={loading}
-                className={`relative flex flex-col items-center justify-center w-28 h-28 sm:w-32 sm:h-32 md:w-36 md:h-36 rounded-full bg-gradient-to-br from-[#8E44AD] to-[#5B2C6F] transition-all duration-300 ${loading ? 'cursor-default' : 'cursor-pointer hover:scale-105'}`}
+                className={`relative flex flex-col items-center justify-center w-28 h-28 sm:w-32 sm:h-32 md:w-36 md:h-36 rounded-full bg-gradient-to-br from-[#8E44AD] to-[#5B2C6F] transition-all duration-300 ${loading ? 'cursor-default opacity-80' : 'cursor-pointer hover:scale-105'}`}
               >
                 {loading ? (
                   <div className="flex flex-col items-center justify-center animate-fade-in">
@@ -317,6 +319,7 @@ export default function Home() {
                     </span>
                   </div>
                 ) : (
+                  // El icono siempre estará iluminado (text-white) sin depender de React
                   <svg className="w-8 h-8 sm:w-10 sm:h-10 text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
                   </svg>
@@ -337,14 +340,14 @@ export default function Home() {
             ) : (
               <div className="flex flex-col items-center gap-3 sm:gap-4 w-full px-4">
                 <span className="text-[10px] sm:text-xs md:text-sm font-semibold tracking-widest text-gray-400 uppercase">
-                  1. Selecciona un archivo | 2. Toca el círculo para analizar
+                  1. Selecciona el archivo | 2. Toca el círculo principal
                 </span>
                 
-                <div className="w-full max-w-[320px] bg-[#1A1C23] rounded-2xl border border-gray-700/50 p-1.5 shadow-lg">
-                  <input
-                    type="file"
+                <div className="w-full max-w-[320px] bg-[#1A1C23] rounded-2xl border border-gray-700/50 p-1.5 shadow-lg relative">
+                  <input 
+                    type="file" 
                     ref={fileInputRef}
-                    accept=".mp3,.wav,.m4a,.aac,.caf,.ogg,.mp4,audio/*,video/*"
+                    accept="audio/*,video/*,audio/mpeg,audio/ogg,audio/wav,audio/x-m4a,audio/aac,audio/mp4,audio/m4a,application/octet-stream,.mp3,.wav,.m4a,.ogg,.aac,.mp4,.caf" 
                     className="block w-full text-xs sm:text-sm text-gray-300
                       file:mr-4 file:py-3 file:px-6
                       file:rounded-xl file:border-0
