@@ -320,29 +320,30 @@ export default function Home() {
               <div className="flex flex-col items-center gap-3 sm:gap-4 w-full px-4">
                 <span className="text-[10px] sm:text-xs md:text-sm font-semibold tracking-widest text-gray-400 uppercase">{file ? 'Toca el círculo para analizar' : 'Esperando archivo'}</span>
                 
-                <div className="relative flex items-center justify-center gap-2 px-5 py-2 sm:px-6 sm:py-2.5 rounded-full bg-[#1A1C23]/60 hover:bg-[#232630] border border-gray-700/50 hover:border-gray-600 transition-all text-xs sm:text-sm font-medium text-gray-300 backdrop-blur-sm w-full max-w-[280px] overflow-hidden">
+                <div 
+                  onClick={() => fileInputRef.current?.click()}
+                  className="relative flex items-center justify-center gap-2 px-5 py-2 sm:px-6 sm:py-2.5 rounded-full bg-[#1A1C23]/60 hover:bg-[#232630] border border-gray-700/50 hover:border-gray-600 transition-all text-xs sm:text-sm font-medium text-gray-300 backdrop-blur-sm w-full max-w-[280px] cursor-pointer"
+                >
                   <input 
                     type="file" 
                     name="audioFile"
-                    accept=".mp3,.wav,.m4a,.aac,.ogg,audio/mpeg,audio/wav,audio/x-m4a,audio/mp4,audio/m4a,application/octet-stream" 
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" 
+                    accept="*" 
+                    className="hidden" 
                     ref={fileInputRef} 
-                    onClick={(e) => {
-                      (e.target as HTMLInputElement).value = '';
-                    }}
                     onChange={(e) => {
                       if (e.target.files && e.target.files.length > 0) {
                         setFile(e.target.files[0]);
                       }
                     }} 
                   />
-                  <svg className="w-4 h-4 text-gray-400 transition-colors shrink-0 relative z-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                  <svg className="w-4 h-4 text-gray-400 transition-colors shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
                   {file ? (
-                    <span className="truncate relative z-0">{file.name}</span>
+                    <span className="truncate">{file.name}</span>
                   ) : (
-                    <span className="relative z-0">Subir archivo de audio</span>
+                    <span>Subir archivo de audio</span>
                   )}
                 </div>
+
               </div>
             )}
             {error && <div className="mt-2 sm:mt-4 px-4 py-2.5 bg-red-900/30 border border-red-500/50 rounded-lg text-red-200 text-xs sm:text-sm w-full max-w-sm text-center">{error}</div>}
