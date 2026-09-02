@@ -72,12 +72,12 @@ export default function Home() {
     }
   };
 
-  // Función limpia, sin pedir el evento "e", el formulario lo manejará.
   const manejarAnalisis = async () => {
+    // Leemos el archivo directo del DOM
     const archivoFinal = fileInputRef.current?.files?.[0] || file;
 
     if (!archivoFinal) {
-      setError('Por favor, selecciona un archivo en el botón de abajo antes de iniciar.');
+      setError('Por favor, selecciona un archivo en el Paso 1 antes de iniciar el análisis.');
       return;
     }
 
@@ -162,7 +162,7 @@ export default function Home() {
       }, 500);
 
     } catch (err: any) {
-      setError(err.message || 'Ocurrió un error inesperado en el proceso.');
+      setError(err.message || 'Ocurrió un error inesperado en el proceso. El archivo podría ser muy grande.');
       setLoading(false);
       setProgress(0);
     }
@@ -284,20 +284,15 @@ export default function Home() {
         )}
 
         {!resultado && (
-          // SEGURO CONTRA REINICIOS: El evento onSubmit intercepta y cancela la recarga de página usando e.preventDefault()
-          <form 
-            onSubmit={(e) => {
-              e.preventDefault(); 
-              manejarAnalisis();
-            }} 
-            className="flex flex-col items-center gap-8 relative z-20 w-full"
-          >
+          // Hemos eliminado el form que causaba el reinicio, volvemos a una caja normal div
+          <div className="flex flex-col items-center gap-8 relative z-20 w-full">
             
             <div className="relative flex items-center justify-center">
               <div className={`absolute inset-0 rounded-full shadow-[0_0_40px_rgba(147,51,234,0.4)] transition-all duration-500 hover:shadow-[0_0_60px_rgba(147,51,234,0.6)]`}></div>
               
               <button
-                type="submit" // Convertido a botón de envío real HTML5
+                type="button" 
+                onClick={manejarAnalisis} // Ejecuta la función de manera segura
                 disabled={loading}
                 className={`relative flex flex-col items-center justify-center w-28 h-28 sm:w-32 sm:h-32 md:w-36 md:h-36 rounded-full bg-gradient-to-br from-[#8E44AD] to-[#5B2C6F] shadow-[0_0_40px_rgba(147,51,234,0.4)] transition-all duration-300 z-10 ${loading ? 'cursor-default opacity-80' : 'cursor-pointer hover:scale-105 hover:shadow-[0_0_60px_rgba(147,51,234,0.6)]'}`}
               >
@@ -309,7 +304,8 @@ export default function Home() {
                     </span>
                   </div>
                 ) : (
-                  <svg className="w-8 h-8 sm:w-10 sm:h-10 text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  // INDICADOR VISUAL NUEVO: Si hay un archivo cargado, el ícono se pintará de verde claro
+                  <svg className={`w-8 h-8 sm:w-10 sm:h-10 transition-colors ${file ? 'text-green-400' : 'text-white'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
                   </svg>
                 )}
@@ -339,6 +335,7 @@ export default function Home() {
                 <div className="w-full max-w-[320px] bg-[#1A1C23] rounded-2xl border border-gray-700/50 p-1.5 shadow-lg mx-auto">
                   <input 
                     type="file" 
+                    id="archivo-audio-nativo"
                     ref={fileInputRef}
                     accept=".mp3,.wav,.m4a,.aac,.caf,.ogg,.mp4,audio/*,video/*" 
                     className="block w-full text-xs sm:text-sm text-gray-300
@@ -351,6 +348,7 @@ export default function Home() {
                     onChange={(e) => {
                       if (e.target.files && e.target.files.length > 0) {
                         setFile(e.target.files[0]);
+                        setError(null);
                       }
                     }}
                   />
@@ -359,7 +357,7 @@ export default function Home() {
               </div>
             )}
             {error && <div className="mt-2 sm:mt-4 px-4 py-2.5 bg-red-900/30 border border-red-500/50 rounded-lg text-red-200 text-xs sm:text-sm w-full max-w-sm text-center mx-auto">{error}</div>}
-          </form>
+          </div>
         )}
 
         {resultado && (
