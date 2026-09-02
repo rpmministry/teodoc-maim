@@ -56,19 +56,17 @@ export default function Home() {
       if (res.ok) {
         setFeedbackStatus('success');
         setTimeout(() => { setShowFeedbackModal(false); setFeedbackStatus('idle'); setFeedbackMsg(''); }, 3000);
-      } else throw new Error("Error");
+      } else throw new Error("Error en servidor");
     } catch (err) {
       setFeedbackStatus('error');
     }
   };
 
-  // FLUJO ADOBE PODCAST: Arranca todo de inmediato al seleccionar el archivo
-  const manejarSeleccionYAnalisis = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // ESTRUCTURA ADOBE PODCAST: Sin trucos visuales, disparo inmediato
+  const manejarSeleccion = (e: React.ChangeEvent<HTMLInputElement>) => {
     const archivoDetectado = e.target.files?.[0];
-    
-    if (!archivoDetectado) return; // Si cancela, no hacemos nada
+    if (!archivoDetectado) return; // Si el usuario cancela, ignorar
 
-    // 1. Mostrar estado visual INMEDIATAMENTE
     setFile(archivoDetectado);
     setLoading(true);
     setProgress(5);
@@ -76,11 +74,8 @@ export default function Home() {
     setResultado(null);
     setVersoIndex(0);
 
-    // 2. TRUCO DE MEMORIA IOS: Le damos medio segundo al iPhone para cerrar la carpeta
-    // y liberar la RAM antes de ahogar el procesador subiendo el archivo.
-    setTimeout(() => {
-      iniciarProcesoPesado(archivoDetectado);
-    }, 500);
+    // Lanzar el proceso de subida de inmediato
+    iniciarProcesoPesado(archivoDetectado);
   };
 
   const iniciarProcesoPesado = async (archivoParaProcesar: File) => {
@@ -111,8 +106,8 @@ export default function Home() {
 
       let dataTranscribe;
       try { dataTranscribe = JSON.parse(rawTextTranscribe); } 
-      catch (err) { throw new Error(`Error en transcripción.`); }
-      if (!resTranscribe.ok) throw new Error(dataTranscribe.error || 'Error.');
+      catch (err) { throw new Error(`Error en el servidor de transcripción.`); }
+      if (!resTranscribe.ok) throw new Error(dataTranscribe.error || 'Error en la transcripción.');
       
       const textoTranscrito = dataTranscribe.text;
       setProgress(50);
@@ -129,8 +124,8 @@ export default function Home() {
 
       let dataAnalyze;
       try { dataAnalyze = JSON.parse(rawTextAnalyze); } 
-      catch (err) { throw new Error('Error al interpretar teología.'); }
-      if (!resAnalyze.ok) throw new Error(dataAnalyze.error || 'Error.');
+      catch (err) { throw new Error('Error al interpretar el análisis teológico.'); }
+      if (!resAnalyze.ok) throw new Error(dataAnalyze.error || 'Error en el análisis.');
 
       setProgress(100);
       setTimeout(() => {
@@ -139,7 +134,7 @@ export default function Home() {
       }, 500);
 
     } catch (err: any) {
-      setError(err.message || 'Ocurrió un error. El archivo puede ser muy pesado.');
+      setError(err.message || 'Ocurrió un error. El archivo puede ser muy pesado o tu internet inestable.');
       setLoading(false);
       setProgress(0);
     }
@@ -147,8 +142,8 @@ export default function Home() {
 
   const nuevoAnalisis = () => {
     setFile(null); setResultado(null); setError(null); setProgress(0);
-    // Limpiamos el input nativo por seguridad
-    const fileInput = document.getElementById('archivo-nativo-ios') as HTMLInputElement;
+    // Limpiar input físico
+    const fileInput = document.getElementById('audio-upload-input') as HTMLInputElement;
     if (fileInput) fileInput.value = '';
   };
 
@@ -267,23 +262,14 @@ export default function Home() {
             
             <div className="relative flex items-center justify-center mb-6">
               
-              {/* ESTRUCTURA NATIVA PERFECTA: Input oculto totalmente separado de la etiqueta */}
-              <input 
-                id="archivo-nativo-ios"
-                type="file" 
-                accept="audio/*,video/*,.mp3,.wav,.m4a,.aac,.ogg,.mp4,.caf" 
-                className="hidden" 
-                onChange={manejarSeleccionYAnalisis}
-                disabled={loading}
-              />
-              
-              {/* EL BOTÓN VIBRANTE SIEMPRE ENCENDIDO (htmlFor conecta este botón con el input nativo) */}
+              {/* ESTRUCTURA NATIVA PURA: La etiqueta <label> es visualmente tu botón */}
+              {/* Notarás que NUNCA pasa a color gris oscuro, SIEMPRE está vibrante */}
               <label
-                htmlFor="archivo-nativo-ios"
+                htmlFor="audio-upload-input"
                 className={`relative flex flex-col items-center justify-center w-32 h-32 sm:w-40 sm:h-40 md:w-44 md:h-44 rounded-full bg-gradient-to-br from-[#8E44AD] to-[#5B2C6F] shadow-[0_0_40px_rgba(147,51,234,0.6)] transition-all duration-300 z-10 ${loading ? 'cursor-wait opacity-80 pointer-events-none' : 'cursor-pointer hover:scale-105 hover:shadow-[0_0_60px_rgba(147,51,234,0.8)] active:scale-95'}`}
               >
                 {loading ? (
-                  <div className="flex flex-col items-center justify-center animate-fade-in">
+                  <div className="flex flex-col items-center justify-center animate-fade-in text-center">
                     <span className="text-3xl sm:text-4xl font-black text-white tracking-tight">{progress}%</span>
                     <span className="text-[10px] sm:text-[11px] uppercase tracking-widest text-purple-200/80 font-semibold mt-1">
                       {progress <= 50 ? 'Subiendo' : 'Analizando'}
@@ -291,16 +277,26 @@ export default function Home() {
                   </div>
                 ) : (
                   <>
-                    <svg className="w-12 h-12 text-white mb-1 transition-colors drop-shadow-lg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-10 h-10 sm:w-12 sm:h-12 text-white mb-2 transition-colors drop-shadow-lg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
                     </svg>
-                    <span className="text-[11px] sm:text-xs font-bold text-white uppercase tracking-widest drop-shadow-md">
+                    <span className="text-[11px] sm:text-xs font-bold text-white uppercase tracking-widest drop-shadow-md px-2 text-center leading-tight">
                       Subir Audio
                     </span>
                   </>
                 )}
               </label>
             </div>
+
+            {/* INPUT INVISIBLE FÍSICO (Separado de los estilos para evitar bloqueos del navegador) */}
+            <input 
+              id="audio-upload-input"
+              type="file" 
+              accept=".mp3,.wav,.m4a,.aac,.caf,.ogg,.mp4,audio/*,video/*" 
+              className="hidden" 
+              onChange={manejarSeleccion}
+              disabled={loading}
+            />
 
             {loading ? (
               <div className="flex flex-col items-center text-center mt-2 w-full px-2 animate-fade-in">
@@ -313,10 +309,10 @@ export default function Home() {
                 </div>
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center w-full px-4 text-center mt-4">
-                {/* TEXTO INSTRUCTIVO ADOBE PODCAST */}
-                <span className="text-[11px] sm:text-xs md:text-sm font-bold tracking-[0.2em] text-gray-400 uppercase leading-relaxed inline-block">
-                  Toca el círculo para subir tu archivo <br/> y comenzar automáticamente
+              <div className="flex flex-col items-center justify-center w-full px-4 text-center mt-2">
+                <span className="text-[11px] sm:text-xs md:text-sm font-bold tracking-[0.15em] text-gray-400 uppercase leading-loose inline-block">
+                  <span className="block mb-1">1. Toca el círculo morado</span>
+                  <span className="block">2. Elige tu archivo y espera</span>
                 </span>
               </div>
             )}
@@ -546,7 +542,7 @@ export default function Home() {
 
       {/* FOOTER ACTUALIZADO */}
       <footer className="w-full text-center py-5 sm:py-6 text-[10px] sm:text-xs text-gray-500 font-medium tracking-wide z-10 mt-auto px-4 space-y-1">
-        <p>Versión 6.0 (Flujo Limpio Adobe) - Creado por RPM Ministry</p>
+        <p>Versión 7.0 (Limpieza Total de Caché) - Creado por RPM Ministry</p>
         <p>Diseño y desarrollo por Mauricio Andrade Luna</p>
       </footer>
     </div>
