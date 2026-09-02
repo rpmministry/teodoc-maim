@@ -72,11 +72,8 @@ export default function Home() {
     }
   };
 
-  // Convertimos la función en un manejador de Formulario tradicional
-  const manejarAnalisis = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault(); // Evita que la página recargue en iOS
-
-    // MAGIA IOS: Extraemos el archivo físicamente del DOM ignorando si React se dio cuenta o no
+  // Función limpia, sin pedir el evento "e", el formulario lo manejará.
+  const manejarAnalisis = async () => {
     const archivoFinal = fileInputRef.current?.files?.[0] || file;
 
     if (!archivoFinal) {
@@ -287,13 +284,20 @@ export default function Home() {
         )}
 
         {!resultado && (
-          // ENVOLTURA NATIVA DE FORMULARIO PARA IOS SAFARI
-          <form onSubmit={manejarAnalisis} className="flex flex-col items-center gap-8 relative z-20 w-full">
+          // SEGURO CONTRA REINICIOS: El evento onSubmit intercepta y cancela la recarga de página usando e.preventDefault()
+          <form 
+            onSubmit={(e) => {
+              e.preventDefault(); 
+              manejarAnalisis();
+            }} 
+            className="flex flex-col items-center gap-8 relative z-20 w-full"
+          >
             
             <div className="relative flex items-center justify-center">
-              {/* El botón ahora es type="submit" y tiene la sombra incluida en sus clases, sin capas separadas que bloqueen los toques */}
+              <div className={`absolute inset-0 rounded-full shadow-[0_0_40px_rgba(147,51,234,0.4)] transition-all duration-500 hover:shadow-[0_0_60px_rgba(147,51,234,0.6)]`}></div>
+              
               <button
-                type="submit"
+                type="submit" // Convertido a botón de envío real HTML5
                 disabled={loading}
                 className={`relative flex flex-col items-center justify-center w-28 h-28 sm:w-32 sm:h-32 md:w-36 md:h-36 rounded-full bg-gradient-to-br from-[#8E44AD] to-[#5B2C6F] shadow-[0_0_40px_rgba(147,51,234,0.4)] transition-all duration-300 z-10 ${loading ? 'cursor-default opacity-80' : 'cursor-pointer hover:scale-105 hover:shadow-[0_0_60px_rgba(147,51,234,0.6)]'}`}
               >
@@ -325,7 +329,6 @@ export default function Home() {
             ) : (
               <div className="flex flex-col items-center justify-center gap-4 w-full px-4">
                 
-                {/* TEXTO CENTRADO Y ESTRUCTURADO */}
                 <div className="text-center w-full flex flex-col items-center justify-center">
                   <span className="text-[11px] sm:text-xs md:text-sm font-bold tracking-widest text-gray-400 uppercase text-center block leading-relaxed">
                     1. Selecciona el archivo de audio <br /> 
@@ -528,7 +531,7 @@ export default function Home() {
                       </div>
 
                       <div className="mt-8 sm:mt-10 text-[#A69B85] text-[10px] sm:text-xs font-bold tracking-widest flex items-center gap-2">
-                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 100-2h-2V7z" clipRule="evenodd"></path></svg>
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clipRule="evenodd"></path></svg>
                         GENERADO POR TEODOC | RPM MINISTRY
                       </div>
                     </div>
