@@ -21,7 +21,6 @@ const promesasBiblicas = [
 ];
 
 export default function Home() {
-  const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [resultado, setResultado] = useState<PredicaAnalisis | null>(null);
@@ -34,7 +33,7 @@ export default function Home() {
   const [feedbackMsg, setFeedbackMsg] = useState('');
   const [feedbackStatus, setFeedbackStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
 
-  // Rotador de promesas
+  // Rotador de promesas durante la carga
   useEffect(() => {
     let intervaloVerso: NodeJS.Timeout;
     if (loading) {
@@ -44,28 +43,6 @@ export default function Home() {
     }
     return () => clearInterval(intervaloVerso);
   }, [loading]);
-
-  // SOLUCIÓN MAGISTRAL IOS: Event Listener Nativo.
-  // Nos saltamos a React y escuchamos directamente a Safari.
-  useEffect(() => {
-    const inputElement = fileInputRef.current;
-    if (!inputElement) return;
-
-    const handleNativeChange = (event: Event) => {
-      const target = event.target as HTMLInputElement;
-      if (target.files && target.files.length > 0) {
-        setFile(target.files[0]);
-        setError(null);
-      }
-    };
-
-    // Escuchamos el evento nativo del celular
-    inputElement.addEventListener('change', handleNativeChange);
-    
-    return () => {
-      inputElement.removeEventListener('change', handleNativeChange);
-    };
-  }, []);
 
   const enviarSugerencia = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -95,16 +72,20 @@ export default function Home() {
     }
   };
 
-  const manejarAnalisis = async () => {
-    // Leemos el archivo del estado, o forzosamente del input si el estado falló
-    const archivoFinal = file || fileInputRef.current?.files?.[0];
+  // MAGIA NATIVA: Usamos el evento de envío del formulario, que es infalible en iOS
+  const manejarAnalisis = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault(); // Evita que la página web recargue
 
-    if (!archivoFinal) {
-      setError('No detectamos el archivo. Por favor, vuelve a seleccionarlo y asegúrate de que cargue.');
+    // Extraemos el archivo directamente del formulario nativo, esquivando a React
+    const formData = new FormData(e.currentTarget);
+    const archivoFinal = formData.get('audioFile') as File;
+
+    // Validación estricta si el iPhone no nos entregó el archivo
+    if (!archivoFinal || archivoFinal.name === '' || archivoFinal.size === 0) {
+      setError('⚠️ Archivo no detectado. Si está en iCloud, asegúrate de que se haya descargado por completo antes de oprimir el botón.');
       return;
     }
 
-    setFile(archivoFinal); 
     setLoading(true);
     setProgress(5);
     setError(null);
@@ -116,6 +97,7 @@ export default function Home() {
         setProgress((prev) => (prev >= 25 ? 25 : prev + 1));
       }, 500);
 
+      // Enviamos el archivo extraído a Cloudinary
       const formDataCloud = new FormData();
       formDataCloud.append('file', archivoFinal);
       formDataCloud.append('upload_preset', 'teodoc_preset');
@@ -126,7 +108,7 @@ export default function Home() {
       });
       clearInterval(timerCloud);
 
-      if (!resCloud.ok) throw new Error('Error al subir el archivo a la nube de paso.');
+      if (!resCloud.ok) throw new Error('Error al subir el archivo a la nube de paso. Revisa tu conexión a internet.');
       const cloudData = await resCloud.json();
       const audioUrl = cloudData.secure_url;
 
@@ -147,7 +129,7 @@ export default function Home() {
       try { 
         dataTranscribe = JSON.parse(rawTextTranscribe); 
       } catch (e) { 
-        throw new Error(`Error en el servidor de transcripción: ${rawTextTranscribe.substring(0, 100)}`); 
+        throw new Error(`Error en el servidor de transcripción.`); 
       }
       if (!resTranscribe.ok) throw new Error(dataTranscribe.error || 'Error en la transcripción.');
       
@@ -157,8 +139,7 @@ export default function Home() {
       const timerAnalyze = setInterval(() => {
         setProgress((prev) => {
           if (prev >= 98) return 98;
-          const restante = 99 - prev;
-          return prev + Math.max(1, Math.floor(restante * 0.05));
+          return prev + Math.max(1, Math.floor((99 - prev) * 0.05));
         });
       }, 1000);
 
@@ -185,14 +166,16 @@ export default function Home() {
       }, 500);
 
     } catch (err: any) {
-      setError(err.message || 'Ocurrió un error inesperado en el proceso.');
+      setError(err.message || 'Ocurrió un error inesperado en el proceso. Intenta de nuevo.');
       setLoading(false);
       setProgress(0);
     }
   };
 
   const nuevoAnalisis = () => {
-    setFile(null); setResultado(null); setError(null); setProgress(0);
+    setResultado(null); 
+    setError(null); 
+    setProgress(0);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -307,16 +290,17 @@ export default function Home() {
         )}
 
         {!resultado && (
-          <div className="flex flex-col items-center gap-8 relative z-20 w-full">
+          // ESTRUCTURA ESTÁNDAR: FORMULARIO HTML PURO
+          <form onSubmit={manejarAnalisis} className="flex flex-col items-center w-full max-w-lg relative z-20">
             
-            <div className="relative flex items-center justify-center">
-              <div className={`absolute inset-0 rounded-full shadow-[0_0_40px_rgba(147,51,234,0.4)] transition-all duration-500 hover:shadow-[0_0_60px_rgba(147,51,234,0.6)]`}></div>
+            {/* EL BOTÓN (Siempre de color y vibrante, nunca "desactivado" visualmente) */}
+            <div className="relative flex items-center justify-center mb-8">
+              <div className="absolute inset-0 rounded-full shadow-[0_0_40px_rgba(147,51,234,0.5)] transition-all duration-500"></div>
               
               <button
-                type="button" 
-                onClick={manejarAnalisis} 
+                type="submit" 
                 disabled={loading}
-                className={`relative flex flex-col items-center justify-center w-28 h-28 sm:w-32 sm:h-32 md:w-36 md:h-36 rounded-full bg-gradient-to-br from-[#8E44AD] to-[#5B2C6F] shadow-[0_0_40px_rgba(147,51,234,0.4)] transition-all duration-300 z-10 ${loading ? 'cursor-default opacity-80' : 'cursor-pointer hover:scale-105 hover:shadow-[0_0_60px_rgba(147,51,234,0.6)]'}`}
+                className={`relative flex flex-col items-center justify-center w-28 h-28 sm:w-32 sm:h-32 md:w-36 md:h-36 rounded-full bg-gradient-to-br from-[#8E44AD] to-[#5B2C6F] transition-all duration-300 z-10 ${loading ? 'cursor-wait opacity-80' : 'cursor-pointer hover:scale-105 hover:shadow-[0_0_60px_rgba(147,51,234,0.7)] active:scale-95'}`}
               >
                 {loading ? (
                   <div className="flex flex-col items-center justify-center animate-fade-in">
@@ -326,8 +310,7 @@ export default function Home() {
                     </span>
                   </div>
                 ) : (
-                  // ALERTA VISUAL: Si hay un archivo capturado, el ícono se iluminará de verde brillante
-                  <svg className={`w-8 h-8 sm:w-10 sm:h-10 transition-all duration-300 ${file ? 'text-green-400 drop-shadow-[0_0_12px_rgba(74,222,128,0.8)] scale-110' : 'text-white'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
                   </svg>
                 )}
@@ -335,52 +318,48 @@ export default function Home() {
             </div>
 
             {loading ? (
-              <div className="flex flex-col items-center text-center mt-2 max-w-lg animate-fade-in w-full px-2">
+              <div className="flex flex-col items-center text-center mt-2 w-full px-2 animate-fade-in">
                 <span className="text-xs sm:text-sm font-bold text-purple-400 uppercase tracking-widest mb-4 sm:mb-6">
                   {progress <= 50 ? 'Paso 1/2: Subiendo y transcribiendo...' : 'Paso 2/2: Analizando teología y bosquejo...'}
                 </span>
-                <div className="bg-[#1A1D27]/90 border border-purple-500/20 rounded-2xl p-5 sm:p-6 shadow-xl transition-all duration-500 w-full">
+                <div className="bg-[#1A1D27]/90 border border-purple-500/20 rounded-2xl p-5 sm:p-6 shadow-xl transition-all w-full">
                   <p className="text-gray-200 text-sm sm:text-base md:text-lg font-medium italic mb-3 sm:mb-4 leading-relaxed">"{promesasBiblicas[versoIndex].texto}"</p>
                   <p className="text-purple-400/80 font-bold text-xs sm:text-sm tracking-wide">— {promesasBiblicas[versoIndex].cita}</p>
                 </div>
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center gap-4 w-full px-4">
+              <div className="flex flex-col items-center w-full px-4 gap-6">
                 
-                {/* ALINEACIÓN PERFECTA: Centrado absoluto de los pasos 1 y 2 */}
-                <div className="w-full flex justify-center text-center">
-                  <p className="text-[11px] sm:text-xs md:text-sm font-bold tracking-widest text-gray-400 uppercase leading-relaxed inline-block">
-                    1. Selecciona el archivo de audio <br /> 
-                    2. Toca el círculo para iniciar
+                {/* ALINEACIÓN DE TEXTO: Perfectamente centrado */}
+                <div className="text-center">
+                  <p className="text-xs sm:text-sm font-bold tracking-[0.15em] text-gray-400 uppercase leading-loose">
+                    <span className="block mb-1">1. Selecciona tu archivo abajo</span>
+                    <span className="block">2. Presiona el botón morado</span>
                   </p>
                 </div>
                 
-                <div className="w-full max-w-[320px] bg-[#1A1C23] rounded-2xl border border-gray-700/50 p-1.5 shadow-lg mx-auto">
+                {/* EL INPUT NATIVO */}
+                <div className="w-full bg-[#1A1C23] rounded-full border border-gray-700 p-1.5 shadow-xl mx-auto">
                   <input 
                     type="file" 
+                    name="audioFile" // Etiqueta obligatoria para el FormData
                     ref={fileInputRef}
-                    accept="audio/*,video/*,.mp3,.wav,.m4a,.aac,.ogg,.mp4" 
+                    accept="audio/*,video/*,.mp3,.wav,.m4a,.aac,.ogg,.mp4,.caf" 
                     className="block w-full text-xs sm:text-sm text-gray-300
                       file:mr-4 file:py-3 file:px-6
-                      file:rounded-xl file:border-0
+                      file:rounded-full file:border-0
                       file:text-xs file:sm:text-sm file:font-bold file:tracking-wide
-                      file:bg-gradient-to-r file:from-purple-600 file:to-indigo-600 file:text-white
-                      hover:file:from-purple-500 hover:file:to-indigo-500 file:cursor-pointer file:transition-all
+                      file:bg-purple-600 file:text-white
+                      hover:file:bg-purple-500 file:cursor-pointer file:transition-colors
                       cursor-pointer focus:outline-none"
-                    // Mantenemos también los eventos de React por compatibilidad con Android
-                    onChange={(e) => {
-                      if (e.target.files && e.target.files.length > 0) {
-                        setFile(e.target.files[0]);
-                        setError(null);
-                      }
-                    }}
+                    required // Obliga al usuario a seleccionar algo antes de enviar
                   />
                 </div>
 
               </div>
             )}
-            {error && <div className="mt-2 sm:mt-4 px-4 py-2.5 bg-red-900/30 border border-red-500/50 rounded-lg text-red-200 text-xs sm:text-sm w-full max-w-sm text-center mx-auto">{error}</div>}
-          </div>
+            {error && <div className="mt-8 px-5 py-3 bg-red-900/30 border border-red-500/50 rounded-xl text-red-200 text-sm w-full text-center animate-fade-in">{error}</div>}
+          </form>
         )}
 
         {resultado && (
