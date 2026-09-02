@@ -34,7 +34,6 @@ export default function Home() {
   const [feedbackMsg, setFeedbackMsg] = useState('');
   const [feedbackStatus, setFeedbackStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
 
-  // Rotador de promesas
   useEffect(() => {
     let intervaloVerso: NodeJS.Timeout;
     if (loading) {
@@ -44,21 +43,6 @@ export default function Home() {
     }
     return () => clearInterval(intervaloVerso);
   }, [loading]);
-
-  // VIGILANTE SILENCIOSO PARA IOS SAFARI
-  useEffect(() => {
-    const chequearArchivo = () => {
-      if (fileInputRef.current?.files && fileInputRef.current.files.length > 0) {
-        const detectado = fileInputRef.current.files[0];
-        setFile(prev => {
-          if (!prev || prev.name !== detectado.name) return detectado;
-          return prev;
-        });
-      }
-    };
-    const intervalo = setInterval(chequearArchivo, 500);
-    return () => clearInterval(intervalo);
-  }, []);
 
   const enviarSugerencia = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,16 +72,19 @@ export default function Home() {
     }
   };
 
-  const manejarAnalisis = async () => {
-    // EL TRUCO DEFINITIVO: Tomar el archivo directamente del elemento HTML físico ignorando el estado visual.
+  // Convertimos la función en un manejador de Formulario tradicional
+  const manejarAnalisis = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault(); // Evita que la página recargue en iOS
+
+    // MAGIA IOS: Extraemos el archivo físicamente del DOM ignorando si React se dio cuenta o no
     const archivoFinal = fileInputRef.current?.files?.[0] || file;
 
     if (!archivoFinal) {
-      setError('Por favor, selecciona un archivo de audio primero en el botón de abajo.');
+      setError('Por favor, selecciona un archivo en el botón de abajo antes de iniciar.');
       return;
     }
 
-    setFile(archivoFinal); // Forzamos actualización visual
+    setFile(archivoFinal);
     setLoading(true);
     setProgress(5);
     setError(null);
@@ -110,7 +97,7 @@ export default function Home() {
       }, 500);
 
       const formDataCloud = new FormData();
-      formDataCloud.append('file', archivoFinal); // Enviamos archivoFinal directamente
+      formDataCloud.append('file', archivoFinal);
       formDataCloud.append('upload_preset', 'teodoc_preset');
 
       const resCloud = await fetch('https://api.cloudinary.com/v1_1/antbfat3/auto/upload', {
@@ -293,23 +280,22 @@ export default function Home() {
       <main className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 z-10 w-full max-w-5xl mx-auto -mt-4 sm:-mt-6">
         
         {!loading && !resultado && (
-          <div className="text-center space-y-3 sm:space-y-4 mb-10 sm:mb-16 animate-fade-in-up">
+          <div className="text-center space-y-3 sm:space-y-4 mb-8 sm:mb-12 animate-fade-in-up">
             <h1 className="text-3xl sm:text-4xl md:text-6xl font-extrabold tracking-tight text-white drop-shadow-sm px-2">Analiza tus prédicas.</h1>
             <p className="text-xs sm:text-sm md:text-base text-gray-400 max-w-lg mx-auto font-medium px-4">Transcripción instantánea y extracción de estructura teológica impulsada por IA.</p>
           </div>
         )}
 
         {!resultado && (
-          <div className="flex flex-col items-center gap-6 sm:gap-8 relative z-20 w-full">
+          // ENVOLTURA NATIVA DE FORMULARIO PARA IOS SAFARI
+          <form onSubmit={manejarAnalisis} className="flex flex-col items-center gap-8 relative z-20 w-full">
             
             <div className="relative flex items-center justify-center">
-              <div className={`absolute inset-0 rounded-full shadow-[0_0_40px_rgba(147,51,234,0.4)] transition-all duration-500 hover:shadow-[0_0_60px_rgba(147,51,234,0.6)]`}></div>
-              
+              {/* El botón ahora es type="submit" y tiene la sombra incluida en sus clases, sin capas separadas que bloqueen los toques */}
               <button
-                onClick={manejarAnalisis}
-                // ¡AQUÍ ESTÁ LA MAGIA! El botón nunca se bloquea por falta de archivo. Siempre está encendido.
+                type="submit"
                 disabled={loading}
-                className={`relative flex flex-col items-center justify-center w-28 h-28 sm:w-32 sm:h-32 md:w-36 md:h-36 rounded-full bg-gradient-to-br from-[#8E44AD] to-[#5B2C6F] transition-all duration-300 ${loading ? 'cursor-default opacity-80' : 'cursor-pointer hover:scale-105'}`}
+                className={`relative flex flex-col items-center justify-center w-28 h-28 sm:w-32 sm:h-32 md:w-36 md:h-36 rounded-full bg-gradient-to-br from-[#8E44AD] to-[#5B2C6F] shadow-[0_0_40px_rgba(147,51,234,0.4)] transition-all duration-300 z-10 ${loading ? 'cursor-default opacity-80' : 'cursor-pointer hover:scale-105 hover:shadow-[0_0_60px_rgba(147,51,234,0.6)]'}`}
               >
                 {loading ? (
                   <div className="flex flex-col items-center justify-center animate-fade-in">
@@ -319,7 +305,6 @@ export default function Home() {
                     </span>
                   </div>
                 ) : (
-                  // El icono siempre estará iluminado (text-white) sin depender de React
                   <svg className="w-8 h-8 sm:w-10 sm:h-10 text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
                   </svg>
@@ -338,16 +323,21 @@ export default function Home() {
                 </div>
               </div>
             ) : (
-              <div className="flex flex-col items-center gap-3 sm:gap-4 w-full px-4">
-                <span className="text-[10px] sm:text-xs md:text-sm font-semibold tracking-widest text-gray-400 uppercase">
-                  1. Selecciona el archivo | 2. Toca el círculo principal
-                </span>
+              <div className="flex flex-col items-center justify-center gap-4 w-full px-4">
                 
-                <div className="w-full max-w-[320px] bg-[#1A1C23] rounded-2xl border border-gray-700/50 p-1.5 shadow-lg relative">
+                {/* TEXTO CENTRADO Y ESTRUCTURADO */}
+                <div className="text-center w-full flex flex-col items-center justify-center">
+                  <span className="text-[11px] sm:text-xs md:text-sm font-bold tracking-widest text-gray-400 uppercase text-center block leading-relaxed">
+                    1. Selecciona el archivo de audio <br /> 
+                    2. Toca el círculo para iniciar
+                  </span>
+                </div>
+                
+                <div className="w-full max-w-[320px] bg-[#1A1C23] rounded-2xl border border-gray-700/50 p-1.5 shadow-lg mx-auto">
                   <input 
                     type="file" 
                     ref={fileInputRef}
-                    accept="audio/*,video/*,audio/mpeg,audio/ogg,audio/wav,audio/x-m4a,audio/aac,audio/mp4,audio/m4a,application/octet-stream,.mp3,.wav,.m4a,.ogg,.aac,.mp4,.caf" 
+                    accept=".mp3,.wav,.m4a,.aac,.caf,.ogg,.mp4,audio/*,video/*" 
                     className="block w-full text-xs sm:text-sm text-gray-300
                       file:mr-4 file:py-3 file:px-6
                       file:rounded-xl file:border-0
@@ -358,14 +348,6 @@ export default function Home() {
                     onChange={(e) => {
                       if (e.target.files && e.target.files.length > 0) {
                         setFile(e.target.files[0]);
-                        setError(null);
-                      }
-                    }}
-                    onInput={(e) => {
-                      const target = e.target as HTMLInputElement;
-                      if (target.files && target.files.length > 0) {
-                        setFile(target.files[0]);
-                        setError(null);
                       }
                     }}
                   />
@@ -373,8 +355,8 @@ export default function Home() {
 
               </div>
             )}
-            {error && <div className="mt-2 sm:mt-4 px-4 py-2.5 bg-red-900/30 border border-red-500/50 rounded-lg text-red-200 text-xs sm:text-sm w-full max-w-sm text-center">{error}</div>}
-          </div>
+            {error && <div className="mt-2 sm:mt-4 px-4 py-2.5 bg-red-900/30 border border-red-500/50 rounded-lg text-red-200 text-xs sm:text-sm w-full max-w-sm text-center mx-auto">{error}</div>}
+          </form>
         )}
 
         {resultado && (
@@ -546,7 +528,7 @@ export default function Home() {
                       </div>
 
                       <div className="mt-8 sm:mt-10 text-[#A69B85] text-[10px] sm:text-xs font-bold tracking-widest flex items-center gap-2">
-                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clipRule="evenodd"></path></svg>
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 100-2h-2V7z" clipRule="evenodd"></path></svg>
                         GENERADO POR TEODOC | RPM MINISTRY
                       </div>
                     </div>
