@@ -27,6 +27,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [versoIndex, setVersoIndex] = useState(0);
   const infografiaRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState('');
@@ -64,6 +65,17 @@ export default function Home() {
   const manejarSeleccionYAnalisis = (e: React.ChangeEvent<HTMLInputElement>) => {
     const archivoDetectado = e.target.files?.[0];
     if (!archivoDetectado) return;
+    
+    // Prevenir touch on iOS/Safari que causa doble procesamiento en este código
+    e.target.value = '';
+    
+    // Eliminar touch 이벤트의 기본 동작과 가로채는 동작을 차단하는 추가적인 감지 함수
+    const detectarPlataforma = () => {
+      const ua = navigator.userAgent;
+      const isIOs = ua.includes('iPhone') || ua.includes('iPad') || (ua.includes('Mac') && navigator.maxTouchPoints > 1);
+      const isAndroid = ua.includes('Android');
+      return { isIOs, isAndroid };
+    };
 
     setLoading(true);
     setProgress(5);
@@ -140,8 +152,7 @@ export default function Home() {
 
   const nuevoAnalisis = () => {
     setResultado(null); setError(null); setProgress(0);
-    const fileInput = document.getElementById('audio-upload-v16') as HTMLInputElement;
-    if (fileInput) fileInput.value = '';
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const descargarInfografia = async () => {
@@ -260,24 +271,16 @@ export default function Home() {
             <div className="relative flex items-center justify-center mb-6">
               <div className={`absolute inset-0 rounded-full transition-all duration-500 ${loading ? 'shadow-[0_0_60px_rgba(16,185,129,0.5)]' : 'shadow-[0_0_40px_rgba(147,51,234,0.4)]'}`}></div>
               
-              <label
-                htmlFor="audio-upload-v16"
+              <button
+                onClick={() => fileInputRef.current?.click()}
                 className={`relative flex flex-col items-center justify-center w-28 h-28 sm:w-32 sm:h-32 md:w-36 md:h-36 rounded-full bg-[#8E44AD] bg-gradient-to-br from-[#8E44AD] to-[#5B2C6F] transition-all duration-300 z-10 shadow-xl ${
                   loading 
                     ? 'bg-gradient-to-br from-emerald-600 to-teal-600 cursor-wait animate-pulse' 
                     : 'cursor-pointer hover:scale-105 hover:shadow-[0_0_60px_rgba(147,51,234,0.6)] active:scale-95'
                 }`}
+                aria-label="Seleccionar archivo de audio"
+                disabled={loading}
               >
-                {/* Accept estrictamente con extensiones de audio comunes para evitar la grabadora y forzar el selector de archivos */}
-                <input 
-                  id="audio-upload-v16"
-                  type="file" 
-                  accept=".mp3,.wav,.m4a,.aac,.ogg,.mp4,.flac,.wma,.opus,.caf"
-                  className="hidden" 
-                  onChange={manejarSeleccionYAnalisis}
-                  disabled={loading}
-                />
-
                 {loading ? (
                   <div className="flex flex-col items-center justify-center animate-fade-in text-center px-2">
                     <span className="text-2xl sm:text-3xl font-black text-white tracking-tight">{progress}%</span>
@@ -290,7 +293,17 @@ export default function Home() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
                   </svg>
                 )}
-              </label>
+              </button>
+
+              <input 
+                ref={fileInputRef}
+                id="audio-upload-v16"
+                type="file" 
+                accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg,.mp4,.flac,.wma,.opus,.caf"
+                className="hidden" 
+                onChange={manejarSeleccionYAnalisis}
+                onClick={(e) => { (e.target as HTMLInputElement).value = ''; }}
+              />
             </div>
 
             {loading ? (
