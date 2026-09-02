@@ -62,20 +62,25 @@ export default function Home() {
     }
   };
 
-  // ESTRUCTURA ADOBE PODCAST: Sin trucos visuales, disparo inmediato
-  const manejarSeleccion = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // FLUJO ADOBE PODCAST DE 1 SOLO PASO (Optimizando la RAM para iOS)
+  const manejarSeleccionYAnalisis = (e: React.ChangeEvent<HTMLInputElement>) => {
     const archivoDetectado = e.target.files?.[0];
-    if (!archivoDetectado) return; // Si el usuario cancela, ignorar
+    if (!archivoDetectado) return;
 
-    setFile(archivoDetectado);
-    setLoading(true);
-    setProgress(5);
-    setError(null);
-    setResultado(null);
-    setVersoIndex(0);
+    // Retrasamos 50ms la actualización visual para evitar que React sature Safari
+    setTimeout(() => {
+      setFile(archivoDetectado);
+      setLoading(true);
+      setProgress(5);
+      setError(null);
+      setResultado(null);
+      setVersoIndex(0);
+    }, 50);
 
-    // Lanzar el proceso de subida de inmediato
-    iniciarProcesoPesado(archivoDetectado);
+    // Retrasamos 600ms la subida para darle tiempo al iPhone de cerrar la app de "Archivos"
+    setTimeout(() => {
+      iniciarProcesoPesado(archivoDetectado);
+    }, 600);
   };
 
   const iniciarProcesoPesado = async (archivoParaProcesar: File) => {
@@ -134,7 +139,7 @@ export default function Home() {
       }, 500);
 
     } catch (err: any) {
-      setError(err.message || 'Ocurrió un error. El archivo puede ser muy pesado o tu internet inestable.');
+      setError(err.message || 'Ocurrió un error. El archivo puede ser muy pesado o falló la conexión.');
       setLoading(false);
       setProgress(0);
     }
@@ -142,9 +147,6 @@ export default function Home() {
 
   const nuevoAnalisis = () => {
     setFile(null); setResultado(null); setError(null); setProgress(0);
-    // Limpiar input físico
-    const fileInput = document.getElementById('audio-upload-input') as HTMLInputElement;
-    if (fileInput) fileInput.value = '';
   };
 
   const descargarInfografia = async () => {
@@ -260,43 +262,40 @@ export default function Home() {
         {!resultado && (
           <div className="flex flex-col items-center w-full max-w-lg relative z-20">
             
-            <div className="relative flex items-center justify-center mb-6">
+            <div className="relative flex items-center justify-center w-32 h-32 sm:w-40 sm:h-40 md:w-44 md:h-44 rounded-full mb-6 group">
               
-              {/* ESTRUCTURA NATIVA PURA: La etiqueta <label> es visualmente tu botón */}
-              {/* Notarás que NUNCA pasa a color gris oscuro, SIEMPRE está vibrante */}
-              <label
-                htmlFor="audio-upload-input"
-                className={`relative flex flex-col items-center justify-center w-32 h-32 sm:w-40 sm:h-40 md:w-44 md:h-44 rounded-full bg-gradient-to-br from-[#8E44AD] to-[#5B2C6F] shadow-[0_0_40px_rgba(147,51,234,0.6)] transition-all duration-300 z-10 ${loading ? 'cursor-wait opacity-80 pointer-events-none' : 'cursor-pointer hover:scale-105 hover:shadow-[0_0_60px_rgba(147,51,234,0.8)] active:scale-95'}`}
-              >
+              {/* CAPA 1: EL DISEÑO VISUAL (Siempre Brillante) */}
+              <div className={`absolute inset-0 rounded-full flex flex-col items-center justify-center bg-gradient-to-br from-[#8E44AD] to-[#5B2C6F] shadow-[0_0_40px_rgba(147,51,234,0.6)] transition-all duration-300 pointer-events-none ${loading ? 'opacity-80' : 'group-hover:scale-105 group-hover:shadow-[0_0_60px_rgba(147,51,234,0.8)]'}`}>
                 {loading ? (
-                  <div className="flex flex-col items-center justify-center animate-fade-in text-center">
+                  <>
                     <span className="text-3xl sm:text-4xl font-black text-white tracking-tight">{progress}%</span>
                     <span className="text-[10px] sm:text-[11px] uppercase tracking-widest text-purple-200/80 font-semibold mt-1">
                       {progress <= 50 ? 'Subiendo' : 'Analizando'}
                     </span>
-                  </div>
+                  </>
                 ) : (
                   <>
-                    <svg className="w-10 h-10 sm:w-12 sm:h-12 text-white mb-2 transition-colors drop-shadow-lg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-12 h-12 text-white mb-1 drop-shadow-lg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
                     </svg>
-                    <span className="text-[11px] sm:text-xs font-bold text-white uppercase tracking-widest drop-shadow-md px-2 text-center leading-tight">
+                    <span className="text-[11px] sm:text-xs font-bold text-white uppercase tracking-widest drop-shadow-md">
                       Subir Audio
                     </span>
                   </>
                 )}
-              </label>
-            </div>
+              </div>
 
-            {/* INPUT INVISIBLE FÍSICO (Separado de los estilos para evitar bloqueos del navegador) */}
-            <input 
-              id="audio-upload-input"
-              type="file" 
-              accept=".mp3,.wav,.m4a,.aac,.caf,.ogg,.mp4,audio/*,video/*" 
-              className="hidden" 
-              onChange={manejarSeleccion}
-              disabled={loading}
-            />
+              {/* CAPA 2: EL INPUT FÍSICO INVISIBLE (El dedo toca esto en realidad) */}
+              {!loading && (
+                <input 
+                  type="file" 
+                  accept="audio/*,video/*,.mp3,.wav,.m4a,.aac,.caf,.ogg,.mp4" 
+                  className="absolute top-0 left-0 w-full h-full opacity-0 z-50 cursor-pointer"
+                  title="" 
+                  onChange={manejarSeleccionYAnalisis}
+                />
+              )}
+            </div>
 
             {loading ? (
               <div className="flex flex-col items-center text-center mt-2 w-full px-2 animate-fade-in">
@@ -310,9 +309,8 @@ export default function Home() {
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center w-full px-4 text-center mt-2">
-                <span className="text-[11px] sm:text-xs md:text-sm font-bold tracking-[0.15em] text-gray-400 uppercase leading-loose inline-block">
-                  <span className="block mb-1">1. Toca el círculo morado</span>
-                  <span className="block">2. Elige tu archivo y espera</span>
+                <span className="text-[11px] sm:text-xs md:text-sm font-bold tracking-[0.2em] text-gray-400 uppercase leading-relaxed inline-block">
+                  Toca el círculo para subir tu archivo <br/> y comenzar automáticamente
                 </span>
               </div>
             )}
@@ -540,9 +538,8 @@ export default function Home() {
         </div>
       )}
 
-      {/* FOOTER ACTUALIZADO */}
       <footer className="w-full text-center py-5 sm:py-6 text-[10px] sm:text-xs text-gray-500 font-medium tracking-wide z-10 mt-auto px-4 space-y-1">
-        <p>Versión 7.0 (Limpieza Total de Caché) - Creado por RPM Ministry</p>
+        <p>Versión 8.0 (Capa Fantasma Segura) - Creado por RPM Ministry</p>
         <p>Diseño y desarrollo por Mauricio Andrade Luna</p>
       </footer>
     </div>
