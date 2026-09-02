@@ -61,7 +61,6 @@ export default function Home() {
     }
   };
 
-  // FLUJO DIRECTO NATIVO: Al seleccionar el archivo, arranca de inmediato en iOS y Android
   const manejarSeleccionYAnalisis = (e: React.ChangeEvent<HTMLInputElement>) => {
     const archivoDetectado = e.target.files?.[0];
     if (!archivoDetectado) return;
@@ -141,7 +140,7 @@ export default function Home() {
 
   const nuevoAnalisis = () => {
     setResultado(null); setError(null); setProgress(0);
-    const fileInput = document.getElementById('audio-upload-directo') as HTMLInputElement;
+    const fileInput = document.getElementById('audio-upload-redondo') as HTMLInputElement;
     if (fileInput) fileInput.value = '';
   };
 
@@ -258,58 +257,56 @@ export default function Home() {
         {!resultado && (
           <div className="flex flex-col items-center w-full max-w-lg relative z-20">
             
-            {/* BOTÓN NATIVO ESTILIZADO DE ALTA COMPATIBILIDAD (Aprobado para iOS y Android) */}
-            <div className="w-full max-w-[340px] mb-6">
-              <label 
-                htmlFor="audio-upload-directo"
-                className={`flex flex-col items-center justify-center w-full py-8 px-6 rounded-3xl bg-gradient-to-br from-[#8E44AD] to-[#5B2C6F] shadow-[0_0_40px_rgba(147,51,234,0.5)] transition-all duration-300 ${
-                  loading ? 'opacity-80 cursor-wait pointer-events-none' : 'cursor-pointer hover:scale-[1.02] hover:shadow-[0_0_60px_rgba(147,51,234,0.7)] active:scale-95'
+            <div className="relative flex items-center justify-center mb-6">
+              <div className={`absolute inset-0 rounded-full transition-all duration-500 ${loading ? 'shadow-[0_0_60px_rgba(16,185,129,0.5)]' : 'shadow-[0_0_40px_rgba(147,51,234,0.4)]'}`}></div>
+              
+              {/* CÍRCULO NATIVO REDONDO: Morado vibrante por defecto, y cambia a Verde Esmeralda al procesar */}
+              <label
+                htmlFor="audio-upload-redondo"
+                className={`relative flex flex-col items-center justify-center w-28 h-28 sm:w-32 sm:h-32 md:w-36 md:h-36 rounded-full transition-all duration-300 z-10 shadow-xl ${
+                  loading 
+                    ? 'bg-gradient-to-br from-emerald-600 to-teal-600 cursor-wait animate-pulse' 
+                    : 'bg-gradient-to-br from-[#8E44AD] to-[#5B2C6F] cursor-pointer hover:scale-105 hover:shadow-[0_0_60px_rgba(147,51,234,0.6)] active:scale-95'
                 }`}
               >
+                <input 
+                  id="audio-upload-redondo"
+                  type="file" 
+                  accept="audio/*,video/*,.mp3,.wav,.m4a,.aac,.caf,.ogg,.mp4" 
+                  className="hidden" 
+                  onChange={manejarSeleccionYAnalisis}
+                  disabled={loading}
+                />
+
                 {loading ? (
-                  <div className="flex flex-col items-center justify-center animate-fade-in py-2">
-                    <span className="text-3xl sm:text-4xl font-black text-white tracking-tight">{progress}%</span>
-                    <span className="text-[11px] sm:text-xs uppercase tracking-widest text-purple-200 font-semibold mt-2">
-                      {progress <= 50 ? 'Subiendo archivo...' : 'Analizando teología...'}
+                  <div className="flex flex-col items-center justify-center animate-fade-in text-center px-2">
+                    <span className="text-2xl sm:text-3xl font-black text-white tracking-tight">{progress}%</span>
+                    <span className="text-[9px] sm:text-[10px] uppercase tracking-widest text-emerald-200 font-semibold mt-0.5">
+                      {progress <= 50 ? 'Subiendo' : 'Analizando'}
                     </span>
                   </div>
                 ) : (
-                  <>
-                    <svg className="w-12 h-12 text-white mb-3 drop-shadow-lg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
-                    </svg>
-                    <span className="text-sm sm:text-base font-bold text-white uppercase tracking-widest drop-shadow-md">
-                      Seleccionar y Analizar Audio
-                    </span>
-                    <span className="text-[10px] text-purple-200/80 mt-1 font-medium">
-                      Compatible con iPhone, iPad y Android
-                    </span>
-                  </>
+                  <svg className="w-8 h-8 sm:w-10 sm:h-10 text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
+                  </svg>
                 )}
               </label>
-
-              {/* INPUT NATIVO REAL Y VISIBLE PARA IOS */}
-              <input 
-                id="audio-upload-directo"
-                type="file" 
-                accept="audio/*,video/*,.mp3,.wav,.m4a,.aac,.caf,.ogg,.mp4" 
-                className="hidden" 
-                onChange={manejarSeleccionYAnalisis}
-                disabled={loading}
-              />
             </div>
 
             {loading ? (
               <div className="flex flex-col items-center text-center mt-2 w-full px-2 animate-fade-in">
-                <div className="bg-[#1A1D27]/90 border border-purple-500/20 rounded-2xl p-5 sm:p-6 shadow-xl transition-all w-full">
+                <span className="text-xs sm:text-sm font-bold text-emerald-400 uppercase tracking-widest mb-4 sm:mb-6">
+                  {progress <= 50 ? 'Paso 1/2: Subiendo archivo...' : 'Paso 2/2: Analizando teología...'}
+                </span>
+                <div className="bg-[#1A1D27]/90 border border-emerald-500/20 rounded-2xl p-5 sm:p-6 shadow-xl transition-all w-full">
                   <p className="text-gray-200 text-sm sm:text-base md:text-lg font-medium italic mb-3 sm:mb-4 leading-relaxed">"{promesasBiblicas[versoIndex].texto}"</p>
-                  <p className="text-purple-400/80 font-bold text-xs sm:text-sm tracking-wide">— {promesasBiblicas[versoIndex].cita}</p>
+                  <p className="text-emerald-400/80 font-bold text-xs sm:text-sm tracking-wide">— {promesasBiblicas[versoIndex].cita}</p>
                 </div>
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center w-full px-4 text-center mt-2">
-                <span className="text-[11px] sm:text-xs font-bold tracking-[0.15em] text-gray-400 uppercase leading-relaxed inline-block">
-                  Toca el botón superior para explorar tus archivos <br/> y el análisis comenzará automáticamente
+                <span className="text-[11px] sm:text-xs md:text-sm font-bold tracking-[0.15em] text-gray-400 uppercase leading-relaxed inline-block">
+                  Toca el círculo para subir tu archivo <br/> y comenzar automáticamente
                 </span>
               </div>
             )}
@@ -539,7 +536,7 @@ export default function Home() {
 
       {/* FOOTER */}
       <footer className="w-full text-center py-5 sm:py-6 text-[10px] sm:text-xs text-gray-500 font-medium tracking-wide z-10 mt-auto px-4 space-y-1">
-        <p>Versión 9.0 (Botón Nativo Directo) - Creado por RPM Ministry</p>
+        <p>Versión 10.0 (Círculo Redondo Clásico) - Creado por RPM Ministry</p>
         <p>Diseño y desarrollo por Mauricio Andrade Luna</p>
       </footer>
     </div>
