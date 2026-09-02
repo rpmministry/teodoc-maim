@@ -21,7 +21,6 @@ const promesasBiblicas = [
 ];
 
 export default function Home() {
-  const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [resultado, setResultado] = useState<PredicaAnalisis | null>(null);
@@ -62,25 +61,20 @@ export default function Home() {
     }
   };
 
-  // FLUJO ADOBE PODCAST DE 1 SOLO PASO (Optimizando la RAM para iOS)
+  // FLUJO DIRECTO NATIVO: Al seleccionar el archivo, arranca de inmediato en iOS y Android
   const manejarSeleccionYAnalisis = (e: React.ChangeEvent<HTMLInputElement>) => {
     const archivoDetectado = e.target.files?.[0];
     if (!archivoDetectado) return;
 
-    // Retrasamos 50ms la actualización visual para evitar que React sature Safari
-    setTimeout(() => {
-      setFile(archivoDetectado);
-      setLoading(true);
-      setProgress(5);
-      setError(null);
-      setResultado(null);
-      setVersoIndex(0);
-    }, 50);
+    setLoading(true);
+    setProgress(5);
+    setError(null);
+    setResultado(null);
+    setVersoIndex(0);
 
-    // Retrasamos 600ms la subida para darle tiempo al iPhone de cerrar la app de "Archivos"
     setTimeout(() => {
       iniciarProcesoPesado(archivoDetectado);
-    }, 600);
+    }, 300);
   };
 
   const iniciarProcesoPesado = async (archivoParaProcesar: File) => {
@@ -146,7 +140,9 @@ export default function Home() {
   };
 
   const nuevoAnalisis = () => {
-    setFile(null); setResultado(null); setError(null); setProgress(0);
+    setResultado(null); setError(null); setProgress(0);
+    const fileInput = document.getElementById('audio-upload-directo') as HTMLInputElement;
+    if (fileInput) fileInput.value = '';
   };
 
   const descargarInfografia = async () => {
@@ -262,46 +258,49 @@ export default function Home() {
         {!resultado && (
           <div className="flex flex-col items-center w-full max-w-lg relative z-20">
             
-            <div className="relative flex items-center justify-center w-32 h-32 sm:w-40 sm:h-40 md:w-44 md:h-44 rounded-full mb-6 group">
-              
-              {/* CAPA 1: EL DISEÑO VISUAL (Siempre Brillante) */}
-              <div className={`absolute inset-0 rounded-full flex flex-col items-center justify-center bg-gradient-to-br from-[#8E44AD] to-[#5B2C6F] shadow-[0_0_40px_rgba(147,51,234,0.6)] transition-all duration-300 pointer-events-none ${loading ? 'opacity-80' : 'group-hover:scale-105 group-hover:shadow-[0_0_60px_rgba(147,51,234,0.8)]'}`}>
+            {/* BOTÓN NATIVO ESTILIZADO DE ALTA COMPATIBILIDAD (Aprobado para iOS y Android) */}
+            <div className="w-full max-w-[340px] mb-6">
+              <label 
+                htmlFor="audio-upload-directo"
+                className={`flex flex-col items-center justify-center w-full py-8 px-6 rounded-3xl bg-gradient-to-br from-[#8E44AD] to-[#5B2C6F] shadow-[0_0_40px_rgba(147,51,234,0.5)] transition-all duration-300 ${
+                  loading ? 'opacity-80 cursor-wait pointer-events-none' : 'cursor-pointer hover:scale-[1.02] hover:shadow-[0_0_60px_rgba(147,51,234,0.7)] active:scale-95'
+                }`}
+              >
                 {loading ? (
-                  <>
+                  <div className="flex flex-col items-center justify-center animate-fade-in py-2">
                     <span className="text-3xl sm:text-4xl font-black text-white tracking-tight">{progress}%</span>
-                    <span className="text-[10px] sm:text-[11px] uppercase tracking-widest text-purple-200/80 font-semibold mt-1">
-                      {progress <= 50 ? 'Subiendo' : 'Analizando'}
+                    <span className="text-[11px] sm:text-xs uppercase tracking-widest text-purple-200 font-semibold mt-2">
+                      {progress <= 50 ? 'Subiendo archivo...' : 'Analizando teología...'}
                     </span>
-                  </>
+                  </div>
                 ) : (
                   <>
-                    <svg className="w-12 h-12 text-white mb-1 drop-shadow-lg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-12 h-12 text-white mb-3 drop-shadow-lg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
                     </svg>
-                    <span className="text-[11px] sm:text-xs font-bold text-white uppercase tracking-widest drop-shadow-md">
-                      Subir Audio
+                    <span className="text-sm sm:text-base font-bold text-white uppercase tracking-widest drop-shadow-md">
+                      Seleccionar y Analizar Audio
+                    </span>
+                    <span className="text-[10px] text-purple-200/80 mt-1 font-medium">
+                      Compatible con iPhone, iPad y Android
                     </span>
                   </>
                 )}
-              </div>
+              </label>
 
-              {/* CAPA 2: EL INPUT FÍSICO INVISIBLE (El dedo toca esto en realidad) */}
-              {!loading && (
-                <input 
-                  type="file" 
-                  accept="audio/*,video/*,.mp3,.wav,.m4a,.aac,.caf,.ogg,.mp4" 
-                  className="absolute top-0 left-0 w-full h-full opacity-0 z-50 cursor-pointer"
-                  title="" 
-                  onChange={manejarSeleccionYAnalisis}
-                />
-              )}
+              {/* INPUT NATIVO REAL Y VISIBLE PARA IOS */}
+              <input 
+                id="audio-upload-directo"
+                type="file" 
+                accept="audio/*,video/*,.mp3,.wav,.m4a,.aac,.caf,.ogg,.mp4" 
+                className="hidden" 
+                onChange={manejarSeleccionYAnalisis}
+                disabled={loading}
+              />
             </div>
 
             {loading ? (
               <div className="flex flex-col items-center text-center mt-2 w-full px-2 animate-fade-in">
-                <span className="text-xs sm:text-sm font-bold text-purple-400 uppercase tracking-widest mb-4 sm:mb-6">
-                  {progress <= 50 ? 'Procesando tu archivo...' : 'Analizando teología y bosquejo...'}
-                </span>
                 <div className="bg-[#1A1D27]/90 border border-purple-500/20 rounded-2xl p-5 sm:p-6 shadow-xl transition-all w-full">
                   <p className="text-gray-200 text-sm sm:text-base md:text-lg font-medium italic mb-3 sm:mb-4 leading-relaxed">"{promesasBiblicas[versoIndex].texto}"</p>
                   <p className="text-purple-400/80 font-bold text-xs sm:text-sm tracking-wide">— {promesasBiblicas[versoIndex].cita}</p>
@@ -309,8 +308,8 @@ export default function Home() {
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center w-full px-4 text-center mt-2">
-                <span className="text-[11px] sm:text-xs md:text-sm font-bold tracking-[0.2em] text-gray-400 uppercase leading-relaxed inline-block">
-                  Toca el círculo para subir tu archivo <br/> y comenzar automáticamente
+                <span className="text-[11px] sm:text-xs font-bold tracking-[0.15em] text-gray-400 uppercase leading-relaxed inline-block">
+                  Toca el botón superior para explorar tus archivos <br/> y el análisis comenzará automáticamente
                 </span>
               </div>
             )}
@@ -393,7 +392,7 @@ export default function Home() {
                 <div className="grid md:grid-cols-2 gap-5 sm:gap-6">
                   <section className="bg-blue-900/10 p-5 sm:p-8 rounded-xl sm:rounded-2xl border border-blue-900/30">
                     <h3 className="text-xs sm:text-sm font-bold text-blue-400 mb-4 sm:mb-6 uppercase tracking-[0.15em] flex items-center gap-2 sm:gap-3">
-                      <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+                      <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
                       Aplicación Práctica
                     </h3>
                     <ul className="space-y-3 sm:space-y-4">
@@ -538,8 +537,9 @@ export default function Home() {
         </div>
       )}
 
+      {/* FOOTER */}
       <footer className="w-full text-center py-5 sm:py-6 text-[10px] sm:text-xs text-gray-500 font-medium tracking-wide z-10 mt-auto px-4 space-y-1">
-        <p>Versión 8.0 (Capa Fantasma Segura) - Creado por RPM Ministry</p>
+        <p>Versión 9.0 (Botón Nativo Directo) - Creado por RPM Ministry</p>
         <p>Diseño y desarrollo por Mauricio Andrade Luna</p>
       </footer>
     </div>
