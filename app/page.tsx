@@ -317,15 +317,14 @@ export default function Home() {
               <div className="flex flex-col items-center gap-3 sm:gap-4 w-full px-4">
                 <span className="text-[10px] sm:text-xs md:text-sm font-semibold tracking-widest text-gray-400 uppercase">{file ? 'Toca el círculo para analizar' : 'Esperando archivo'}</span>
                 
-                {/* SOLUCIÓN FINAL: Estructura directa y sincrónica para iOS */}
+                {/* SOLUCIÓN FINAL: Reglas estrictas para Safari iOS aplicadas */}
                 <div className="relative w-full max-w-[280px]">
                   <input 
                     type="file" 
-                    accept="audio/*,video/*,.mp3,.wav,.m4a,.mp4,.aac,.ogg" 
+                    accept=".mp3,.wav,.m4a,.aac,.caf,.ogg,.mp4" 
                     className="absolute inset-0 w-full h-full opacity-0 z-50 cursor-pointer" 
                     onChange={(e) => {
                       if (e.target.files && e.target.files.length > 0) {
-                        // Cambio sincrónico inmediato, sin tiempos de espera que Apple bloquee
                         setFile(e.target.files[0]);
                       }
                     }} 
