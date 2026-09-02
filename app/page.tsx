@@ -34,7 +34,7 @@ export default function Home() {
   const [feedbackMsg, setFeedbackMsg] = useState('');
   const [feedbackStatus, setFeedbackStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
 
-  // 1. Efecto para los versículos
+  // Rotador de promesas
   useEffect(() => {
     let intervaloVerso: NodeJS.Timeout;
     if (loading) {
@@ -45,22 +45,27 @@ export default function Home() {
     return () => clearInterval(intervaloVerso);
   }, [loading]);
 
-  // 2. NUEVO: Vigilante silencioso para obligar a iOS a reconocer el archivo
+  // VIGILANTE AGRESIVO: Intenta detectar el archivo si Safari no avisa
   useEffect(() => {
-    const vigilanteArchivo = setInterval(() => {
-      if (fileInputRef.current && fileInputRef.current.files && fileInputRef.current.files.length > 0) {
-        const archivoDetectado = fileInputRef.current.files[0];
-        setFile((archivoActual) => {
-          // Si no había archivo, o si el nombre es diferente, lo actualiza forzosamente
-          if (!archivoActual || archivoActual.name !== archivoDetectado.name) {
-            return archivoDetectado;
-          }
-          return archivoActual;
+    const chequearArchivo = () => {
+      if (fileInputRef.current?.files && fileInputRef.current.files.length > 0) {
+        const detectado = fileInputRef.current.files[0];
+        setFile(prev => {
+          if (!prev || prev.name !== detectado.name) return detectado;
+          return prev;
         });
       }
-    }, 500); // Revisa el botón nativo cada medio segundo
+    };
 
-    return () => clearInterval(vigilanteArchivo);
+    const intervalo = setInterval(chequearArchivo, 500);
+    window.addEventListener('focus', chequearArchivo);
+    document.addEventListener('visibilitychange', chequearArchivo);
+
+    return () => {
+      clearInterval(intervalo);
+      window.removeEventListener('focus', chequearArchivo);
+      document.removeEventListener('visibilitychange', chequearArchivo);
+    };
   }, []);
 
   const enviarSugerencia = async (e: React.FormEvent) => {
@@ -71,31 +76,27 @@ export default function Home() {
       const res = await fetch("https://formsubmit.co/ajax/recursosparaministerios@gmail.com", {
         method: "POST",
         headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body: JSON.stringify({
-          _subject: "💡 Nueva Sugerencia - TeoDoc",
-          mensaje: feedbackMsg
-        })
+        body: JSON.stringify({ _subject: "💡 Nueva Sugerencia - TeoDoc", mensaje: feedbackMsg })
       });
       if (res.ok) {
         setFeedbackStatus('success');
-        setTimeout(() => {
-          setShowFeedbackModal(false);
-          setFeedbackStatus('idle');
-          setFeedbackMsg('');
-        }, 3000);
-      } else {
-        throw new Error("Error en servidor");
-      }
+        setTimeout(() => { setShowFeedbackModal(false); setFeedbackStatus('idle'); setFeedbackMsg(''); }, 3000);
+      } else throw new Error("Error");
     } catch (err) {
       setFeedbackStatus('error');
     }
   };
 
   const manejarAnalisis = async () => {
-    if (!file) {
-      setError('Por favor, selecciona un archivo de audio primero.');
+    // EL TRUCO DEFINITIVO: Tomar el archivo directamente del elemento HTML ignorando el estado de React
+    const archivoFinal = fileInputRef.current?.files?.[0] || file;
+
+    if (!archivoFinal) {
+      setError('Por favor, selecciona un archivo de audio primero en el botón de abajo.');
       return;
     }
+
+    setFile(archivoFinal); // Forzamos actualización visual
     setLoading(true);
     setProgress(5);
     setError(null);
@@ -108,7 +109,7 @@ export default function Home() {
       }, 500);
 
       const formDataCloud = new FormData();
-      formDataCloud.append('file', file);
+      formDataCloud.append('file', archivoFinal); // Usamos el archivo forzado
       formDataCloud.append('upload_preset', 'teodoc_preset');
 
       const resCloud = await fetch('https://api.cloudinary.com/v1_1/antbfat3/auto/upload', {
@@ -148,8 +149,7 @@ export default function Home() {
       const timerAnalyze = setInterval(() => {
         setProgress((prev) => {
           if (prev >= 98) return 98;
-          const restante = 99 - prev;
-          return prev + Math.max(1, Math.floor(restante * 0.05));
+          return prev + Math.max(1, Math.floor((99 - prev) * 0.05));
         });
       }, 1000);
 
@@ -301,12 +301,13 @@ export default function Home() {
           <div className="flex flex-col items-center gap-6 sm:gap-8 relative z-20 w-full">
             
             <div className="relative flex items-center justify-center">
-              <div className={`absolute inset-0 rounded-full shadow-[0_0_40px_rgba(147,51,234,0.3)] transition-all duration-500 ${file && !loading ? 'hover:shadow-[0_0_60px_rgba(147,51,234,0.5)]' : ''}`}></div>
+              <div className={`absolute inset-0 rounded-full shadow-[0_0_40px_rgba(147,51,234,0.3)] transition-all duration-500 hover:shadow-[0_0_60px_rgba(147,51,234,0.5)]`}></div>
               
               <button
                 onClick={manejarAnalisis}
-                disabled={loading || !file}
-                className={`relative flex flex-col items-center justify-center w-28 h-28 sm:w-32 sm:h-32 md:w-36 md:h-36 rounded-full bg-gradient-to-br from-[#8E44AD] to-[#5B2C6F] transition-all duration-300 ${!file || loading ? 'cursor-default' : 'cursor-pointer hover:scale-105'}`}
+                // ¡AQUÍ ESTÁ EL CAMBIO! Ya no se bloquea si no hay archivo, siempre se puede oprimir
+                disabled={loading}
+                className={`relative flex flex-col items-center justify-center w-28 h-28 sm:w-32 sm:h-32 md:w-36 md:h-36 rounded-full bg-gradient-to-br from-[#8E44AD] to-[#5B2C6F] transition-all duration-300 ${loading ? 'cursor-default' : 'cursor-pointer hover:scale-105'}`}
               >
                 {loading ? (
                   <div className="flex flex-col items-center justify-center animate-fade-in">
@@ -316,7 +317,7 @@ export default function Home() {
                     </span>
                   </div>
                 ) : (
-                  <svg className={`w-8 h-8 sm:w-10 sm:h-10 transition-colors ${file ? 'text-white' : 'text-white/50'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-8 h-8 sm:w-10 sm:h-10 text-white transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
                   </svg>
                 )}
@@ -336,7 +337,7 @@ export default function Home() {
             ) : (
               <div className="flex flex-col items-center gap-3 sm:gap-4 w-full px-4">
                 <span className="text-[10px] sm:text-xs md:text-sm font-semibold tracking-widest text-gray-400 uppercase">
-                  {file ? 'Toca el círculo para analizar' : 'Esperando archivo'}
+                  1. Selecciona un archivo | 2. Toca el círculo para analizar
                 </span>
                 
                 <div className="w-full max-w-[320px] bg-[#1A1C23] rounded-2xl border border-gray-700/50 p-1.5 shadow-lg">
@@ -354,6 +355,14 @@ export default function Home() {
                     onChange={(e) => {
                       if (e.target.files && e.target.files.length > 0) {
                         setFile(e.target.files[0]);
+                        setError(null);
+                      }
+                    }}
+                    onInput={(e) => {
+                      const target = e.target as HTMLInputElement;
+                      if (target.files && target.files.length > 0) {
+                        setFile(target.files[0]);
+                        setError(null);
                       }
                     }}
                   />
