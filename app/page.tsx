@@ -296,7 +296,7 @@ export default function Home() {
             <div className="relative flex items-center justify-center mb-6">
               <div className="relative w-28 h-28 sm:w-32 sm:h-32 md:w-36 md:h-36">
                 {/* Visual button - the gradient circle */}
-                <div className={`absolute inset-0 rounded-full bg-[#8E44AD] bg-gradient-to-br from-[#8E44AD] to-[#5B2C6F] transition-all duration-300 z-0 shadow-xl ${loading ? 'bg-gradient-to-br from-emerald-600 to-teal-600 cursor-wait animate-pulse' : 'cursor-pointer hover:scale-105 hover:shadow-[0_0_60px_rgba(147,51,234,0.6)] active:scale-95'}`}></div>
+                <div onClick={handleButtonClick} className={`absolute inset-0 rounded-full bg-[#8E44AD] bg-gradient-to-br from-[#8E44AD] to-[#5B2C6F] transition-all duration-300 z-0 shadow-xl ${loading ? 'bg-gradient-to-br from-emerald-600 to-teal-600 cursor-wait animate-pulse' : 'cursor-pointer hover:scale-105 hover:shadow-[0_0_60px_rgba(147,51,234,0.6)] active:scale-95'}`}></div>
                 
                 {/* Shadow/glow effect */}
                 <div className={`absolute inset-0 rounded-full transition-all duration-500 ${loading ? 'shadow-[0_0_60px_rgba(16,185,129,0.5)]' : 'shadow-[0_0_40px_rgba(147,51,234,0.4)]'}`}></div>
@@ -322,7 +322,7 @@ export default function Home() {
                   ref={fileInputRef}
                   id="audio-upload-v16"
                   type="file" 
-                  accept={platform === 'android' ? '.mp3,.wav,.m4a,.aac,.ogg,.mp4,.flac,.wma,.opus,.caf' : 'audio/*,.mp3,.wav,.m4a,.aac,.ogg,.mp4,.flac,.wma,.opus,.caf'}
+                  accept={getAcceptAttribute()}
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
                   onChange={manejarSeleccionYAnalisis}
                 />
@@ -572,7 +572,7 @@ export default function Home() {
 
       {/* FOOTER */}
       <footer className="w-full text-center py-5 sm:py-6 text-[10px] sm:text-xs text-gray-500 font-medium tracking-wide z-10 mt-auto px-4 space-y-1">
-        <p>Versión 16.0 - Creado por RPM Ministry</p>
+        <p>Versión 1.1 - Creado por RPM Ministry</p>
         <p>Diseño y desarrollo por Mauricio Andrade Luna</p>
       </footer>
     </div>
