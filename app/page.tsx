@@ -34,6 +34,7 @@ export default function Home() {
   const [feedbackMsg, setFeedbackMsg] = useState('');
   const [feedbackStatus, setFeedbackStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
 
+  // Rotador de promesas
   useEffect(() => {
     let intervaloVerso: NodeJS.Timeout;
     if (loading) {
@@ -43,6 +44,28 @@ export default function Home() {
     }
     return () => clearInterval(intervaloVerso);
   }, [loading]);
+
+  // SOLUCIÓN MAGISTRAL IOS: Event Listener Nativo.
+  // Nos saltamos a React y escuchamos directamente a Safari.
+  useEffect(() => {
+    const inputElement = fileInputRef.current;
+    if (!inputElement) return;
+
+    const handleNativeChange = (event: Event) => {
+      const target = event.target as HTMLInputElement;
+      if (target.files && target.files.length > 0) {
+        setFile(target.files[0]);
+        setError(null);
+      }
+    };
+
+    // Escuchamos el evento nativo del celular
+    inputElement.addEventListener('change', handleNativeChange);
+    
+    return () => {
+      inputElement.removeEventListener('change', handleNativeChange);
+    };
+  }, []);
 
   const enviarSugerencia = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,15 +96,15 @@ export default function Home() {
   };
 
   const manejarAnalisis = async () => {
-    // Leemos el archivo directo del DOM
-    const archivoFinal = fileInputRef.current?.files?.[0] || file;
+    // Leemos el archivo del estado, o forzosamente del input si el estado falló
+    const archivoFinal = file || fileInputRef.current?.files?.[0];
 
     if (!archivoFinal) {
-      setError('Por favor, selecciona un archivo en el Paso 1 antes de iniciar el análisis.');
+      setError('No detectamos el archivo. Por favor, vuelve a seleccionarlo y asegúrate de que cargue.');
       return;
     }
 
-    setFile(archivoFinal);
+    setFile(archivoFinal); 
     setLoading(true);
     setProgress(5);
     setError(null);
@@ -162,7 +185,7 @@ export default function Home() {
       }, 500);
 
     } catch (err: any) {
-      setError(err.message || 'Ocurrió un error inesperado en el proceso. El archivo podría ser muy grande.');
+      setError(err.message || 'Ocurrió un error inesperado en el proceso.');
       setLoading(false);
       setProgress(0);
     }
@@ -284,7 +307,6 @@ export default function Home() {
         )}
 
         {!resultado && (
-          // Hemos eliminado el form que causaba el reinicio, volvemos a una caja normal div
           <div className="flex flex-col items-center gap-8 relative z-20 w-full">
             
             <div className="relative flex items-center justify-center">
@@ -292,7 +314,7 @@ export default function Home() {
               
               <button
                 type="button" 
-                onClick={manejarAnalisis} // Ejecuta la función de manera segura
+                onClick={manejarAnalisis} 
                 disabled={loading}
                 className={`relative flex flex-col items-center justify-center w-28 h-28 sm:w-32 sm:h-32 md:w-36 md:h-36 rounded-full bg-gradient-to-br from-[#8E44AD] to-[#5B2C6F] shadow-[0_0_40px_rgba(147,51,234,0.4)] transition-all duration-300 z-10 ${loading ? 'cursor-default opacity-80' : 'cursor-pointer hover:scale-105 hover:shadow-[0_0_60px_rgba(147,51,234,0.6)]'}`}
               >
@@ -304,8 +326,8 @@ export default function Home() {
                     </span>
                   </div>
                 ) : (
-                  // INDICADOR VISUAL NUEVO: Si hay un archivo cargado, el ícono se pintará de verde claro
-                  <svg className={`w-8 h-8 sm:w-10 sm:h-10 transition-colors ${file ? 'text-green-400' : 'text-white'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  // ALERTA VISUAL: Si hay un archivo capturado, el ícono se iluminará de verde brillante
+                  <svg className={`w-8 h-8 sm:w-10 sm:h-10 transition-all duration-300 ${file ? 'text-green-400 drop-shadow-[0_0_12px_rgba(74,222,128,0.8)] scale-110' : 'text-white'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
                   </svg>
                 )}
@@ -325,19 +347,19 @@ export default function Home() {
             ) : (
               <div className="flex flex-col items-center justify-center gap-4 w-full px-4">
                 
-                <div className="text-center w-full flex flex-col items-center justify-center">
-                  <span className="text-[11px] sm:text-xs md:text-sm font-bold tracking-widest text-gray-400 uppercase text-center block leading-relaxed">
+                {/* ALINEACIÓN PERFECTA: Centrado absoluto de los pasos 1 y 2 */}
+                <div className="w-full flex justify-center text-center">
+                  <p className="text-[11px] sm:text-xs md:text-sm font-bold tracking-widest text-gray-400 uppercase leading-relaxed inline-block">
                     1. Selecciona el archivo de audio <br /> 
                     2. Toca el círculo para iniciar
-                  </span>
+                  </p>
                 </div>
                 
                 <div className="w-full max-w-[320px] bg-[#1A1C23] rounded-2xl border border-gray-700/50 p-1.5 shadow-lg mx-auto">
                   <input 
                     type="file" 
-                    id="archivo-audio-nativo"
                     ref={fileInputRef}
-                    accept=".mp3,.wav,.m4a,.aac,.caf,.ogg,.mp4,audio/*,video/*" 
+                    accept="audio/*,video/*,.mp3,.wav,.m4a,.aac,.ogg,.mp4" 
                     className="block w-full text-xs sm:text-sm text-gray-300
                       file:mr-4 file:py-3 file:px-6
                       file:rounded-xl file:border-0
@@ -345,6 +367,7 @@ export default function Home() {
                       file:bg-gradient-to-r file:from-purple-600 file:to-indigo-600 file:text-white
                       hover:file:from-purple-500 hover:file:to-indigo-500 file:cursor-pointer file:transition-all
                       cursor-pointer focus:outline-none"
+                    // Mantenemos también los eventos de React por compatibilidad con Android
                     onChange={(e) => {
                       if (e.target.files && e.target.files.length > 0) {
                         setFile(e.target.files[0]);
