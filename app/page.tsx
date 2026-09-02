@@ -21,6 +21,7 @@ const promesasBiblicas = [
 ];
 
 export default function Home() {
+  const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [resultado, setResultado] = useState<PredicaAnalisis | null>(null);
@@ -33,7 +34,6 @@ export default function Home() {
   const [feedbackMsg, setFeedbackMsg] = useState('');
   const [feedbackStatus, setFeedbackStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
 
-  // Rotador de promesas durante la carga
   useEffect(() => {
     let intervaloVerso: NodeJS.Timeout;
     if (loading) {
@@ -43,6 +43,28 @@ export default function Home() {
     }
     return () => clearInterval(intervaloVerso);
   }, [loading]);
+
+  // VIGILANTE DE ESTADO SEGURO: Obliga a React a enterarse cuando Safari carga el archivo
+  useEffect(() => {
+    const sincronizarArchivo = () => {
+      if (fileInputRef.current && fileInputRef.current.files && fileInputRef.current.files.length > 0) {
+        setFile(fileInputRef.current.files[0]);
+      }
+    };
+    
+    // Escucha cuando regresas de la ventana de archivos en el iPhone
+    window.addEventListener('focus', sincronizarArchivo);
+    document.addEventListener('visibilitychange', sincronizarArchivo);
+    
+    // Mini-revisor constante (1 vez por segundo)
+    const revisor = setInterval(sincronizarArchivo, 1000);
+
+    return () => {
+      window.removeEventListener('focus', sincronizarArchivo);
+      document.removeEventListener('visibilitychange', sincronizarArchivo);
+      clearInterval(revisor);
+    };
+  }, []);
 
   const enviarSugerencia = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,20 +94,16 @@ export default function Home() {
     }
   };
 
-  // MAGIA NATIVA: Usamos el evento de envío del formulario, que es infalible en iOS
-  const manejarAnalisis = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault(); // Evita que la página web recargue
+  const manejarAnalisis = async () => {
+    // Tomamos la referencia más actualizada
+    const archivoParaSubir = file || fileInputRef.current?.files?.[0];
 
-    // Extraemos el archivo directamente del formulario nativo, esquivando a React
-    const formData = new FormData(e.currentTarget);
-    const archivoFinal = formData.get('audioFile') as File;
-
-    // Validación estricta si el iPhone no nos entregó el archivo
-    if (!archivoFinal || archivoFinal.name === '' || archivoFinal.size === 0) {
-      setError('⚠️ Archivo no detectado. Si está en iCloud, asegúrate de que se haya descargado por completo antes de oprimir el botón.');
+    if (!archivoParaSubir) {
+      setError('Por favor, selecciona un archivo en el Paso 1.');
       return;
     }
 
+    setFile(archivoParaSubir);
     setLoading(true);
     setProgress(5);
     setError(null);
@@ -97,9 +115,8 @@ export default function Home() {
         setProgress((prev) => (prev >= 25 ? 25 : prev + 1));
       }, 500);
 
-      // Enviamos el archivo extraído a Cloudinary
       const formDataCloud = new FormData();
-      formDataCloud.append('file', archivoFinal);
+      formDataCloud.append('file', archivoParaSubir);
       formDataCloud.append('upload_preset', 'teodoc_preset');
 
       const resCloud = await fetch('https://api.cloudinary.com/v1_1/antbfat3/auto/upload', {
@@ -108,7 +125,7 @@ export default function Home() {
       });
       clearInterval(timerCloud);
 
-      if (!resCloud.ok) throw new Error('Error al subir el archivo a la nube de paso. Revisa tu conexión a internet.');
+      if (!resCloud.ok) throw new Error('Error al subir el archivo a la nube. Verifica tu conexión a internet.');
       const cloudData = await resCloud.json();
       const audioUrl = cloudData.secure_url;
 
@@ -166,16 +183,14 @@ export default function Home() {
       }, 500);
 
     } catch (err: any) {
-      setError(err.message || 'Ocurrió un error inesperado en el proceso. Intenta de nuevo.');
+      setError(err.message || 'Ocurrió un error inesperado. El archivo puede ser muy pesado.');
       setLoading(false);
       setProgress(0);
     }
   };
 
   const nuevoAnalisis = () => {
-    setResultado(null); 
-    setError(null); 
-    setProgress(0);
+    setFile(null); setResultado(null); setError(null); setProgress(0);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -290,27 +305,41 @@ export default function Home() {
         )}
 
         {!resultado && (
-          // ESTRUCTURA ESTÁNDAR: FORMULARIO HTML PURO
-          <form onSubmit={manejarAnalisis} className="flex flex-col items-center w-full max-w-lg relative z-20">
+          // CONTENEDOR SEGURO: Usamos 'div' en lugar de 'form' para que iOS JAMÁS reinicie la página
+          <div className="flex flex-col items-center w-full max-w-lg relative z-20">
             
-            {/* EL BOTÓN (Siempre de color y vibrante, nunca "desactivado" visualmente) */}
-            <div className="relative flex items-center justify-center mb-8">
-              <div className="absolute inset-0 rounded-full shadow-[0_0_40px_rgba(147,51,234,0.5)] transition-all duration-500"></div>
+            <div className="relative flex items-center justify-center mb-6">
               
               <button
-                type="submit" 
-                disabled={loading}
-                className={`relative flex flex-col items-center justify-center w-28 h-28 sm:w-32 sm:h-32 md:w-36 md:h-36 rounded-full bg-gradient-to-br from-[#8E44AD] to-[#5B2C6F] transition-all duration-300 z-10 ${loading ? 'cursor-wait opacity-80' : 'cursor-pointer hover:scale-105 hover:shadow-[0_0_60px_rgba(147,51,234,0.7)] active:scale-95'}`}
+                type="button" // Tipo botón previene absolutamente el reinicio de pantalla
+                onClick={manejarAnalisis} 
+                disabled={!file || loading}
+                // CAMBIO RADICAL DE COLOR: 
+                // Sin archivo = Gris y aburrido.
+                // Con archivo = Morado brillante y llamativo.
+                className={`relative flex flex-col items-center justify-center w-28 h-28 sm:w-32 sm:h-32 md:w-36 md:h-36 rounded-full transition-all duration-300 z-10 ${
+                  !file 
+                    ? 'bg-[#1A1C23] border-2 border-gray-700/50 cursor-not-allowed opacity-60' 
+                    : loading
+                    ? 'bg-gradient-to-br from-[#8E44AD] to-[#5B2C6F] cursor-wait opacity-80'
+                    : 'bg-gradient-to-br from-purple-500 to-indigo-500 shadow-[0_0_40px_rgba(147,51,234,0.6)] cursor-pointer hover:scale-105 hover:shadow-[0_0_60px_rgba(147,51,234,0.8)]'
+                }`}
               >
                 {loading ? (
                   <div className="flex flex-col items-center justify-center animate-fade-in">
                     <span className="text-2xl sm:text-3xl font-black text-white tracking-tight">{progress}%</span>
                     <span className="text-[9px] sm:text-[10px] uppercase tracking-widest text-purple-200/80 font-semibold mt-0.5">
-                      {progress <= 50 ? 'Transcribiendo' : 'Analizando'}
+                      {progress <= 50 ? 'Procesando' : 'Analizando'}
                     </span>
                   </div>
+                ) : !file ? (
+                  // Ícono gris cuando no hay archivo
+                  <svg className="w-8 h-8 sm:w-10 sm:h-10 text-gray-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
+                  </svg>
                 ) : (
-                  <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  // Ícono blanco brillante cuando SÍ hay archivo
+                  <svg className="w-10 h-10 text-white animate-pulse transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
                   </svg>
                 )}
@@ -320,7 +349,7 @@ export default function Home() {
             {loading ? (
               <div className="flex flex-col items-center text-center mt-2 w-full px-2 animate-fade-in">
                 <span className="text-xs sm:text-sm font-bold text-purple-400 uppercase tracking-widest mb-4 sm:mb-6">
-                  {progress <= 50 ? 'Paso 1/2: Subiendo y transcribiendo...' : 'Paso 2/2: Analizando teología y bosquejo...'}
+                  Procesando audio de forma segura...
                 </span>
                 <div className="bg-[#1A1D27]/90 border border-purple-500/20 rounded-2xl p-5 sm:p-6 shadow-xl transition-all w-full">
                   <p className="text-gray-200 text-sm sm:text-base md:text-lg font-medium italic mb-3 sm:mb-4 leading-relaxed">"{promesasBiblicas[versoIndex].texto}"</p>
@@ -328,38 +357,44 @@ export default function Home() {
                 </div>
               </div>
             ) : (
-              <div className="flex flex-col items-center w-full px-4 gap-6">
+              <div className="flex flex-col items-center w-full px-4 gap-5">
                 
-                {/* ALINEACIÓN DE TEXTO: Perfectamente centrado */}
-                <div className="text-center">
-                  <p className="text-xs sm:text-sm font-bold tracking-[0.15em] text-gray-400 uppercase leading-loose">
-                    <span className="block mb-1">1. Selecciona tu archivo abajo</span>
-                    <span className="block">2. Presiona el botón morado</span>
+                {/* TEXTOS 100% CENTRADOS Y ALINEADOS */}
+                <div className="w-full flex flex-col items-center justify-center text-center">
+                  <p className="text-[11px] sm:text-xs md:text-sm font-bold tracking-widest text-gray-400 uppercase leading-loose block">
+                    <span className="block mb-1">1. Selecciona el archivo abajo</span>
+                    <span className={`block transition-colors duration-300 ${file ? 'text-purple-400' : 'text-gray-500'}`}>
+                      2. Presiona el círculo para analizar
+                    </span>
                   </p>
                 </div>
                 
-                {/* EL INPUT NATIVO */}
-                <div className="w-full bg-[#1A1C23] rounded-full border border-gray-700 p-1.5 shadow-xl mx-auto">
+                {/* BOTÓN NATIVO DE ARCHIVO ESTILIZADO */}
+                <div className="w-full max-w-[320px] bg-[#1A1C23] rounded-2xl border border-gray-700/50 p-2 shadow-lg mx-auto">
                   <input 
                     type="file" 
-                    name="audioFile" // Etiqueta obligatoria para el FormData
                     ref={fileInputRef}
-                    accept="audio/*,video/*,.mp3,.wav,.m4a,.aac,.ogg,.mp4,.caf" 
+                    accept="audio/*,video/*,.mp3,.wav,.m4a,.aac,.caf,.ogg,.mp4" 
                     className="block w-full text-xs sm:text-sm text-gray-300
                       file:mr-4 file:py-3 file:px-6
-                      file:rounded-full file:border-0
+                      file:rounded-xl file:border-0
                       file:text-xs file:sm:text-sm file:font-bold file:tracking-wide
-                      file:bg-purple-600 file:text-white
-                      hover:file:bg-purple-500 file:cursor-pointer file:transition-colors
+                      file:bg-[#2A2D39] file:text-purple-400
+                      hover:file:bg-[#343846] file:cursor-pointer file:transition-all
                       cursor-pointer focus:outline-none"
-                    required // Obliga al usuario a seleccionar algo antes de enviar
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files.length > 0) {
+                        setFile(e.target.files[0]);
+                        setError(null);
+                      }
+                    }}
                   />
                 </div>
 
               </div>
             )}
             {error && <div className="mt-8 px-5 py-3 bg-red-900/30 border border-red-500/50 rounded-xl text-red-200 text-sm w-full text-center animate-fade-in">{error}</div>}
-          </form>
+          </div>
         )}
 
         {resultado && (
@@ -582,9 +617,9 @@ export default function Home() {
         </div>
       )}
 
-      {/* FOOTER ACTUALIZADO */}
+      {/* FOOTER: Prueba absoluta de actualización */}
       <footer className="w-full text-center py-5 sm:py-6 text-[10px] sm:text-xs text-gray-500 font-medium tracking-wide z-10 mt-auto px-4 space-y-1">
-        <p>Creado por RPM Ministry</p>
+        <p>Versión 3.0 (iOS Bypass) - Creado por RPM Ministry</p>
         <p>Diseño y desarrollo por Mauricio Andrade Luna</p>
       </footer>
     </div>
