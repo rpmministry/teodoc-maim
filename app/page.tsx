@@ -27,7 +27,6 @@ export default function Home() {
   const [resultado, setResultado] = useState<PredicaAnalisis | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [versoIndex, setVersoIndex] = useState(0);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const infografiaRef = useRef<HTMLDivElement>(null);
 
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
@@ -43,28 +42,6 @@ export default function Home() {
     }
     return () => clearInterval(intervaloVerso);
   }, [loading]);
-
-  // VIGILANTE DE ESTADO SEGURO: Obliga a React a enterarse cuando Safari carga el archivo
-  useEffect(() => {
-    const sincronizarArchivo = () => {
-      if (fileInputRef.current && fileInputRef.current.files && fileInputRef.current.files.length > 0) {
-        setFile(fileInputRef.current.files[0]);
-      }
-    };
-    
-    // Escucha cuando regresas de la ventana de archivos en el iPhone
-    window.addEventListener('focus', sincronizarArchivo);
-    document.addEventListener('visibilitychange', sincronizarArchivo);
-    
-    // Mini-revisor constante (1 vez por segundo)
-    const revisor = setInterval(sincronizarArchivo, 1000);
-
-    return () => {
-      window.removeEventListener('focus', sincronizarArchivo);
-      document.removeEventListener('visibilitychange', sincronizarArchivo);
-      clearInterval(revisor);
-    };
-  }, []);
 
   const enviarSugerencia = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,16 +71,16 @@ export default function Home() {
     }
   };
 
-  const manejarAnalisis = async () => {
-    // Tomamos la referencia más actualizada
-    const archivoParaSubir = file || fileInputRef.current?.files?.[0];
-
-    if (!archivoParaSubir) {
-      setError('Por favor, selecciona un archivo en el Paso 1.');
-      return;
+  // FLUJO ADOBE PODCAST: Se activa instantáneamente al seleccionar el archivo
+  const manejarSeleccionYAnalisis = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const archivoDetectado = e.target.files?.[0];
+    
+    if (!archivoDetectado) {
+      return; // Si el usuario cancela la selección, no hacemos nada
     }
 
-    setFile(archivoParaSubir);
+    // Iniciamos la interfaz de carga y análisis Inmediatamente
+    setFile(archivoDetectado);
     setLoading(true);
     setProgress(5);
     setError(null);
@@ -116,7 +93,7 @@ export default function Home() {
       }, 500);
 
       const formDataCloud = new FormData();
-      formDataCloud.append('file', archivoParaSubir);
+      formDataCloud.append('file', archivoDetectado); // Enviamos el archivo fresco de la memoria
       formDataCloud.append('upload_preset', 'teodoc_preset');
 
       const resCloud = await fetch('https://api.cloudinary.com/v1_1/antbfat3/auto/upload', {
@@ -145,7 +122,7 @@ export default function Home() {
       let dataTranscribe;
       try { 
         dataTranscribe = JSON.parse(rawTextTranscribe); 
-      } catch (e) { 
+      } catch (err) { 
         throw new Error(`Error en el servidor de transcripción.`); 
       }
       if (!resTranscribe.ok) throw new Error(dataTranscribe.error || 'Error en la transcripción.');
@@ -171,7 +148,7 @@ export default function Home() {
       let dataAnalyze;
       try { 
         dataAnalyze = JSON.parse(rawTextAnalyze); 
-      } catch (e) { 
+      } catch (err) { 
         throw new Error('Error al interpretar el análisis teológico.'); 
       }
       if (!resAnalyze.ok) throw new Error(dataAnalyze.error || 'Error en el análisis.');
@@ -183,7 +160,7 @@ export default function Home() {
       }, 500);
 
     } catch (err: any) {
-      setError(err.message || 'Ocurrió un error inesperado. El archivo puede ser muy pesado.');
+      setError(err.message || 'Ocurrió un error inesperado en el proceso. Intenta de nuevo.');
       setLoading(false);
       setProgress(0);
     }
@@ -191,7 +168,6 @@ export default function Home() {
 
   const nuevoAnalisis = () => {
     setFile(null); setResultado(null); setError(null); setProgress(0);
-    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const descargarInfografia = async () => {
@@ -305,51 +281,47 @@ export default function Home() {
         )}
 
         {!resultado && (
-          // CONTENEDOR SEGURO: Usamos 'div' en lugar de 'form' para que iOS JAMÁS reinicie la página
           <div className="flex flex-col items-center w-full max-w-lg relative z-20">
             
             <div className="relative flex items-center justify-center mb-6">
               
-              <button
-                type="button" // Tipo botón previene absolutamente el reinicio de pantalla
-                onClick={manejarAnalisis} 
-                disabled={!file || loading}
-                // CAMBIO RADICAL DE COLOR: 
-                // Sin archivo = Gris y aburrido.
-                // Con archivo = Morado brillante y llamativo.
-                className={`relative flex flex-col items-center justify-center w-28 h-28 sm:w-32 sm:h-32 md:w-36 md:h-36 rounded-full transition-all duration-300 z-10 ${
-                  !file 
-                    ? 'bg-[#1A1C23] border-2 border-gray-700/50 cursor-not-allowed opacity-60' 
-                    : loading
-                    ? 'bg-gradient-to-br from-[#8E44AD] to-[#5B2C6F] cursor-wait opacity-80'
-                    : 'bg-gradient-to-br from-purple-500 to-indigo-500 shadow-[0_0_40px_rgba(147,51,234,0.6)] cursor-pointer hover:scale-105 hover:shadow-[0_0_60px_rgba(147,51,234,0.8)]'
-                }`}
+              {/* EL BOTÓN VIBRANTE: Siempre brillante como solicitaste */}
+              <label
+                className={`relative flex flex-col items-center justify-center w-32 h-32 sm:w-40 sm:h-40 md:w-44 md:h-44 rounded-full bg-gradient-to-br from-[#8E44AD] to-[#5B2C6F] shadow-[0_0_40px_rgba(147,51,234,0.6)] transition-all duration-300 z-10 ${loading ? 'cursor-wait opacity-80 pointer-events-none' : 'cursor-pointer hover:scale-105 hover:shadow-[0_0_60px_rgba(147,51,234,0.8)] active:scale-95'}`}
               >
+                {/* El input oculto dentro del botón (al estilo Adobe Podcast) */}
+                <input 
+                  type="file" 
+                  className="hidden" 
+                  accept="audio/*,video/*,.mp3,.wav,.m4a,.aac,.ogg,.mp4,.caf" 
+                  onChange={manejarSeleccionYAnalisis}
+                  disabled={loading}
+                />
+
                 {loading ? (
                   <div className="flex flex-col items-center justify-center animate-fade-in">
-                    <span className="text-2xl sm:text-3xl font-black text-white tracking-tight">{progress}%</span>
-                    <span className="text-[9px] sm:text-[10px] uppercase tracking-widest text-purple-200/80 font-semibold mt-0.5">
-                      {progress <= 50 ? 'Procesando' : 'Analizando'}
+                    <span className="text-3xl sm:text-4xl font-black text-white tracking-tight">{progress}%</span>
+                    <span className="text-[10px] sm:text-[11px] uppercase tracking-widest text-purple-200/80 font-semibold mt-1">
+                      {progress <= 50 ? 'Subiendo' : 'Analizando'}
                     </span>
                   </div>
-                ) : !file ? (
-                  // Ícono gris cuando no hay archivo
-                  <svg className="w-8 h-8 sm:w-10 sm:h-10 text-gray-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
-                  </svg>
                 ) : (
-                  // Ícono blanco brillante cuando SÍ hay archivo
-                  <svg className="w-10 h-10 text-white animate-pulse transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
-                  </svg>
+                  <>
+                    <svg className="w-12 h-12 text-white mb-1 transition-colors drop-shadow-lg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
+                    </svg>
+                    <span className="text-[11px] sm:text-xs font-bold text-white uppercase tracking-widest drop-shadow-md">
+                      Subir Audio
+                    </span>
+                  </>
                 )}
-              </button>
+              </label>
             </div>
 
             {loading ? (
               <div className="flex flex-col items-center text-center mt-2 w-full px-2 animate-fade-in">
                 <span className="text-xs sm:text-sm font-bold text-purple-400 uppercase tracking-widest mb-4 sm:mb-6">
-                  Procesando audio de forma segura...
+                  {progress <= 50 ? 'Procesando tu archivo...' : 'Analizando teología y bosquejo...'}
                 </span>
                 <div className="bg-[#1A1D27]/90 border border-purple-500/20 rounded-2xl p-5 sm:p-6 shadow-xl transition-all w-full">
                   <p className="text-gray-200 text-sm sm:text-base md:text-lg font-medium italic mb-3 sm:mb-4 leading-relaxed">"{promesasBiblicas[versoIndex].texto}"</p>
@@ -357,40 +329,10 @@ export default function Home() {
                 </div>
               </div>
             ) : (
-              <div className="flex flex-col items-center w-full px-4 gap-5">
-                
-                {/* TEXTOS 100% CENTRADOS Y ALINEADOS */}
-                <div className="w-full flex flex-col items-center justify-center text-center">
-                  <p className="text-[11px] sm:text-xs md:text-sm font-bold tracking-widest text-gray-400 uppercase leading-loose block">
-                    <span className="block mb-1">1. Selecciona el archivo abajo</span>
-                    <span className={`block transition-colors duration-300 ${file ? 'text-purple-400' : 'text-gray-500'}`}>
-                      2. Presiona el círculo para analizar
-                    </span>
-                  </p>
-                </div>
-                
-                {/* BOTÓN NATIVO DE ARCHIVO ESTILIZADO */}
-                <div className="w-full max-w-[320px] bg-[#1A1C23] rounded-2xl border border-gray-700/50 p-2 shadow-lg mx-auto">
-                  <input 
-                    type="file" 
-                    ref={fileInputRef}
-                    accept="audio/*,video/*,.mp3,.wav,.m4a,.aac,.caf,.ogg,.mp4" 
-                    className="block w-full text-xs sm:text-sm text-gray-300
-                      file:mr-4 file:py-3 file:px-6
-                      file:rounded-xl file:border-0
-                      file:text-xs file:sm:text-sm file:font-bold file:tracking-wide
-                      file:bg-[#2A2D39] file:text-purple-400
-                      hover:file:bg-[#343846] file:cursor-pointer file:transition-all
-                      cursor-pointer focus:outline-none"
-                    onChange={(e) => {
-                      if (e.target.files && e.target.files.length > 0) {
-                        setFile(e.target.files[0]);
-                        setError(null);
-                      }
-                    }}
-                  />
-                </div>
-
+              <div className="flex flex-col items-center justify-center w-full px-4 text-center mt-4">
+                <span className="text-[11px] sm:text-xs md:text-sm font-bold tracking-[0.2em] text-gray-400 uppercase leading-relaxed inline-block">
+                  Toca el círculo para subir tu archivo <br/> y comenzar automáticamente
+                </span>
               </div>
             )}
             {error && <div className="mt-8 px-5 py-3 bg-red-900/30 border border-red-500/50 rounded-xl text-red-200 text-sm w-full text-center animate-fade-in">{error}</div>}
@@ -617,9 +559,9 @@ export default function Home() {
         </div>
       )}
 
-      {/* FOOTER: Prueba absoluta de actualización */}
+      {/* FOOTER ACTUALIZADO PARA ASEGURAR QUE ESTAS EN LA VERSION CORRECTA */}
       <footer className="w-full text-center py-5 sm:py-6 text-[10px] sm:text-xs text-gray-500 font-medium tracking-wide z-10 mt-auto px-4 space-y-1">
-        <p>Versión 3.0 (iOS Bypass) - Creado por RPM Ministry</p>
+        <p>Versión 4.0 (Flujo Adobe Podcast) - Creado por RPM Ministry</p>
         <p>Diseño y desarrollo por Mauricio Andrade Luna</p>
       </footer>
     </div>
