@@ -1,8 +1,7 @@
 'use client';
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { jsPDF } from 'jspdf';
 import domtoimage from 'dom-to-image-more';
-import { useDropzone } from 'react-dropzone';
 
 interface Versiculo { cita: string; texto: string; }
 interface PuntoDesarrollo { punto: string; explicacion: string; versiculos: Versiculo[]; }
@@ -29,27 +28,12 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [versoIndex, setVersoIndex] = useState(0);
   
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const infografiaRef = useRef<HTMLDivElement>(null);
 
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState('');
   const [feedbackStatus, setFeedbackStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
-
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    if (acceptedFiles && acceptedFiles.length > 0) {
-      setSelectedFile(acceptedFiles[0]);
-      setError(null);
-    }
-  }, []);
-
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
-    accept: {
-      'audio/*': ['.mp3', '.m4a', '.wav', '.aac', '.ogg', '.wma', '.caf'],
-      'video/mp4': ['.mp4']
-    },
-    multiple: false
-  });
 
   useEffect(() => {
     let intervaloVerso: NodeJS.Timeout;
@@ -78,12 +62,28 @@ export default function Home() {
     }
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    if (file.size > 104857600) {
+      setError("El archivo es demasiado grande. El límite es 100MB.");
+      return;
+    }
+
+    setSelectedFile(file);
+    setError(null);
+  };
+
   const formatearTamaño = (bytes: number) => {
     return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
   };
 
   const clearFile = () => {
     setSelectedFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   const nuevoAnalisis = () => {
@@ -233,7 +233,7 @@ export default function Home() {
       
       <nav className="w-full flex flex-wrap gap-4 justify-between items-center px-4 sm:px-8 py-4 sm:py-6 z-10">
         <div className="flex items-center gap-2 sm:gap-3">
-          <div className="w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-tr from-purple-600 to-indigo-500 rounded-xl flex items-center justify-center shadow-lg shadow-purple-500/30 border border-white/10 shrink-0">
+          <div className="w-8 h-8 sm:w-9 sm:h-9 bg-purple-600 rounded-xl flex items-center justify-center border border-white/10 shrink-0">
             <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
           </div>
           <span className="font-extrabold text-xl sm:text-2xl tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-gray-100 to-gray-400">TeoDoc</span>
@@ -244,11 +244,6 @@ export default function Home() {
             <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
             <span>Sugerencias</span>
           </button>
-          
-          <a href="https://collection.cloudinary.com/antbfat3/ee4582aa2bac515291b5d02c058e9c4d" target="_blank" rel="noopener noreferrer" className="group flex items-center gap-1.5 sm:gap-2 px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-full bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-300 hover:text-blue-200 text-[10px] sm:text-sm font-medium transition-all">
-            <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-            <span>Manual</span>
-          </a>
         </div>
       </nav>
 
@@ -265,14 +260,23 @@ export default function Home() {
           <div className="flex flex-col items-center w-full max-w-lg relative z-20 animate-fade-in">
             
             {!selectedFile ? (
-              <div {...getRootProps()} className="relative flex flex-col items-center justify-center w-32 h-32 sm:w-40 sm:h-40 md:w-44 md:h-44 rounded-full bg-gradient-to-br from-[#8E44AD] to-[#5B2C6F] shadow-[0_0_40px_rgba(147,51,234,0.5)] hover:scale-105 hover:shadow-[0_0_60px_rgba(147,51,234,0.7)] transition-all duration-300 cursor-pointer outline-none">
-                <input {...getInputProps()} />
-                <div className="flex flex-col items-center pointer-events-none transition-opacity">
-                  <svg className="w-12 h-12 text-white mb-2 drop-shadow-lg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="relative flex flex-col items-center justify-center w-32 h-32 sm:w-40 sm:h-40 md:w-44 md:h-44 group">
+                
+                <div className="absolute inset-0 rounded-full bg-purple-600 hover:bg-purple-500 shadow-xl shadow-purple-500/20 transition-colors duration-300 flex flex-col items-center justify-center pointer-events-none">
+                  <svg className="w-12 h-12 text-white mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
                   </svg>
                   <span className="text-xs font-bold text-white uppercase tracking-widest text-center px-2">Subir Audio</span>
                 </div>
+
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".mp3,.wav,.m4a,.aac,.flac,.ogg,.mp4"
+                  onChange={handleFileChange}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-50 rounded-full"
+                  title="Toca para seleccionar tu grabación"
+                />
               </div>
             ) : (
               <div className="flex flex-col items-center animate-fade-in w-full mt-4">
@@ -307,11 +311,11 @@ export default function Home() {
 
         {loading && (
           <div className="flex flex-col items-center text-center mt-2 w-full px-2 animate-fade-in">
-            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-emerald-600 to-teal-600 animate-pulse flex items-center justify-center shadow-[0_0_40px_rgba(16,185,129,0.5)] mb-6">
+            <div className="w-24 h-24 rounded-full bg-emerald-600 animate-pulse flex items-center justify-center shadow-xl shadow-emerald-500/40 mb-6">
               <span className="text-2xl font-black text-white">{progress}%</span>
             </div>
             <span className="text-xs sm:text-sm font-bold text-emerald-400 uppercase tracking-widest mb-4">
-              {progress <= 50 ? 'Subiendo a la nube...' : 'Analizando teología...'}
+              {progress <= 50 ? 'Subiendo archivo...' : 'Analizando teología...'}
             </span>
             <div className="bg-[#1A1D27]/90 border border-emerald-500/20 rounded-2xl p-5 shadow-xl w-full">
               <p className="text-gray-200 text-sm font-medium italic mb-2">"{promesasBiblicas[versoIndex].texto}"</p>
@@ -400,7 +404,7 @@ export default function Home() {
                     </h3>
                     <ul className="space-y-3 sm:space-y-4">
                       {resultado.aplicacion.map((app, idx) => (
-                        <li key={idx} className="flex gap-3 sm:gap-4 text-gray-300 font-light leading-relaxed text-sm sm:text:base">
+                        <li key={idx} className="flex gap-3 sm:gap-4 text-gray-300 font-light leading-relaxed text-sm sm:text-base">
                           <span className="text-blue-500 mt-0.5 sm:mt-1 text-lg leading-none">•</span>
                           <span>{app}</span>
                         </li>
@@ -413,7 +417,7 @@ export default function Home() {
                       <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
                       Oración Ministerial
                     </h3>
-                    <p className="text-gray-300 italic leading-relaxed font-light text-sm sm:text:base">"{resultado.oracion}"</p>
+                    <p className="text-gray-300 italic leading-relaxed font-light text-sm sm:text-base">"{resultado.oracion}"</p>
                   </section>
                 </div>
               </div>
@@ -444,7 +448,7 @@ export default function Home() {
                         <h1 className="text-2xl sm:text-4xl md:text-5xl font-black uppercase tracking-widest font-sans leading-tight">{resultado.titulo}</h1>
                       </div>
 
-                      <div className="text-center mb-8 sm:mb-12 max-w-2j px-2">
+                      <div className="text-center mb-8 sm:mb-12 max-w-2xl px-2">
                         <p className="text-lg sm:text-2xl font-bold italic text-[#725439] leading-snug">
                           "{resultado.infografia.frase_corta || resultado.idea_principal}"
                         </p>
@@ -453,7 +457,7 @@ export default function Home() {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 mb-8 sm:mb-12 w-full">
                         <div className="bg-white p-6 sm:p-8 rounded-xl border border-gray-200 border-t-[6px] border-t-[#5B778A]">
                           <h3 className="text-xs sm:text-sm font-black uppercase tracking-widest text-[#5B778A] mb-3 sm:mb-4 bg-[#EDF1F3] inline-block px-3 py-1.5 sm:px-4 sm:py-2 rounded">Contexto Histórico</h3>
-                          <p className="text-gray-700 leading-relaxed text-sm sm:text:base">
+                          <p className="text-gray-700 leading-relaxed text-sm sm:text-base">
                             {resultado.infografia.contexto_breve || "Enseñanza extraída de las escrituras."}
                           </p>
                         </div>
@@ -477,10 +481,10 @@ export default function Home() {
                               <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full text-white flex items-center justify-center font-bold text-lg sm:text-xl mb-4 sm:mb-5 shrink-0" style={{ backgroundColor: '#D4AF37' }}>
                                 {i + 1}
                               </div>
-                              <h4 className="font-bold text-[#5B778A] text-sm sm:text:base uppercase mb-2 sm:mb-3 leading-tight">
+                              <h4 className="font-bold text-[#5B778A] text-sm sm:text-base uppercase mb-2 sm:mb-3 leading-tight">
                                 {punto.punto}
                               </h4>
-                              <p className="text-xs sm:text:sm text-gray-700 leading-relaxed text-center">
+                              <p className="text-xs sm:text-sm text-gray-700 leading-relaxed text-center">
                                 {punto.explicacion}
                               </p>
                             </div>
@@ -540,7 +544,7 @@ export default function Home() {
       )}
 
       <footer className="w-full text-center py-5 sm:py-6 text-[10px] sm:text-xs text-gray-500 font-medium tracking-wide z-10 mt-auto px-4 space-y-1">
-        <p>1.16 beta</p>
+        <p>1.17 beta</p>
       </footer>
     </div>
   );
