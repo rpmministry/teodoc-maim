@@ -43,22 +43,6 @@ export default function Home() {
     return () => clearInterval(intervaloVerso);
   }, [loading]);
 
-  useEffect(() => {
-    const inputElement = fileInputRef.current;
-    if (!inputElement) return;
-
-    const handleNativeChange = (event: Event) => {
-      const target = event.target as HTMLInputElement;
-      if (target.files && target.files.length > 0) {
-        setSelectedFile(target.files[0]);
-        setError(null);
-      }
-    };
-
-    inputElement.addEventListener('change', handleNativeChange);
-    return () => inputElement.removeEventListener('change', handleNativeChange);
-  }, []);
-
   const enviarSugerencia = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!feedbackMsg.trim()) return;
@@ -81,6 +65,15 @@ export default function Home() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    const extension = file.name.slice((file.name.lastIndexOf(".") - 1 >>> 0) + 2).toLowerCase();
+    const validExtensions = ['mp3', 'wav', 'm4a', 'aac', 'flac', 'ogg', 'mp4', 'wma', 'caf'];
+    
+    if (!validExtensions.includes(extension) && !file.type.startsWith('audio/') && !file.type.startsWith('video/')) {
+      setError("Formato no reconocido. Por favor, selecciona una grabación válida.");
+      return;
+    }
+
     setSelectedFile(file);
     setError(null);
   };
@@ -319,28 +312,26 @@ export default function Home() {
         {!resultado && !loading && (
           <div className="flex flex-col items-center w-full max-w-lg relative z-20 animate-fade-in">
             
-            {!selectedFile ? (
-              <div className="relative flex flex-col items-center justify-center w-32 h-32 sm:w-40 sm:h-40 md:w-44 md:h-44 group">
-                
-                <div className="absolute inset-0 rounded-full bg-purple-600 shadow-xl shadow-purple-500/20 group-hover:scale-105 transition-all duration-300 flex flex-col items-center justify-center pointer-events-none">
-                  <svg className="w-12 h-12 text-white mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
-                  </svg>
-                  <span className="text-xs font-bold text-white uppercase tracking-widest text-center px-2">Subir Audio</span>
-                </div>
-
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".mp3,.wav,.m4a,.aac,.flac,.ogg,.mp4,audio/*"
-                  onChange={handleFileChange}
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-50"
-                  title="Seleccionar grabación"
-                />
+            <div className={`relative flex flex-col items-center justify-center transition-all duration-300 ${selectedFile ? 'absolute w-0 h-0 opacity-0 overflow-hidden pointer-events-none' : 'w-32 h-32 sm:w-40 sm:h-40 md:w-44 md:h-44 group'}`}>
+              
+              <div className="absolute inset-0 rounded-full bg-purple-600 shadow-xl shadow-purple-500/20 group-hover:scale-105 transition-all duration-300 flex flex-col items-center justify-center pointer-events-none">
+                <svg className="w-12 h-12 text-white mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
+                </svg>
+                <span className="text-xs font-bold text-white uppercase tracking-widest text-center px-2">Subir Audio</span>
               </div>
-            ) : (
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                onChange={handleFileChange}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-50 rounded-full"
+                title="Seleccionar grabación"
+              />
+            </div>
+
+            {selectedFile && (
               <form onSubmit={handleFormSubmit} className="flex flex-col items-center animate-fade-in w-full mt-4">
-                
                 <div className="bg-[#1A1C23] border border-purple-500/30 p-4 rounded-2xl mb-6 flex items-center justify-between w-full max-w-sm shadow-lg">
                   <div className="flex flex-col overflow-hidden text-left flex-1">
                     <span className="text-sm font-bold text-emerald-400 truncate pr-2">{selectedFile.name}</span>
@@ -604,7 +595,7 @@ export default function Home() {
       )}
 
       <footer className="w-full text-center py-5 sm:py-6 text-[10px] sm:text-xs text-gray-500 font-medium tracking-wide z-10 mt-auto px-4 space-y-1">
-        <p>1.19 beta</p>
+        <p>1.20 beta</p>
       </footer>
     </div>
   );
