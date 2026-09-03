@@ -4,7 +4,6 @@ import Script from 'next/script';
 import { jsPDF } from 'jspdf';
 import domtoimage from 'dom-to-image-more';
 
-// Permitir el uso del objeto cloudinary inyectado por el script
 declare global {
   interface Window {
     cloudinary: any;
@@ -21,6 +20,12 @@ interface PredicaAnalisis {
   aplicacion: string[]; oracion: string;
 }
 
+// Interfaz para unificar archivos nativos de iOS y respuestas de Cloudinary
+interface FileDisplay {
+  name: string;
+  size: number;
+}
+
 const promesasBiblicas = [
   { cita: "Isaías 41:10", texto: "No temas, porque yo estoy contigo; no desmayes..." },
   { cita: "Jeremías 29:11", texto: "Porque yo sé los pensamientos que tengo acerca de vosotros..." },
@@ -29,13 +34,14 @@ const promesasBiblicas = [
 ];
 
 export default function Home() {
+  const [selectedFile, setSelectedFile] = useState<FileDisplay | null>(null);
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [resultado, setResultado] = useState<PredicaAnalisis | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [versoIndex, setVersoIndex] = useState(0);
   
-  const widgetRef = useRef<any>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const infografiaRef = useRef<HTMLDivElement>(null);
 
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
@@ -69,90 +75,21 @@ export default function Home() {
     }
   };
 
-  // ----------------------------------------------------------------------
-  // FASE 1 DE LA AUDITORÍA: PRECARGAR EL WIDGET DE CLOUDINARY
-  // Se inicializa en segundo plano para que el clic del usuario sea instantáneo.
-  // ----------------------------------------------------------------------
-  useEffect(() => {
-    const initWidget = () => {
-      if (typeof window !== 'undefined' && window.cloudinary && !widgetRef.current) {
-        widgetRef.current = window.cloudinary.createUploadWidget(
-          {
-            cloudName: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'antbfat3',
-            uploadPreset: 'teodoc_preset',
-            sources: ['local', 'google_drive'],
-            resourceType: 'video', // Cloudinary procesa audios como video
-            clientAllowedFormats: ['mp3', 'wav', 'm4a', 'aac', 'flac', 'ogg', 'mp4'],
-            maxFileSize: 524288000, // 500 MB
-            multiple: false,
-            language: 'es',
-            text: {
-              es: {
-                menu: { files: "Mis Archivos" },
-                local: { browse: "Seleccionar Prédica", dd_title_single: "Arrastra tu audio aquí" }
-              }
-            },
-            styles: {
-              palette: {
-                window: "#1A1D27", windowBorder: "#8E44AD", tabIcon: "#8E44AD",
-                menuIcons: "#FFFFFF", textDark: "#000000", textLight: "#FFFFFF",
-                link:  "#10B981", action:  "#8E44AD", inactiveTabIcon: "#A0AEC0",
-                error: "#EF4444", inProgress: "#10B981", complete: "#10B981", sourceBg: "#13161F"
-              }
-            }
-          },
-          (err: any, result: any) => {
-            // El Widget de Cloudinary maneja el progreso visual en su propia ventana.
-            // Solo escuchamos el evento final de "éxito" para arrancar TeoDoc.
-            if (!err && result && result.event === "success") {
-              const uploadedUrl = result.info.secure_url;
-              // Pasamos el control al motor de procesamiento asíncrono
-              startAnalysisPipeline(uploadedUrl);
-            }
-          }
-        );
-      }
-    };
-
-    // Intentamos inicializar hasta que el script de Cloudinary haya cargado
-    const interval = setInterval(() => {
-      if (widgetRef.current) {
-        clearInterval(interval);
-      } else {
-        initWidget();
-      }
-    }, 500);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  // DISPARADOR DIRECTO
-  const handleOpenWidget = () => {
-    if (widgetRef.current) {
-      widgetRef.current.open();
-    } else {
-      setError("El sistema de subida está cargando. Intenta en unos segundos.");
-    }
+  const formatearTamaño = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  const nuevoAnalisis = () => {
-    setResultado(null); 
-    setError(null); 
-    setProgress(0);
-  };
-
-  // ----------------------------------------------------------------------
-  // FASE 2 Y 3: PROCESAMIENTO DESACOPLADO (Arranca automáticamente tras Cloudinary)
-  // ----------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
+  // MOTOR 1: EL EMBUDO FINAL DE PROCESAMIENTO
+  // Recibe una URL segura de Cloudinary (venga de iOS o de Android/PC) y arranca la IA.
+  // ---------------------------------------------------------------------------
   const startAnalysisPipeline = async (audioUrl: string) => {
-    setLoading(true);
-    setProgress(0);
-    setError(null);
-    setResultado(null);
-    setVersoIndex(0);
-
     try {
-      // TRANSCRIPCIÓN
+      // 1. TRANSCRIPCIÓN
       setProgress(30);
       const timerTranscribe = setInterval(() => setProgress((prev) => (prev >= 49 ? 49 : prev + 1)), 800);
 
@@ -165,7 +102,7 @@ export default function Home() {
       const dataTranscribe = await resTranscribe.json();
       const textoTranscrito = dataTranscribe.text;
       
-      // ANÁLISIS TEOLÓGICO
+      // 2. ANÁLISIS TEOLÓGICO
       setProgress(50);
       const timerAnalyze = setInterval(() => {
         setProgress((prev) => prev >= 98 ? 98 : prev + Math.max(1, Math.floor((99 - prev) * 0.05)));
@@ -179,7 +116,7 @@ export default function Home() {
       if (!resAnalyze.ok) throw new Error('Error en el análisis teológico.');
       const dataAnalyze = await resAnalyze.json();
 
-      // FINALIZAR
+      // 3. FINALIZAR
       setProgress(100);
       setTimeout(() => {
         setResultado(dataAnalyze);
@@ -190,7 +127,128 @@ export default function Home() {
       setError(err.message || 'Ocurrió un error inesperado en el análisis.');
       setLoading(false);
       setProgress(0);
+      setSelectedFile(null);
     }
+  };
+
+  // ---------------------------------------------------------------------------
+  // MOTOR 2: FLUJO NATIVO PARA iOS (iPhone / iPad)
+  // ---------------------------------------------------------------------------
+  const uploadToCloudinaryChunked = async (file: File) => {
+    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'antbfat3';
+    const url = `https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`;
+    const uploadPreset = 'teodoc_preset';
+    const chunkSize = 10 * 1024 * 1024; // 10MB
+    const totalChunks = Math.ceil(file.size / chunkSize);
+    const uniqueUploadId = `${Date.now()}-${Math.random().toString(36).substring(7)}`;
+    let secureUrl = "";
+
+    for (let i = 0; i < totalChunks; i++) {
+      const start = i * chunkSize;
+      const end = Math.min(start + chunkSize, file.size);
+      const chunk = file.slice(start, end);
+
+      const formData = new FormData();
+      formData.append('file', chunk);
+      formData.append('upload_preset', uploadPreset);
+      
+      const headers: HeadersInit = {
+        'X-Unique-Upload-Id': uniqueUploadId,
+        'Content-Range': `bytes ${start}-${end - 1}/${file.size}`,
+      };
+
+      const res = await fetch(url, { method: 'POST', headers, body: formData });
+      if (!res.ok) throw new Error(`Error de red al subir. Verifica tu conexión.`);
+      
+      const data = await res.json();
+      const currentProgress = Math.floor(((i + 1) / totalChunks) * 25);
+      setProgress(currentProgress);
+
+      if (i === totalChunks - 1) secureUrl = data.secure_url;
+    }
+    return secureUrl;
+  };
+
+  const handleNativeFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setSelectedFile({ name: file.name, size: file.size });
+    setError(null);
+    setLoading(true);
+    setProgress(0);
+    setVersoIndex(0);
+
+    try {
+      const audioUrl = await uploadToCloudinaryChunked(file);
+      await startAnalysisPipeline(audioUrl);
+    } catch (err: any) {
+      setError(err.message || 'Error al subir el archivo.');
+      setLoading(false);
+      setProgress(0);
+      setSelectedFile(null);
+    }
+  };
+
+  // ---------------------------------------------------------------------------
+  // MOTOR 3: FLUJO CLOUDINARY WIDGET PARA ANDROID / WINDOWS / MAC
+  // ---------------------------------------------------------------------------
+  const openCloudinaryWidget = () => {
+    window.cloudinary.openUploadWidget(
+      {
+        cloudName: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'antbfat3',
+        uploadPreset: 'teodoc_preset',
+        sources: ['local', 'google_drive'],
+        resourceType: 'video', // Audios son tratados como video en Cloudinary
+        clientAllowedFormats: ['mp3', 'wav', 'm4a', 'aac', 'flac', 'ogg', 'mp4'],
+        maxFileSize: 524288000, // 500 MB
+        multiple: false,
+        language: 'es',
+        text: { es: { menu: { files: "Mis Archivos" }, local: { browse: "Seleccionar Prédica" } } },
+        styles: {
+          palette: {
+            window: "#1A1D27", windowBorder: "#8E44AD", tabIcon: "#8E44AD",
+            menuIcons: "#FFFFFF", textDark: "#000000", textLight: "#FFFFFF",
+            link:  "#10B981", action:  "#8E44AD", inactiveTabIcon: "#A0AEC0",
+            sourceBg: "#13161F"
+          }
+        }
+      },
+      (err: any, result: any) => {
+        if (!err && result && result.event === "success") {
+          setSelectedFile({ 
+            name: `${result.info.original_filename}.${result.info.format}`, 
+            size: result.info.bytes 
+          });
+          setLoading(true);
+          setProgress(25); // Saltamos el progreso de subida porque Cloudinary ya lo hizo
+          startAnalysisPipeline(result.info.secure_url);
+        }
+      }
+    );
+  };
+
+  // ---------------------------------------------------------------------------
+  // INTERCEPTOR HÍBRIDO DE CLICS (El cerebro del sistema)
+  // ---------------------------------------------------------------------------
+  const handleSmartClick = (e: React.MouseEvent<HTMLInputElement>) => {
+    // Detectamos si el usuario está en un iPhone o iPad (iOS Safari)
+    const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+    // Si NO es iOS y el script de Cloudinary cargó correctamente, bloqueamos el HTML nativo y abrimos el Widget.
+    if (!isIOSDevice && typeof window !== 'undefined' && window.cloudinary) {
+      e.preventDefault(); 
+      openCloudinaryWidget();
+    }
+    // Si ES iOS, simplemente no hacemos nada. El navegador dejará pasar el click hacia el <input type="file"> nativo, garantizando que funcione en el iPhone sin bloqueos.
+  };
+
+  const nuevoAnalisis = () => {
+    setSelectedFile(null); 
+    setResultado(null); 
+    setError(null); 
+    setProgress(0);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const descargarInfografia = async () => {
@@ -267,7 +325,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-[#0B0C10] bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#1C1635] via-[#0B0C10] to-[#070709] text-white font-sans selection:bg-purple-500/30 flex flex-col relative overflow-x-hidden">
       
-      {/* SCRIPT OFICIAL DE CLOUDINARY PARA WIDGET */}
+      {/* SCRIPT OFICIAL DE CLOUDINARY */}
       <Script src="https://upload-widget.cloudinary.com/global/all.js" strategy="afterInteractive" />
 
       <nav className="w-full flex flex-wrap gap-4 justify-between items-center px-4 sm:px-8 py-4 sm:py-6 z-10">
@@ -306,20 +364,35 @@ export default function Home() {
           </div>
         )}
 
-        {/* CÍRCULO NATIVO - GATILLO DEL WIDGET (Eliminado todo input manual) */}
+        {/* CONTENEDOR HÍBRIDO (El Cerebro de la V1.27) */}
         {!loading && !resultado && (
           <div className="flex flex-col items-center w-full max-w-lg relative z-20 animate-fade-in">
             
-            <button
-              type="button"
-              onClick={handleOpenWidget}
-              className="relative flex flex-col items-center justify-center w-32 h-32 sm:w-40 sm:h-40 md:w-44 md:h-44 rounded-full bg-purple-600 hover:bg-purple-500 shadow-xl shadow-purple-500/20 hover:scale-105 transition-all duration-300 cursor-pointer outline-none group"
-            >
-              <svg className="w-12 h-12 text-white mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
-              </svg>
-              <span className="text-xs font-bold text-white uppercase tracking-widest text-center px-2">Subir Audio</span>
-            </button>
+            <div className="relative flex flex-col items-center justify-center w-32 h-32 sm:w-40 sm:h-40 md:w-44 md:h-44 group">
+              
+              {/* LA CAPA VISUAL ÚNICA */}
+              <div className="absolute inset-0 rounded-full bg-purple-600 hover:bg-purple-500 shadow-xl shadow-purple-500/20 group-hover:scale-105 transition-all duration-300 flex flex-col items-center justify-center pointer-events-none">
+                <svg className="w-12 h-12 text-white mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
+                </svg>
+                <span className="text-xs font-bold text-white uppercase tracking-widest text-center px-2">Subir Audio</span>
+              </div>
+
+              {/* 
+                EL INTERCEPTOR: Este Input existe siempre en el DOM.
+                - Si es iPhone (iOS), el evento onClick no hace nada, permitiendo que Safari dispare el selector de archivos nativo y caiga en onChange.
+                - Si es PC/Android, el evento onClick bloquea a Safari (e.preventDefault) y abre la ventana flotante de Cloudinary.
+              */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".mp3,.wav,.m4a,.aac,.flac,.ogg,.mp4,audio/*"
+                onClick={handleSmartClick}
+                onChange={handleNativeFileChange}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-50 rounded-full"
+                title="Seleccionar grabación"
+              />
+            </div>
             
             <p className="text-gray-500 text-xs mt-6 text-center max-w-xs">
               Soporta MP3, WAV, M4A, FLAC, AAC. <br/> Archivos de hasta 500 MB.
@@ -338,10 +411,10 @@ export default function Home() {
             
             <div className="text-emerald-400 font-bold mb-4 text-center">
               <span className="text-xs sm:text-sm uppercase tracking-widest block mb-1">
-                {progress <= 49 ? 'Extrayendo texto de la prédica...' : 'Analizando teología profunda...'}
+                {progress <= 25 ? 'Subiendo archivo pesado...' : progress <= 50 ? 'Extrayendo texto...' : 'Analizando teología...'}
               </span>
               <span className="text-[10px] text-gray-500 font-normal">
-                El audio ya está seguro en la nube.
+                {selectedFile ? `Procesando: ${selectedFile.name}` : 'Asegurando audio en la nube...'}
               </span>
             </div>
 
@@ -575,7 +648,7 @@ export default function Home() {
 
       {/* FOOTER */}
       <footer className="w-full text-center py-5 sm:py-6 text-[10px] sm:text-xs text-gray-500 font-medium tracking-wide z-10 mt-auto px-4 space-y-1">
-        <p>1.26 beta</p>
+        <p>1.27 beta</p>
       </footer>
     </div>
   );
