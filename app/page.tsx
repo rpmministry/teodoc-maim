@@ -37,7 +37,7 @@ const isMobileDevice = () => {
 };
 
 const getAcceptAttribute = () => {
-  if (isAndroid()) {
+  if (isAndroid() || isIOS()) {
     return '.mp3,.wav,.m4a,.aac,.ogg,.mp4,.flac,.wma,.opus,.caf';
   }
   return 'audio/*,.mp3,.wav,.m4a,.aac,.ogg,.mp4,.flac,.wma,.opus,.caf';
