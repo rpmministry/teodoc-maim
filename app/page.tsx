@@ -29,7 +29,6 @@ export default function Home() {
   const [versoIndex, setVersoIndex] = useState(0);
   
   const infografiaRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
 
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState('');
@@ -62,9 +61,13 @@ export default function Home() {
     }
   };
 
+  // PASO 1: CAPTURA FÍSICA DIRECTA DEL ARCHIVO
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file) {
+      console.log("iOS devolvió un archivo vacío. Asegúrate de que el archivo esté descargado en el iPhone.");
+      return;
+    }
     setSelectedFile(file);
     setError(null);
   };
@@ -73,6 +76,7 @@ export default function Home() {
     return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
   };
 
+  // PASO 2: SUBIDA Y ANÁLISIS
   const handleAnalyze = async () => {
     if (!selectedFile) return;
 
@@ -138,8 +142,10 @@ export default function Home() {
   };
 
   const nuevoAnalisis = () => {
-    setSelectedFile(null); setResultado(null); setError(null); setProgress(0);
-    if (inputRef.current) inputRef.current.value = '';
+    setSelectedFile(null); 
+    setResultado(null); 
+    setError(null); 
+    setProgress(0);
   };
 
   const descargarInfografia = async () => {
@@ -239,16 +245,6 @@ export default function Home() {
 
       <main className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 z-10 w-full max-w-5xl mx-auto -mt-4 sm:-mt-6">
         
-        <input
-          ref={inputRef}
-          id="audio-upload-core"
-          type="file"
-          accept=".mp3,.m4a,.wav,.aac,.ogg,.mp4,*/*"
-          onChange={handleFileChange}
-          className="absolute w-[1px] h-[1px] opacity-0 -z-10 overflow-hidden"
-          style={{ visibility: 'hidden' }}
-        />
-
         {!loading && !resultado && (
           <div className="text-center space-y-3 sm:space-y-4 mb-8 sm:mb-12 animate-fade-in-up">
             <h1 className="text-3xl sm:text-4xl md:text-6xl font-extrabold tracking-tight text-white drop-shadow-sm px-2">Analiza tus prédicas.</h1>
@@ -260,18 +256,29 @@ export default function Home() {
           <div className="flex flex-col items-center w-full max-w-lg relative z-20">
             
             {!selectedFile ? (
-              <div className="relative w-32 h-32 sm:w-40 sm:h-40 md:w-44 md:h-44 flex items-center justify-center">
-                <label
-                  htmlFor="audio-upload-core"
-                  className="flex flex-col items-center justify-center w-full h-full rounded-full bg-gradient-to-br from-[#8E44AD] to-[#5B2C6F] shadow-[0_0_40px_rgba(147,51,234,0.5)] hover:scale-105 hover:shadow-[0_0_60px_rgba(147,51,234,0.7)] transition-all duration-300 cursor-pointer"
-                >
+              // HACK W3C: El círculo es la decoración visual, el INPUT está encima transparente al 100%
+              <div className="relative w-32 h-32 sm:w-40 sm:h-40 md:w-44 md:h-44 flex items-center justify-center group">
+                
+                {/* LA CAPA VISUAL MORADA (No es interactiva, solo decorativa) */}
+                <div className="absolute inset-0 rounded-full bg-gradient-to-br from-[#8E44AD] to-[#5B2C6F] shadow-[0_0_40px_rgba(147,51,234,0.5)] group-hover:scale-105 group-hover:shadow-[0_0_60px_rgba(147,51,234,0.7)] transition-all duration-300 flex flex-col items-center justify-center pointer-events-none">
                   <svg className="w-12 h-12 text-white mb-2 drop-shadow-lg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
                   </svg>
                   <span className="text-xs font-bold text-white uppercase tracking-widest">Subir Audio</span>
-                </label>
+                </div>
+
+                {/* EL INPUT ORIGINAL (El usuario toca directamente esto, Safari no lo puede bloquear) */}
+                <input
+                  type="file"
+                  accept="audio/*,video/*,.mp3,.wav,.m4a,.aac,.ogg,.mp4,.wma"
+                  onChange={handleFileChange}
+                  onClick={(e) => { e.currentTarget.value = ''; }} // Evita bug de seleccionar el mismo archivo
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-50 rounded-full"
+                  title="Seleccionar archivo"
+                />
               </div>
             ) : !loading ? (
+              // ESTADO 2: Archivo Seleccionado
               <div className="flex flex-col items-center animate-fade-in w-full mt-4">
                 <div className="bg-[#1A1C23] border border-purple-500/30 p-4 rounded-2xl mb-6 flex items-center justify-between w-full max-w-sm">
                   <div className="flex flex-col overflow-hidden">
@@ -312,6 +319,7 @@ export default function Home() {
           </div>
         )}
 
+        {/* CONTENEDOR DE RESULTADOS */}
         {resultado && (
           <div className="w-full mt-6 md:mt-10 mb-12 sm:mb-16 space-y-10 sm:space-y-16 animate-fade-in">
             <div className="bg-[#13161F]/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl border border-gray-800 shadow-2xl overflow-hidden">
@@ -494,6 +502,7 @@ export default function Home() {
         )}
       </main>
 
+      {/* MODAL DE SUGERENCIAS */}
       {showFeedbackModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-fade-in">
           <div className="bg-[#1A1D27] border border-gray-800 rounded-2xl p-6 w-full max-w-md shadow-2xl">
@@ -521,7 +530,7 @@ export default function Home() {
                 <button
                   type="submit"
                   disabled={feedbackStatus === 'sending'}
-                  className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-pink-500 hover:to-indigo-500 text-white font-bold py-2.5 rounded-xl text-sm transition-all disabled:opacity-50"
+                  className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold py-2.5 rounded-xl text-sm transition-all disabled:opacity-50"
                 >
                   {feedbackStatus === 'sending' ? 'Enviando...' : 'Enviar Mensaje'}
                 </button>
@@ -531,8 +540,9 @@ export default function Home() {
         </div>
       )}
 
+      {/* FOOTER */}
       <footer className="w-full text-center py-5 sm:py-6 text-[10px] sm:text-xs text-gray-500 font-medium tracking-wide z-10 mt-auto px-4 space-y-1">
-        <p>1.10 beta</p>
+        <p>1.11 beta</p>
       </footer>
     </div>
   );
