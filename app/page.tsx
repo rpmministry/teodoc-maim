@@ -71,56 +71,80 @@ export default function Home() {
   };
 
   // ---------------------------------------------------------------------------
-  // EL MOTOR DE SUBIDA A PRUEBA DE BALAS (Propuesto por la auditoría)
-  // Soporta fallos de red en móviles, reintentos y chunking nativo.
+  // FASE 1: CAPTURA FÍSICA SEGURA (Sin filtros, sin bloqueos de Safari)
   // ---------------------------------------------------------------------------
-  const uploadChunkWithRetry = async (
-    chunk: Blob,
-    start: number,
-    end: number,
-    total: number,
-    uploadId: string,
-    cloudName: string
-  ) => {
-    // Intentará subir el mismo pedazo hasta 4 veces si hay falla de internet
+  const handleNativeFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    
+    if (!file) {
+      setError("Safari no entregó ningún archivo.");
+      return;
+    }
+
+    // Validación posterior a la captura (Evita el rechazo silencioso de iOS)
+    const validExtensions = ["mp3", "wav", "m4a", "aac", "flac", "ogg", "mp4", "caf", "wma"];
+    const extension = file.name.slice((file.name.lastIndexOf(".") - 1 >>> 0) + 2).toLowerCase();
+    
+    if (!validExtensions.includes(extension) && !file.type.startsWith('audio/') && !file.type.startsWith('video/')) {
+      setError("Formato no reconocido. Usa archivos de audio comunes.");
+      return;
+    }
+
+    setSelectedFile(file);
+    setError(null);
+    // NO iniciamos el análisis aquí. Obligamos al usuario a pulsar "Analizar" 
+    // para confirmar que el archivo está en memoria.
+  };
+
+  // ---------------------------------------------------------------------------
+  // FASE 2: MOTOR DE SUBIDA DE DOBLE RUTA (Cloudinary /video/upload)
+  // ---------------------------------------------------------------------------
+  const uploadNormal = async (file: File) => {
+    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'antbfat3';
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("upload_preset", "teodoc_preset");
+
+    const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/video/upload`, {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response.ok) throw new Error(`Error Cloudinary: ${response.status}`);
+    const data = await response.json();
+    return data.secure_url;
+  };
+
+  const uploadChunkWithRetry = async (chunk: Blob, start: number, end: number, total: number, uploadId: string, cloudName: string) => {
     for (let attempt = 1; attempt <= 4; attempt++) {
       try {
         const formData = new FormData();
         formData.append("file", chunk);
         formData.append("upload_preset", "teodoc_preset");
 
-        const response = await fetch(
-          `https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`,
-          {
-            method: "POST",
-            headers: {
-              "X-Unique-Upload-Id": uploadId,
-              "Content-Range": `bytes ${start}-${end - 1}/${total}`,
-            },
-            body: formData,
-          }
-        );
+        const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/video/upload`, {
+          method: "POST",
+          headers: {
+            "X-Unique-Upload-Id": uploadId,
+            "Content-Range": `bytes ${start}-${end - 1}/${total}`,
+          },
+          body: formData,
+        });
 
-        if (!response.ok) {
-          throw new Error(`Error HTTP: ${response.status}`);
-        }
-
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
         return await response.json();
-
       } catch (err) {
-        if (attempt === 4) throw err; // Se rinde al cuarto intento
-        // Espera antes de reintentar (1.5s, 3s, 4.5s...)
+        if (attempt === 4) throw err;
         await new Promise(resolve => setTimeout(resolve, attempt * 1500));
       }
     }
   };
 
-  const uploadToCloudinaryResilient = async (file: File) => {
+  const uploadChunked = async (file: File) => {
     const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'antbfat3';
     const chunkSize = 10 * 1024 * 1024; // 10MB
     const totalChunks = Math.ceil(file.size / chunkSize);
     const uniqueUploadId = `${Date.now()}-${Math.random().toString(36).substring(7)}`;
-    
     let secureUrl = "";
 
     for (let i = 0; i < totalChunks; i++) {
@@ -133,18 +157,18 @@ export default function Home() {
       const currentProgress = Math.floor(((i + 1) / totalChunks) * 25);
       setProgress(currentProgress);
 
-      if (i === totalChunks - 1 && data) {
-        secureUrl = data.secure_url;
-      }
+      if (i === totalChunks - 1 && data) secureUrl = data.secure_url;
     }
-
     return secureUrl;
   };
 
   // ---------------------------------------------------------------------------
-  // EL EMBUDO DE PROCESAMIENTO
+  // FASE 3: EL PIPELINE COMPLETO (Se activa con el botón "Analizar")
   // ---------------------------------------------------------------------------
-  const executeAnalysis = async (fileToProcess: File) => {
+  const executeAnalysis = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedFile) return;
+
     setLoading(true);
     setProgress(0);
     setError(null);
@@ -152,10 +176,17 @@ export default function Home() {
     setVersoIndex(0);
 
     try {
-      // 1. SUBIDA RESILIENTE
-      const audioUrl = await uploadToCloudinaryResilient(fileToProcess);
+      // DECISIÓN INTELIGENTE DE SUBIDA: <= 100MB Rápida | > 100MB Resiliente
+      let audioUrl = "";
+      if (selectedFile.size <= 104857600) { // 100 MB
+        setProgress(15);
+        audioUrl = await uploadNormal(selectedFile);
+        setProgress(25);
+      } else {
+        audioUrl = await uploadChunked(selectedFile);
+      }
 
-      // 2. TRANSCRIPCIÓN
+      // TRANSCRIPCIÓN
       setProgress(30);
       const timerTranscribe = setInterval(() => setProgress((prev) => (prev >= 49 ? 49 : prev + 1)), 800);
 
@@ -168,7 +199,7 @@ export default function Home() {
       const dataTranscribe = await resTranscribe.json();
       const textoTranscrito = dataTranscribe.text;
       
-      // 3. ANÁLISIS TEOLÓGICO
+      // ANÁLISIS TEOLÓGICO
       setProgress(50);
       const timerAnalyze = setInterval(() => {
         setProgress((prev) => prev >= 98 ? 98 : prev + Math.max(1, Math.floor((99 - prev) * 0.05)));
@@ -182,7 +213,7 @@ export default function Home() {
       if (!resAnalyze.ok) throw new Error('Error procesando el análisis teológico.');
       const dataAnalyze = await resAnalyze.json();
 
-      // 4. FINALIZAR
+      // FINALIZAR
       setProgress(100);
       setTimeout(() => {
         setResultado(dataAnalyze);
@@ -193,34 +224,10 @@ export default function Home() {
       setError(err.message || 'Ocurrió un error inesperado en la red.');
       setLoading(false);
       setProgress(0);
-      setSelectedFile(null);
     }
   };
 
-  // ---------------------------------------------------------------------------
-  // INTERACCIÓN NATIVA PURA (Sin hacks, sin superposiciones)
-  // ---------------------------------------------------------------------------
-  const handleNativeFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Validación Básica
-    const extension = file.name.slice((file.name.lastIndexOf(".") - 1 >>> 0) + 2).toLowerCase();
-    const validExtensions = ['mp3', 'wav', 'm4a', 'aac', 'flac', 'ogg', 'mp4', 'wma', 'caf'];
-    
-    if (!validExtensions.includes(extension)) {
-      setError("Formato no reconocido. Usa formatos comunes de audio.");
-      return;
-    }
-
-    setSelectedFile(file);
-    setError(null);
-
-    // Auto-arranque
-    await executeAnalysis(file);
-  };
-
-  const nuevoAnalisis = () => {
+  const clearFile = () => {
     setSelectedFile(null); 
     setResultado(null); 
     setError(null); 
@@ -339,35 +346,70 @@ export default function Home() {
         )}
 
         {/* 
-          ARQUITECTURA DE ETIQUETA PURA (Label Architecture) 
-          El Input y el Label están separados, como dicta el estándar HTML5. Safari no puede fallar aquí.
+          LA ESTRUCTURA FÍSICA PURA (SIN WIDGETS, SIN HACKS)
+          El <input> físico y clickeable ocupa el espacio con opacity-0
         */}
         {!loading && !resultado && (
           <div className="flex flex-col items-center w-full max-w-lg relative z-20 animate-fade-in">
             
-            {/* INPUT INVISIBLE (Pero presente en el DOM) */}
-            <input
-              id="teodoc-audio-upload"
-              ref={fileInputRef}
-              type="file"
-              accept=".mp3,.wav,.m4a,.aac,.flac,.ogg"
-              onChange={handleNativeFileChange}
-              className="hidden" // Completamente oculto, pero activo.
-            />
+            <div className={`relative flex flex-col items-center justify-center transition-all duration-500 ease-in-out group ${
+              selectedFile ? 'w-16 h-16 sm:w-20 sm:h-20 mb-4' : 'w-32 h-32 sm:w-40 sm:h-40 md:w-44 md:h-44'
+            }`}>
+              
+              <div className={`absolute inset-0 rounded-full flex flex-col items-center justify-center pointer-events-none transition-colors duration-300 shadow-xl ${
+                selectedFile ? 'bg-emerald-600 shadow-emerald-500/20' : 'bg-purple-600 shadow-purple-500/20 group-hover:scale-105'
+              }`}>
+                {selectedFile ? (
+                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
+                ) : (
+                  <>
+                    <svg className="w-12 h-12 text-white mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
+                    </svg>
+                    <span className="text-xs font-bold text-white uppercase tracking-widest text-center px-2">Subir Audio</span>
+                  </>
+                )}
+              </div>
 
-            {/* LABEL VISUAL (Controla al Input de forma nativa) */}
-            <label 
-              htmlFor="teodoc-audio-upload"
-              className="relative flex flex-col items-center justify-center w-32 h-32 sm:w-40 sm:h-40 md:w-44 md:h-44 rounded-full bg-purple-600 hover:bg-purple-500 shadow-xl shadow-purple-500/20 hover:scale-105 transition-all duration-300 cursor-pointer outline-none group"
-            >
-              <svg className="w-12 h-12 text-white mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
-              </svg>
-              <span className="text-xs font-bold text-white uppercase tracking-widest text-center px-2">Subir Audio</span>
-            </label>
+              {/* INPUT NATIVO REAL Y FÍSICO EN PANTALLA (SIN "ACCEPT") */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                onChange={handleNativeFileChange}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-50 rounded-full"
+                title={selectedFile ? "Toca para cambiar de audio" : "Seleccionar grabación"}
+              />
+            </div>
+
+            {/* SEPARACIÓN DE CULPAS: Si el archivo se cargó en Safari, verás esto. */}
+            {selectedFile && (
+              <form onSubmit={executeAnalysis} className="flex flex-col items-center animate-fade-in w-full mt-2">
+                <div className="bg-[#1A1C23] border border-emerald-500/30 p-4 rounded-2xl mb-6 flex items-center justify-between w-full max-w-sm shadow-lg">
+                  <div className="flex flex-col overflow-hidden text-left flex-1">
+                    <span className="text-sm font-bold text-emerald-400 truncate pr-2">{selectedFile.name}</span>
+                    <span className="text-[10px] text-gray-400 mt-0.5">{formatearTamaño(selectedFile.size)}</span>
+                  </div>
+                  <button 
+                    type="button"
+                    onClick={clearFile}
+                    className="ml-2 text-gray-500 hover:text-red-400 bg-white/5 rounded-full p-1.5 transition-colors"
+                    title="Eliminar archivo"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                  </button>
+                </div>
+
+                <button
+                  type="submit"
+                  className="w-full max-w-sm py-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-lg shadow-[0_0_30px_rgba(16,185,129,0.4)] transition-all hover:scale-[1.02]"
+                >
+                  Analizar Predicación
+                </button>
+              </form>
+            )}
             
             <p className="text-gray-500 text-xs mt-6 text-center max-w-xs">
-              Soporta MP3, WAV, M4A, FLAC, AAC, OGG. <br/> Archivos de hasta 500 MB.
+              {!selectedFile && "Soporta MP3, WAV, M4A, FLAC, AAC, OGG. Archivos de hasta 500 MB."}
             </p>
 
             {error && <div className="mt-8 px-5 py-3 bg-red-900/30 border border-red-500/50 rounded-xl text-red-200 text-sm w-full max-w-sm text-center animate-fade-in">{error}</div>}
@@ -383,7 +425,7 @@ export default function Home() {
             
             <div className="text-emerald-400 font-bold mb-4 text-center">
               <span className="text-xs sm:text-sm uppercase tracking-widest block mb-1">
-                {progress <= 25 ? 'Subiendo archivo pesado...' : progress <= 50 ? 'Extrayendo texto...' : 'Analizando teología...'}
+                {progress <= 25 ? 'Asegurando audio en la nube...' : progress <= 50 ? 'Extrayendo texto...' : 'Analizando teología...'}
               </span>
               <span className="text-[10px] text-gray-500 font-normal">
                 {selectedFile ? `Procesando: ${selectedFile.name}` : ''}
@@ -620,7 +662,7 @@ export default function Home() {
 
       {/* FOOTER */}
       <footer className="w-full text-center py-5 sm:py-6 text-[10px] sm:text-xs text-gray-500 font-medium tracking-wide z-10 mt-auto px-4 space-y-1">
-        <p>1.28 beta</p>
+        <p>1.29 beta (Estable)</p>
       </footer>
     </div>
   );
