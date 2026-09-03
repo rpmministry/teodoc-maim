@@ -28,8 +28,8 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [versoIndex, setVersoIndex] = useState(0);
   
-  const infografiaRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const infografiaRef = useRef<HTMLDivElement>(null);
 
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState('');
@@ -65,10 +65,6 @@ export default function Home() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 100 * 1024 * 1024) {
-      setError("El archivo excede el límite de 100MB");
-      return;
-    }
     setSelectedFile(file);
     setError(null);
   };
@@ -143,6 +139,7 @@ export default function Home() {
 
   const nuevoAnalisis = () => {
     setSelectedFile(null); setResultado(null); setError(null); setProgress(0);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const descargarInfografia = async () => {
@@ -216,12 +213,6 @@ export default function Home() {
     doc.save("Bosquejo_TeoDoc.pdf");
   };
 
-  const triggerFileInput = () => {
-    if (!selectedFile) {
-      fileInputRef.current?.click();
-    }
-  };
-
   return (
     <div className="min-h-screen bg-[#0B0C10] bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#1C1635] via-[#0B0C10] to-[#070709] text-white font-sans selection:bg-purple-500/30 flex flex-col relative overflow-x-hidden">
       
@@ -244,7 +235,7 @@ export default function Home() {
             <span>Manual</span>
           </a>
 
-          <a href="https://www.paypal.com/ncp/payment/ZTLTVMRR95J2C" target="_blank" rel="noopener noreferrer" className="group flex items-center gap-1.5 sm:gap-2 px-2.5 py-1.5 sm:px-5 sm:py-2 rounded-full bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-600 text-white text-[10px] sm:text-sm font-bold shadow-lg shadow-pink-500/25 transition-all hover:scale-105 border border-white/10">
+          <a href="https://www.paypal.com/ncp/payment/ZTLTVMRR95J2C" target="_blank" rel="noopener noreferrer" className="group flex items-center gap-1.5 sm:gap-2 px-2.5 py-1.5 sm:px-5 sm:py-2 rounded-full bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white text-[10px] sm:text-sm font-bold shadow-lg shadow-pink-500/25 transition-all hover:scale-105 border border-white/10">
             <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:animate-pulse" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
             <span className="hidden lg:inline">Apoyar Proyecto</span>
             <span className="lg:hidden">Apoyar</span>
@@ -264,60 +255,55 @@ export default function Home() {
         {!resultado && (
           <div className="flex flex-col items-center w-full max-w-lg relative z-20">
             
-            {!loading && (
-              <div className="flex flex-col items-center justify-center p-8 md:p-10 border-2 border-dashed border-purple-500/30 rounded-3xl bg-[#1A1C23] shadow-2xl transition-all hover:border-purple-500/60 w-full max-w-sm">
-                <svg className="w-12 h-12 text-purple-500 mb-6 drop-shadow-lg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
-                </svg>
+            {!selectedFile ? (
+              <div className="relative w-32 h-32 sm:w-40 sm:h-40 md:w-44 md:h-44 flex items-center justify-center group">
                 
-                <input
-                  type="file"
-                  accept=".mp3,.wav,.m4a,.aac,.caf,.ogg,.mp4,audio/mpeg,audio/wav,audio/mp4,audio/x-m4a,audio/aac"
-                  onChange={handleFileChange}
-                  ref={fileInputRef}
-                  className="block w-full text-sm text-gray-400
-                    file:mr-4 file:py-3 file:px-6
-                    file:rounded-full file:border-0
-                    file:text-sm file:font-bold file:tracking-widest file:uppercase
-                    file:bg-gradient-to-r file:from-purple-600 file:to-indigo-600 file:text-white
-                    hover:file:from-purple-500 hover:file:to-indigo-600
-                    file:cursor-pointer cursor-pointer file:shadow-lg file:shadow-purple-500/30"
-                />
-                
-                {selectedFile && (
-                  <div className="mt-4 text-xs text-gray-300 text-center">
-                    {selectedFile.name} • {formatearTamaño(selectedFile.size)}
-                  </div>
-                )}
-              </div>
-            )}
+                <div className="absolute inset-0 rounded-full bg-gradient-to-br from-[#8E44AD] to-[#5B2C6F] shadow-[0_0_40px_rgba(147,51,234,0.5)] group-hover:scale-105 group-hover:shadow-[0_0_60px_rgba(147,51,234,0.7)] transition-all duration-300 flex flex-col items-center justify-center pointer-events-none">
+                  <svg className="w-12 h-12 text-white mb-2 drop-shadow-lg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
+                  </svg>
+                  <span className="text-xs font-bold text-white uppercase tracking-widest">Subir Audio</span>
+                </div>
 
-            {selectedFile && !loading && (
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="*/*"
+                  onChange={handleFileChange}
+                  title=""
+                  className="absolute inset-0 w-full h-full cursor-pointer rounded-full z-50"
+                  style={{ opacity: 0.01 }}
+                />
+              </div>
+            ) : !loading ? (
               <div className="flex flex-col items-center animate-fade-in w-full mt-4">
+                <div className="bg-[#1A1C23] border border-purple-500/30 p-4 rounded-2xl mb-6 flex items-center justify-between w-full max-w-sm">
+                  <div className="flex flex-col overflow-hidden">
+                    <span className="text-sm font-bold text-gray-200 truncate pr-4">{selectedFile.name}</span>
+                    <span className="text-xs text-gray-500 mt-1">{formatearTamaño(selectedFile.size)}</span>
+                  </div>
+                  <button onClick={nuevoAnalisis} className="text-gray-500 hover:text-red-400 p-2">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                  </button>
+                </div>
+
                 <button
                   type="button"
                   onClick={handleAnalyze}
-                  className="w-full max-w-sm py-4 rounded-xl bg-emerald-600 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-lg shadow-lg shadow-emerald-500/40 transition-all hover:scale-[1.02]"
+                  className="w-full max-w-sm py-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-lg shadow-[0_0_30px_rgba(16,185,129,0.4)] transition-all hover:scale-[1.02]"
                 >
                   Analizar Predicación
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setSelectedFile(null)}
-                  className="mt-3 text-gray-400 hover:text-red-400 text-sm"
-                >
-                  Cambiar archivo
-                </button>
               </div>
-            )}
-            
+            ) : null}
+
             {loading && (
               <div className="flex flex-col items-center text-center mt-2 w-full px-2 animate-fade-in">
-                <div className="w-24 h-24 rounded-full bg-emerald-600 bg-gradient-to-br from-emerald-600 to-teal-600 animate-pulse flex items-center justify-center shadow-2xl shadow-emerald-500/50 mb-6">
+                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-emerald-600 to-teal-600 animate-pulse flex items-center justify-center shadow-[0_0_40px_rgba(16,185,129,0.5)] mb-6">
                   <span className="text-2xl font-black text-white">{progress}%</span>
                 </div>
                 <span className="text-xs sm:text-sm font-bold text-emerald-400 uppercase tracking-widest mb-4">
-                  {progress <= 49 ? 'Extrayendo texto del audio...' : 'Analizando teología profunda...'}
+                  {progress <= 50 ? 'Subiendo a la nube...' : 'Analizando teología...'}
                 </span>
                 <div className="bg-[#1A1D27]/90 border border-emerald-500/20 rounded-2xl p-5 shadow-xl w-full">
                   <p className="text-gray-200 text-sm font-medium italic mb-2">"{promesasBiblicas[versoIndex].texto}"</p>
@@ -550,7 +536,7 @@ export default function Home() {
       )}
 
       <footer className="w-full text-center py-5 sm:py-6 text-[10px] sm:text-xs text-gray-500 font-medium tracking-wide z-10 mt-auto px-4 space-y-1">
-        <p>1.8 beta</p>
+        <p>1.9 beta</p>
       </footer>
     </div>
   );
