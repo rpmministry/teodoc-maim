@@ -43,6 +43,22 @@ export default function Home() {
     return () => clearInterval(intervaloVerso);
   }, [loading]);
 
+  useEffect(() => {
+    const inputElement = fileInputRef.current;
+    if (!inputElement) return;
+
+    const handleNativeChange = (event: Event) => {
+      const target = event.target as HTMLInputElement;
+      if (target.files && target.files.length > 0) {
+        setSelectedFile(target.files[0]);
+        setError(null);
+      }
+    };
+
+    inputElement.addEventListener('change', handleNativeChange);
+    return () => inputElement.removeEventListener('change', handleNativeChange);
+  }, []);
+
   const enviarSugerencia = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!feedbackMsg.trim()) return;
@@ -65,7 +81,6 @@ export default function Home() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    
     setSelectedFile(file);
     setError(null);
   };
@@ -97,7 +112,7 @@ export default function Home() {
     const url = `https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`;
     const uploadPreset = 'teodoc_preset';
     
-    const chunkSize = 10 * 1024 * 1024; // 10MB
+    const chunkSize = 10 * 1024 * 1024;
     const totalChunks = Math.ceil(file.size / chunkSize);
     const uniqueUploadId = `${Date.now()}-${Math.random().toString(36).substring(7)}`;
     
@@ -120,7 +135,7 @@ export default function Home() {
       const res = await fetch(url, { method: 'POST', headers, body: formData });
       
       if (!res.ok) {
-        throw new Error(`Error de red al subir. Intenta de nuevo.`);
+        throw new Error(`Error de red al subir. Verifica tu conexión.`);
       }
       
       const data = await res.json();
@@ -136,7 +151,7 @@ export default function Home() {
     return secureUrl;
   };
 
-  const handleAnalyze = async () => {
+  const executeAnalysis = async () => {
     if (!selectedFile) return;
 
     setLoading(true);
@@ -184,6 +199,11 @@ export default function Home() {
       setLoading(false);
       setProgress(0);
     }
+  };
+
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    executeAnalysis();
   };
 
   const descargarInfografia = async () => {
@@ -302,7 +322,7 @@ export default function Home() {
             {!selectedFile ? (
               <div className="relative flex flex-col items-center justify-center w-32 h-32 sm:w-40 sm:h-40 md:w-44 md:h-44 group">
                 
-                <div className="absolute inset-0 rounded-full bg-purple-600 hover:bg-purple-500 transition-colors duration-300 flex flex-col items-center justify-center pointer-events-none">
+                <div className="absolute inset-0 rounded-full bg-purple-600 shadow-xl shadow-purple-500/20 group-hover:scale-105 transition-all duration-300 flex flex-col items-center justify-center pointer-events-none">
                   <svg className="w-12 h-12 text-white mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
                   </svg>
@@ -312,14 +332,15 @@ export default function Home() {
                 <input
                   ref={fileInputRef}
                   type="file"
-                  accept=".mp3,.wav,.m4a,.aac,.flac,.ogg,.mp4"
+                  accept=".mp3,.wav,.m4a,.aac,.flac,.ogg,.mp4,audio/*"
                   onChange={handleFileChange}
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-50 rounded-full"
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-50"
                   title="Seleccionar grabación"
                 />
               </div>
             ) : (
-              <div className="flex flex-col items-center animate-fade-in w-full mt-4">
+              <form onSubmit={handleFormSubmit} className="flex flex-col items-center animate-fade-in w-full mt-4">
+                
                 <div className="bg-[#1A1C23] border border-purple-500/30 p-4 rounded-2xl mb-6 flex items-center justify-between w-full max-w-sm shadow-lg">
                   <div className="flex flex-col overflow-hidden text-left flex-1">
                     <span className="text-sm font-bold text-emerald-400 truncate pr-2">{selectedFile.name}</span>
@@ -336,13 +357,12 @@ export default function Home() {
                 </div>
 
                 <button
-                  type="button"
-                  onClick={handleAnalyze}
+                  type="submit"
                   className="w-full max-w-sm py-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-lg shadow-[0_0_30px_rgba(16,185,129,0.4)] transition-all hover:scale-[1.02]"
                 >
                   Analizar Predicación
                 </button>
-              </div>
+              </form>
             )}
             
             {error && <div className="mt-8 px-5 py-3 bg-red-900/30 border border-red-500/50 rounded-xl text-red-200 text-sm w-full text-center animate-fade-in">{error}</div>}
@@ -584,7 +604,7 @@ export default function Home() {
       )}
 
       <footer className="w-full text-center py-5 sm:py-6 text-[10px] sm:text-xs text-gray-500 font-medium tracking-wide z-10 mt-auto px-4 space-y-1">
-        <p>1.18 beta</p>
+        <p>1.19 beta</p>
       </footer>
     </div>
   );
