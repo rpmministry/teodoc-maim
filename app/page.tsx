@@ -41,76 +41,6 @@ export default function Home() {
   const [feedbackMsg, setFeedbackMsg] = useState('');
   const [feedbackStatus, setFeedbackStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
 
-  useEffect(() => {
-    let intervaloVerso: NodeJS.Timeout;
-    if (loading) {
-      intervaloVerso = setInterval(() => setVersoIndex((prev) => (prev + 1) % promesasBiblicas.length), 7000);
-    }
-    return () => clearInterval(intervaloVerso);
-  }, [loading]);
-
-  const enviarSugerencia = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!feedbackMsg.trim()) return;
-    setFeedbackStatus('sending');
-    try {
-      const res = await fetch("https://formsubmit.co/ajax/recursosparaministerios@gmail.com", {
-        method: "POST",
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body: JSON.stringify({ _subject: "💡 Nueva Sugerencia - TeoDoc", mensaje: feedbackMsg })
-      });
-      if (res.ok) {
-        setFeedbackStatus('success');
-        setTimeout(() => { setShowFeedbackModal(false); setFeedbackStatus('idle'); setFeedbackMsg(''); }, 3000);
-      } else throw new Error("Error en servidor");
-    } catch (err) {
-      setFeedbackStatus('error');
-    }
-  };
-
-  const openWidget = () => {
-    if (typeof window === 'undefined' || !window.cloudinary) {
-      setError("El sistema de subida está cargando. Por favor, intenta en un par de segundos.");
-      return;
-    }
-
-    if (!widgetRef.current) {
-      widgetRef.current = window.cloudinary.createUploadWidget({
-        cloudName: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'antbfat3',
-        uploadPreset: 'teodoc_preset',
-        sources: ['local', 'google_drive'],
-        multiple: false,
-        resourceType: 'auto',
-        clientAllowedFormats: ['audio', 'video'],
-        maxFileSize: 104857600,
-        language: 'es',
-        text: {
-          es: {
-            menu: { files: "Mis Archivos", web: "Navegar" },
-            local: { browse: "Seleccionar Audio", dd_title_single: "Arrastra tu prédica aquí" }
-          }
-        },
-        styles: {
-          palette: {
-            window: "#1A1D27", windowBorder: "#8E44AD", tabIcon: "#8E44AD",
-            menuIcons: "#FFFFFF", textDark: "#000000", textLight: "#FFFFFF",
-            link: "#10B981", action: "#8E44AD", inactiveTabIcon: "#A0AEC0",
-            error: "#EF4444", inProgress: "#10B981", complete: "#10B981", sourceBg: "#13161F"
-          }
-        }
-      }, (err: any, result: any) => {
-        if (!err && result && result.event === "success") {
-          const audioUrl = result.info.secure_url;
-          processAudioAndText(audioUrl);
-        } else if (err) {
-          console.error("Error en Widget Cloudinary:", err);
-        }
-      });
-    }
-    
-    widgetRef.current.open();
-  };
-
   const processAudioAndText = async (audioUrl: string) => {
     setLoading(true);
     setProgress(5);
@@ -153,6 +83,90 @@ export default function Home() {
       setError(err.message || 'Ocurrió un error en el proceso de análisis.');
       setLoading(false);
       setProgress(0);
+    }
+  };
+
+  useEffect(() => {
+    let intervaloVerso: NodeJS.Timeout;
+    if (loading) {
+      intervaloVerso = setInterval(() => setVersoIndex((prev) => (prev + 1) % promesasBiblicas.length), 7000);
+    }
+    return () => clearInterval(intervaloVerso);
+  }, [loading]);
+
+  useEffect(() => {
+    const initCloudinaryWidget = () => {
+      if (typeof window !== 'undefined' && window.cloudinary && !widgetRef.current) {
+        widgetRef.current = window.cloudinary.createUploadWidget(
+          {
+            cloudName: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'antbfat3',
+            uploadPreset: 'teodoc_preset',
+            sources: ['local', 'google_drive'],
+            multiple: false,
+            resourceType: 'auto',
+            clientAllowedFormats: ['audio', 'video'],
+            maxFileSize: 104857600,
+            language: 'es',
+            text: {
+              es: {
+                menu: { files: "Mis Archivos", web: "Navegar" },
+                local: { browse: "Seleccionar Audio", dd_title_single: "Arrastra tu prédica aquí" }
+              }
+            },
+            styles: {
+              palette: {
+                window: "#1A1D27", windowBorder: "#8E44AD", tabIcon: "#8E44AD",
+                menuIcons: "#FFFFFF", textDark: "#000000", textLight: "#FFFFFF",
+                link: "#10B981", action: "#8E44AD", inactiveTabIcon: "#A0AEC0",
+                error: "#EF4444", inProgress: "#10B981", complete: "#10B981", sourceBg: "#13161F"
+              }
+            }
+          },
+          (err: any, result: any) => {
+            if (!err && result && result.event === "success") {
+              const audioUrl = result.info.secure_url;
+              processAudioAndText(audioUrl);
+            }
+          }
+        );
+      }
+    };
+
+    const checkInterval = setInterval(() => {
+      if (widgetRef.current) {
+        clearInterval(checkInterval);
+      } else {
+        initCloudinaryWidget();
+      }
+    }, 500);
+
+    return () => clearInterval(checkInterval);
+  }, []);
+
+  const openWidget = () => {
+    if (widgetRef.current) {
+      widgetRef.current.open();
+    } else {
+      setError("Cargando el sistema de subida. Por favor, intenta de nuevo en un segundo.");
+    }
+  };
+
+  const enviarSugerencia = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!feedbackMsg.trim()) return;
+    setFeedbackStatus('sending');
+    try {
+      const res = await fetch("https://formsubmit.co/ajax/recursosparaministerios@gmail.com", {
+        method: "POST",
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({ _subject: "💡 Nueva Sugerencia - TeoDoc", mensaje: feedbackMsg })
+      });
+      if (res.ok) {
+        setFeedbackStatus('success');
+        setTimeout(() => { setShowFeedbackModal(false); setFeedbackStatus('idle'); setFeedbackMsg(''); }, 3000);
+      } else throw new Error("Error en servidor");
+    } catch (err) {
+      setFeedbackStatus('error');
     }
   };
 
@@ -277,21 +291,16 @@ export default function Home() {
             
             {!loading && (
               <div className="flex flex-col items-center relative">
-                <div className="relative flex flex-col items-center justify-center w-32 h-32 sm:w-40 sm:h-40 md:w-44 md:h-44 rounded-full bg-purple-700 bg-gradient-to-br from-purple-600 to-indigo-900 shadow-2xl shadow-purple-500/40 hover:scale-105 hover:shadow-purple-500/60 transition-all duration-300">
-                  
-                  <div className="flex flex-col items-center pointer-events-none">
-                    <svg className="w-12 h-12 text-white mb-2 drop-shadow-lg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
-                    </svg>
-                    <span className="text-xs font-bold text-white uppercase tracking-widest">Subir Audio</span>
-                  </div>
-
-                  <button 
-                    onClick={openWidget}
-                    className="absolute inset-0 w-full h-full cursor-pointer rounded-full"
-                    style={{ WebkitTapHighlightColor: 'transparent' }}
-                  ></button>
-                </div>
+                <button 
+                  onClick={openWidget}
+                  type="button"
+                  className="relative flex flex-col items-center justify-center w-32 h-32 sm:w-40 sm:h-40 md:w-44 md:h-44 rounded-full bg-purple-700 bg-gradient-to-br from-purple-600 to-indigo-900 shadow-2xl shadow-purple-500/40 hover:scale-105 hover:shadow-purple-500/60 transition-all duration-300 cursor-pointer"
+                >
+                  <svg className="w-12 h-12 text-white mb-2 drop-shadow-lg pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
+                  </svg>
+                  <span className="text-xs font-bold text-white uppercase tracking-widest pointer-events-none">Subir Audio</span>
+                </button>
               </div>
             )}
 
@@ -453,8 +462,7 @@ export default function Home() {
                         </div>
 
                         <div style={{ backgroundColor: '#F3EBE1' }} className="p-6 sm:p-8 rounded-xl border border-gray-200 border-l-[6px] border-l-[#D4AF37]">
-                          <h3 className="text-xs sm:text-sm font-black uppercase tracking-widest text-[#725439] mb-3 sm:mb-4">📖 Texto Clave (RV1960)
-                          </h3>
+                          <h3 className="text-xs sm:text-sm font-black uppercase tracking-widest text-[#725439] mb-3 sm:mb-4">📖 Texto Clave (RV1960)</h3>
                           <p className="text-[#2C3E50] font-medium italic text-base sm:text-lg leading-relaxed">
                             "{resultado.infografia.texto_clave || 'Lámpara es a mis pies tu palabra.'}"
                           </p>
@@ -524,7 +532,7 @@ export default function Home() {
                 <button
                   type="submit"
                   disabled={feedbackStatus === 'sending'}
-                  className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold py-2.5 rounded-xl text-sm transition-all disabled:opacity-50"
+                  className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-pink-500 hover:to-indigo-500 text-white font-bold py-2.5 rounded-xl text-sm transition-all disabled:opacity-50"
                 >
                   {feedbackStatus === 'sending' ? 'Enviando...' : 'Enviar Mensaje'}
                 </button>
@@ -535,7 +543,7 @@ export default function Home() {
       )}
 
       <footer className="w-full text-center py-5 sm:py-6 text-[10px] sm:text-xs text-gray-500 font-medium tracking-wide z-10 mt-auto px-4 space-y-1">
-        <p>1.6 beta</p>
+        <p>1.7 beta</p>
       </footer>
     </div>
   );
