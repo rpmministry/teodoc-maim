@@ -62,7 +62,7 @@ export default function Home() {
     }
   };
 
-  // PASO 1: Captura sincrónica del archivo
+  // PASO 1: Captura nativa y directa del archivo
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -75,7 +75,7 @@ export default function Home() {
     return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
   };
 
-  // PASO 2: Procesamiento directo desde el cliente a Cloudinary (Evita el límite de 4.5MB de Vercel)
+  // PASO 2: Procesamiento directo a la Nube evadiendo Vercel
   const handleAnalyze = async () => {
     if (!selectedFile) return;
 
@@ -86,7 +86,7 @@ export default function Home() {
     setVersoIndex(0);
 
     try {
-      // 1. UPLOAD DIRECTO A CLOUDINARY (Sin pasar por Next.js api/upload)
+      // 1. UPLOAD DIRECTO A CLOUDINARY (Soporta archivos pesados)
       const timerCloud = setInterval(() => setProgress((prev) => (prev >= 25 ? 25 : prev + 1)), 500);
       
       const formDataCloud = new FormData();
@@ -99,7 +99,7 @@ export default function Home() {
       });
       clearInterval(timerCloud);
 
-      if (!resCloud.ok) throw new Error('Error enviando el archivo a la nube. Verifica tu conexión.');
+      if (!resCloud.ok) throw new Error('Error enviando el archivo a la nube. Verifica el peso o tu conexión.');
       const cloudData = await resCloud.json();
       const audioUrl = cloudData.secure_url;
 
@@ -261,37 +261,45 @@ export default function Home() {
         {!resultado && (
           <div className="flex flex-col items-center w-full max-w-lg relative z-20">
             
-            {/* Input Físico con extensiones explícitas (Sin audio/* para forzar el administrador de archivos en Android) */}
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".mp3,.wav,.m4a,.aac,.ogg,.mp4,.flac,.wma,.opus,.caf"
-              onChange={handleFileChange}
-              className="sr-only" 
-            />
-
             {!selectedFile ? (
-              // CÍRCULO SEGURO PARA IOS (Clases Tailwind estándar, sin HEX personalizados que causan fondo negro)
+              // SOLUCIÓN DEFINITIVA IOS: Div contenedor (seguro) + Label Transparente (nativo)
               <div className="flex flex-col items-center">
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="relative flex flex-col items-center justify-center w-32 h-32 sm:w-40 sm:h-40 md:w-44 md:h-44 rounded-full bg-purple-700 bg-gradient-to-br from-purple-600 to-indigo-900 shadow-2xl shadow-purple-500/40 hover:scale-105 hover:shadow-purple-500/60 active:scale-95 transition-all duration-300 appearance-none"
-                >
-                  <svg className="w-12 h-12 text-white mb-2 drop-shadow-lg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
-                  </svg>
-                  <span className="text-xs font-bold text-white uppercase tracking-widest">Subir Audio</span>
-                </button>
+                <div className="relative flex flex-col items-center justify-center w-32 h-32 sm:w-40 sm:h-40 md:w-44 md:h-44 rounded-full bg-purple-700 bg-gradient-to-br from-purple-600 to-indigo-900 shadow-2xl shadow-purple-500/40 hover:scale-105 hover:shadow-purple-500/60 transition-all duration-300">
+                  
+                  {/* Capa Visual (No interactiva) */}
+                  <div className="flex flex-col items-center pointer-events-none">
+                    <svg className="w-12 h-12 text-white mb-2 drop-shadow-lg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
+                    </svg>
+                    <span className="text-xs font-bold text-white uppercase tracking-widest">Subir Audio</span>
+                  </div>
+
+                  {/* Capa Nativa iOS (Label 100% transparente para capturar el toque nativo de Apple) */}
+                  <label 
+                     htmlFor="audio-upload-input" 
+                     className="absolute inset-0 w-full h-full cursor-pointer z-10 rounded-full"
+                     style={{ WebkitTapHighlightColor: 'transparent' }}
+                  ></label>
+                </div>
+
+                {/* Input Oculto (Seguro en el DOM) */}
+                <input
+                  id="audio-upload-input"
+                  type="file"
+                  accept=".mp3,.wav,.m4a,.aac,.caf,.ogg,.mp4,audio/*,video/*"
+                  onChange={handleFileChange}
+                  className="hidden" 
+                />
               </div>
             ) : !loading ? (
-              <div className="flex flex-col items-center animate-fade-in w-full">
+              // ESTADO 2: Archivo Seleccionado -> Listo para Analizar
+              <div className="flex flex-col items-center animate-fade-in w-full mt-4">
                 <div className="bg-[#1A1C23] border border-purple-500/30 p-4 rounded-2xl mb-6 flex items-center justify-between w-full max-w-sm">
                   <div className="flex flex-col overflow-hidden">
                     <span className="text-sm font-bold text-gray-200 truncate pr-4">{selectedFile.name}</span>
                     <span className="text-xs text-gray-500 mt-1">{formatearTamaño(selectedFile.size)}</span>
                   </div>
-                  <button onClick={() => { setSelectedFile(null); if(fileInputRef.current) fileInputRef.current.value = ''; }} className="text-gray-500 hover:text-red-400 p-2">
+                  <button onClick={nuevoAnalisis} className="text-gray-500 hover:text-red-400 p-2">
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                   </button>
                 </div>
@@ -325,6 +333,7 @@ export default function Home() {
           </div>
         )}
 
+        {/* CONTENEDOR DE RESULTADOS */}
         {resultado && (
           <div className="w-full mt-6 md:mt-10 mb-12 sm:mb-16 space-y-10 sm:space-y-16 animate-fade-in">
             <div className="bg-[#13161F]/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl border border-gray-800 shadow-2xl overflow-hidden">
@@ -347,7 +356,7 @@ export default function Home() {
                     </button>
                     {resultado.infografia && (
                       <button onClick={descargarInfografia} className="w-full sm:w-auto justify-center bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-medium transition-colors shadow-lg flex items-center gap-2">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 002 2v12a2 2 0 002 2z"></path></svg>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                         Exportar Infografía
                       </button>
                     )}
@@ -400,7 +409,7 @@ export default function Home() {
                 <div className="grid md:grid-cols-2 gap-5 sm:gap-6">
                   <section className="bg-blue-900/10 p-5 sm:p-8 rounded-xl sm:rounded-2xl border border-blue-900/30">
                     <h3 className="text-xs sm:text-sm font-bold text-blue-400 mb-4 sm:mb-6 uppercase tracking-[0.15em] flex items-center gap-2 sm:gap-3">
-                      <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+                      <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
                       Aplicación Práctica
                     </h3>
                     <ul className="space-y-3 sm:space-y-4">
@@ -547,7 +556,7 @@ export default function Home() {
 
       {/* FOOTER */}
       <footer className="w-full text-center py-5 sm:py-6 text-[10px] sm:text-xs text-gray-500 font-medium tracking-wide z-10 mt-auto px-4 space-y-1">
-        <p>1.3 beta</p>
+        <p>1.4 beta</p>
       </footer>
     </div>
   );
