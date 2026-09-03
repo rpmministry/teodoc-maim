@@ -1,14 +1,7 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
-import Script from 'next/script';
 import { jsPDF } from 'jspdf';
 import domtoimage from 'dom-to-image-more';
-
-declare global {
-  interface Window {
-    cloudinary: any;
-  }
-}
 
 interface Versiculo { cita: string; texto: string; }
 interface PuntoDesarrollo { punto: string; explicacion: string; versiculos: Versiculo[]; }
@@ -20,12 +13,6 @@ interface PredicaAnalisis {
   aplicacion: string[]; oracion: string;
 }
 
-// Interfaz para unificar archivos nativos de iOS y respuestas de Cloudinary
-interface FileDisplay {
-  name: string;
-  size: number;
-}
-
 const promesasBiblicas = [
   { cita: "Isaías 41:10", texto: "No temas, porque yo estoy contigo; no desmayes..." },
   { cita: "Jeremías 29:11", texto: "Porque yo sé los pensamientos que tengo acerca de vosotros..." },
@@ -34,7 +21,7 @@ const promesasBiblicas = [
 ];
 
 export default function Home() {
-  const [selectedFile, setSelectedFile] = useState<FileDisplay | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [resultado, setResultado] = useState<PredicaAnalisis | null>(null);
@@ -84,12 +71,91 @@ export default function Home() {
   };
 
   // ---------------------------------------------------------------------------
-  // MOTOR 1: EL EMBUDO FINAL DE PROCESAMIENTO
-  // Recibe una URL segura de Cloudinary (venga de iOS o de Android/PC) y arranca la IA.
+  // EL MOTOR DE SUBIDA A PRUEBA DE BALAS (Propuesto por la auditoría)
+  // Soporta fallos de red en móviles, reintentos y chunking nativo.
   // ---------------------------------------------------------------------------
-  const startAnalysisPipeline = async (audioUrl: string) => {
+  const uploadChunkWithRetry = async (
+    chunk: Blob,
+    start: number,
+    end: number,
+    total: number,
+    uploadId: string,
+    cloudName: string
+  ) => {
+    // Intentará subir el mismo pedazo hasta 4 veces si hay falla de internet
+    for (let attempt = 1; attempt <= 4; attempt++) {
+      try {
+        const formData = new FormData();
+        formData.append("file", chunk);
+        formData.append("upload_preset", "teodoc_preset");
+
+        const response = await fetch(
+          `https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`,
+          {
+            method: "POST",
+            headers: {
+              "X-Unique-Upload-Id": uploadId,
+              "Content-Range": `bytes ${start}-${end - 1}/${total}`,
+            },
+            body: formData,
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(`Error HTTP: ${response.status}`);
+        }
+
+        return await response.json();
+
+      } catch (err) {
+        if (attempt === 4) throw err; // Se rinde al cuarto intento
+        // Espera antes de reintentar (1.5s, 3s, 4.5s...)
+        await new Promise(resolve => setTimeout(resolve, attempt * 1500));
+      }
+    }
+  };
+
+  const uploadToCloudinaryResilient = async (file: File) => {
+    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'antbfat3';
+    const chunkSize = 10 * 1024 * 1024; // 10MB
+    const totalChunks = Math.ceil(file.size / chunkSize);
+    const uniqueUploadId = `${Date.now()}-${Math.random().toString(36).substring(7)}`;
+    
+    let secureUrl = "";
+
+    for (let i = 0; i < totalChunks; i++) {
+      const start = i * chunkSize;
+      const end = Math.min(start + chunkSize, file.size);
+      const chunk = file.slice(start, end);
+
+      const data = await uploadChunkWithRetry(chunk, start, end, file.size, uniqueUploadId, cloudName);
+      
+      const currentProgress = Math.floor(((i + 1) / totalChunks) * 25);
+      setProgress(currentProgress);
+
+      if (i === totalChunks - 1 && data) {
+        secureUrl = data.secure_url;
+      }
+    }
+
+    return secureUrl;
+  };
+
+  // ---------------------------------------------------------------------------
+  // EL EMBUDO DE PROCESAMIENTO
+  // ---------------------------------------------------------------------------
+  const executeAnalysis = async (fileToProcess: File) => {
+    setLoading(true);
+    setProgress(0);
+    setError(null);
+    setResultado(null);
+    setVersoIndex(0);
+
     try {
-      // 1. TRANSCRIPCIÓN
+      // 1. SUBIDA RESILIENTE
+      const audioUrl = await uploadToCloudinaryResilient(fileToProcess);
+
+      // 2. TRANSCRIPCIÓN
       setProgress(30);
       const timerTranscribe = setInterval(() => setProgress((prev) => (prev >= 49 ? 49 : prev + 1)), 800);
 
@@ -98,11 +164,11 @@ export default function Home() {
       });
       clearInterval(timerTranscribe);
 
-      if (!resTranscribe.ok) throw new Error('Error procesando la transcripción.');
+      if (!resTranscribe.ok) throw new Error('Error en el motor de transcripción.');
       const dataTranscribe = await resTranscribe.json();
       const textoTranscrito = dataTranscribe.text;
       
-      // 2. ANÁLISIS TEOLÓGICO
+      // 3. ANÁLISIS TEOLÓGICO
       setProgress(50);
       const timerAnalyze = setInterval(() => {
         setProgress((prev) => prev >= 98 ? 98 : prev + Math.max(1, Math.floor((99 - prev) * 0.05)));
@@ -113,10 +179,10 @@ export default function Home() {
       });
       clearInterval(timerAnalyze);
 
-      if (!resAnalyze.ok) throw new Error('Error en el análisis teológico.');
+      if (!resAnalyze.ok) throw new Error('Error procesando el análisis teológico.');
       const dataAnalyze = await resAnalyze.json();
 
-      // 3. FINALIZAR
+      // 4. FINALIZAR
       setProgress(100);
       setTimeout(() => {
         setResultado(dataAnalyze);
@@ -124,7 +190,7 @@ export default function Home() {
       }, 500);
 
     } catch (err: any) {
-      setError(err.message || 'Ocurrió un error inesperado en el análisis.');
+      setError(err.message || 'Ocurrió un error inesperado en la red.');
       setLoading(false);
       setProgress(0);
       setSelectedFile(null);
@@ -132,115 +198,26 @@ export default function Home() {
   };
 
   // ---------------------------------------------------------------------------
-  // MOTOR 2: FLUJO NATIVO PARA iOS (iPhone / iPad)
+  // INTERACCIÓN NATIVA PURA (Sin hacks, sin superposiciones)
   // ---------------------------------------------------------------------------
-  const uploadToCloudinaryChunked = async (file: File) => {
-    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'antbfat3';
-    const url = `https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`;
-    const uploadPreset = 'teodoc_preset';
-    const chunkSize = 10 * 1024 * 1024; // 10MB
-    const totalChunks = Math.ceil(file.size / chunkSize);
-    const uniqueUploadId = `${Date.now()}-${Math.random().toString(36).substring(7)}`;
-    let secureUrl = "";
-
-    for (let i = 0; i < totalChunks; i++) {
-      const start = i * chunkSize;
-      const end = Math.min(start + chunkSize, file.size);
-      const chunk = file.slice(start, end);
-
-      const formData = new FormData();
-      formData.append('file', chunk);
-      formData.append('upload_preset', uploadPreset);
-      
-      const headers: HeadersInit = {
-        'X-Unique-Upload-Id': uniqueUploadId,
-        'Content-Range': `bytes ${start}-${end - 1}/${file.size}`,
-      };
-
-      const res = await fetch(url, { method: 'POST', headers, body: formData });
-      if (!res.ok) throw new Error(`Error de red al subir. Verifica tu conexión.`);
-      
-      const data = await res.json();
-      const currentProgress = Math.floor(((i + 1) / totalChunks) * 25);
-      setProgress(currentProgress);
-
-      if (i === totalChunks - 1) secureUrl = data.secure_url;
-    }
-    return secureUrl;
-  };
-
   const handleNativeFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setSelectedFile({ name: file.name, size: file.size });
+    // Validación Básica
+    const extension = file.name.slice((file.name.lastIndexOf(".") - 1 >>> 0) + 2).toLowerCase();
+    const validExtensions = ['mp3', 'wav', 'm4a', 'aac', 'flac', 'ogg', 'mp4', 'wma', 'caf'];
+    
+    if (!validExtensions.includes(extension)) {
+      setError("Formato no reconocido. Usa formatos comunes de audio.");
+      return;
+    }
+
+    setSelectedFile(file);
     setError(null);
-    setLoading(true);
-    setProgress(0);
-    setVersoIndex(0);
 
-    try {
-      const audioUrl = await uploadToCloudinaryChunked(file);
-      await startAnalysisPipeline(audioUrl);
-    } catch (err: any) {
-      setError(err.message || 'Error al subir el archivo.');
-      setLoading(false);
-      setProgress(0);
-      setSelectedFile(null);
-    }
-  };
-
-  // ---------------------------------------------------------------------------
-  // MOTOR 3: FLUJO CLOUDINARY WIDGET PARA ANDROID / WINDOWS / MAC
-  // ---------------------------------------------------------------------------
-  const openCloudinaryWidget = () => {
-    window.cloudinary.openUploadWidget(
-      {
-        cloudName: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'antbfat3',
-        uploadPreset: 'teodoc_preset',
-        sources: ['local', 'google_drive'],
-        resourceType: 'video', // Audios son tratados como video en Cloudinary
-        clientAllowedFormats: ['mp3', 'wav', 'm4a', 'aac', 'flac', 'ogg', 'mp4'],
-        maxFileSize: 524288000, // 500 MB
-        multiple: false,
-        language: 'es',
-        text: { es: { menu: { files: "Mis Archivos" }, local: { browse: "Seleccionar Prédica" } } },
-        styles: {
-          palette: {
-            window: "#1A1D27", windowBorder: "#8E44AD", tabIcon: "#8E44AD",
-            menuIcons: "#FFFFFF", textDark: "#000000", textLight: "#FFFFFF",
-            link:  "#10B981", action:  "#8E44AD", inactiveTabIcon: "#A0AEC0",
-            sourceBg: "#13161F"
-          }
-        }
-      },
-      (err: any, result: any) => {
-        if (!err && result && result.event === "success") {
-          setSelectedFile({ 
-            name: `${result.info.original_filename}.${result.info.format}`, 
-            size: result.info.bytes 
-          });
-          setLoading(true);
-          setProgress(25); // Saltamos el progreso de subida porque Cloudinary ya lo hizo
-          startAnalysisPipeline(result.info.secure_url);
-        }
-      }
-    );
-  };
-
-  // ---------------------------------------------------------------------------
-  // INTERCEPTOR HÍBRIDO DE CLICS (El cerebro del sistema)
-  // ---------------------------------------------------------------------------
-  const handleSmartClick = (e: React.MouseEvent<HTMLInputElement>) => {
-    // Detectamos si el usuario está en un iPhone o iPad (iOS Safari)
-    const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-
-    // Si NO es iOS y el script de Cloudinary cargó correctamente, bloqueamos el HTML nativo y abrimos el Widget.
-    if (!isIOSDevice && typeof window !== 'undefined' && window.cloudinary) {
-      e.preventDefault(); 
-      openCloudinaryWidget();
-    }
-    // Si ES iOS, simplemente no hacemos nada. El navegador dejará pasar el click hacia el <input type="file"> nativo, garantizando que funcione en el iPhone sin bloqueos.
+    // Auto-arranque
+    await executeAnalysis(file);
   };
 
   const nuevoAnalisis = () => {
@@ -325,9 +302,6 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-[#0B0C10] bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#1C1635] via-[#0B0C10] to-[#070709] text-white font-sans selection:bg-purple-500/30 flex flex-col relative overflow-x-hidden">
       
-      {/* SCRIPT OFICIAL DE CLOUDINARY */}
-      <Script src="https://upload-widget.cloudinary.com/global/all.js" strategy="afterInteractive" />
-
       <nav className="w-full flex flex-wrap gap-4 justify-between items-center px-4 sm:px-8 py-4 sm:py-6 z-10">
         <div className="flex items-center gap-2 sm:gap-3">
           <div className="w-8 h-8 sm:w-9 sm:h-9 bg-purple-600 rounded-xl flex items-center justify-center border border-white/10 shrink-0">
@@ -364,38 +338,36 @@ export default function Home() {
           </div>
         )}
 
-        {/* CONTENEDOR HÍBRIDO (El Cerebro de la V1.27) */}
+        {/* 
+          ARQUITECTURA DE ETIQUETA PURA (Label Architecture) 
+          El Input y el Label están separados, como dicta el estándar HTML5. Safari no puede fallar aquí.
+        */}
         {!loading && !resultado && (
           <div className="flex flex-col items-center w-full max-w-lg relative z-20 animate-fade-in">
             
-            <div className="relative flex flex-col items-center justify-center w-32 h-32 sm:w-40 sm:h-40 md:w-44 md:h-44 group">
-              
-              {/* LA CAPA VISUAL ÚNICA */}
-              <div className="absolute inset-0 rounded-full bg-purple-600 hover:bg-purple-500 shadow-xl shadow-purple-500/20 group-hover:scale-105 transition-all duration-300 flex flex-col items-center justify-center pointer-events-none">
-                <svg className="w-12 h-12 text-white mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
-                </svg>
-                <span className="text-xs font-bold text-white uppercase tracking-widest text-center px-2">Subir Audio</span>
-              </div>
+            {/* INPUT INVISIBLE (Pero presente en el DOM) */}
+            <input
+              id="teodoc-audio-upload"
+              ref={fileInputRef}
+              type="file"
+              accept=".mp3,.wav,.m4a,.aac,.flac,.ogg"
+              onChange={handleNativeFileChange}
+              className="hidden" // Completamente oculto, pero activo.
+            />
 
-              {/* 
-                EL INTERCEPTOR: Este Input existe siempre en el DOM.
-                - Si es iPhone (iOS), el evento onClick no hace nada, permitiendo que Safari dispare el selector de archivos nativo y caiga en onChange.
-                - Si es PC/Android, el evento onClick bloquea a Safari (e.preventDefault) y abre la ventana flotante de Cloudinary.
-              */}
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".mp3,.wav,.m4a,.aac,.flac,.ogg,.mp4,audio/*"
-                onClick={handleSmartClick}
-                onChange={handleNativeFileChange}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-50 rounded-full"
-                title="Seleccionar grabación"
-              />
-            </div>
+            {/* LABEL VISUAL (Controla al Input de forma nativa) */}
+            <label 
+              htmlFor="teodoc-audio-upload"
+              className="relative flex flex-col items-center justify-center w-32 h-32 sm:w-40 sm:h-40 md:w-44 md:h-44 rounded-full bg-purple-600 hover:bg-purple-500 shadow-xl shadow-purple-500/20 hover:scale-105 transition-all duration-300 cursor-pointer outline-none group"
+            >
+              <svg className="w-12 h-12 text-white mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
+              </svg>
+              <span className="text-xs font-bold text-white uppercase tracking-widest text-center px-2">Subir Audio</span>
+            </label>
             
             <p className="text-gray-500 text-xs mt-6 text-center max-w-xs">
-              Soporta MP3, WAV, M4A, FLAC, AAC. <br/> Archivos de hasta 500 MB.
+              Soporta MP3, WAV, M4A, FLAC, AAC, OGG. <br/> Archivos de hasta 500 MB.
             </p>
 
             {error && <div className="mt-8 px-5 py-3 bg-red-900/30 border border-red-500/50 rounded-xl text-red-200 text-sm w-full max-w-sm text-center animate-fade-in">{error}</div>}
@@ -414,7 +386,7 @@ export default function Home() {
                 {progress <= 25 ? 'Subiendo archivo pesado...' : progress <= 50 ? 'Extrayendo texto...' : 'Analizando teología...'}
               </span>
               <span className="text-[10px] text-gray-500 font-normal">
-                {selectedFile ? `Procesando: ${selectedFile.name}` : 'Asegurando audio en la nube...'}
+                {selectedFile ? `Procesando: ${selectedFile.name}` : ''}
               </span>
             </div>
 
@@ -648,7 +620,7 @@ export default function Home() {
 
       {/* FOOTER */}
       <footer className="w-full text-center py-5 sm:py-6 text-[10px] sm:text-xs text-gray-500 font-medium tracking-wide z-10 mt-auto px-4 space-y-1">
-        <p>1.27 beta</p>
+        <p>1.28 beta</p>
       </footer>
     </div>
   );
