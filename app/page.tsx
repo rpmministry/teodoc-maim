@@ -282,7 +282,7 @@ export default function Home() {
         </div>
       </nav>
 
-      <main className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 z-10 w-full max-w-5xl mx-auto -mt-4 sm:-mt-6">
+  <main className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 z-10 w-full max-w-5xl mx-auto -mt-4 sm:-mt-6">
         
         {!loading && !resultado && (
           <div className="text-center space-y-3 sm:space-y-4 mb-8 sm:mb-12 animate-fade-in-up">
@@ -296,7 +296,11 @@ export default function Home() {
             <div className="relative flex items-center justify-center mb-6">
               <div className="relative w-28 h-28 sm:w-32 sm:h-32 md:w-36 md:h-36">
                 {/* Visual button - the gradient circle */}
-                <div onClick={handleButtonClick} className={`absolute inset-0 rounded-full bg-[#8E44AD] bg-gradient-to-br from-[#8E44AD] to-[#5B2C6F] transition-all duration-300 z-0 shadow-xl ${loading ? 'bg-gradient-to-br from-emerald-600 to-teal-600 cursor-wait animate-pulse' : 'cursor-pointer hover:scale-105 hover:shadow-[0_0_60px_rgba(147,51,234,0.6)] active:scale-95'}`}></div>
+                <label 
+                  htmlFor="audio-upload-v16"
+                  onClick={handleButtonClick}
+                  className={`absolute inset-0 rounded-full bg-[#8E44AD] bg-gradient-to-br from-[#8E44AD] to-[#5B2C6F] transition-all duration-300 z-0 shadow-xl ${loading ? 'bg-gradient-to-br from-emerald-600 to-teal-600 cursor-wait animate-pulse' : 'cursor-pointer hover:scale-105 hover:shadow-[0_0_60px_rgba(147,51,234,0.6)] active:scale-95'}`}
+                ></label>
                 
                 {/* Shadow/glow effect */}
                 <div className={`absolute inset-0 rounded-full transition-all duration-500 ${loading ? 'shadow-[0_0_60px_rgba(16,185,129,0.5)]' : 'shadow-[0_0_40px_rgba(147,51,234,0.4)]'}`}></div>
@@ -323,7 +327,7 @@ export default function Home() {
                   id="audio-upload-v16"
                   type="file" 
                   accept={getAcceptAttribute()}
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-30"
                   onChange={manejarSeleccionYAnalisis}
                 />
               </div>
