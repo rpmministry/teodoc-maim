@@ -81,7 +81,6 @@ export default function Home() {
       return;
     }
 
-    // Validación posterior a la captura (Evita el rechazo silencioso de iOS)
     const validExtensions = ["mp3", "wav", "m4a", "aac", "flac", "ogg", "mp4", "caf", "wma"];
     const extension = file.name.slice((file.name.lastIndexOf(".") - 1 >>> 0) + 2).toLowerCase();
     
@@ -92,8 +91,6 @@ export default function Home() {
 
     setSelectedFile(file);
     setError(null);
-    // NO iniciamos el análisis aquí. Obligamos al usuario a pulsar "Analizar" 
-    // para confirmar que el archivo está en memoria.
   };
 
   // ---------------------------------------------------------------------------
@@ -160,7 +157,7 @@ export default function Home() {
       if (i === totalChunks - 1 && data) secureUrl = data.secure_url;
     }
     return secureUrl;
-  };
+  }
 
   // ---------------------------------------------------------------------------
   // FASE 3: EL PIPELINE COMPLETO (Se activa con el botón "Analizar")
@@ -176,17 +173,15 @@ export default function Home() {
     setVersoIndex(0);
 
     try {
-      // DECISIÓN INTELIGENTE DE SUBIDA: <= 100MB Rápida | > 100MB Resiliente
       let audioUrl = "";
-      if (selectedFile.size <= 104857600) { // 100 MB
+      if (selectedFile.size <= 104857600) { // <= 100 MB
         setProgress(15);
         audioUrl = await uploadNormal(selectedFile);
         setProgress(25);
       } else {
-        audioUrl = await uploadChunked(selectedFile);
+        audioUrl = await uploadChunked(selectedFile); // > 100 MB
       }
 
-      // TRANSCRIPCIÓN
       setProgress(30);
       const timerTranscribe = setInterval(() => setProgress((prev) => (prev >= 49 ? 49 : prev + 1)), 800);
 
@@ -199,7 +194,6 @@ export default function Home() {
       const dataTranscribe = await resTranscribe.json();
       const textoTranscrito = dataTranscribe.text;
       
-      // ANÁLISIS TEOLÓGICO
       setProgress(50);
       const timerAnalyze = setInterval(() => {
         setProgress((prev) => prev >= 98 ? 98 : prev + Math.max(1, Math.floor((99 - prev) * 0.05)));
@@ -213,7 +207,6 @@ export default function Home() {
       if (!resAnalyze.ok) throw new Error('Error procesando el análisis teológico.');
       const dataAnalyze = await resAnalyze.json();
 
-      // FINALIZAR
       setProgress(100);
       setTimeout(() => {
         setResultado(dataAnalyze);
@@ -227,7 +220,16 @@ export default function Home() {
     }
   };
 
+  // Función para reiniciar el formulario cuando hay error o se descarta la selección
   const clearFile = () => {
+    setSelectedFile(null); 
+    setError(null); 
+    setProgress(0);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  // Función para volver a la pantalla de inicio desde el resultado (SOLUCIÓN DEL ERROR TS2304)
+  const nuevoAnalisis = () => {
     setSelectedFile(null); 
     setResultado(null); 
     setError(null); 
@@ -345,10 +347,6 @@ export default function Home() {
           </div>
         )}
 
-        {/* 
-          LA ESTRUCTURA FÍSICA PURA (SIN WIDGETS, SIN HACKS)
-          El <input> físico y clickeable ocupa el espacio con opacity-0
-        */}
         {!loading && !resultado && (
           <div className="flex flex-col items-center w-full max-w-lg relative z-20 animate-fade-in">
             
@@ -371,7 +369,6 @@ export default function Home() {
                 )}
               </div>
 
-              {/* INPUT NATIVO REAL Y FÍSICO EN PANTALLA (SIN "ACCEPT") */}
               <input
                 ref={fileInputRef}
                 type="file"
@@ -381,7 +378,6 @@ export default function Home() {
               />
             </div>
 
-            {/* SEPARACIÓN DE CULPAS: Si el archivo se cargó en Safari, verás esto. */}
             {selectedFile && (
               <form onSubmit={executeAnalysis} className="flex flex-col items-center animate-fade-in w-full mt-2">
                 <div className="bg-[#1A1C23] border border-emerald-500/30 p-4 rounded-2xl mb-6 flex items-center justify-between w-full max-w-sm shadow-lg">
@@ -662,7 +658,7 @@ export default function Home() {
 
       {/* FOOTER */}
       <footer className="w-full text-center py-5 sm:py-6 text-[10px] sm:text-xs text-gray-500 font-medium tracking-wide z-10 mt-auto px-4 space-y-1">
-        <p>1.29 beta (Estable)</p>
+        <p>1.30 beta</p>
       </footer>
     </div>
   );
