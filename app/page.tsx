@@ -1,7 +1,14 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
+import Script from 'next/script';
 import { jsPDF } from 'jspdf';
 import domtoimage from 'dom-to-image-more';
+
+declare global {
+  interface Window {
+    cloudinary: any;
+  }
+}
 
 interface Versiculo { cita: string; texto: string; }
 interface PuntoDesarrollo { punto: string; explicacion: string; versiculos: Versiculo[]; }
@@ -21,14 +28,13 @@ const promesasBiblicas = [
 ];
 
 export default function Home() {
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [resultado, setResultado] = useState<PredicaAnalisis | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [versoIndex, setVersoIndex] = useState(0);
   
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const widgetRef = useRef<any>(null);
   const infografiaRef = useRef<HTMLDivElement>(null);
 
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
@@ -62,21 +68,50 @@ export default function Home() {
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const openWidget = () => {
+    if (typeof window === 'undefined' || !window.cloudinary) {
+      setError("El sistema de subida está cargando. Por favor, intenta en un par de segundos.");
+      return;
+    }
 
-    setSelectedFile(file);
-    setError(null);
+    if (!widgetRef.current) {
+      widgetRef.current = window.cloudinary.createUploadWidget({
+        cloudName: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'antbfat3',
+        uploadPreset: 'teodoc_preset',
+        sources: ['local', 'google_drive'],
+        multiple: false,
+        resourceType: 'auto',
+        clientAllowedFormats: ['audio', 'video'],
+        maxFileSize: 104857600,
+        language: 'es',
+        text: {
+          es: {
+            menu: { files: "Mis Archivos", web: "Navegar" },
+            local: { browse: "Seleccionar Audio", dd_title_single: "Arrastra tu prédica aquí" }
+          }
+        },
+        styles: {
+          palette: {
+            window: "#1A1D27", windowBorder: "#8E44AD", tabIcon: "#8E44AD",
+            menuIcons: "#FFFFFF", textDark: "#000000", textLight: "#FFFFFF",
+            link: "#10B981", action: "#8E44AD", inactiveTabIcon: "#A0AEC0",
+            error: "#EF4444", inProgress: "#10B981", complete: "#10B981", sourceBg: "#13161F"
+          }
+        }
+      }, (err: any, result: any) => {
+        if (!err && result && result.event === "success") {
+          const audioUrl = result.info.secure_url;
+          processAudioAndText(audioUrl);
+        } else if (err) {
+          console.error("Error en Widget Cloudinary:", err);
+        }
+      });
+    }
+    
+    widgetRef.current.open();
   };
 
-  const formatearTamaño = (bytes: number) => {
-    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
-  };
-
-  const handleAnalyze = async () => {
-    if (!selectedFile) return;
-
+  const processAudioAndText = async (audioUrl: string) => {
     setLoading(true);
     setProgress(5);
     setError(null);
@@ -84,23 +119,6 @@ export default function Home() {
     setVersoIndex(0);
 
     try {
-      const timerCloud = setInterval(() => setProgress((prev) => (prev >= 25 ? 25 : prev + 1)), 500);
-      
-      const formDataCloud = new FormData();
-      formDataCloud.append('file', selectedFile);
-      formDataCloud.append('upload_preset', 'teodoc_preset');
-
-      const resCloud = await fetch('https://api.cloudinary.com/v1_1/antbfat3/auto/upload', {
-        method: 'POST',
-        body: formDataCloud
-      });
-      clearInterval(timerCloud);
-
-      if (!resCloud.ok) throw new Error('Error enviando el archivo a la nube. Verifica el peso o tu conexión.');
-      const cloudData = await resCloud.json();
-      const audioUrl = cloudData.secure_url;
-
-      setProgress(30);
       const timerTranscribe = setInterval(() => setProgress((prev) => (prev >= 49 ? 49 : prev + 1)), 800);
 
       const resTranscribe = await fetch('/api/transcribe', { 
@@ -132,15 +150,14 @@ export default function Home() {
       }, 500);
 
     } catch (err: any) {
-      setError(err.message || 'Ocurrió un error en el proceso.');
+      setError(err.message || 'Ocurrió un error en el proceso de análisis.');
       setLoading(false);
       setProgress(0);
     }
   };
 
   const nuevoAnalisis = () => {
-    setSelectedFile(null); setResultado(null); setError(null); setProgress(0);
-    if (fileInputRef.current) fileInputRef.current.value = '';
+    setResultado(null); setError(null); setProgress(0);
   };
 
   const descargarInfografia = async () => {
@@ -217,6 +234,8 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-[#0B0C10] bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#1C1635] via-[#0B0C10] to-[#070709] text-white font-sans selection:bg-purple-500/30 flex flex-col relative overflow-x-hidden">
       
+      <Script src="https://upload-widget.cloudinary.com/global/all.js" strategy="afterInteractive" />
+
       <nav className="w-full flex flex-wrap gap-4 justify-between items-center px-4 sm:px-8 py-4 sm:py-6 z-10">
         <div className="flex items-center gap-2 sm:gap-3">
           <div className="w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-tr from-purple-600 to-indigo-500 rounded-xl flex items-center justify-center shadow-lg shadow-purple-500/30 border border-white/10 shrink-0">
@@ -227,7 +246,7 @@ export default function Home() {
         
         <div className="flex flex-wrap items-center gap-2 sm:gap-3 justify-end">
           <button onClick={() => setShowFeedbackModal(true)} className="group flex items-center gap-1.5 sm:gap-2 px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white text-[10px] sm:text-sm font-medium transition-all">
-            <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+            <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
             <span>Sugerencias</span>
           </button>
           
@@ -256,49 +275,25 @@ export default function Home() {
         {!resultado && (
           <div className="flex flex-col items-center w-full max-w-lg relative z-20">
             
-            {!selectedFile ? (
+            {!loading && (
               <div className="flex flex-col items-center relative">
-                <input
-                  id="audio-upload-input"
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".mp3,.wav,.m4a,.aac,.caf,.ogg,.mp4,audio/mpeg,audio/wav,audio/mp4,audio/x-m4a,audio/aac"
-                  onChange={handleFileChange}
-                  onClick={(e) => { e.currentTarget.value = ''; }}
-                  className="opacity-0 absolute -z-10 w-[1px] h-[1px] overflow-hidden" 
-                />
-                
-                <label 
-                  htmlFor="audio-upload-input" 
-                  className="relative flex flex-col items-center justify-center w-32 h-32 sm:w-40 sm:h-40 md:w-44 md:h-44 rounded-full bg-purple-700 bg-gradient-to-br from-purple-600 to-indigo-900 shadow-2xl shadow-purple-500/40 hover:scale-105 hover:shadow-purple-500/60 transition-all duration-300 cursor-pointer"
-                >
-                  <svg className="w-12 h-12 text-white mb-2 drop-shadow-lg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
-                  </svg>
-                  <span className="text-xs font-bold text-white uppercase tracking-widest">Subir Audio</span>
-                </label>
-              </div>
-            ) : !loading ? (
-              <div className="flex flex-col items-center animate-fade-in w-full mt-4">
-                <div className="bg-[#1A1C23] border border-purple-500/30 p-4 rounded-2xl mb-6 flex items-center justify-between w-full max-w-sm">
-                  <div className="flex flex-col overflow-hidden">
-                    <span className="text-sm font-bold text-gray-200 truncate pr-4">{selectedFile.name}</span>
-                    <span className="text-xs text-gray-500 mt-1">{formatearTamaño(selectedFile.size)}</span>
+                <div className="relative flex flex-col items-center justify-center w-32 h-32 sm:w-40 sm:h-40 md:w-44 md:h-44 rounded-full bg-purple-700 bg-gradient-to-br from-purple-600 to-indigo-900 shadow-2xl shadow-purple-500/40 hover:scale-105 hover:shadow-purple-500/60 transition-all duration-300">
+                  
+                  <div className="flex flex-col items-center pointer-events-none">
+                    <svg className="w-12 h-12 text-white mb-2 drop-shadow-lg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
+                    </svg>
+                    <span className="text-xs font-bold text-white uppercase tracking-widest">Subir Audio</span>
                   </div>
-                  <button onClick={nuevoAnalisis} className="text-gray-500 hover:text-red-400 p-2">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                  </button>
-                </div>
 
-                <button
-                  type="button"
-                  onClick={handleAnalyze}
-                  className="w-full max-w-sm py-4 rounded-xl bg-emerald-600 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-lg shadow-lg shadow-emerald-500/40 transition-all hover:scale-[1.02]"
-                >
-                  Analizar Predicación
-                </button>
+                  <button 
+                    onClick={openWidget}
+                    className="absolute inset-0 w-full h-full cursor-pointer rounded-full"
+                    style={{ WebkitTapHighlightColor: 'transparent' }}
+                  ></button>
+                </div>
               </div>
-            ) : null}
+            )}
 
             {loading && (
               <div className="flex flex-col items-center text-center mt-2 w-full px-2 animate-fade-in">
@@ -306,7 +301,7 @@ export default function Home() {
                   <span className="text-2xl font-black text-white">{progress}%</span>
                 </div>
                 <span className="text-xs sm:text-sm font-bold text-emerald-400 uppercase tracking-widest mb-4">
-                  {progress <= 50 ? 'Subiendo a la nube...' : 'Analizando teología...'}
+                  {progress <= 49 ? 'Extrayendo texto del audio...' : 'Analizando teología profunda...'}
                 </span>
                 <div className="bg-[#1A1D27]/90 border border-emerald-500/20 rounded-2xl p-5 shadow-xl w-full">
                   <p className="text-gray-200 text-sm font-medium italic mb-2">"{promesasBiblicas[versoIndex].texto}"</p>
@@ -458,7 +453,8 @@ export default function Home() {
                         </div>
 
                         <div style={{ backgroundColor: '#F3EBE1' }} className="p-6 sm:p-8 rounded-xl border border-gray-200 border-l-[6px] border-l-[#D4AF37]">
-                          <h3 className="text-xs sm:text-sm font-black uppercase tracking-widest text-[#725439] mb-3 sm:mb-4">📖 Texto Clave (RV1960)</h3>
+                          <h3 className="text-xs sm:text-sm font-black uppercase tracking-widest text-[#725439] mb-3 sm:mb-4">📖 Texto Clave (RV1960)
+                          </h3>
                           <p className="text-[#2C3E50] font-medium italic text-base sm:text-lg leading-relaxed">
                             "{resultado.infografia.texto_clave || 'Lámpara es a mis pies tu palabra.'}"
                           </p>
@@ -539,7 +535,7 @@ export default function Home() {
       )}
 
       <footer className="w-full text-center py-5 sm:py-6 text-[10px] sm:text-xs text-gray-500 font-medium tracking-wide z-10 mt-auto px-4 space-y-1">
-        <p>1.5 beta</p>
+        <p>1.6 beta</p>
       </footer>
     </div>
   );
