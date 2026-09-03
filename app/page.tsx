@@ -106,8 +106,9 @@ export default function Home() {
     return secureUrl;
   };
 
-  // NÚCLEO DE LA SOLUCIÓN: El análisis se arranca enviando el archivo de inmediato
+  // NÚCLEO DE LA SOLUCIÓN: LA ACCIÓN DE AUTO-ARRANQUE DIRECTO
   const executeAnalysis = async (file: File) => {
+    // Entramos directamente al backend y a la pantalla de carga, como sugeriste.
     setLoading(true);
     setProgress(0);
     setError(null);
@@ -115,7 +116,7 @@ export default function Home() {
     setVersoIndex(0);
 
     try {
-      // 1. SUBIDA REANUDABLE POR CHUNKS
+      // 1. SUBIDA PROTEGIDA EN BLOQUES
       const audioUrl = await uploadToCloudinaryChunked(file);
 
       // 2. TRANSCRIPCIÓN
@@ -161,12 +162,12 @@ export default function Home() {
     }
   };
 
-  // EVENTO DE SELECCIÓN NATURA: Al seleccionar, arranca todo automáticamente
+  // EL EVENTO GATILLO: Apenas tocas tu archivo en el iPhone, ¡Boom! Despega.
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     
-    // Validación de extensiones seguras
+    // Validamos para asegurarnos que sea un archivo correcto
     const extension = file.name.slice((file.name.lastIndexOf(".") - 1 >>> 0) + 2).toLowerCase();
     const validExtensions = ['mp3', 'wav', 'm4a', 'aac', 'flac', 'ogg', 'mp4', 'wma', 'caf'];
     
@@ -178,7 +179,7 @@ export default function Home() {
     setSelectedFile(file);
     setError(null);
 
-    // ¡EL FLUJO ADOBE! Inicia el proceso instantáneamente para que iOS no borre el archivo
+    // AUTO-START: Inicia tu idea de ir directo al backend
     await executeAnalysis(file);
   };
 
@@ -264,6 +265,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-[#0B0C10] bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#1C1635] via-[#0B0C10] to-[#070709] text-white font-sans selection:bg-purple-500/30 flex flex-col relative overflow-x-hidden">
       
+      {/* BOTONES VITALES RESTAURADOS Y SEGUROS */}
       <nav className="w-full flex flex-wrap gap-4 justify-between items-center px-4 sm:px-8 py-4 sm:py-6 z-10">
         <div className="flex items-center gap-2 sm:gap-3">
           <div className="w-8 h-8 sm:w-9 sm:h-9 bg-purple-600 rounded-xl flex items-center justify-center border border-white/10 shrink-0">
@@ -291,7 +293,7 @@ export default function Home() {
         </div>
       </nav>
 
-      <main className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 z-10 w-full max-w-5xl mx-auto -mt-4 sm:-mt-6">
+      <main className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 z-10 w-full max-w-5xl mx-auto -mt-4 sm:-mt-6 relative">
         
         {!loading && !resultado && (
           <div className="text-center space-y-3 sm:space-y-4 mb-8 sm:mb-12 animate-fade-in-up">
@@ -300,44 +302,59 @@ export default function Home() {
           </div>
         )}
 
-        {/* BOTÓN ÚNICO: SELECCIÓN -> CARGA (Como Adobe Podcast) */}
-        {!resultado && !loading && (
-          <div className="flex flex-col items-center w-full max-w-lg relative z-20 animate-fade-in">
-            
-            <div className="relative flex flex-col items-center justify-center w-32 h-32 sm:w-40 sm:h-40 md:w-44 md:h-44 group cursor-pointer">
-              
-              <div className="absolute inset-0 rounded-full bg-purple-600 shadow-xl shadow-purple-500/20 group-hover:scale-105 transition-all duration-300 flex flex-col items-center justify-center pointer-events-none">
-                <svg className="w-12 h-12 text-white mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
-                </svg>
-                <span className="text-xs font-bold text-white uppercase tracking-widest text-center px-2">Subir Audio</span>
-              </div>
+        {/* EL INPUT INMORTAL:
+            En lugar de usar un "if", lo mantenemos SIEMPRE en el HTML.
+            Si está cargando o hay resultado, lo "escondemos" empujándolo 9999 píxeles a la izquierda.
+            De esta forma, Safari NUNCA corta la conexión a internet. */}
+        <div className={`relative transition-all duration-500 ease-in-out z-20 flex flex-col items-center ${
+          loading || resultado
+            ? 'absolute -left-[9999px] opacity-0 pointer-events-none' // Escondido pero VIVO
+            : 'w-32 h-32 sm:w-40 sm:h-40 md:w-44 md:h-44 group cursor-pointer'
+        }`}>
+          
+          {/* El Diseño Visual del Botón */}
+          <div className="absolute inset-0 rounded-full bg-purple-600 hover:bg-purple-500 shadow-xl shadow-purple-500/20 group-hover:scale-105 transition-all duration-300 flex flex-col items-center justify-center pointer-events-none">
+            <svg className="w-12 h-12 text-white mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
+            </svg>
+            <span className="text-xs font-bold text-white uppercase tracking-widest text-center px-2">Subir Audio</span>
+          </div>
 
-              {/* INPUT NATIVO - EL FLUJO ARRANCA EN EL ONCHANGE */}
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".mp3,.wav,.m4a,.aac,.flac,.ogg,.mp4,audio/*"
-                onChange={handleFileChange}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-50 rounded-full"
-                title="Seleccionar grabación"
-              />
-            </div>
-            
-            {error && <div className="mt-8 px-5 py-3 bg-red-900/30 border border-red-500/50 rounded-xl text-red-200 text-sm w-full text-center animate-fade-in">{error}</div>}
+          {/* El Selector Físico (Transparente encima del diseño) */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".mp3,.wav,.m4a,.aac,.flac,.ogg,.mp4,audio/*"
+            onChange={handleFileChange}
+            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-50 rounded-full"
+            title="Seleccionar grabación"
+          />
+        </div>
+        
+        {/* Espacio para mostrar mensajes de error (Fuera del contenedor del botón) */}
+        {!loading && !resultado && error && (
+          <div className="mt-8 px-5 py-3 bg-red-900/30 border border-red-500/50 rounded-xl text-red-200 text-sm w-full max-w-sm text-center animate-fade-in z-20 relative">
+            {error}
           </div>
         )}
 
-        {/* ESTADO DE CARGA Y PROCESAMIENTO */}
+        {/* PANTALLA DE CARGA (Aparece instantáneamente al seleccionar el archivo) */}
         {loading && (
-          <div className="flex flex-col items-center text-center mt-2 w-full px-2 animate-fade-in">
+          <div className="flex flex-col items-center text-center mt-2 w-full px-2 animate-fade-in z-20 relative">
             <div className="w-24 h-24 rounded-full bg-emerald-600 animate-pulse flex items-center justify-center shadow-xl shadow-emerald-500/40 mb-6">
               <span className="text-2xl font-black text-white">{progress}%</span>
             </div>
-            <span className="text-xs sm:text-sm font-bold text-emerald-400 uppercase tracking-widest mb-4">
-              {progress <= 25 ? 'Subiendo archivo...' : progress <= 50 ? 'Extrayendo texto...' : 'Analizando teología...'}
-            </span>
-            <div className="bg-[#1A1D27]/90 border border-emerald-500/20 rounded-2xl p-5 shadow-xl w-full">
+            
+            <div className="text-emerald-400 font-bold mb-4 text-center">
+              <span className="text-xs sm:text-sm uppercase tracking-widest block mb-1">
+                {progress <= 25 ? 'Subiendo archivo...' : progress <= 50 ? 'Extrayendo texto...' : 'Analizando teología...'}
+              </span>
+              <span className="text-[10px] text-gray-500 font-normal">
+                {selectedFile ? `Procesando: ${selectedFile.name}` : ''}
+              </span>
+            </div>
+
+            <div className="bg-[#1A1D27]/90 border border-emerald-500/20 rounded-2xl p-5 shadow-xl w-full max-w-lg">
               <p className="text-gray-200 text-sm font-medium italic mb-2">"{promesasBiblicas[versoIndex].texto}"</p>
               <p className="text-emerald-400/80 font-bold text-xs">— {promesasBiblicas[versoIndex].cita}</p>
             </div>
@@ -346,7 +363,7 @@ export default function Home() {
 
         {/* CONTENEDOR DE RESULTADOS */}
         {resultado && (
-          <div className="w-full mt-6 md:mt-10 mb-12 sm:mb-16 space-y-10 sm:space-y-16 animate-fade-in">
+          <div className="w-full mt-6 md:mt-10 mb-12 sm:mb-16 space-y-10 sm:space-y-16 animate-fade-in z-20 relative">
             <div className="bg-[#13161F]/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl border border-gray-800 shadow-2xl overflow-hidden">
               <div className="bg-gradient-to-b from-[#1C1E2A] to-[#13161F] p-5 sm:p-8 md:p-12 border-b border-gray-800">
                 <div className="flex flex-col md:flex-row justify-between items-center md:items-start mb-8 sm:mb-10 gap-5 sm:gap-6">
@@ -567,7 +584,7 @@ export default function Home() {
 
       {/* FOOTER */}
       <footer className="w-full text-center py-5 sm:py-6 text-[10px] sm:text-xs text-gray-500 font-medium tracking-wide z-10 mt-auto px-4 space-y-1">
-        <p>1.23 beta</p>
+        <p>1.24 beta</p>
       </footer>
     </div>
   );
