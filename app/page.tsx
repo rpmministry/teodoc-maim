@@ -1,7 +1,15 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
+import Script from 'next/script';
 import { jsPDF } from 'jspdf';
 import domtoimage from 'dom-to-image-more';
+
+// Declaración para el script global de Cloudinary
+declare global {
+  interface Window {
+    cloudinary: any;
+  }
+}
 
 interface Versiculo { cita: string; texto: string; }
 interface PuntoDesarrollo { punto: string; explicacion: string; versiculos: Versiculo[]; }
@@ -21,14 +29,14 @@ const promesasBiblicas = [
 ];
 
 export default function Home() {
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [resultado, setResultado] = useState<PredicaAnalisis | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [versoIndex, setVersoIndex] = useState(0);
   
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  // Referencias
+  const widgetRef = useRef<any>(null);
   const infografiaRef = useRef<HTMLDivElement>(null);
 
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
@@ -62,100 +70,16 @@ export default function Home() {
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const extension = file.name.slice((file.name.lastIndexOf(".") - 1 >>> 0) + 2).toLowerCase();
-    const validExtensions = ['mp3', 'wav', 'm4a', 'aac', 'flac', 'ogg', 'mp4', 'wma', 'caf'];
-    
-    if (!validExtensions.includes(extension) && !file.type.startsWith('audio/') && !file.type.startsWith('video/')) {
-      setError("Formato no reconocido. Por favor, selecciona una grabación válida.");
-      return;
-    }
-
-    setSelectedFile(file);
-    setError(null);
-  };
-
-  const formatearTamaño = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
-
-  const clearFile = () => {
-    setSelectedFile(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  };
-
-  const nuevoAnalisis = () => {
-    clearFile();
-    setResultado(null); 
-    setError(null); 
-    setProgress(0);
-  };
-
-  const uploadToCloudinaryChunked = async (file: File) => {
-    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'antbfat3';
-    const url = `https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`;
-    const uploadPreset = 'teodoc_preset';
-    
-    const chunkSize = 10 * 1024 * 1024;
-    const totalChunks = Math.ceil(file.size / chunkSize);
-    const uniqueUploadId = `${Date.now()}-${Math.random().toString(36).substring(7)}`;
-    
-    let secureUrl = "";
-
-    for (let i = 0; i < totalChunks; i++) {
-      const start = i * chunkSize;
-      const end = Math.min(start + chunkSize, file.size);
-      const chunk = file.slice(start, end);
-
-      const formData = new FormData();
-      formData.append('file', chunk);
-      formData.append('upload_preset', uploadPreset);
-      
-      const headers: HeadersInit = {
-        'X-Unique-Upload-Id': uniqueUploadId,
-        'Content-Range': `bytes ${start}-${end - 1}/${file.size}`,
-      };
-
-      const res = await fetch(url, { method: 'POST', headers, body: formData });
-      
-      if (!res.ok) {
-        throw new Error(`Error de red al subir. Verifica tu conexión.`);
-      }
-      
-      const data = await res.json();
-      
-      const currentProgress = Math.floor(((i + 1) / totalChunks) * 25);
-      setProgress(currentProgress);
-
-      if (i === totalChunks - 1) {
-        secureUrl = data.secure_url;
-      }
-    }
-
-    return secureUrl;
-  };
-
-  const executeAnalysis = async () => {
-    if (!selectedFile) return;
-
+  // NÚCLEO DE LA AUDITORÍA: PROCESAMIENTO ASÍNCRONO DESACOPLADO
+  // Esta función SOLO se ejecuta cuando Cloudinary ya subió el archivo exitosamente.
+  const processAudioPipeline = async (audioUrl: string) => {
     setLoading(true);
-    setProgress(0);
     setError(null);
     setResultado(null);
     setVersoIndex(0);
 
     try {
-      const audioUrl = await uploadToCloudinaryChunked(selectedFile);
-
+      // 1. TRANSCRIPCIÓN (AssemblyAI / Deepgram)
       setProgress(30);
       const timerTranscribe = setInterval(() => setProgress((prev) => (prev >= 49 ? 49 : prev + 1)), 800);
 
@@ -168,6 +92,7 @@ export default function Home() {
       const dataTranscribe = await resTranscribe.json();
       const textoTranscrito = dataTranscribe.text;
       
+      // 2. ANÁLISIS TEOLÓGICO (Gemini / OpenRouter)
       setProgress(50);
       const timerAnalyze = setInterval(() => {
         setProgress((prev) => prev >= 98 ? 98 : prev + Math.max(1, Math.floor((99 - prev) * 0.05)));
@@ -181,6 +106,7 @@ export default function Home() {
       if (!resAnalyze.ok) throw new Error('Error procesando el análisis teológico de IA.');
       const dataAnalyze = await resAnalyze.json();
 
+      // 3. FINALIZAR
       setProgress(100);
       setTimeout(() => {
         setResultado(dataAnalyze);
@@ -188,15 +114,75 @@ export default function Home() {
       }, 500);
 
     } catch (err: any) {
-      setError(err.message || 'Ocurrió un error en el proceso.');
+      setError(err.message || 'Ocurrió un error en el procesamiento.');
       setLoading(false);
       setProgress(0);
     }
   };
 
-  const handleFormSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    executeAnalysis();
+  // INICIALIZACIÓN DEL WIDGET DE CLOUDINARY
+  // Pre-cargamos el widget para que el botón nativo lo abra de inmediato, evitando bloqueos de Safari.
+  useEffect(() => {
+    const initWidget = () => {
+      if (typeof window !== 'undefined' && window.cloudinary && !widgetRef.current) {
+        widgetRef.current = window.cloudinary.createUploadWidget(
+          {
+            cloudName: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'antbfat3',
+            uploadPreset: 'teodoc_preset',
+            sources: ['local', 'google_drive'],
+            resourceType: 'auto',
+            maxFileSize: 524288000, // LÍMITE AUMENTADO: 500 MB
+            language: 'es',
+            text: {
+              es: {
+                menu: { files: "Mis Archivos", web: "Navegar" },
+                local: { browse: "Seleccionar Prédica", dd_title_single: "Arrastra tu audio aquí" }
+              }
+            },
+            styles: {
+              palette: {
+                window: "#1A1D27", windowBorder: "#8E44AD", tabIcon: "#8E44AD",
+                menuIcons: "#FFFFFF", textDark: "#000000", textLight: "#FFFFFF",
+                link:  "#10B981", action:  "#8E44AD", inactiveTabIcon: "#A0AEC0",
+                error: "#EF4444", inProgress: "#10B981", complete: "#10B981", sourceBg: "#13161F"
+              }
+            }
+          },
+          (err: any, result: any) => {
+            // Cuando Cloudinary termina de subir el archivo por su cuenta, nos entrega la URL.
+            if (!err && result && result.event === "success") {
+              const uploadedUrl = result.info.secure_url;
+              // Pasamos la estafeta a nuestro motor de IA
+              processAudioPipeline(uploadedUrl);
+            }
+          }
+        );
+      }
+    };
+
+    const interval = setInterval(() => {
+      if (widgetRef.current) {
+        clearInterval(interval);
+      } else {
+        initWidget();
+      }
+    }, 500);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleOpenWidget = () => {
+    if (widgetRef.current) {
+      widgetRef.current.open();
+    } else {
+      setError("El sistema de subida está cargando. Por favor, espera un segundo.");
+    }
+  };
+
+  const nuevoAnalisis = () => {
+    setResultado(null); 
+    setError(null); 
+    setProgress(0);
   };
 
   const descargarInfografia = async () => {
@@ -273,6 +259,9 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-[#0B0C10] bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#1C1635] via-[#0B0C10] to-[#070709] text-white font-sans selection:bg-purple-500/30 flex flex-col relative overflow-x-hidden">
       
+      {/* SCRIPT OFICIAL DE CLOUDINARY */}
+      <Script src="https://upload-widget.cloudinary.com/global/all.js" strategy="afterInteractive" />
+
       <nav className="w-full flex flex-wrap gap-4 justify-between items-center px-4 sm:px-8 py-4 sm:py-6 z-10">
         <div className="flex items-center gap-2 sm:gap-3">
           <div className="w-8 h-8 sm:w-9 sm:h-9 bg-purple-600 rounded-xl flex items-center justify-center border border-white/10 shrink-0">
@@ -309,64 +298,37 @@ export default function Home() {
           </div>
         )}
 
+        {/* INTERFAZ PRINCIPAL - BOTÓN DELEGADO A CLOUDINARY */}
         {!resultado && !loading && (
           <div className="flex flex-col items-center w-full max-w-lg relative z-20 animate-fade-in">
             
-            <div className={`relative flex flex-col items-center justify-center transition-all duration-300 ${selectedFile ? 'absolute w-0 h-0 opacity-0 overflow-hidden pointer-events-none' : 'w-32 h-32 sm:w-40 sm:h-40 md:w-44 md:h-44 group'}`}>
-              
-              <div className="absolute inset-0 rounded-full bg-purple-600 shadow-xl shadow-purple-500/20 group-hover:scale-105 transition-all duration-300 flex flex-col items-center justify-center pointer-events-none">
-                <svg className="w-12 h-12 text-white mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
-                </svg>
-                <span className="text-xs font-bold text-white uppercase tracking-widest text-center px-2">Subir Audio</span>
-              </div>
-
-              <input
-                ref={fileInputRef}
-                type="file"
-                onChange={handleFileChange}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-50 rounded-full"
-                title="Seleccionar grabación"
-              />
-            </div>
-
-            {selectedFile && (
-              <form onSubmit={handleFormSubmit} className="flex flex-col items-center animate-fade-in w-full mt-4">
-                <div className="bg-[#1A1C23] border border-purple-500/30 p-4 rounded-2xl mb-6 flex items-center justify-between w-full max-w-sm shadow-lg">
-                  <div className="flex flex-col overflow-hidden text-left flex-1">
-                    <span className="text-sm font-bold text-emerald-400 truncate pr-2">{selectedFile.name}</span>
-                    <span className="text-[10px] text-gray-400 mt-0.5">{formatearTamaño(selectedFile.size)}</span>
-                  </div>
-                  <button 
-                    type="button"
-                    onClick={clearFile}
-                    className="ml-2 text-gray-500 hover:text-red-400 bg-white/5 rounded-full p-1.5 transition-colors"
-                    title="Eliminar archivo"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                  </button>
-                </div>
-
-                <button
-                  type="submit"
-                  className="w-full max-w-sm py-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-lg shadow-[0_0_30px_rgba(16,185,129,0.4)] transition-all hover:scale-[1.02]"
-                >
-                  Analizar Predicación
-                </button>
-              </form>
-            )}
+            <button
+              type="button"
+              onClick={handleOpenWidget}
+              className="relative flex flex-col items-center justify-center w-32 h-32 sm:w-40 sm:h-40 md:w-44 md:h-44 rounded-full bg-purple-600 hover:bg-purple-500 shadow-xl shadow-purple-500/20 hover:scale-105 transition-all duration-300 cursor-pointer outline-none"
+            >
+              <svg className="w-12 h-12 text-white mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
+              </svg>
+              <span className="text-xs font-bold text-white uppercase tracking-widest text-center px-2">Subir Audio</span>
+            </button>
             
+            <p className="text-gray-500 text-xs mt-6 text-center max-w-xs">
+              Soporta MP3, WAV, M4A, FLAC, AAC. <br/> Archivos de hasta 500 MB.
+            </p>
+
             {error && <div className="mt-8 px-5 py-3 bg-red-900/30 border border-red-500/50 rounded-xl text-red-200 text-sm w-full text-center animate-fade-in">{error}</div>}
           </div>
         )}
 
+        {/* ESTADO DE CARGA Y ANÁLISIS (Se activa automáticamente después de Cloudinary) */}
         {loading && (
           <div className="flex flex-col items-center text-center mt-2 w-full px-2 animate-fade-in">
             <div className="w-24 h-24 rounded-full bg-emerald-600 animate-pulse flex items-center justify-center shadow-xl shadow-emerald-500/40 mb-6">
               <span className="text-2xl font-black text-white">{progress}%</span>
             </div>
             <span className="text-xs sm:text-sm font-bold text-emerald-400 uppercase tracking-widest mb-4">
-              {progress <= 25 ? 'Subiendo archivo pesado...' : progress <= 50 ? 'Extrayendo texto...' : 'Analizando teología...'}
+              {progress <= 49 ? 'Extrayendo texto de la prédica...' : 'Analizando teología profunda...'}
             </span>
             <div className="bg-[#1A1D27]/90 border border-emerald-500/20 rounded-2xl p-5 shadow-xl w-full">
               <p className="text-gray-200 text-sm font-medium italic mb-2">"{promesasBiblicas[versoIndex].texto}"</p>
@@ -375,6 +337,7 @@ export default function Home() {
           </div>
         )}
 
+        {/* CONTENEDOR DE RESULTADOS */}
         {resultado && (
           <div className="w-full mt-6 md:mt-10 mb-12 sm:mb-16 space-y-10 sm:space-y-16 animate-fade-in">
             <div className="bg-[#13161F]/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl border border-gray-800 shadow-2xl overflow-hidden">
@@ -557,6 +520,7 @@ export default function Home() {
         )}
       </main>
 
+      {/* MODAL DE SUGERENCIAS */}
       {showFeedbackModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-fade-in">
           <div className="bg-[#1A1D27] border border-gray-800 rounded-2xl p-6 w-full max-w-md shadow-2xl">
@@ -594,8 +558,9 @@ export default function Home() {
         </div>
       )}
 
+      {/* FOOTER */}
       <footer className="w-full text-center py-5 sm:py-6 text-[10px] sm:text-xs text-gray-500 font-medium tracking-wide z-10 mt-auto px-4 space-y-1">
-        <p>1.20 beta</p>
+        <p>1.22 beta</p>
       </footer>
     </div>
   );
