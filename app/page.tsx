@@ -1,7 +1,8 @@
 'use client';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { jsPDF } from 'jspdf';
 import domtoimage from 'dom-to-image-more';
+import { useDropzone } from 'react-dropzone';
 
 interface Versiculo { cita: string; texto: string; }
 interface PuntoDesarrollo { punto: string; explicacion: string; versiculos: Versiculo[]; }
@@ -28,12 +29,27 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [versoIndex, setVersoIndex] = useState(0);
   
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const infografiaRef = useRef<HTMLDivElement>(null);
 
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState('');
   const [feedbackStatus, setFeedbackStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
+
+  const onDrop = useCallback((acceptedFiles: File[]) => {
+    if (acceptedFiles && acceptedFiles.length > 0) {
+      setSelectedFile(acceptedFiles[0]);
+      setError(null);
+    }
+  }, []);
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: {
+      'audio/*': ['.mp3', '.m4a', '.wav', '.aac', '.ogg', '.wma', '.caf'],
+      'video/mp4': ['.mp4']
+    },
+    multiple: false
+  });
 
   useEffect(() => {
     let intervaloVerso: NodeJS.Timeout;
@@ -62,29 +78,12 @@ export default function Home() {
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    
-    setSelectedFile(file);
-    setError(null);
-  };
-
   const formatearTamaño = (bytes: number) => {
     return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
   };
 
-  const handleUploadClick = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
-    }
-  };
-
   const clearFile = () => {
     setSelectedFile(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
   };
 
   const nuevoAnalisis = () => {
@@ -232,14 +231,6 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-[#0B0C10] bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#1C1635] via-[#0B0C10] to-[#070709] text-white font-sans selection:bg-purple-500/30 flex flex-col relative overflow-x-hidden">
       
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="audio/*,.mp3,.wav,.m4a,.aac,.ogg,.mp4"
-        onChange={handleFileChange}
-        style={{ display: 'none' }}
-      />
-
       <nav className="w-full flex flex-wrap gap-4 justify-between items-center px-4 sm:px-8 py-4 sm:py-6 z-10">
         <div className="flex items-center gap-2 sm:gap-3">
           <div className="w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-tr from-purple-600 to-indigo-500 rounded-xl flex items-center justify-center shadow-lg shadow-purple-500/30 border border-white/10 shrink-0">
@@ -274,21 +265,18 @@ export default function Home() {
           <div className="flex flex-col items-center w-full max-w-lg relative z-20 animate-fade-in">
             
             {!selectedFile ? (
-              <button
-                type="button"
-                onClick={handleUploadClick}
-                className="relative flex flex-col items-center justify-center w-32 h-32 sm:w-40 sm:h-40 md:w-44 md:h-44 rounded-full bg-gradient-to-br from-[#8E44AD] to-[#5B2C6F] shadow-[0_0_40px_rgba(147,51,234,0.5)] hover:scale-105 transition-all duration-300 cursor-pointer"
-              >
-                <div className="flex flex-col items-center pointer-events-none">
+              <div {...getRootProps()} className="relative flex flex-col items-center justify-center w-32 h-32 sm:w-40 sm:h-40 md:w-44 md:h-44 rounded-full bg-gradient-to-br from-[#8E44AD] to-[#5B2C6F] shadow-[0_0_40px_rgba(147,51,234,0.5)] hover:scale-105 hover:shadow-[0_0_60px_rgba(147,51,234,0.7)] transition-all duration-300 cursor-pointer outline-none">
+                <input {...getInputProps()} />
+                <div className="flex flex-col items-center pointer-events-none transition-opacity">
                   <svg className="w-12 h-12 text-white mb-2 drop-shadow-lg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
                   </svg>
-                  <span className="text-xs font-bold text-white uppercase tracking-widest">Subir Audio</span>
+                  <span className="text-xs font-bold text-white uppercase tracking-widest text-center px-2">Subir Audio</span>
                 </div>
-              </button>
+              </div>
             ) : (
-              <div className="flex flex-col items-center animate-fade-in w-full">
-                <div className="bg-[#1A1C23] border border-purple-500/30 p-4 rounded-2xl mb-6 flex items-center justify-between w-full max-w-sm">
+              <div className="flex flex-col items-center animate-fade-in w-full mt-4">
+                <div className="bg-[#1A1C23] border border-purple-500/30 p-4 rounded-2xl mb-6 flex items-center justify-between w-full max-w-sm shadow-lg">
                   <div className="flex flex-col overflow-hidden text-left flex-1">
                     <span className="text-sm font-bold text-emerald-400 truncate pr-2">{selectedFile.name}</span>
                     <span className="text-[10px] text-gray-400 mt-0.5">{formatearTamaño(selectedFile.size)}</span>
@@ -412,7 +400,7 @@ export default function Home() {
                     </h3>
                     <ul className="space-y-3 sm:space-y-4">
                       {resultado.aplicacion.map((app, idx) => (
-                        <li key={idx} className="flex gap-3 sm:gap-4 text-gray-300 font-light leading-relaxed text-sm sm:text-base">
+                        <li key={idx} className="flex gap-3 sm:gap-4 text-gray-300 font-light leading-relaxed text-sm sm:text:base">
                           <span className="text-blue-500 mt-0.5 sm:mt-1 text-lg leading-none">•</span>
                           <span>{app}</span>
                         </li>
@@ -425,7 +413,7 @@ export default function Home() {
                       <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
                       Oración Ministerial
                     </h3>
-                    <p className="text-gray-300 italic leading-relaxed font-light text-sm sm:text-base">"{resultado.oracion}"</p>
+                    <p className="text-gray-300 italic leading-relaxed font-light text-sm sm:text:base">"{resultado.oracion}"</p>
                   </section>
                 </div>
               </div>
@@ -456,7 +444,7 @@ export default function Home() {
                         <h1 className="text-2xl sm:text-4xl md:text-5xl font-black uppercase tracking-widest font-sans leading-tight">{resultado.titulo}</h1>
                       </div>
 
-                      <div className="text-center mb-8 sm:mb-12 max-w-2xl px-2">
+                      <div className="text-center mb-8 sm:mb-12 max-w-2j px-2">
                         <p className="text-lg sm:text-2xl font-bold italic text-[#725439] leading-snug">
                           "{resultado.infografia.frase_corta || resultado.idea_principal}"
                         </p>
@@ -465,7 +453,7 @@ export default function Home() {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 mb-8 sm:mb-12 w-full">
                         <div className="bg-white p-6 sm:p-8 rounded-xl border border-gray-200 border-t-[6px] border-t-[#5B778A]">
                           <h3 className="text-xs sm:text-sm font-black uppercase tracking-widest text-[#5B778A] mb-3 sm:mb-4 bg-[#EDF1F3] inline-block px-3 py-1.5 sm:px-4 sm:py-2 rounded">Contexto Histórico</h3>
-                          <p className="text-gray-700 leading-relaxed text-sm sm:text-base">
+                          <p className="text-gray-700 leading-relaxed text-sm sm:text:base">
                             {resultado.infografia.contexto_breve || "Enseñanza extraída de las escrituras."}
                           </p>
                         </div>
@@ -489,10 +477,10 @@ export default function Home() {
                               <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full text-white flex items-center justify-center font-bold text-lg sm:text-xl mb-4 sm:mb-5 shrink-0" style={{ backgroundColor: '#D4AF37' }}>
                                 {i + 1}
                               </div>
-                              <h4 className="font-bold text-[#5B778A] text-sm sm:text-base uppercase mb-2 sm:mb-3 leading-tight">
+                              <h4 className="font-bold text-[#5B778A] text-sm sm:text:base uppercase mb-2 sm:mb-3 leading-tight">
                                 {punto.punto}
                               </h4>
-                              <p className="text-xs sm:text-sm text-gray-700 leading-relaxed text-center">
+                              <p className="text-xs sm:text:sm text-gray-700 leading-relaxed text-center">
                                 {punto.explicacion}
                               </p>
                             </div>
@@ -552,7 +540,7 @@ export default function Home() {
       )}
 
       <footer className="w-full text-center py-5 sm:py-6 text-[10px] sm:text-xs text-gray-500 font-medium tracking-wide z-10 mt-auto px-4 space-y-1">
-        <p>1.15 beta</p>
+        <p>1.16 beta</p>
       </footer>
     </div>
   );
