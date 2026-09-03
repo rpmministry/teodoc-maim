@@ -20,6 +20,48 @@ const promesasBiblicas = [
   { cita: "Josué 1:9", texto: "Mira que te mando que te esfuerces y seas valiente..." }
 ];
 
+const CHUNK_SIZE = 6 * 1024 * 1024;
+const CLOUD_NAME = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'antbfat3';
+
+async function uploadToCloudinaryChunked(file: File, onProgress: (p: number) => void): Promise<string> {
+  const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+  const uniqueUploadId = `teodoc_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+
+  for (let i = 0; i < totalChunks; i++) {
+    const start = i * CHUNK_SIZE;
+    const end = Math.min(start + CHUNK_SIZE, file.size);
+    const chunk = file.slice(start, end);
+    const contentRange = `bytes ${start}-${end - 1}/${file.size}`;
+
+    const formData = new FormData();
+    formData.append('file', chunk);
+    formData.append('upload_preset', 'teodoc_preset');
+    formData.append('chunk', String(i));
+    formData.append('chunks', String(totalChunks));
+    formData.append('upload_id', uniqueUploadId);
+
+    const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/auto/upload`, {
+      method: 'POST',
+      headers: { 'X-Unique-Upload-Id': uniqueUploadId, 'Content-Range': contentRange },
+      body: formData
+    });
+
+    if (!res.ok) {
+      let errText = '';
+      try { errText = await res.text(); } catch {}
+      throw new Error(`Error subiendo fragmento ${i + 1}/${totalChunks}. ${errText.slice(0, 200)}`);
+    }
+
+    const data = await res.json();
+    if (data.secure_url) {
+      onProgress(25);
+      return data.secure_url;
+    }
+    onProgress(Math.round(((i + 1) / totalChunks) * 25));
+  }
+  throw new Error('La subida por fragmentos no devolvió una URL final.');
+}
+
 export default function Home() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
@@ -103,23 +145,9 @@ export default function Home() {
     setVersoIndex(0);
 
     try {
-      const timerCloud = setInterval(() => setProgress((prev) => (prev >= 25 ? 25 : prev + 1)), 500);
-      
-      const formDataCloud = new FormData();
-      formDataCloud.append('file', selectedFile);
-      formDataCloud.append('upload_preset', 'teodoc_preset');
-
-      const resCloud = await fetch('https://api.cloudinary.com/v1_1/antbfat3/auto/upload', {
-        method: 'POST',
-        body: formDataCloud
-      });
-      clearInterval(timerCloud);
-
-      if (!resCloud.ok) throw new Error('Error enviando el archivo a la nube. Verifica tu conexión a internet.');
-      const cloudData = await resCloud.json();
-      const audioUrl = cloudData.secure_url;
-
+      const audioUrl = await uploadToCloudinaryChunked(selectedFile, (p) => setProgress(p));
       setProgress(30);
+
       const timerTranscribe = setInterval(() => setProgress((prev) => (prev >= 49 ? 49 : prev + 1)), 800);
 
       const resTranscribe = await fetch('/api/transcribe', { 
@@ -240,6 +268,15 @@ export default function Home() {
         </div>
         
         <div className="flex flex-wrap items-center gap-2 sm:gap-3 justify-end">
+          <a 
+            href="https://www.paypal.com/ncp/payment/ZTLTVMRR95J2C" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="group flex items-center gap-1.5 sm:gap-2 px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-full bg-blue-500/10 hover:bg-blue-500/20 border border-blue-400/30 text-blue-300 hover:text-blue-200 text-[10px] sm:text-sm font-medium transition-all"
+          >
+            <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944.901C5.026.382 5.474 0 5.998 0h7.46c2.57 0 4.578.543 5.69 1.81 1.01 1.15 1.304 2.42 1.012 4.287-.023.143-.047.288-.077.437-.983 5.05-4.349 6.797-8.647 6.797h-2.19c-.524 0-.968.382-1.05.9l-1.12 7.106zm14.146-14.42a3.35 3.35 0 0 0-.607-.541c-.013.076-.026.175-.041.254-.93 4.778-4.005 7.201-9.138 7.201h-2.19a.563.563 0 0 0-.556.479l-1.187 7.527h-.506l-.24 1.516a.56.56 0 0 0 .554.647h3.882c.46 0 .85-.334.922-.788.06-.26.76-4.852.816-5.09a.932.932 0 0 1 .923-.788h.58c3.76 0 6.705-1.528 7.565-5.946.36-1.847.174-3.388-.777-4.471z"/></svg>
+            <span>Apoyar Proyecto</span>
+          </a>
           <button onClick={() => setShowFeedbackModal(true)} className="group flex items-center gap-1.5 sm:gap-2 px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white text-[10px] sm:text-sm font-medium transition-all">
             <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
             <span>Sugerencias</span>
@@ -315,7 +352,7 @@ export default function Home() {
               <span className="text-2xl font-black text-white">{progress}%</span>
             </div>
             <span className="text-xs sm:text-sm font-bold text-emerald-400 uppercase tracking-widest mb-4">
-              {progress <= 50 ? 'Subiendo archivo...' : 'Analizando teología...'}
+              {progress <= 30 ? 'Subiendo archivo...' : 'Analizando teología...'}
             </span>
             <div className="bg-[#1A1D27]/90 border border-emerald-500/20 rounded-2xl p-5 shadow-xl w-full">
               <p className="text-gray-200 text-sm font-medium italic mb-2">"{promesasBiblicas[versoIndex].texto}"</p>
@@ -544,7 +581,7 @@ export default function Home() {
       )}
 
       <footer className="w-full text-center py-5 sm:py-6 text-[10px] sm:text-xs text-gray-500 font-medium tracking-wide z-10 mt-auto px-4 space-y-1">
-        <p>1.17 beta</p>
+        <p>1.18 beta</p>
       </footer>
     </div>
   );
