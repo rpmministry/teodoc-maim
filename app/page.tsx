@@ -38,9 +38,10 @@ const isMobileDevice = () => {
 
 const getAcceptAttribute = () => {
   if (isAndroid() || isIOS()) {
-    return '.mp3,.wav,.m4a,.aac,.ogg,.mp4,.flac,.wma,.opus,.caf';
+    // Especificar MIME types e extensiones para iOS Safari para evitar que audio/* se trate como video/*
+    return 'audio/mpeg, audio/mp3, audio/wav, audio/x-wav, audio/x-m4a, audio/m4a, .mp3, .wav, .m4a, .aac, .ogg, .flac, .wma, .opus, .caf';
   }
-  return 'audio/*,.mp3,.wav,.m4a,.aac,.ogg,.mp4,.flac,.wma,.opus,.caf';
+  return 'audio/*,.mp3,.wav,.m4a,.aac,.ogg,.flac,.wma,.opus,.caf';
 };
 
 export default function Home() {
@@ -102,6 +103,17 @@ export default function Home() {
   const manejarSeleccionYAnalisis = (e: React.ChangeEvent<HTMLInputElement>) => {
     const archivoDetectado = e.target.files?.[0];
     if (!archivoDetectado) return;
+
+    const allowedExtensions = ['mp3', 'wav', 'm4a', 'ogg', 'aac', 'flac', 'wma', 'opus', 'caf', 'mp4'];
+    const fileExtension = archivoDetectado.name.split('.').pop()?.toLowerCase() || '';
+    const isAudioMime = archivoDetectado.type.startsWith('audio/');
+    const isValidExtension = allowedExtensions.includes(fileExtension);
+
+    if (!isAudioMime && !isValidExtension) {
+      setError('Por favor, selecciona un archivo de audio válido (.mp3, .wav, .m4a, .ogg, .aac, .flac)');
+      e.target.value = '';
+      return;
+    }
 
     setLoading(true);
     setProgress(5);
