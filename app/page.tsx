@@ -20,48 +20,6 @@ const promesasBiblicas = [
   { cita: "Josué 1:9", texto: "Mira que te mando que te esfuerces y seas valiente..." }
 ];
 
-const CHUNK_SIZE = 6 * 1024 * 1024;
-const CLOUD_NAME = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'antbfat3';
-
-async function uploadToCloudinaryChunked(file: File, onProgress: (p: number) => void): Promise<string> {
-  const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
-  const uniqueUploadId = `teodoc_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
-
-  for (let i = 0; i < totalChunks; i++) {
-    const start = i * CHUNK_SIZE;
-    const end = Math.min(start + CHUNK_SIZE, file.size);
-    const chunk = file.slice(start, end);
-    const contentRange = `bytes ${start}-${end - 1}/${file.size}`;
-
-    const formData = new FormData();
-    formData.append('file', chunk);
-    formData.append('upload_preset', 'teodoc_preset');
-    formData.append('chunk', String(i));
-    formData.append('chunks', String(totalChunks));
-    formData.append('upload_id', uniqueUploadId);
-
-    const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/auto/upload`, {
-      method: 'POST',
-      headers: { 'X-Unique-Upload-Id': uniqueUploadId, 'Content-Range': contentRange },
-      body: formData
-    });
-
-    if (!res.ok) {
-      let errText = '';
-      try { errText = await res.text(); } catch {}
-      throw new Error(`Error subiendo fragmento ${i + 1}/${totalChunks}. ${errText.slice(0, 200)}`);
-    }
-
-    const data = await res.json();
-    if (data.secure_url) {
-      onProgress(25);
-      return data.secure_url;
-    }
-    onProgress(Math.round(((i + 1) / totalChunks) * 25));
-  }
-  throw new Error('La subida por fragmentos no devolvió una URL final.');
-}
-
 export default function Home() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
@@ -108,17 +66,16 @@ export default function Home() {
     const file = e.target.files?.[0];
     if (!file) return;
     
-    if (file.size > 104857600) {
-      setError("El archivo es demasiado grande. El límite es 100MB.");
-      return;
-    }
-
     setSelectedFile(file);
     setError(null);
   };
 
   const formatearTamaño = (bytes: number) => {
-    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
   const clearFile = () => {
@@ -135,19 +92,63 @@ export default function Home() {
     setProgress(0);
   };
 
+  const uploadToCloudinaryChunked = async (file: File) => {
+    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'antbfat3';
+    const url = `https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`;
+    const uploadPreset = 'teodoc_preset';
+    
+    const chunkSize = 10 * 1024 * 1024; // 10MB
+    const totalChunks = Math.ceil(file.size / chunkSize);
+    const uniqueUploadId = `${Date.now()}-${Math.random().toString(36).substring(7)}`;
+    
+    let secureUrl = "";
+
+    for (let i = 0; i < totalChunks; i++) {
+      const start = i * chunkSize;
+      const end = Math.min(start + chunkSize, file.size);
+      const chunk = file.slice(start, end);
+
+      const formData = new FormData();
+      formData.append('file', chunk);
+      formData.append('upload_preset', uploadPreset);
+      
+      const headers: HeadersInit = {
+        'X-Unique-Upload-Id': uniqueUploadId,
+        'Content-Range': `bytes ${start}-${end - 1}/${file.size}`,
+      };
+
+      const res = await fetch(url, { method: 'POST', headers, body: formData });
+      
+      if (!res.ok) {
+        throw new Error(`Error de red al subir. Intenta de nuevo.`);
+      }
+      
+      const data = await res.json();
+      
+      const currentProgress = Math.floor(((i + 1) / totalChunks) * 25);
+      setProgress(currentProgress);
+
+      if (i === totalChunks - 1) {
+        secureUrl = data.secure_url;
+      }
+    }
+
+    return secureUrl;
+  };
+
   const handleAnalyze = async () => {
     if (!selectedFile) return;
 
     setLoading(true);
-    setProgress(5);
+    setProgress(0);
     setError(null);
     setResultado(null);
     setVersoIndex(0);
 
     try {
-      const audioUrl = await uploadToCloudinaryChunked(selectedFile, (p) => setProgress(p));
-      setProgress(30);
+      const audioUrl = await uploadToCloudinaryChunked(selectedFile);
 
+      setProgress(30);
       const timerTranscribe = setInterval(() => setProgress((prev) => (prev >= 49 ? 49 : prev + 1)), 800);
 
       const resTranscribe = await fetch('/api/transcribe', { 
@@ -268,19 +269,21 @@ export default function Home() {
         </div>
         
         <div className="flex flex-wrap items-center gap-2 sm:gap-3 justify-end">
-          <a 
-            href="https://www.paypal.com/ncp/payment/ZTLTVMRR95J2C" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="group flex items-center gap-1.5 sm:gap-2 px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-full bg-blue-500/10 hover:bg-blue-500/20 border border-blue-400/30 text-blue-300 hover:text-blue-200 text-[10px] sm:text-sm font-medium transition-all"
-          >
-            <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944.901C5.026.382 5.474 0 5.998 0h7.46c2.57 0 4.578.543 5.69 1.81 1.01 1.15 1.304 2.42 1.012 4.287-.023.143-.047.288-.077.437-.983 5.05-4.349 6.797-8.647 6.797h-2.19c-.524 0-.968.382-1.05.9l-1.12 7.106zm14.146-14.42a3.35 3.35 0 0 0-.607-.541c-.013.076-.026.175-.041.254-.93 4.778-4.005 7.201-9.138 7.201h-2.19a.563.563 0 0 0-.556.479l-1.187 7.527h-.506l-.24 1.516a.56.56 0 0 0 .554.647h3.882c.46 0 .85-.334.922-.788.06-.26.76-4.852.816-5.09a.932.932 0 0 1 .923-.788h.58c3.76 0 6.705-1.528 7.565-5.946.36-1.847.174-3.388-.777-4.471z"/></svg>
-            <span>Apoyar Proyecto</span>
-          </a>
           <button onClick={() => setShowFeedbackModal(true)} className="group flex items-center gap-1.5 sm:gap-2 px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white text-[10px] sm:text-sm font-medium transition-all">
             <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
-            <span>Sugerencias</span>
+            <span className="hidden sm:inline">Sugerencias</span>
           </button>
+          
+          <a href="https://collection.cloudinary.com/antbfat3/ee4582aa2bac515291b5d02c058e9c4d" target="_blank" rel="noopener noreferrer" className="group flex items-center gap-1.5 sm:gap-2 px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-full bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-300 hover:text-blue-200 text-[10px] sm:text-sm font-medium transition-all">
+            <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+            <span className="hidden sm:inline">Manual</span>
+          </a>
+
+          <a href="https://www.paypal.com/ncp/payment/ZTLTVMRR95J2C" target="_blank" rel="noopener noreferrer" className="group flex items-center gap-1.5 sm:gap-2 px-2.5 py-1.5 sm:px-5 sm:py-2 rounded-full bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white text-[10px] sm:text-sm font-bold shadow-lg shadow-pink-500/25 transition-all hover:scale-105 border border-white/10">
+            <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:animate-pulse" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+            <span className="hidden lg:inline">Apoyar Proyecto</span>
+            <span className="lg:hidden">Apoyar</span>
+          </a>
         </div>
       </nav>
 
@@ -299,7 +302,7 @@ export default function Home() {
             {!selectedFile ? (
               <div className="relative flex flex-col items-center justify-center w-32 h-32 sm:w-40 sm:h-40 md:w-44 md:h-44 group">
                 
-                <div className="absolute inset-0 rounded-full bg-purple-600 hover:bg-purple-500 shadow-xl shadow-purple-500/20 transition-colors duration-300 flex flex-col items-center justify-center pointer-events-none">
+                <div className="absolute inset-0 rounded-full bg-purple-600 hover:bg-purple-500 transition-colors duration-300 flex flex-col items-center justify-center pointer-events-none">
                   <svg className="w-12 h-12 text-white mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
                   </svg>
@@ -312,7 +315,7 @@ export default function Home() {
                   accept=".mp3,.wav,.m4a,.aac,.flac,.ogg,.mp4"
                   onChange={handleFileChange}
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-50 rounded-full"
-                  title="Toca para seleccionar tu grabación"
+                  title="Seleccionar grabación"
                 />
               </div>
             ) : (
@@ -352,7 +355,7 @@ export default function Home() {
               <span className="text-2xl font-black text-white">{progress}%</span>
             </div>
             <span className="text-xs sm:text-sm font-bold text-emerald-400 uppercase tracking-widest mb-4">
-              {progress <= 30 ? 'Subiendo archivo...' : 'Analizando teología...'}
+              {progress <= 25 ? 'Subiendo archivo pesado...' : progress <= 50 ? 'Extrayendo texto...' : 'Analizando teología...'}
             </span>
             <div className="bg-[#1A1D27]/90 border border-emerald-500/20 rounded-2xl p-5 shadow-xl w-full">
               <p className="text-gray-200 text-sm font-medium italic mb-2">"{promesasBiblicas[versoIndex].texto}"</p>
