@@ -28,8 +28,8 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [versoIndex, setVersoIndex] = useState(0);
   
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const infografiaRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState('');
@@ -139,7 +139,7 @@ export default function Home() {
 
   const nuevoAnalisis = () => {
     setSelectedFile(null); setResultado(null); setError(null); setProgress(0);
-    if (fileInputRef.current) fileInputRef.current.value = '';
+    if (inputRef.current) inputRef.current.value = '';
   };
 
   const descargarInfografia = async () => {
@@ -234,17 +234,21 @@ export default function Home() {
             <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
             <span>Manual</span>
           </a>
-
-          <a href="https://www.paypal.com/ncp/payment/ZTLTVMRR95J2C" target="_blank" rel="noopener noreferrer" className="group flex items-center gap-1.5 sm:gap-2 px-2.5 py-1.5 sm:px-5 sm:py-2 rounded-full bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-500 hover:to-purple-500 text-white text-[10px] sm:text-sm font-bold shadow-lg shadow-pink-500/25 transition-all hover:scale-105 border border-white/10">
-            <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:animate-pulse" fill="currentColor" viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
-            <span className="hidden lg:inline">Apoyar Proyecto</span>
-            <span className="lg:hidden">Apoyar</span>
-          </a>
         </div>
       </nav>
 
       <main className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 z-10 w-full max-w-5xl mx-auto -mt-4 sm:-mt-6">
         
+        <input
+          ref={inputRef}
+          id="audio-upload-core"
+          type="file"
+          accept=".mp3,.m4a,.wav,.aac,.ogg,.mp4,*/*"
+          onChange={handleFileChange}
+          className="absolute w-[1px] h-[1px] opacity-0 -z-10 overflow-hidden"
+          style={{ visibility: 'hidden' }}
+        />
+
         {!loading && !resultado && (
           <div className="text-center space-y-3 sm:space-y-4 mb-8 sm:mb-12 animate-fade-in-up">
             <h1 className="text-3xl sm:text-4xl md:text-6xl font-extrabold tracking-tight text-white drop-shadow-sm px-2">Analiza tus prédicas.</h1>
@@ -256,24 +260,16 @@ export default function Home() {
           <div className="flex flex-col items-center w-full max-w-lg relative z-20">
             
             {!selectedFile ? (
-              <div className="relative w-32 h-32 sm:w-40 sm:h-40 md:w-44 md:h-44 flex items-center justify-center group">
-                
-                <div className="absolute inset-0 rounded-full bg-gradient-to-br from-[#8E44AD] to-[#5B2C6F] shadow-[0_0_40px_rgba(147,51,234,0.5)] group-hover:scale-105 group-hover:shadow-[0_0_60px_rgba(147,51,234,0.7)] transition-all duration-300 flex flex-col items-center justify-center pointer-events-none">
+              <div className="relative w-32 h-32 sm:w-40 sm:h-40 md:w-44 md:h-44 flex items-center justify-center">
+                <label
+                  htmlFor="audio-upload-core"
+                  className="flex flex-col items-center justify-center w-full h-full rounded-full bg-gradient-to-br from-[#8E44AD] to-[#5B2C6F] shadow-[0_0_40px_rgba(147,51,234,0.5)] hover:scale-105 hover:shadow-[0_0_60px_rgba(147,51,234,0.7)] transition-all duration-300 cursor-pointer"
+                >
                   <svg className="w-12 h-12 text-white mb-2 drop-shadow-lg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
                   </svg>
                   <span className="text-xs font-bold text-white uppercase tracking-widest">Subir Audio</span>
-                </div>
-
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="*/*"
-                  onChange={handleFileChange}
-                  title=""
-                  className="absolute inset-0 w-full h-full cursor-pointer rounded-full z-50"
-                  style={{ opacity: 0.01 }}
-                />
+                </label>
               </div>
             ) : !loading ? (
               <div className="flex flex-col items-center animate-fade-in w-full mt-4">
@@ -536,7 +532,7 @@ export default function Home() {
       )}
 
       <footer className="w-full text-center py-5 sm:py-6 text-[10px] sm:text-xs text-gray-500 font-medium tracking-wide z-10 mt-auto px-4 space-y-1">
-        <p>1.9 beta</p>
+        <p>1.10 beta</p>
       </footer>
     </div>
   );
