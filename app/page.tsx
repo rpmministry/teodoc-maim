@@ -14,10 +14,10 @@ interface PredicaAnalisis {
 }
 
 const promesasBiblicas = [
-  { cita: "Isaías 41:10", texto: "No temas, porque yo estoy contigo; no desmayes, porque yo soy tu Dios que te esfuerzo..." },
-  { cita: "Jeremías 29:11", texto: "Porque yo sé los pensamientos que tengo acerca de vosotros, dice Jehova, pensamientos de paz..." },
+  { cita: "Isaías 41:10", texto: "No temas, porque yo estoy contigo; no desmayes..." },
+  { cita: "Jeremías 29:11", texto: "Porque yo sé los pensamientos que tengo acerca de vosotros..." },
   { cita: "Romanos 8:28", texto: "Y sabemos que a los que aman a Dios, todas las cosas les ayudan a bien..." },
-  { cita: "Josué 1:9", texto: "Mira que te mando que te esfuerces y seas valiente; no temas ni desmayes..." }
+  { cita: "Josué 1:9", texto: "Mira que te mando que te esfuerces y seas valiente..." }
 ];
 
 export default function Home() {
@@ -27,7 +27,7 @@ export default function Home() {
   const [resultado, setResultado] = useState<PredicaAnalisis | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [versoIndex, setVersoIndex] = useState(0);
-
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
   const infografiaRef = useRef<HTMLDivElement>(null);
 
@@ -62,10 +62,11 @@ export default function Home() {
     }
   };
 
+  // PASO 1: Captura sincrónica del archivo
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    console.log("Archivo capturado en Frontend:", { name: file.name, type: file.type, size: `${(file.size / (1024 * 1024)).toFixed(2)} MB` });
+
     setSelectedFile(file);
     setError(null);
   };
@@ -74,8 +75,10 @@ export default function Home() {
     return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
   };
 
+  // PASO 2: Procesamiento directo desde el cliente a Cloudinary (Evita el límite de 4.5MB de Vercel)
   const handleAnalyze = async () => {
     if (!selectedFile) return;
+
     setLoading(true);
     setProgress(5);
     setError(null);
@@ -83,41 +86,56 @@ export default function Home() {
     setVersoIndex(0);
 
     try {
+      // 1. UPLOAD DIRECTO A CLOUDINARY (Sin pasar por Next.js api/upload)
       const timerCloud = setInterval(() => setProgress((prev) => (prev >= 25 ? 25 : prev + 1)), 500);
+      
+      const formDataCloud = new FormData();
+      formDataCloud.append('file', selectedFile);
+      formDataCloud.append('upload_preset', 'teodoc_preset');
 
-      const formData = new FormData();
-      formData.append("audio", selectedFile, selectedFile.name);
-
-      const resUpload = await fetch('/api/upload', { method: 'POST', body: formData });
+      const resCloud = await fetch('https://api.cloudinary.com/v1_1/antbfat3/auto/upload', {
+        method: 'POST',
+        body: formDataCloud
+      });
       clearInterval(timerCloud);
 
-      if (!resUpload.ok) throw new Error('Error enviando el archivo a nuestro servidor.');
-      const uploadData = await resUpload.json();
-      const audioUrl = uploadData.audioUrl;
+      if (!resCloud.ok) throw new Error('Error enviando el archivo a la nube. Verifica tu conexión.');
+      const cloudData = await resCloud.json();
+      const audioUrl = cloudData.secure_url;
 
+      // 2. TRANSCRIPCIÓN
       setProgress(30);
       const timerTranscribe = setInterval(() => setProgress((prev) => (prev >= 49 ? 49 : prev + 1)), 800);
 
-      const resTranscribe = await fetch('/api/transcribe', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ audioUrl }) });
+      const resTranscribe = await fetch('/api/transcribe', { 
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ audioUrl }) 
+      });
       clearInterval(timerTranscribe);
 
       if (!resTranscribe.ok) throw new Error('Error en el motor de transcripción.');
       const dataTranscribe = await resTranscribe.json();
       const textoTranscrito = dataTranscribe.text;
-
+      
+      // 3. ANÁLISIS TEOLÓGICO
       setProgress(50);
       const timerAnalyze = setInterval(() => {
         setProgress((prev) => prev >= 98 ? 98 : prev + Math.max(1, Math.floor((99 - prev) * 0.05)));
       }, 1000);
 
-      const resAnalyze = await fetch('/api/analyze', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: textoTranscrito }) });
+      const resAnalyze = await fetch('/api/analyze', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: textoTranscrito })
+      });
       clearInterval(timerAnalyze);
 
       if (!resAnalyze.ok) throw new Error('Error procesando el análisis teológico de IA.');
       const dataAnalyze = await resAnalyze.json();
 
       setProgress(100);
-      setTimeout(() => { setResultado(dataAnalyze); setLoading(false); }, 500);
+      setTimeout(() => {
+        setResultado(dataAnalyze);
+        setLoading(false);
+      }, 500);
+
     } catch (err: any) {
       setError(err.message || 'Ocurrió un error en el proceso.');
       setLoading(false);
@@ -148,7 +166,7 @@ export default function Home() {
     if (!resultado) return;
     const doc = new jsPDF();
     const margin = 20; const pageWidth = doc.internal.pageSize.getWidth(); let y = margin;
-    const colorPrimario = [44, 62, 80]; const colorSecundario = [127, 140, 141]; const colorAcento = [192, 57, 43];
+    const colorPrimario = [44, 62, 80]; const colorSecundario = [127, 140, 141]; const colorAcento = [192, 57, 43]; 
 
     doc.setFont("helvetica", "bold"); doc.setFontSize(22); doc.setTextColor(colorPrimario[0], colorPrimario[1], colorPrimario[2]);
     const tituloLineas = doc.splitTextToSize(resultado.titulo.toUpperCase(), pageWidth - margin * 2);
@@ -203,7 +221,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-[#0B0C10] bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#1C1635] via-[#0B0C10] to-[#070709] text-white font-sans selection:bg-purple-500/30 flex flex-col relative overflow-x-hidden">
-
+      
       <nav className="w-full flex flex-wrap gap-4 justify-between items-center px-4 sm:px-8 py-4 sm:py-6 z-10">
         <div className="flex items-center gap-2 sm:gap-3">
           <div className="w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-tr from-purple-600 to-indigo-500 rounded-xl flex items-center justify-center shadow-lg shadow-purple-500/30 border border-white/10 shrink-0">
@@ -211,13 +229,13 @@ export default function Home() {
           </div>
           <span className="font-extrabold text-xl sm:text-2xl tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-gray-100 to-gray-400">TeoDoc</span>
         </div>
-
+        
         <div className="flex flex-wrap items-center gap-2 sm:gap-3 justify-end">
           <button onClick={() => setShowFeedbackModal(true)} className="group flex items-center gap-1.5 sm:gap-2 px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white text-[10px] sm:text-sm font-medium transition-all">
-            <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+            <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
             <span>Sugerencias</span>
           </button>
-
+          
           <a href="https://collection.cloudinary.com/antbfat3/ee4582aa2bac515291b5d02c058e9c4d" target="_blank" rel="noopener noreferrer" className="group flex items-center gap-1.5 sm:gap-2 px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-full bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 text-blue-300 hover:text-blue-200 text-[10px] sm:text-sm font-medium transition-all">
             <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
             <span>Manual</span>
@@ -231,8 +249,8 @@ export default function Home() {
         </div>
       </nav>
 
-  <main className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 z-10 w-full max-w-5xl mx-auto -mt-4 sm:-mt-6">
-
+      <main className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 z-10 w-full max-w-5xl mx-auto -mt-4 sm:-mt-6">
+        
         {!loading && !resultado && (
           <div className="text-center space-y-3 sm:space-y-4 mb-8 sm:mb-12 animate-fade-in-up">
             <h1 className="text-3xl sm:text-4xl md:text-6xl font-extrabold tracking-tight text-white drop-shadow-sm px-2">Analiza tus prédicas.</h1>
@@ -242,24 +260,26 @@ export default function Home() {
 
         {!resultado && (
           <div className="flex flex-col items-center w-full max-w-lg relative z-20">
-
+            
+            {/* Input Físico con extensiones explícitas (Sin audio/* para forzar el administrador de archivos en Android) */}
             <input
               ref={fileInputRef}
               type="file"
-              accept=".mp3,.m4a,.wav,.aac,.ogg,.webm,.caf,audio/mpeg,audio/mp4,audio/wav,audio/x-m4a,audio/*"
+              accept=".mp3,.wav,.m4a,.aac,.ogg,.mp4,.flac,.wma,.opus,.caf"
               onChange={handleFileChange}
-              className="sr-only"
+              className="sr-only" 
             />
 
             {!selectedFile ? (
+              // CÍRCULO SEGURO PARA IOS (Clases Tailwind estándar, sin HEX personalizados que causan fondo negro)
               <div className="flex flex-col items-center">
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="relative flex flex-col items-center justify-center w-32 h-32 sm:w-40 sm:h-40 md:w-44 md:h-44 rounded-full bg-gradient-to-br from-[#8E44AD] to-[#5B2C6F] shadow-[0_0_40px_rgba(147,51,234,0.6)] hover:scale-105 hover:shadow-[0_0_60px_rgba(147,51,234,0.8)] active:scale-95 transition-all duration-300"
+                  className="relative flex flex-col items-center justify-center w-32 h-32 sm:w-40 sm:h-40 md:w-44 md:h-44 rounded-full bg-purple-700 bg-gradient-to-br from-purple-600 to-indigo-900 shadow-2xl shadow-purple-500/40 hover:scale-105 hover:shadow-purple-500/60 active:scale-95 transition-all duration-300 appearance-none"
                 >
                   <svg className="w-12 h-12 text-white mb-2 drop-shadow-lg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
                   </svg>
                   <span className="text-xs font-bold text-white uppercase tracking-widest">Subir Audio</span>
                 </button>
@@ -279,7 +299,7 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={handleAnalyze}
-                  className="w-full max-w-sm py-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-lg shadow-[0_0_30px_rgba(16,185,129,0.4)] transition-all hover:scale-[1.02]"
+                  className="w-full max-w-sm py-4 rounded-xl bg-emerald-600 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-lg shadow-lg shadow-emerald-500/40 transition-all hover:scale-[1.02]"
                 >
                   Analizar Predicación
                 </button>
@@ -288,11 +308,11 @@ export default function Home() {
 
             {loading && (
               <div className="flex flex-col items-center text-center mt-2 w-full px-2 animate-fade-in">
-                <div className="w-24 h-24 rounded-full bg-gradient-to-br from-emerald-600 to-teal-600 animate-pulse flex items-center justify-center shadow-[0_0_40px_rgba(16,185,129,0.5)] mb-6">
+                <div className="w-24 h-24 rounded-full bg-emerald-600 bg-gradient-to-br from-emerald-600 to-teal-600 animate-pulse flex items-center justify-center shadow-2xl shadow-emerald-500/50 mb-6">
                   <span className="text-2xl font-black text-white">{progress}%</span>
                 </div>
                 <span className="text-xs sm:text-sm font-bold text-emerald-400 uppercase tracking-widest mb-4">
-                  {progress <= 50 ? 'Subiendo y procesando audio...' : 'Analizando teología...'}
+                  {progress <= 50 ? 'Subiendo a la nube...' : 'Analizando teología...'}
                 </span>
                 <div className="bg-[#1A1D27]/90 border border-emerald-500/20 rounded-2xl p-5 shadow-xl w-full">
                   <p className="text-gray-200 text-sm font-medium italic mb-2">"{promesasBiblicas[versoIndex].texto}"</p>
@@ -300,7 +320,7 @@ export default function Home() {
                 </div>
               </div>
             )}
-
+            
             {error && <div className="mt-8 px-5 py-3 bg-red-900/30 border border-red-500/50 rounded-xl text-red-200 text-sm w-full text-center animate-fade-in">{error}</div>}
           </div>
         )}
@@ -310,12 +330,12 @@ export default function Home() {
             <div className="bg-[#13161F]/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl border border-gray-800 shadow-2xl overflow-hidden">
               <div className="bg-gradient-to-b from-[#1C1E2A] to-[#13161F] p-5 sm:p-8 md:p-12 border-b border-gray-800">
                 <div className="flex flex-col md:flex-row justify-between items-center md:items-start mb-8 sm:mb-10 gap-5 sm:gap-6">
-
+                  
                   <div className="flex flex-col items-center md:items-start text-center md:text-left">
                     <span className="text-[10px] sm:text-xs font-bold text-purple-500 uppercase tracking-[0.2em] mb-1.5 sm:mb-2">Análisis Completado</span>
                     <span className="text-gray-400 text-xs sm:text-sm font-light">Estructura teológica extraída.</span>
                   </div>
-
+                  
                   <div className="flex flex-col sm:flex-row flex-wrap justify-center md:justify-end items-stretch sm:items-center gap-2.5 sm:gap-3 w-full md:w-auto mt-2 md:mt-0">
                     <button onClick={nuevoAnalisis} className="w-full sm:w-auto justify-center bg-transparent hover:bg-white/5 border border-purple-500/30 text-purple-300 hover:text-purple-200 px-4 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-medium transition-colors flex items-center gap-2">
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>
@@ -327,7 +347,7 @@ export default function Home() {
                     </button>
                     {resultado.infografia && (
                       <button onClick={descargarInfografia} className="w-full sm:w-auto justify-center bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-xs sm:text-sm font-medium transition-colors shadow-lg flex items-center gap-2">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 002 2v12a2 2 0 002 2z"></path></svg>
                         Exportar Infografía
                       </button>
                     )}
@@ -340,7 +360,7 @@ export default function Home() {
                   <p className="text-purple-300/90 text-sm sm:text-lg md:text-xl italic max-w-3xl mx-auto font-light leading-relaxed">"{resultado.idea_principal}"</p>
                 </div>
               </div>
-
+              
               <div className="p-5 sm:p-8 md:p-12 space-y-8 sm:space-y-12">
                 <section>
                   <h3 className="text-xs sm:text-sm font-bold text-gray-400 mb-6 sm:mb-8 uppercase tracking-[0.2em] flex items-center gap-3 sm:gap-4">
@@ -348,19 +368,19 @@ export default function Home() {
                     Desarrollo Bíblico
                     <span className="flex-1 h-[1px] bg-gray-700/50"></span>
                   </h3>
-
+                  
                   <div className="grid gap-4 sm:gap-6">
                     {resultado.desarrollo_progresivo.map((item, idx) => (
                       <div key={idx} className="bg-[#1A1D27] p-5 sm:p-6 md:p-8 rounded-xl sm:rounded-2xl border border-gray-800/60 hover:border-purple-500/30 transition-colors">
-
+                        
                         <div className="flex gap-3 sm:gap-4 items-start mb-3 sm:mb-4">
                           <span className="text-purple-400 bg-purple-500/10 border border-purple-500/20 w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shrink-0 text-xs sm:text-sm mt-0.5">{idx + 1}</span>
                           <h4 className="text-lg sm:text-xl font-bold text-gray-100 pt-1 sm:pt-1.5 leading-tight">{item.punto}</h4>
                         </div>
-
+                        
                         <div className="pl-11 sm:pl-14">
                           <p className="text-gray-400 mb-4 sm:mb-6 leading-relaxed font-light text-sm sm:text-base">{item.explicacion}</p>
-
+                          
                           {item.versiculos.length > 0 && (
                             <div className="grid gap-2.5 sm:gap-3">
                               {item.versiculos.map((v, vIdx) => (
@@ -380,7 +400,7 @@ export default function Home() {
                 <div className="grid md:grid-cols-2 gap-5 sm:gap-6">
                   <section className="bg-blue-900/10 p-5 sm:p-8 rounded-xl sm:rounded-2xl border border-blue-900/30">
                     <h3 className="text-xs sm:text-sm font-bold text-blue-400 mb-4 sm:mb-6 uppercase tracking-[0.15em] flex items-center gap-2 sm:gap-3">
-                      <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+                      <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
                       Aplicación Práctica
                     </h3>
                     <ul className="space-y-3 sm:space-y-4">
@@ -395,7 +415,7 @@ export default function Home() {
 
                   <section className="bg-amber-900/10 p-5 sm:p-8 rounded-xl sm:rounded-2xl border border-amber-900/30">
                     <h3 className="text-xs sm:text-sm font-bold text-amber-400 mb-4 sm:mb-6 uppercase tracking-[0.15em] flex items-center gap-2 sm:gap-3">
-                      <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
+                      <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
                       Oración Ministerial
                     </h3>
                     <p className="text-gray-300 italic leading-relaxed font-light text-sm sm:text-base">"{resultado.oracion}"</p>
@@ -414,15 +434,15 @@ export default function Home() {
                 </div>
 
                 <div className="w-full px-2 sm:px-0">
-                  <div
-                    ref={infografiaRef}
+                  <div 
+                    ref={infografiaRef} 
                     style={{ backgroundColor: '#F8F5EE', color: '#2C3E50' }}
                     className="w-full max-w-3xl p-6 sm:p-10 md:p-14 rounded-xl relative border-[8px] sm:border-[12px] border-[#E8DFC8] font-serif overflow-hidden mx-auto shadow-2xl"
                   >
                     <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'radial-gradient(#8C7D64 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
-
+                    
                     <div className="relative z-10 flex flex-col items-center">
-
+                      
                       <div style={{ backgroundColor: '#5B778A', borderColor: '#3A4D59' }} className="text-[#F8F5EE] py-6 px-4 sm:py-8 sm:px-10 rounded-xl mb-8 sm:mb-10 w-full text-center border-b-6 sm:border-b-8 relative">
                         <div className="absolute -left-2 sm:-left-3 top-3 bottom-3 sm:top-4 sm:bottom-4 w-2 sm:w-3" style={{ backgroundColor: '#D4AF37' }}></div>
                         <div className="absolute -right-2 sm:-right-3 top-3 bottom-3 sm:top-4 sm:bottom-4 w-2 sm:w-3" style={{ backgroundColor: '#D4AF37' }}></div>
@@ -455,7 +475,7 @@ export default function Home() {
                         <div className="text-center mb-8 sm:mb-10">
                           <h3 className="text-lg sm:text-xl font-bold uppercase tracking-widest text-[#2C3E50] border-b-2 border-[#D4AF37] pb-2 sm:pb-3 inline-block">El Mensaje Central</h3>
                         </div>
-
+                        
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                           {resultado.desarrollo_progresivo.slice(0, 3).map((punto, i) => (
                             <div key={i} className="flex flex-col items-center text-center">
@@ -497,7 +517,7 @@ export default function Home() {
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
               </button>
             </div>
-
+            
             {feedbackStatus === 'success' ? (
               <div className="text-green-400 text-center py-8 font-medium">
                 ¡Gracias! Tu mensaje ha sido enviado correctamente.
@@ -527,7 +547,7 @@ export default function Home() {
 
       {/* FOOTER */}
       <footer className="w-full text-center py-5 sm:py-6 text-[10px] sm:text-xs text-gray-500 font-medium tracking-wide z-10 mt-auto px-4 space-y-1">
-        <p>17.0</p>
+        <p>1.3 beta</p>
       </footer>
     </div>
   );
