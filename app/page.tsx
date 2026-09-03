@@ -62,6 +62,39 @@ export default function Home() {
     }
   };
 
+  // NÚCLEO DE LA SOLUCIÓN 1.25: ACEPTAR TODO SIN PREGUNTAR
+  // Eliminamos cualquier validación para que iOS Safari nunca nos rechace el archivo en silencio.
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      setError(null);
+    }
+  };
+
+  const formatearTamaño = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  const clearFile = () => {
+    setSelectedFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const nuevoAnalisis = () => {
+    clearFile();
+    setResultado(null); 
+    setError(null); 
+    setProgress(0);
+  };
+
+  // UPLOAD POR BLOQUES DE 10MB PARA AUDIOS PESADOS
   const uploadToCloudinaryChunked = async (file: File) => {
     const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'antbfat3';
     const url = `https://api.cloudinary.com/v1_1/${cloudName}/auto/upload`;
@@ -106,9 +139,10 @@ export default function Home() {
     return secureUrl;
   };
 
-  // NÚCLEO DE LA SOLUCIÓN: LA ACCIÓN DE AUTO-ARRANQUE DIRECTO
-  const executeAnalysis = async (file: File) => {
-    // Entramos directamente al backend y a la pantalla de carga, como sugeriste.
+  // EJECUCIÓN (Llamada por el formulario HTML de confianza nativa)
+  const executeAnalysis = async () => {
+    if (!selectedFile) return;
+
     setLoading(true);
     setProgress(0);
     setError(null);
@@ -116,10 +150,8 @@ export default function Home() {
     setVersoIndex(0);
 
     try {
-      // 1. SUBIDA PROTEGIDA EN BLOQUES
-      const audioUrl = await uploadToCloudinaryChunked(file);
+      const audioUrl = await uploadToCloudinaryChunked(selectedFile);
 
-      // 2. TRANSCRIPCIÓN
       setProgress(30);
       const timerTranscribe = setInterval(() => setProgress((prev) => (prev >= 49 ? 49 : prev + 1)), 800);
 
@@ -132,7 +164,6 @@ export default function Home() {
       const dataTranscribe = await resTranscribe.json();
       const textoTranscrito = dataTranscribe.text;
       
-      // 3. ANÁLISIS TEOLÓGICO
       setProgress(50);
       const timerAnalyze = setInterval(() => {
         setProgress((prev) => prev >= 98 ? 98 : prev + Math.max(1, Math.floor((99 - prev) * 0.05)));
@@ -146,7 +177,6 @@ export default function Home() {
       if (!resAnalyze.ok) throw new Error('Error en el análisis teológico.');
       const dataAnalyze = await resAnalyze.json();
 
-      // 4. FINALIZAR
       setProgress(100);
       setTimeout(() => {
         setResultado(dataAnalyze);
@@ -157,38 +187,12 @@ export default function Home() {
       setError(err.message || 'Ocurrió un error inesperado.');
       setLoading(false);
       setProgress(0);
-      setSelectedFile(null);
-      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
-  // EL EVENTO GATILLO: Apenas tocas tu archivo en el iPhone, ¡Boom! Despega.
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    
-    // Validamos para asegurarnos que sea un archivo correcto
-    const extension = file.name.slice((file.name.lastIndexOf(".") - 1 >>> 0) + 2).toLowerCase();
-    const validExtensions = ['mp3', 'wav', 'm4a', 'aac', 'flac', 'ogg', 'mp4', 'wma', 'caf'];
-    
-    if (!validExtensions.includes(extension) && !file.type.startsWith('audio/') && !file.type.startsWith('video/')) {
-      setError("Formato no reconocido. Por favor, selecciona un audio válido.");
-      return;
-    }
-
-    setSelectedFile(file);
-    setError(null);
-
-    // AUTO-START: Inicia tu idea de ir directo al backend
-    await executeAnalysis(file);
-  };
-
-  const nuevoAnalisis = () => {
-    setSelectedFile(null);
-    setResultado(null); 
-    setError(null); 
-    setProgress(0);
-    if (fileInputRef.current) fileInputRef.current.value = '';
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    executeAnalysis();
   };
 
   const descargarInfografia = async () => {
@@ -265,7 +269,6 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-[#0B0C10] bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#1C1635] via-[#0B0C10] to-[#070709] text-white font-sans selection:bg-purple-500/30 flex flex-col relative overflow-x-hidden">
       
-      {/* BOTONES VITALES RESTAURADOS Y SEGUROS */}
       <nav className="w-full flex flex-wrap gap-4 justify-between items-center px-4 sm:px-8 py-4 sm:py-6 z-10">
         <div className="flex items-center gap-2 sm:gap-3">
           <div className="w-8 h-8 sm:w-9 sm:h-9 bg-purple-600 rounded-xl flex items-center justify-center border border-white/10 shrink-0">
@@ -302,43 +305,78 @@ export default function Home() {
           </div>
         )}
 
-        {/* EL INPUT INMORTAL:
-            En lugar de usar un "if", lo mantenemos SIEMPRE en el HTML.
-            Si está cargando o hay resultado, lo "escondemos" empujándolo 9999 píxeles a la izquierda.
-            De esta forma, Safari NUNCA corta la conexión a internet. */}
-        <div className={`relative transition-all duration-500 ease-in-out z-20 flex flex-col items-center ${
-          loading || resultado
-            ? 'absolute -left-[9999px] opacity-0 pointer-events-none' // Escondido pero VIVO
-            : 'w-32 h-32 sm:w-40 sm:h-40 md:w-44 md:h-44 group cursor-pointer'
-        }`}>
-          
-          {/* El Diseño Visual del Botón */}
-          <div className="absolute inset-0 rounded-full bg-purple-600 hover:bg-purple-500 shadow-xl shadow-purple-500/20 group-hover:scale-105 transition-all duration-300 flex flex-col items-center justify-center pointer-events-none">
-            <svg className="w-12 h-12 text-white mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
-            </svg>
-            <span className="text-xs font-bold text-white uppercase tracking-widest text-center px-2">Subir Audio</span>
-          </div>
+        {/* CONTENEDOR PRINCIPAL: INMORTAL, SEGURO PARA LA MEMORIA DE SAFARI */}
+        {!loading && !resultado && (
+          <div className="flex flex-col items-center w-full max-w-lg relative z-20 animate-fade-in">
+            
+            {/* EL INPUT FÍSICO NUNCA DESAPARECE. 
+                Si hay archivo, se encoge a un botón verde "Cambiar".
+                Si no hay, es el botón morado gigante "Subir". */}
+            <div className={`relative flex flex-col items-center justify-center transition-all duration-500 ease-in-out group cursor-pointer ${
+              selectedFile ? 'w-16 h-16 sm:w-20 sm:h-20 mb-4' : 'w-32 h-32 sm:w-40 sm:h-40 md:w-44 md:h-44'
+            }`}>
+              
+              {/* DISEÑO VISUAL DINÁMICO */}
+              <div className={`absolute inset-0 rounded-full flex flex-col items-center justify-center pointer-events-none transition-colors duration-300 shadow-xl ${
+                selectedFile ? 'bg-emerald-600 shadow-emerald-500/20' : 'bg-purple-600 shadow-purple-500/20 group-hover:scale-105'
+              }`}>
+                {selectedFile ? (
+                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
+                ) : (
+                  <>
+                    <svg className="w-12 h-12 text-white mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
+                    </svg>
+                    <span className="text-xs font-bold text-white uppercase tracking-widest text-center px-2">Subir Audio</span>
+                  </>
+                )}
+              </div>
 
-          {/* El Selector Físico (Transparente encima del diseño) */}
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".mp3,.wav,.m4a,.aac,.flac,.ogg,.mp4,audio/*"
-            onChange={handleFileChange}
-            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-50 rounded-full"
-            title="Seleccionar grabación"
-          />
-        </div>
-        
-        {/* Espacio para mostrar mensajes de error (Fuera del contenedor del botón) */}
-        {!loading && !resultado && error && (
-          <div className="mt-8 px-5 py-3 bg-red-900/30 border border-red-500/50 rounded-xl text-red-200 text-sm w-full max-w-sm text-center animate-fade-in z-20 relative">
-            {error}
+              {/* INPUT NATIVO SEGURO - CERO FILTROS, CERO VALIDACIONES DE APPLE */}
+              {/* Al quitar el "accept", Safari te dejará elegir Notas de Voz y archivos de iCloud sin descartarlos */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                onChange={handleFileChange}
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-50 rounded-full"
+                title={selectedFile ? "Toca para cambiar de audio" : "Seleccionar grabación"}
+              />
+            </div>
+
+            {/* FORMULARIO DE ACCIÓN: Aparece debajo del botón cuando el archivo está listo */}
+            {selectedFile && (
+              <form onSubmit={handleFormSubmit} className="flex flex-col items-center animate-fade-in w-full mt-2">
+                
+                <div className="bg-[#1A1C23] border border-emerald-500/30 p-4 rounded-2xl mb-6 flex items-center justify-between w-full max-w-sm shadow-lg">
+                  <div className="flex flex-col overflow-hidden text-left flex-1">
+                    <span className="text-sm font-bold text-emerald-400 truncate pr-2">{selectedFile.name}</span>
+                    <span className="text-[10px] text-gray-400 mt-0.5">{formatearTamaño(selectedFile.size)}</span>
+                  </div>
+                  <button 
+                    type="button"
+                    onClick={clearFile}
+                    className="ml-2 text-gray-500 hover:text-red-400 bg-white/5 rounded-full p-1.5 transition-colors"
+                    title="Eliminar archivo"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                  </button>
+                </div>
+
+                {/* BOTÓN SUBMIT DE CONFIANZA NATIVA */}
+                <button
+                  type="submit"
+                  className="w-full max-w-sm py-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-lg shadow-[0_0_30px_rgba(16,185,129,0.4)] transition-all hover:scale-[1.02]"
+                >
+                  Analizar Predicación
+                </button>
+              </form>
+            )}
+            
+            {error && <div className="mt-8 px-5 py-3 bg-red-900/30 border border-red-500/50 rounded-xl text-red-200 text-sm w-full max-w-sm text-center animate-fade-in">{error}</div>}
           </div>
         )}
 
-        {/* PANTALLA DE CARGA (Aparece instantáneamente al seleccionar el archivo) */}
+        {/* ESTADO DE CARGA */}
         {loading && (
           <div className="flex flex-col items-center text-center mt-2 w-full px-2 animate-fade-in z-20 relative">
             <div className="w-24 h-24 rounded-full bg-emerald-600 animate-pulse flex items-center justify-center shadow-xl shadow-emerald-500/40 mb-6">
@@ -347,7 +385,7 @@ export default function Home() {
             
             <div className="text-emerald-400 font-bold mb-4 text-center">
               <span className="text-xs sm:text-sm uppercase tracking-widest block mb-1">
-                {progress <= 25 ? 'Subiendo archivo...' : progress <= 50 ? 'Extrayendo texto...' : 'Analizando teología...'}
+                {progress <= 25 ? 'Subiendo archivo pesado...' : progress <= 50 ? 'Extrayendo texto...' : 'Analizando teología...'}
               </span>
               <span className="text-[10px] text-gray-500 font-normal">
                 {selectedFile ? `Procesando: ${selectedFile.name}` : ''}
@@ -584,7 +622,7 @@ export default function Home() {
 
       {/* FOOTER */}
       <footer className="w-full text-center py-5 sm:py-6 text-[10px] sm:text-xs text-gray-500 font-medium tracking-wide z-10 mt-auto px-4 space-y-1">
-        <p>1.24 beta</p>
+        <p>1.25 beta</p>
       </footer>
     </div>
   );
