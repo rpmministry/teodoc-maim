@@ -1,5 +1,5 @@
 'use client';
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { jsPDF } from 'jspdf';
 import domtoimage from 'dom-to-image-more';
 
@@ -74,12 +74,6 @@ export default function Home() {
     }
     return () => clearInterval(intervaloVerso);
   }, [loading]);
-
-  const handleButtonClick = useCallback(() => {
-    if (platform === 'ios' && fileInputRef.current) {
-      fileInputRef.current.click();
-    }
-  }, [platform]);
 
   const enviarSugerencia = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -310,9 +304,10 @@ export default function Home() {
                 {/* Visual button - the gradient circle */}
                 <label 
                   htmlFor="audio-upload-v16"
-                  onClick={handleButtonClick}
                   className={`absolute inset-0 rounded-full bg-[#8E44AD] bg-gradient-to-br from-[#8E44AD] to-[#5B2C6F] transition-all duration-300 z-0 shadow-xl ${loading ? 'bg-gradient-to-br from-emerald-600 to-teal-600 cursor-wait animate-pulse' : 'cursor-pointer hover:scale-105 hover:shadow-[0_0_60px_rgba(147,51,234,0.6)] active:scale-95'}`}
-                ></label>
+                >
+                  {/* El label nativo activará el input file */}
+                </label>
                 
                 {/* Shadow/glow effect */}
                 <div className={`absolute inset-0 rounded-full transition-all duration-500 ${loading ? 'shadow-[0_0_60px_rgba(16,185,129,0.5)]' : 'shadow-[0_0_40px_rgba(147,51,234,0.4)]'}`}></div>
