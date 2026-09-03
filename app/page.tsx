@@ -62,7 +62,6 @@ export default function Home() {
     }
   };
 
-  // PASO 1: Captura nativa y directa del archivo
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -75,7 +74,6 @@ export default function Home() {
     return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
   };
 
-  // PASO 2: Procesamiento directo a la Nube evadiendo Vercel
   const handleAnalyze = async () => {
     if (!selectedFile) return;
 
@@ -86,7 +84,6 @@ export default function Home() {
     setVersoIndex(0);
 
     try {
-      // 1. UPLOAD DIRECTO A CLOUDINARY (Soporta archivos pesados)
       const timerCloud = setInterval(() => setProgress((prev) => (prev >= 25 ? 25 : prev + 1)), 500);
       
       const formDataCloud = new FormData();
@@ -103,7 +100,6 @@ export default function Home() {
       const cloudData = await resCloud.json();
       const audioUrl = cloudData.secure_url;
 
-      // 2. TRANSCRIPCIÓN
       setProgress(30);
       const timerTranscribe = setInterval(() => setProgress((prev) => (prev >= 49 ? 49 : prev + 1)), 800);
 
@@ -116,7 +112,6 @@ export default function Home() {
       const dataTranscribe = await resTranscribe.json();
       const textoTranscrito = dataTranscribe.text;
       
-      // 3. ANÁLISIS TEOLÓGICO
       setProgress(50);
       const timerAnalyze = setInterval(() => {
         setProgress((prev) => prev >= 98 ? 98 : prev + Math.max(1, Math.floor((99 - prev) * 0.05)));
@@ -262,37 +257,28 @@ export default function Home() {
           <div className="flex flex-col items-center w-full max-w-lg relative z-20">
             
             {!selectedFile ? (
-              // SOLUCIÓN DEFINITIVA IOS: Div contenedor (seguro) + Label Transparente (nativo)
-              <div className="flex flex-col items-center">
-                <div className="relative flex flex-col items-center justify-center w-32 h-32 sm:w-40 sm:h-40 md:w-44 md:h-44 rounded-full bg-purple-700 bg-gradient-to-br from-purple-600 to-indigo-900 shadow-2xl shadow-purple-500/40 hover:scale-105 hover:shadow-purple-500/60 transition-all duration-300">
-                  
-                  {/* Capa Visual (No interactiva) */}
-                  <div className="flex flex-col items-center pointer-events-none">
-                    <svg className="w-12 h-12 text-white mb-2 drop-shadow-lg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
-                    </svg>
-                    <span className="text-xs font-bold text-white uppercase tracking-widest">Subir Audio</span>
-                  </div>
-
-                  {/* Capa Nativa iOS (Label 100% transparente para capturar el toque nativo de Apple) */}
-                  <label 
-                     htmlFor="audio-upload-input" 
-                     className="absolute inset-0 w-full h-full cursor-pointer z-10 rounded-full"
-                     style={{ WebkitTapHighlightColor: 'transparent' }}
-                  ></label>
-                </div>
-
-                {/* Input Oculto (Seguro en el DOM) */}
+              <div className="flex flex-col items-center relative">
                 <input
                   id="audio-upload-input"
+                  ref={fileInputRef}
                   type="file"
-                  accept=".mp3,.wav,.m4a,.aac,.caf,.ogg,.mp4,audio/*,video/*"
+                  accept=".mp3,.wav,.m4a,.aac,.caf,.ogg,.mp4,audio/mpeg,audio/wav,audio/mp4,audio/x-m4a,audio/aac"
                   onChange={handleFileChange}
-                  className="hidden" 
+                  onClick={(e) => { e.currentTarget.value = ''; }}
+                  className="opacity-0 absolute -z-10 w-[1px] h-[1px] overflow-hidden" 
                 />
+                
+                <label 
+                  htmlFor="audio-upload-input" 
+                  className="relative flex flex-col items-center justify-center w-32 h-32 sm:w-40 sm:h-40 md:w-44 md:h-44 rounded-full bg-purple-700 bg-gradient-to-br from-purple-600 to-indigo-900 shadow-2xl shadow-purple-500/40 hover:scale-105 hover:shadow-purple-500/60 transition-all duration-300 cursor-pointer"
+                >
+                  <svg className="w-12 h-12 text-white mb-2 drop-shadow-lg" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
+                  </svg>
+                  <span className="text-xs font-bold text-white uppercase tracking-widest">Subir Audio</span>
+                </label>
               </div>
             ) : !loading ? (
-              // ESTADO 2: Archivo Seleccionado -> Listo para Analizar
               <div className="flex flex-col items-center animate-fade-in w-full mt-4">
                 <div className="bg-[#1A1C23] border border-purple-500/30 p-4 rounded-2xl mb-6 flex items-center justify-between w-full max-w-sm">
                   <div className="flex flex-col overflow-hidden">
@@ -333,7 +319,6 @@ export default function Home() {
           </div>
         )}
 
-        {/* CONTENEDOR DE RESULTADOS */}
         {resultado && (
           <div className="w-full mt-6 md:mt-10 mb-12 sm:mb-16 space-y-10 sm:space-y-16 animate-fade-in">
             <div className="bg-[#13161F]/80 backdrop-blur-xl rounded-2xl sm:rounded-3xl border border-gray-800 shadow-2xl overflow-hidden">
@@ -424,7 +409,7 @@ export default function Home() {
 
                   <section className="bg-amber-900/10 p-5 sm:p-8 rounded-xl sm:rounded-2xl border border-amber-900/30">
                     <h3 className="text-xs sm:text-sm font-bold text-amber-400 mb-4 sm:mb-6 uppercase tracking-[0.15em] flex items-center gap-2 sm:gap-3">
-                      <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
+                      <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
                       Oración Ministerial
                     </h3>
                     <p className="text-gray-300 italic leading-relaxed font-light text-sm sm:text-base">"{resultado.oracion}"</p>
@@ -516,7 +501,6 @@ export default function Home() {
         )}
       </main>
 
-      {/* MODAL DE SUGERENCIAS */}
       {showFeedbackModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-fade-in">
           <div className="bg-[#1A1D27] border border-gray-800 rounded-2xl p-6 w-full max-w-md shadow-2xl">
@@ -554,9 +538,8 @@ export default function Home() {
         </div>
       )}
 
-      {/* FOOTER */}
       <footer className="w-full text-center py-5 sm:py-6 text-[10px] sm:text-xs text-gray-500 font-medium tracking-wide z-10 mt-auto px-4 space-y-1">
-        <p>1.4 beta</p>
+        <p>1.5 beta</p>
       </footer>
     </div>
   );
