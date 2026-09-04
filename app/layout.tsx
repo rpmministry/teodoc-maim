@@ -23,6 +23,22 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es" className={`${inter.variable} ${lora.variable}`}>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.onerror = function(msg, url, line, col, error) {
+                alert('🔴 ERROR JS: ' + msg + ' | Línea: ' + line + ':' + col + (error && error.stack ? ' | Stack: ' + error.stack.substring(0, 300) : ''));
+                return false;
+              };
+              window.addEventListener('unhandledrejection', function(e) {
+                alert('🔴 PROMESA RECHAZADA: ' + (e.reason && e.reason.message ? e.reason.message : e.reason));
+              });
+              window.onerror('__TEST__', '', 0, 0, null);
+            `,
+          }}
+        />
+      </head>
       <body className="font-sans antialiased">
         {children}
       </body>
