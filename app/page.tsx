@@ -22,6 +22,8 @@ const promesasBiblicas = [
 
 export default function Home() {
   const selectedFileRef = useRef<File | null>(null);
+  const processedFileKeyRef = useRef<string | null>(null); // Llave de deduplicación anti-ejecución múltiple
+  
   const [fileName, setFileName] = useState<string | null>(null);
   const [fileSize, setFileSize] = useState<number | null>(null);
 
@@ -48,63 +50,72 @@ export default function Home() {
   }, [loading]);
 
   // ---------------------------------------------------------------------------
-  // ARQUITECTURA ROBUSTA DE RETORNO (Focus + VisibilityChange + DOM Inspection)
-  // Resuelve el bug de WebKit donde iOS selecciona el archivo pero omite el "change".
+  // ARQUITECTURA DE DETECCIÓN HÍBRIDA (Eventos + Polling DOM 300ms + Focus)
+  // Neutraliza el bug de WebKit donde Safari oculta el evento change en iOS.
   // ---------------------------------------------------------------------------
   useEffect(() => {
     const input = fileInputRef.current;
     if (!input) return;
 
-    let esperandoRegreso = false;
-
-    const procesarArchivoDetectado = () => {
+    const detectarArchivo = () => {
       const file = input.files?.[0];
       if (!file) return;
+
+      const fileKey = `${file.name}|${file.size}|${file.lastModified}`;
+
+      // Evita iniciar el proceso múltiples veces por solapamiento de eventos/polling
+      if (processedFileKeyRef.current === fileKey) return;
+      processedFileKeyRef.current = fileKey;
 
       selectedFileRef.current = file;
       setFileName(file.name);
       setFileSize(file.size);
       setError(null);
-
-      // Auto-start inmediato
-      setLoading(true);
-      setProgress(5);
-      setStatusText(`Archivo recibido: ${file.name}. Conectando con la nube...`);
       setResultado(null);
       setVersoIndex(0);
 
-      runPipeline(file);
+      // Auto-start inmediato al estilo Adobe Podcast
+      setLoading(true);
+      setProgress(5);
+      setStatusText(`Archivo recibido: ${file.name}. Iniciando análisis...`);
+
+      void runPipeline(file);
     };
 
-    const marcarPickerAbierto = () => {
-      esperandoRegreso = true;
+    // Eventos nativos estándar
+    input.addEventListener("change", detectarArchivo);
+    input.addEventListener("input", detectarArchivo);
+
+    // Respaldo de sondeo constante (Polling cada 300ms para leer input.files directamente)
+    const intervalId = window.setInterval(() => {
+      detectarArchivo();
+    }, 300);
+
+    // Respaldo adicional al recuperar la atención de la pantalla en Safari
+    const revisarAlVolver = () => {
+      window.setTimeout(detectarArchivo, 300);
+      window.setTimeout(detectarArchivo, 800);
+      window.setTimeout(detectarArchivo, 1500);
     };
 
-    const verificarRegresoDeSafari = () => {
-      if (!esperandoRegreso) return;
-      esperandoRegreso = false;
+    window.addEventListener("focus", revisarAlVolver);
+    window.addEventListener("pageshow", revisarAlVolver);
 
-      // Breve retardo para que WebKit termine de volcar el archivo al DOM del input
-      setTimeout(procesarArchivoDetectado, 200);
-    };
-
-    // Eventos de control nativos
-    input.addEventListener("click", marcarPickerAbierto);
-    input.addEventListener("change", procesarArchivoDetectado);
-    input.addEventListener("input", procesarArchivoDetectado);
-
-    window.addEventListener("focus", verificarRegresoDeSafari);
-    document.addEventListener("visibilitychange", () => {
+    const handleVisibility = () => {
       if (document.visibilityState === "visible") {
-        verificarRegresoDeSafari();
+        revisarAlVolver();
       }
-    });
+    };
+
+    document.addEventListener("visibilitychange", handleVisibility);
 
     return () => {
-      input.removeEventListener("click", marcarPickerAbierto);
-      input.removeEventListener("change", procesarArchivoDetectado);
-      input.removeEventListener("input", procesarArchivoDetectado);
-      window.removeEventListener("focus", verificarRegresoDeSafari);
+      input.removeEventListener("change", detectarArchivo);
+      input.removeEventListener("input", detectarArchivo);
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", revisarAlVolver);
+      window.removeEventListener("pageshow", revisarAlVolver);
+      document.removeEventListener("visibilitychange", handleVisibility);
     };
   }, []);
 
@@ -258,6 +269,7 @@ export default function Home() {
 
   const clearFile = () => {
     selectedFileRef.current = null;
+    processedFileKeyRef.current = null;
     setFileName(null);
     setFileSize(null);
     setError(null); 
@@ -267,6 +279,7 @@ export default function Home() {
 
   const nuevoAnalisis = () => {
     selectedFileRef.current = null;
+    processedFileKeyRef.current = null;
     setFileName(null);
     setFileSize(null);
     setResultado(null); 
@@ -385,7 +398,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* INPUT PERMANENTE EN EL DOM (Controlado por Focus + VisibilityChange nativo) */}
+        {/* INPUT PERMANENTE EN EL DOM (Controlado por Polling 300ms + Focus + VisibilityChange nativo) */}
         <div className={`w-full flex flex-col items-center max-w-lg relative z-20 animate-fade-in ${loading || resultado ? 'hidden' : 'block'}`}>
           <div className="w-full flex flex-col items-center bg-[#1A1D27] border border-purple-500/30 rounded-3xl p-6 sm:p-8 shadow-2xl">
             
@@ -655,7 +668,7 @@ export default function Home() {
             
             {feedbackStatus === 'success' ? (
               <div className="text-green-400 text-center py-8 font-medium">
-                ¡Gracias! Masaje enviado.
+                ¡Gracias! Tu mensaje ha sido enviado correctamente.
               </div>
             ) : (
               <form onSubmit={enviarSugerencia} className="flex flex-col gap-4">
@@ -682,7 +695,7 @@ export default function Home() {
 
       {/* FOOTER */}
       <footer className="w-full text-center py-5 sm:py-6 text-[10px] sm:text-xs text-gray-500 font-medium tracking-wide z-10 mt-auto px-4 space-y-1">
-        <p>1.42 beta (Detección por Focus/VisibilityChange y DOM Permanente)</p>
+        <p>1.43 beta (Polling Nativo e Inspección DOM Continua)</p>
       </footer>
     </div>
   );
