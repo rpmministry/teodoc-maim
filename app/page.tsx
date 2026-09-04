@@ -21,7 +21,6 @@ const promesasBiblicas = [
 ];
 
 export default function Home() {
-  // DOBLE RED DE SEGURIDAD (Referencia estable para el archivo, Estado separado para la UI)
   const selectedFileRef = useRef<File | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
   const [fileSize, setFileSize] = useState<number | null>(null);
@@ -75,7 +74,7 @@ export default function Home() {
   };
 
   // ---------------------------------------------------------------------------
-  // CAPTURA ESTABLE CON REFRESCAMIENTO DUAL (React + DOM Ref)
+  // CAPTURA NATIVA ESTABLE
   // ---------------------------------------------------------------------------
   const handleNativeFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.currentTarget.files?.[0];
@@ -89,7 +88,7 @@ export default function Home() {
   };
 
   // ---------------------------------------------------------------------------
-  // MOTOR DE SUBIDA RESILIENTE (Doble Ruta Cloudinary)
+  // MOTOR DE SUBIDA RESILIENTE (Cloudinary)
   // ---------------------------------------------------------------------------
   const uploadNormal = async (file: File) => {
     const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'antbfat3';
@@ -155,13 +154,11 @@ export default function Home() {
   };
 
   // ---------------------------------------------------------------------------
-  // PIPELINE DE EJECUCIÓN CON DOBLE RECUPERACIÓN (Ref + DOM Fallback)
+  // PIPELINE DE EJECUCIÓN (Sin <form>, sin type="submit", con prioridad DOM)
   // ---------------------------------------------------------------------------
-  const executeAnalysis = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    // DOBLE RED DE SEGURIDAD: Busca en la referencia de React o directamente en el DOM nativo de Safari
-    const fileToProcess = selectedFileRef.current ?? fileInputRef.current?.files?.[0];
+  const executeAnalysis = async () => {
+    // Prioridad invertida: DOM nativo primero, referencia de React como respaldo secundario
+    const fileToProcess = fileInputRef.current?.files?.[0] ?? selectedFileRef.current;
 
     if (!fileToProcess) {
       setError("⚠️ Por favor selecciona un archivo de audio primero.");
@@ -354,8 +351,8 @@ export default function Home() {
         {!loading && !resultado && (
           <div className="flex flex-col items-center w-full max-w-lg relative z-20 animate-fade-in">
             
-            {/* FORMULARIO PERMANENTE CON DOBLE RECUPERACIÓN DOM */}
-            <form onSubmit={executeAnalysis} className="w-full flex flex-col items-center bg-[#1A1D27] border border-purple-500/30 rounded-3xl p-6 sm:p-8 shadow-2xl">
+            {/* CONTENEDOR DIV LIMPIO (SIN <form> NI SUBMIT NATIVO) */}
+            <div className="w-full flex flex-col items-center bg-[#1A1D27] border border-purple-500/30 rounded-3xl p-6 sm:p-8 shadow-2xl">
               
               <h3 className="text-lg font-bold text-white mb-2 uppercase tracking-widest text-center">
                 Paso 1: Seleccionar Audio
@@ -376,7 +373,6 @@ export default function Home() {
                   hover:file:bg-purple-500 cursor-pointer mb-6"
               />
 
-              {/* CONFIRMACIÓN VISUAL DINÁMICA */}
               {fileName && (
                 <div className="w-full bg-black/40 border border-emerald-500/50 p-4 rounded-2xl mb-6 flex items-center justify-between">
                   <div className="flex flex-col overflow-hidden text-left flex-1">
@@ -398,9 +394,11 @@ export default function Home() {
                 Paso 2: Procesar
               </h3>
 
+              {/* BOTÓN NORMAL TYPE="BUTTON" (Cero recargas de Safari) */}
               <button
-                type="submit"
-                className="w-full py-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-lg shadow-[0_0_30px_rgba(16,185,129,0.4)] transition-all hover:scale-[1.02]"
+                type="button"
+                onClick={executeAnalysis}
+                className="w-full py-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-lg shadow-[0_0_30px_rgba(16,185,129,0.4)] transition-all hover:scale-[1.02] cursor-pointer"
               >
                 Analizar Predicación
               </button>
@@ -408,7 +406,7 @@ export default function Home() {
               <p className="text-gray-500 text-xs mt-6 text-center max-w-xs">
                 Soporta MP3, WAV, M4A, FLAC, AAC, OGG. <br/> Archivos de hasta 500 MB.
               </p>
-            </form>
+            </div>
 
             {error && <div className="mt-8 px-5 py-3 bg-red-900/30 border border-red-500/50 rounded-xl text-red-200 text-sm w-full max-w-sm text-center animate-fade-in">{error}</div>}
           </div>
@@ -660,7 +658,7 @@ export default function Home() {
 
       {/* FOOTER */}
       <footer className="w-full text-center py-5 sm:py-6 text-[10px] sm:text-xs text-gray-500 font-medium tracking-wide z-10 mt-auto px-4 space-y-1">
-        <p>1.36 beta (Doble Red de Seguridad Ref + DOM)</p>
+        <p>1.37 beta (Eliminación de Form Submit nativo)</p>
       </footer>
     </div>
   );
