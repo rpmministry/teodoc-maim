@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { Inter, Lora } from 'next/font/google'
+import Script from 'next/script'
 import './globals.css'
 
 const inter = Inter({
@@ -29,6 +30,10 @@ export default function RootLayout({ children }: LayoutProps<'/'>) {
   return (
     <html lang="es" className={`light bg-background ${inter.variable} ${lora.variable}`}>
       <body className="font-sans antialiased">{children}</body>
+      <Script
+        src="https://upload-widget.cloudinary.com/latest/global/all.js"
+        strategy="beforeInteractive"
+      />
     </html>
   )
 }
