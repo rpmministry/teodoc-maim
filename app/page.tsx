@@ -32,6 +32,7 @@ export default function Home() {
   const [versoIndex, setVersoIndex] = useState(0);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const processButtonRef = useRef<HTMLButtonElement>(null); // Referencia para el evento nativo DOM
   const infografiaRef = useRef<HTMLDivElement>(null);
 
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
@@ -45,6 +46,24 @@ export default function Home() {
     }
     return () => clearInterval(intervaloVerso);
   }, [loading]);
+
+  // ---------------------------------------------------------------------------
+  // BYPASS DE REACT: INSTALADOR DE EVENTO NATIVO DOM PARA EL BOTÓN EN SAFARI
+  // ---------------------------------------------------------------------------
+  useEffect(() => {
+    const button = processButtonRef.current;
+    if (!button) return;
+
+    const handleNativePress = (e: Event) => {
+      e.preventDefault();
+      iniciarAnalisis();
+    };
+
+    button.addEventListener("click", handleNativePress);
+    return () => {
+      button.removeEventListener("click", handleNativePress);
+    };
+  }, []);
 
   const enviarSugerencia = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -195,13 +214,10 @@ export default function Home() {
     }
   };
 
-  // ---------------------------------------------------------------------------
-  // DISPARADOR AISLADO CON SEÑAL DE DIAGNÓSTICO INMEDIATA (5%)
-  // ---------------------------------------------------------------------------
   const iniciarAnalisis = () => {
     setError(null);
     setLoading(true);
-    setProgress(5); // SEÑAL INEQUÍVOCA: Si ves el 5%, el botón de iOS SÍ respondió.
+    setProgress(5); // TEST VISUAL INMEDIATO: Si ves 5%, el toque nativo llegó con éxito.
 
     const fileToProcess = fileInputRef.current?.files?.[0] ?? selectedFileRef.current;
 
@@ -281,7 +297,7 @@ export default function Home() {
         doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.setTextColor(colorAcento[0], colorAcento[1], colorAcento[2]);
         doc.text(v.cita, margin + 5, y); y += 5;
         doc.setFont("helvetica", "italic"); doc.setTextColor(80, 80, 80);
-        const vTextoLineas = doc.splitTextToSize(`"${v.texto}"`, margin + 5, pageWidth - margin * 2 - 10);
+        const vTextoLineas = doc.splitTextToSize(`"${v.texto}"`, pageWidth - margin * 2 - 10);
         doc.text(vTextoLineas, margin + 5, y); y += vTextoLineas.length * 5 + 5;
       });
       y += 5;
@@ -388,10 +404,10 @@ export default function Home() {
               Paso 2: Procesar
             </h3>
 
-            {/* BOTÓN LIMPIO Y ESTÁNDAR (Únicamente onClick, sin conflictos de touchend) */}
+            {/* BOTÓN CON EVENT LISTENER NATIVO DOM (Bypass total de React synthetic events) */}
             <button
+              ref={processButtonRef}
               type="button"
-              onClick={iniciarAnalisis}
               className="w-full py-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-lg shadow-[0_0_30px_rgba(16,185,129,0.4)] transition-all hover:scale-[1.02] cursor-pointer"
             >
               Analizar Predicación
@@ -651,7 +667,7 @@ export default function Home() {
 
       {/* FOOTER */}
       <footer className="w-full text-center py-5 sm:py-6 text-[10px] sm:text-xs text-gray-500 font-medium tracking-wide z-10 mt-auto px-4 space-y-1">
-        <p>1.39 beta (Limpieza de eventos táctiles y diagnóstico 5%)</p>
+        <p>1.40 beta (Bypass React con Event Listener Nativo DOM)</p>
       </footer>
     </div>
   );
