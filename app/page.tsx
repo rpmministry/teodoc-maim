@@ -16,7 +16,7 @@ interface PredicaAnalisis {
 const promesasBiblicas = [
   { cita: "Isaías 41:10", texto: "No temas, porque yo estoy contigo; no desmayes..." },
   { cita: "Jeremías 29:11", texto: "Porque yo sé los pensamientos que tengo acerca de vosotros..." },
-  { cita: "Romanos 8:28", texto: "Y sabemos que a los que aman a Dios, todas las cosas les ayudan a bien..." },
+  { cita: "Romanos 8:28", texto: "Y sabemos que al que aman a Dios, todas las cosas les ayudan a bien..." },
   { cita: "Josué 1:9", texto: "Mira que te mando que te esfuerces y seas valiente..." }
 ];
 
@@ -72,9 +72,6 @@ export default function Home() {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  // ---------------------------------------------------------------------------
-  // MANEJADOR GENERAL DE SELECCIÓN DE ARCHIVOS
-  // ---------------------------------------------------------------------------
   const handleFileSelected = (file: File) => {
     if (!file) return;
 
@@ -104,9 +101,6 @@ export default function Home() {
     if (input) input.value = '';
   };
 
-  // ---------------------------------------------------------------------------
-  // PROCESAMIENTO A CLOUDINARY
-  // ---------------------------------------------------------------------------
   const handleAnalizarClick = async () => {
     if (!selectedFile) {
       setError('Primero selecciona un archivo.');
@@ -173,9 +167,6 @@ export default function Home() {
     await startAnalysisPipeline(data.secure_url);
   };
 
-  // ---------------------------------------------------------------------------
-  // PIPELINE BACKEND (Transcripción y Análisis IA)
-  // ---------------------------------------------------------------------------
   const startAnalysisPipeline = async (audioUrl: string) => {
     try {
       const timerTranscribe = setInterval(() => setProgress((prev) => (prev >= 49 ? 49 : prev + 1)), 800);
@@ -339,11 +330,11 @@ export default function Home() {
         )}
 
         {/* ========================================================================= */}
-        {/* FASE A: SELECCIÓN DE ARCHIVO */}
+        {/* FASE A: DROPZONE MODERNA Y VISUALMENTE IMPACTANTE */}
         {/* ========================================================================= */}
         {!selectedFile && !loading && !resultado && (
           <div className="w-full max-w-lg animate-fade-in">
-            <div className="relative">
+            <div className="relative group">
               <input
                 ref={fileInputRef}
                 id="teodoc-file-input"
@@ -353,51 +344,45 @@ export default function Home() {
                   const file = event.target.files?.[0];
                   if (file) handleFileSelected(file);
                 }}
-                className="
-                  block
-                  w-full
-                  max-w-lg
-                  mx-auto
-                  rounded-xl
-                  border
-                  border-white/20
-                  bg-[#13161F]
-                  px-4
-                  py-4
-                  text-sm
-                  text-gray-300
-                  cursor-pointer
-                  file:mr-4
-                  file:rounded-lg
-                  file:border-0
-                  file:bg-purple-600
-                  file:px-5
-                  file:py-3
-                  file:text-sm
-                  file:font-bold
-                  file:text-white
-                  hover:file:bg-purple-500
-                  transition-all
-                "
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
               />
-            </div>
+              
+              <div className="bg-[#13161F]/90 backdrop-blur-md border-2 border-dashed border-purple-500/30 group-hover:border-purple-500/60 rounded-3xl p-8 sm:p-10 text-center transition-all duration-300 shadow-2xl group-hover:shadow-purple-500/10 flex flex-col items-center justify-center">
+                
+                {/* Círculo central con ícono */}
+                <div className="w-20 h-20 rounded-full bg-purple-600/15 group-hover:bg-purple-600/25 border border-purple-500/30 flex items-center justify-center mb-5 transition-transform duration-300 group-hover:scale-105 shadow-inner">
+                  <svg className="w-9 h-9 text-purple-400 group-hover:text-purple-300 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                  </svg>
+                </div>
 
-            <p className="text-gray-500 text-xs text-center mt-6">
-              Soporta MP3, WAV, M4A, FLAC, AAC. <br/> Archivos de hasta 500 MB.
-            </p>
+                <h3 className="text-white font-bold text-base sm:text-lg mb-2 tracking-wide">
+                  Sube o selecciona tu archivo de audio
+                </h3>
+
+                <p className="text-gray-400 text-xs sm:text-sm max-w-xs mx-auto mb-6 font-light">
+                  Arrastra tu prédica aquí o <span className="text-purple-400 font-semibold underline underline-offset-4">explora tus archivos</span>
+                </p>
+
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-purple-600/20 border border-purple-500/30 text-purple-300 text-xs font-semibold shadow-md">
+                  <span>MP3, WAV, M4A, FLAC, AAC · Máx. 500 MB</span>
+                </div>
+
+              </div>
+            </div>
           </div>
         )}
 
         {/* ========================================================================= */}
-        {/* FASE B: TARJETA DE ARCHIVO Y BOTÓN "ANALIZAR PRÉDICA" (Verde brillante) */}
+        {/* FASE B: TARJETA DE ARCHIVO Y BOTÓN VERDE ESMERALDA BRILLANTE */}
         {/* ========================================================================= */}
         {selectedFile && !loading && !resultado && (
           <div className="mt-4 sm:mt-8 w-full max-w-lg animate-fade-in pb-6">
-            <div className="bg-[#13161F] border border-purple-500/30 rounded-2xl p-5 shadow-2xl backdrop-blur-md">
+            <div className="bg-[#13161F] border border-emerald-500/40 rounded-2xl p-5 shadow-2xl backdrop-blur-md">
               
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-purple-600/20 flex items-center justify-center shrink-0 border border-purple-500/20">
-                  <span className="text-2xl">🎵</span>
+                <div className="w-12 h-12 rounded-full bg-emerald-600/20 flex items-center justify-center shrink-0 border border-emerald-500/30">
+                  <span className="text-xl">🎵</span>
                 </div>
 
                 <div className="min-w-0 flex-1">
@@ -422,9 +407,10 @@ export default function Home() {
               <button
                 type="button"
                 onClick={handleAnalizarClick}
-                className="mt-5 w-full bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-emerald-500/30 transition-all uppercase tracking-widest text-sm"
+                className="mt-5 w-full bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold py-4 rounded-xl shadow-xl shadow-emerald-600/40 transition-all uppercase tracking-widest text-sm flex items-center justify-center gap-2 border border-emerald-400/30"
               >
-                Analizar Prédica
+                <span>Analizar Prédica</span>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg>
               </button>
 
             </div>
@@ -444,7 +430,7 @@ export default function Home() {
         {/* ========================================================================= */}
         {loading && (
           <div className="flex flex-col items-center text-center mt-2 w-full px-2 animate-fade-in z-20 relative">
-            <div className="w-24 h-24 rounded-full bg-emerald-600 animate-pulse flex items-center justify-center shadow-xl shadow-emerald-500/40 mb-6">
+            <div className="w-24 h-24 rounded-full bg-emerald-600 animate-pulse flex items-center justify-center shadow-xl shadow-emerald-500/40 mb-6 border-2 border-emerald-400/50">
               <span className="text-2xl font-black text-white">{progress}%</span>
             </div>
             
