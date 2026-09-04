@@ -29,12 +29,12 @@ export default function Home() {
   const [versoIndex, setVersoIndex] = useState(0);
   
   const infografiaRef = useRef<HTMLDivElement>(null);
+  const ultimoArchivoProcesadoRef = useRef<string | null>(null);
 
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState('');
   const [feedbackStatus, setFeedbackStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
 
-  // Rotación de versículos
   useEffect(() => {
     let intervaloVerso: NodeJS.Timeout;
     if (loading) {
@@ -63,15 +63,43 @@ export default function Home() {
   };
 
   // ---------------------------------------------------------------------------
-  // MANEJO DE ARCHIVO NATIVO (Bypass de WebKit Security Constraints)
+  // MANEJO DE EVENTOS DUALES Y ANÁLISIS DE ARCHIVO
   // ---------------------------------------------------------------------------
-  const handleFileSelected = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+  const handleFileInput = async (event: React.FormEvent<HTMLInputElement>) => {
+    const input = event.currentTarget;
+    const file = input.files?.[0];
 
     if (!file) {
-      console.log('[TeoDoc] No se seleccionó archivo.');
+      console.log('[TeoDoc] Evento de archivo sin archivo seleccionado:', event.type);
       return;
     }
+
+    const fileKey = [file.name, file.size, file.lastModified].join('|');
+
+    // Evita subir el mismo archivo dos veces si Safari dispara 'input' y 'change' juntos
+    if (ultimoArchivoProcesadoRef.current === fileKey) {
+      console.log('[TeoDoc] Archivo duplicado ignorado:', event.type);
+      return;
+    }
+
+    ultimoArchivoProcesadoRef.current = fileKey;
+
+    console.log(`[TeoDoc] EVENTO ${event.type.toUpperCase()}`, {
+      name: file.name,
+      size: file.size,
+      type: file.type,
+    });
+
+    // Diagnóstico visual en pantalla para probar en iOS
+    setStatusText(`Archivo detectado (${event.type})`);
+
+    await handleFileSelected(event);
+  };
+
+  const handleFileSelected = async (event: React.FormEvent<HTMLInputElement>) => {
+    const file = event.currentTarget.files?.[0];
+
+    if (!file) return;
 
     console.log('[TeoDoc] ARCHIVO SELECCIONADO', {
       name: file.name,
@@ -81,10 +109,8 @@ export default function Home() {
     });
 
     const maxSize = 500 * 1024 * 1024;
-
     if (file.size > maxSize) {
       setError('El archivo supera el límite permitido de 500 MB.');
-      event.target.value = '';
       return;
     }
 
@@ -94,7 +120,6 @@ export default function Home() {
 
     if (!validExtension) {
       setError('Formato no compatible. Utiliza MP3, WAV, M4A, AAC, FLAC, OGG o MP4.');
-      event.target.value = '';
       return;
     }
 
@@ -102,7 +127,8 @@ export default function Home() {
     setResultado(null);
     setLoading(true);
     setProgress(2);
-    setStatusText('Archivo seleccionado. Preparando subida...');
+    // Nota: El setStatusText de "Archivo seleccionado" fue sobrescrito por el diagnóstico visual en handleFileInput,
+    // pero pronto cambiará en uploadFileToCloudinary.
 
     try {
       await uploadFileToCloudinary(file);
@@ -113,7 +139,15 @@ export default function Home() {
       setError(error?.message || 'No fue posible subir el archivo.');
     }
 
-    event.target.value = '';
+    // No limpiamos event.target.value aquí para no romper el ciclo en Safari.
+  };
+
+  const limpiarSelectorArchivo = () => {
+    const input = document.getElementById('teodoc-file-input') as HTMLInputElement | null;
+    if (input) {
+      input.value = '';
+    }
+    ultimoArchivoProcesadoRef.current = null;
   };
 
   // ---------------------------------------------------------------------------
@@ -135,8 +169,8 @@ export default function Home() {
 
     /*
      * Safari/iOS WebKit Bugzilla Workaround:
-     * Creamos un Blob real a partir de los bytes del archivo para
-     * evitar el bug que envía 0 bytes desde inputs móviles.
+     * Safari puede enviar cuerpos vacíos al enviar File por Fetch directo.
+     * Creamos un Blob puro para asegurar la transferencia.
      */
     const buffer = await file.arrayBuffer();
     const safeBlob = new Blob([buffer], { type: file.type || 'application/octet-stream' });
@@ -230,12 +264,14 @@ export default function Home() {
       setTimeout(() => {
         setResultado(dataAnalyze);
         setLoading(false);
+        limpiarSelectorArchivo();
       }, 500);
 
     } catch (err: any) {
       setError(`❌ Fallo crítico en el pipeline: ${err.message || 'Ocurrió un error inesperado.'}`);
       setLoading(false);
       setProgress(0);
+      limpiarSelectorArchivo();
     }
   };
 
@@ -243,6 +279,7 @@ export default function Home() {
     setResultado(null); 
     setError(null); 
     setProgress(0);
+    limpiarSelectorArchivo();
   };
 
   const descargarInfografia = async () => {
@@ -319,6 +356,21 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-[#0B0C10] bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#1C1635] via-[#0B0C10] to-[#070709] text-white font-sans selection:bg-purple-500/30 flex flex-col relative overflow-x-hidden">
       
+      {/* 
+        EL INPUT MAESTRO:
+        Montado permanentemente y fuera del bloque condicional de loading
+        para evitar que React destruya la memoria de WebKit en iOS.
+      */}
+      <input
+        id="teodoc-file-input"
+        type="file"
+        accept=".mp3,.wav,.m4a,.aac,.flac,.ogg,.mp4,audio/mpeg,audio/wav,audio/mp4,video/mp4"
+        onInput={handleFileInput}
+        onChange={handleFileInput}
+        className="fixed -left-[9999px] w-px h-px opacity-0"
+        tabIndex={-1}
+      />
+
       <nav className="w-full flex flex-wrap gap-4 justify-between items-center px-4 sm:px-8 py-4 sm:py-6 z-10">
         <div className="flex items-center gap-2 sm:gap-3">
           <div className="w-8 h-8 sm:w-9 sm:h-9 bg-purple-600 rounded-xl flex items-center justify-center border border-white/10 shrink-0">
@@ -355,18 +407,14 @@ export default function Home() {
           </div>
         )}
 
-        {/* SELECTOR NATIVO (LABEL WRAPPER) */}
+        {/* SELECTOR NATIVO MEDIANTE LABEL (No usa JavaScript onClick ni fileInputRef) */}
         {!loading && !resultado && (
           <div className="flex flex-col items-center w-full max-w-lg relative z-20 animate-fade-in">
             
-            <label className="relative block w-32 h-32 sm:w-40 sm:h-40 md:w-44 md:h-44 cursor-pointer">
-              <input
-                type="file"
-                accept="audio/*,video/*,.mp3,.wav,.m4a,.aac,.flac,.ogg,.mp4"
-                onChange={handleFileSelected}
-                className="absolute inset-0 z-20 w-full h-full opacity-0 cursor-pointer"
-              />
-
+            <label
+              htmlFor="teodoc-file-input"
+              className="relative block w-32 h-32 sm:w-40 sm:h-40 md:w-44 md:h-44 cursor-pointer"
+            >
               <div className="absolute inset-0 flex flex-col items-center justify-center rounded-full transition-all duration-300 bg-purple-600 hover:bg-purple-500 shadow-xl shadow-purple-500/20 hover:scale-105">
                 <svg
                   className="w-12 h-12 text-white mb-2 pointer-events-none"
@@ -378,7 +426,7 @@ export default function Home() {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth="1.5"
-                    d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"
+                    d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 01-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A6 6 0 009 10.172V5L8 4z"
                   />
                 </svg>
 
@@ -403,7 +451,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* ESTADO DE CARGA */}
+        {/* ESTADO DE CARGA Y DIAGNÓSTICO */}
         {loading && (
           <div className="flex flex-col items-center text-center mt-2 w-full px-2 animate-fade-in z-20 relative">
             <div className="w-24 h-24 rounded-full bg-emerald-600 animate-pulse flex items-center justify-center shadow-xl shadow-emerald-500/40 mb-6">
@@ -415,7 +463,7 @@ export default function Home() {
                 {statusText}
               </span>
               <span className="text-[10px] text-gray-500 font-normal">
-                Subida segura y cifrada
+                Servidor Cloudinary & IA en marcha
               </span>
             </div>
 
@@ -649,7 +697,7 @@ export default function Home() {
 
       {/* FOOTER */}
       <footer className="w-full text-center py-5 sm:py-6 text-[10px] sm:text-xs text-gray-500 font-medium tracking-wide z-10 mt-auto px-4 space-y-1">
-        <p>1.50 beta (Upload NATIVO Client-Side a Cloudinary con Bypass WebKit)</p>
+        <p>1.51 beta (Input Maestro Permanente y Bypass de WebKit Dismount Bug)</p>
       </footer>
     </div>
   );
