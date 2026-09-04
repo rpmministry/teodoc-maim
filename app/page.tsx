@@ -73,7 +73,7 @@ export default function Home() {
   };
 
   // ---------------------------------------------------------------------------
-  // ETAPA 1: SELECCIÓN NATIVA DIRECTA (Bypass Safari Label Security Bug)
+  // ETAPA 1: SELECCIÓN NATIVA DIRECTA (Puro React onChange, sin hacks DOM)
   // ---------------------------------------------------------------------------
   const handleFileSelected = (file: File) => {
     if (!file) return;
@@ -82,6 +82,7 @@ export default function Home() {
       name: file.name,
       type: file.type,
       size: file.size,
+      sizeMB: (file.size / 1024 / 1024).toFixed(2),
     });
 
     const maxSize = 500 * 1024 * 1024;
@@ -102,12 +103,16 @@ export default function Home() {
     setError(null);
     setResultado(null);
 
-    // UX Fase 1: Solo guardamos el archivo en el estado de React
+    // Solo guardamos para mostrar la tarjeta, no iniciamos subida aún
     setSelectedFile(file);
   };
 
+  const handleCambiarArchivo = () => {
+    setSelectedFile(null);
+  };
+
   // ---------------------------------------------------------------------------
-  // ETAPA 2: PROCESAMIENTO A CLOUDINARY (Lanzado manualmente por el usuario)
+  // ETAPA 2: PROCESAMIENTO A CLOUDINARY (Lanzado al tocar "ANALIZAR PRÉDICA")
   // ---------------------------------------------------------------------------
   const handleAnalizarClick = async () => {
     if (!selectedFile) return;
@@ -222,8 +227,6 @@ export default function Home() {
     setError(null); 
     setProgress(0);
     setSelectedFile(null);
-    const input = document.getElementById('teodoc-file-input') as HTMLInputElement | null;
-    if (input) input.value = '';
   };
 
   const descargarInfografia = async () => {
@@ -338,13 +341,11 @@ export default function Home() {
         )}
 
         {/* ========================================================================= */}
-        {/* FASE A: BOTÓN DE SUBIDA (INPUT CLICK-JACKING PARA SAFARI iOS) */}
+        {/* FASE A: BOTÓN NATIVO VISIBLE (Sin accepts ni labels, puro HTML5) */}
         {/* ========================================================================= */}
-        {!loading && !resultado && (
+        {!loading && !resultado && !selectedFile && (
           <div className="w-full max-w-lg animate-fade-in">
             <div className="relative">
-              
-              {/* EL INPUT NATIVO REAL, SIN ACCEPT Y SUPERPUESTO (Click-Jacking) */}
               <input
                 id="teodoc-file-input"
                 type="file"
@@ -353,16 +354,32 @@ export default function Home() {
                   if (!file) return;
                   handleFileSelected(file);
                 }}
-                className="absolute inset-0 z-20 w-full h-full opacity-0 cursor-pointer"
+                className="
+                  block
+                  w-full
+                  max-w-lg
+                  mx-auto
+                  rounded-xl
+                  border
+                  border-white/20
+                  bg-[#13161F]
+                  px-4
+                  py-4
+                  text-sm
+                  text-gray-300
+                  cursor-pointer
+                  file:mr-4
+                  file:rounded-lg
+                  file:border-0
+                  file:bg-purple-600
+                  file:px-5
+                  file:py-3
+                  file:text-sm
+                  file:font-bold
+                  file:text-white
+                  hover:file:bg-purple-500
+                "
               />
-
-              {/* DISEÑO VISUAL DEL BOTÓN DEBAJO DEL INPUT INVISIBLE */}
-              <div className="relative z-10 flex flex-col items-center justify-center w-32 h-32 sm:w-40 sm:h-40 md:w-44 md:h-44 mx-auto rounded-full bg-purple-600 hover:bg-purple-500 shadow-xl shadow-purple-500/20 transition-all duration-300 pointer-events-none">
-                <svg className="w-12 h-12 text-white mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 01-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A6 6 0 009 10.172V5L8 4z"></path>
-                </svg>
-                <span className="text-xs font-bold text-white uppercase tracking-widest text-center px-2">Subir Audio</span>
-              </div>
             </div>
 
             <p className="text-gray-500 text-xs text-center mt-6">
@@ -372,7 +389,7 @@ export default function Home() {
         )}
 
         {/* ========================================================================= */}
-        {/* FASE B: TARJETA DE ARCHIVO Y BOTÓN DE ANALIZAR */}
+        {/* FASE B: TARJETA DE ARCHIVO SELECCIONADO Y BOTÓN "ANALIZAR PRÉDICA" */}
         {/* ========================================================================= */}
         {selectedFile && !loading && !resultado && (
           <div className="mt-8 w-full max-w-lg animate-fade-in">
@@ -391,11 +408,7 @@ export default function Home() {
 
               <button
                 type="button"
-                onClick={() => {
-                  setSelectedFile(null);
-                  const input = document.getElementById('teodoc-file-input') as HTMLInputElement | null;
-                  if (input) input.value = '';
-                }}
+                onClick={handleCambiarArchivo}
                 className="mt-4 text-gray-400 hover:text-white text-sm transition-colors"
               >
                 Cambiar archivo
@@ -412,7 +425,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* ERROR DE VALIDACIÓN / SUBIDA */}
+        {/* ERROR DE VALIDACIÓN O SUBIDA */}
         {!loading && !resultado && error && (
           <div className="mt-6 px-5 py-4 bg-red-950/80 border-2 border-red-500 rounded-2xl text-red-200 text-xs w-full max-w-sm shadow-2xl animate-fade-in space-y-2 text-center relative z-20">
             <p className="font-bold uppercase tracking-wider text-red-400">🚨 Error:</p>
@@ -421,7 +434,7 @@ export default function Home() {
         )}
 
         {/* ========================================================================= */}
-        {/* FASE C: ESTADO DE CARGA (Procesando con la IA) */}
+        {/* FASE C: ESTADO DE CARGA Y DIAGNÓSTICO (Procesamiento) */}
         {/* ========================================================================= */}
         {loading && (
           <div className="flex flex-col items-center text-center mt-2 w-full px-2 animate-fade-in z-20 relative">
@@ -521,7 +534,7 @@ export default function Home() {
                 <div className="grid md:grid-cols-2 gap-5 sm:gap-6">
                   <section className="bg-blue-900/10 p-5 sm:p-8 rounded-xl sm:rounded-2xl border border-blue-900/30">
                     <h3 className="text-xs sm:text-sm font-bold text-blue-400 mb-4 sm:mb-6 uppercase tracking-[0.15em] flex items-center gap-2 sm:gap-3">
-                      <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 012-2h2a2 2 0 012 2h-2M9 5a2 2 0 002 2h2a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+                      <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
                       Aplicación Práctica
                     </h3>
                     <ul className="space-y-3 sm:space-y-4">
@@ -668,7 +681,7 @@ export default function Home() {
 
       {/* FOOTER */}
       <footer className="w-full text-center py-5 sm:py-6 text-[10px] sm:text-xs text-gray-500 font-medium tracking-wide z-10 mt-auto px-4 space-y-1">
-        <p>1.55 beta (Click-Jacking Nativo con UX de 2 Fases)</p>
+        <p>1.56 beta (Prueba Definitiva iOS: Input Nativo Puro + UX 2 Fases)</p>
       </footer>
     </div>
   );
