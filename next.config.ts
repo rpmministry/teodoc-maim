@@ -1,21 +1,6 @@
-/** @type {import('next').NextConfig} */
-const nextConfig = {
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-  typescript: {
-    ignoreBuildErrors: true,
-  },
-  // Desactiva la optimización experimental pesada para evitar bloqueos en Vercel
-  experimental: {
-    esmExternals: 'loose',
-  },
-};
+import type { NextConfig } from 'next';
 
-export default nextConfig;
-
-/** @type {import('next').NextConfig} */
-const nextConfig = {
+const nextConfig: NextConfig = {
   allowedDevOrigins: ['192.168.100.21'],
 };
 
