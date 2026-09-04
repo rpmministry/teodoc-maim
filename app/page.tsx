@@ -38,6 +38,39 @@ export default function Home() {
   const [feedbackMsg, setFeedbackMsg] = useState('');
   const [feedbackStatus, setFeedbackStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
 
+  // ---------------------------------------------------------------------------
+  // ESTADO Y LÓGICA PARA LA MINICONCOLA DE DIAGNÓSTICO
+  // ---------------------------------------------------------------------------
+  const [debugLogs, setDebugLogs] = useState<string[]>([]);
+
+  useEffect(() => {
+    // Interceptar console.log
+    const originalLog = console.log;
+    const originalError = console.error;
+
+    console.log = (...args) => {
+      const msg = args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' ');
+      setDebugLogs(prev => [...prev, `[LOG] ${msg}`]);
+      originalLog(...args);
+    };
+
+    console.error = (...args) => {
+      const msg = args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' ');
+      setDebugLogs(prev => [...prev, `[ERR] ${msg}`]);
+      originalError(...args);
+    };
+
+    console.log('[TeoDoc] Interceptor de logs activado');
+
+    return () => {
+      console.log = originalLog;
+      console.error = originalError;
+    };
+  }, []);
+
+  // ---------------------------------------------------------------------------
+  // EFECTOS GENERALES
+  // ---------------------------------------------------------------------------
   useEffect(() => {
     let intervaloVerso: NodeJS.Timeout;
     if (loading) {
@@ -441,10 +474,9 @@ export default function Home() {
         </div>
       </nav>
 
-      {/* REAJUSTE DE LAYOUT MÓVIL: justify-start y padding top/bottom */}
       <main className="flex-1 flex flex-col items-center justify-start px-4 sm:px-6 lg:px-8 z-10 w-full max-w-5xl mx-auto pt-6 sm:pt-10 pb-12 relative">
         
-        {/* TÍTULO PRINCIPAL (Se oculta al seleccionar archivo) */}
+        {/* TÍTULO PRINCIPAL */}
         {!selectedFile && !loading && !resultado && (
           <div className="text-center space-y-3 sm:space-y-4 mb-8 sm:mb-12 animate-fade-in-up">
             <h1 className="text-3xl sm:text-4xl md:text-6xl font-extrabold tracking-tight text-white drop-shadow-sm px-2">Analiza tus prédicas.</h1>
@@ -453,7 +485,7 @@ export default function Home() {
         )}
 
         {/* ========================================================================= */}
-        {/* FASE A: BOTÓN NATIVO VISIBLE (El input no se oculta de la estructura, solo visualmente) */}
+        {/* FASE A: BOTÓN NATIVO VISIBLE (Se oculta al seleccionar archivo) */}
         {/* ========================================================================= */}
         {!loading && !resultado && (
           <div className="w-full max-w-lg animate-fade-in">
@@ -505,7 +537,7 @@ export default function Home() {
         )}
 
         {/* ========================================================================= */}
-        {/* FASE B: TARJETA DE ARCHIVO (BOTÓN INTEGRADO) */}
+        {/* FASE B: TARJETA DE ARCHIVO Y BOTÓN "ANALIZAR PRÉDICA" */}
         {/* ========================================================================= */}
         {selectedFile && !loading && !resultado && (
           <div className="mt-4 sm:mt-8 w-full max-w-lg animate-fade-in pb-6">
@@ -763,6 +795,18 @@ export default function Home() {
         )}
       </main>
 
+      {/* MINICONSOLA MANUAL DE DEBUG (BORRAR DESPUES) */}
+      <div className="w-full max-w-5xl mx-auto px-4 mb-10 z-50">
+        <div className="bg-black border border-gray-700 rounded-xl p-4 max-h-[300px] overflow-y-auto">
+          <h3 className="text-red-500 font-bold text-xs mb-2">DEBUG CONSOLE:</h3>
+          {debugLogs.map((log, i) => (
+            <div key={i} className="text-[10px] font-mono text-green-400 border-b border-gray-800 pb-1 mb-1">
+              {log}
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* MODAL DE SUGERENCIAS */}
       {showFeedbackModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-fade-in">
@@ -803,7 +847,7 @@ export default function Home() {
 
       {/* FOOTER */}
       <footer className="w-full text-center py-5 sm:py-6 text-[10px] sm:text-xs text-gray-500 font-medium tracking-wide z-10 mt-auto px-4 space-y-1">
-        <p>1.65 beta (Initial Check iOS Safari Fix)</p>
+        <p>1.66 beta (Miniconsola DOM inyectada para cacería visual de logs)</p>
       </footer>
     </div>
   );
