@@ -16,7 +16,7 @@ interface PredicaAnalisis {
 const promesasBiblicas = [
   { cita: "Isaías 41:10", texto: "No temas, porque yo estoy contigo; no desmayes..." },
   { cita: "Jeremías 29:11", texto: "Porque yo sé los pensamientos que tengo acerca de vosotros..." },
-  { cita: "Romanos 8:28", texto: "Y sabemos que a los que aman a Dios, todas las cosas les ayudan a bien..." },
+  { cita: "Romanos 8:28", texto: "Y sabemos que al que aman a Dios, todas las cosas les ayudan a bien..." },
   { cita: "Josué 1:9", texto: "Mira que te mando que te esfuerces y seas valiente..." }
 ];
 
@@ -155,7 +155,7 @@ export default function Home() {
     try {
       data = JSON.parse(responseText);
     } catch {
-      throw new Error('Cloudinary devolvió una respuesta que no pudo ser interpretada.');
+      throw new Error('Cloudinary devolvió una respuesta que não pudo ser interpretada.');
     }
 
     if (!data?.secure_url) {
@@ -330,7 +330,7 @@ export default function Home() {
         )}
 
         {/* ========================================================================= */}
-        {/* FASE A: ESTILO HMI / GLASSMORPHISM TIPO AUDIO-IA (Basado en referencia) */}
+        {/* FASE A: DROPZONE MODERNA CON CÍRCULO CENTRAL Y MORADO BRILLANTE */}
         {/* ========================================================================= */}
         {!selectedFile && !loading && !resultado && (
           <div className="w-full max-w-lg animate-fade-in">
@@ -347,22 +347,22 @@ export default function Home() {
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
               />
               
-              {/* Contenedor tipo Glassmorphism con anillos concéntricos estilo neón */}
-              <div className="bg-[#12151E]/80 backdrop-blur-xl border border-white/10 rounded-3xl p-8 sm:p-10 text-center transition-all duration-300 shadow-2xl shadow-purple-950/20 group-hover:border-cyan-500/40 group-hover:shadow-cyan-500/10 flex flex-col items-center justify-center relative overflow-hidden">
+              {/* Tarjeta Glassmorphism con bordes de luz morada */}
+              <div className="bg-[#12151E]/90 backdrop-blur-xl border-2 border-purple-500/40 group-hover:border-purple-500 rounded-3xl p-8 sm:p-10 text-center transition-all duration-300 shadow-2xl shadow-purple-600/20 group-hover:shadow-purple-500/40 flex flex-col items-center justify-center relative overflow-hidden">
                 
-                {/* Fondo sutil tipo radar/onda */}
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(56,189,248,0.05)_0%,_transparent_70%)] pointer-events-none"></div>
+                {/* Resplandor de fondo morado brillante */}
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(168,85,247,0.12)_0%,_transparent_70%)] pointer-events-none"></div>
 
-                {/* Nodo de Audio Central (Estilo UI Cyber/Glass) */}
+                {/* Nodo de Audio Central con Círculo Neón Morado */}
                 <div className="relative mb-6">
-                  {/* Anillo exterior animado de neón */}
-                  <div className="absolute -inset-3 rounded-full bg-gradient-to-r from-cyan-500/30 to-purple-600/30 blur-md opacity-75 group-hover:opacity-100 transition-opacity animate-pulse"></div>
+                  {/* Aura brillante detrás del círculo */}
+                  <div className="absolute -inset-4 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 blur-lg opacity-65 group-hover:opacity-100 transition-opacity animate-pulse"></div>
                   
                   {/* Contenedor del ícono cristalino */}
-                  <div className="relative w-24 h-24 rounded-2xl bg-[#1A1F2C]/90 border border-white/15 backdrop-blur-md flex items-center justify-center shadow-2xl group-hover:scale-105 transition-transform duration-300">
+                  <div className="relative w-24 h-24 rounded-full bg-[#1A1F2C] border-2 border-purple-400/50 backdrop-blur-md flex items-center justify-center shadow-2xl group-hover:scale-105 transition-transform duration-300">
                     
-                    {/* Onda de sonido central estilizada */}
-                    <svg className="w-12 h-12 text-cyan-400 group-hover:text-cyan-300 transition-colors drop-shadow-[0_0_8px_rgba(34,211,238,0.5)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    {/* Onda de sonido en morado/cian brillante */}
+                    <svg className="w-10 h-10 text-purple-400 group-hover:text-purple-300 transition-colors drop-shadow-[0_0_10px_rgba(192,132,252,0.8)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
                     </svg>
 
@@ -374,11 +374,11 @@ export default function Home() {
                 </h3>
 
                 <p className="text-gray-400 text-xs sm:text-sm max-w-xs mx-auto mb-6 font-light">
-                  Arrastra tu prédica o <span className="text-cyan-400 font-semibold underline underline-offset-4">haz clic para explorar</span>
+                  Arrastra tu prédica o <span className="text-purple-400 font-semibold underline underline-offset-4">haz clic para explorar</span>
                 </p>
 
-                {/* Badge de formatos */}
-                <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 text-[11px] font-semibold tracking-wider uppercase shadow-sm">
+                {/* Badge de formatos con acento morado */}
+                <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-purple-600/20 border border-purple-500/30 text-purple-300 text-[11px] font-semibold tracking-wider uppercase shadow-sm">
                   <span>MP3 · WAV · M4A · AAC · MP4 (Máx. 500 MB)</span>
                 </div>
 
