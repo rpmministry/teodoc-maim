@@ -47,6 +47,42 @@ export default function Home() {
     return () => clearInterval(intervaloVerso);
   }, [loading]);
 
+  // ---------------------------------------------------------------------------
+  // BYPASS TOTAL DE REACT SYNTHETIC EVENTS: LISTENER DOM NATIVO PURO
+  // Atrapa el archivo de Safari directamente a nivel navegador, sin intermediarios.
+  // ---------------------------------------------------------------------------
+  useEffect(() => {
+    const input = fileInputRef.current;
+    if (!input) return;
+
+    const handleNativeChange = () => {
+      const file = input.files?.[0];
+      if (!file) return;
+
+      selectedFileRef.current = file;
+      setFileName(file.name);
+      setFileSize(file.size);
+      setError(null);
+
+      // Auto-start inmediato con diagnóstico observable al 5%
+      setLoading(true);
+      setProgress(5);
+      setStatusText(`Archivo recibido: ${file.name}. Conectando con la nube...`);
+      setResultado(null);
+      setVersoIndex(0);
+
+      runPipeline(file);
+    };
+
+    input.addEventListener("change", handleNativeChange);
+    input.addEventListener("input", handleNativeChange);
+
+    return () => {
+      input.removeEventListener("change", handleNativeChange);
+      input.removeEventListener("input", handleNativeChange);
+    };
+  }, []);
+
   const enviarSugerencia = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!feedbackMsg.trim()) return;
@@ -75,7 +111,7 @@ export default function Home() {
   };
 
   // ---------------------------------------------------------------------------
-  // MOTOR DE SUBIDA RESILIENTE (Cloudinary) CON DIAGNÓSTICO VISIBLE
+  // MOTOR DE SUBIDA RESILIENTE (Cloudinary)
   // ---------------------------------------------------------------------------
   const uploadNormal = async (file: File) => {
     setStatusText('Subiendo audio a la nube (Cloudinary)...');
@@ -189,37 +225,10 @@ export default function Home() {
       }, 500);
 
     } catch (err: any) {
-      // DIAGNÓSTICO PERSISTENTE: No ocultamos el error ni reseteamos silenciosamente
       setError(`❌ Fallo crítico: ${err.message || 'Ocurrió un error inesperado.'}`);
       setLoading(false);
       setProgress(0);
     }
-  };
-
-  // ---------------------------------------------------------------------------
-  // DISPARADOR MAESTRO (UX ADOBE PODCAST): AUTO-START INMEDIATO EN CAMBIO NATIVO
-  // ---------------------------------------------------------------------------
-  const handleNativeFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.currentTarget.files?.[0];
-    
-    if (!file) {
-      setError("Safari no entregó ningún archivo válido.");
-      return;
-    }
-
-    selectedFileRef.current = file;
-    setFileName(file.name);
-    setFileSize(file.size);
-    setError(null);
-
-    // Arrancamos de inmediato con feedback visible al 5%
-    setLoading(true);
-    setProgress(5);
-    setStatusText('Archivo recibido. Iniciando conexión...');
-    setResultado(null);
-    setVersoIndex(0);
-
-    runPipeline(file);
   };
 
   const clearFile = () => {
@@ -351,7 +360,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* INPUT PERMANENTE EN EL DOM (Se oculta limpiamente al procesar) */}
+        {/* INPUT PERMANENTE EN EL DOM SIN REACT ONCHANGE PROPS (Controlado por useEffect nativo) */}
         <div className={`w-full flex flex-col items-center max-w-lg relative z-20 animate-fade-in ${loading || resultado ? 'hidden' : 'block'}`}>
           <div className="w-full flex flex-col items-center bg-[#1A1D27] border border-purple-500/30 rounded-3xl p-6 sm:p-8 shadow-2xl">
             
@@ -365,7 +374,6 @@ export default function Home() {
             <input
               ref={fileInputRef}
               type="file"
-              onChange={handleNativeFileChange}
               className="block w-full text-sm text-gray-400
                 file:mr-4 file:py-4 file:px-8
                 file:rounded-full file:border-0
@@ -388,14 +396,14 @@ export default function Home() {
             </p>
           </div>
 
-          {/* DIAGNÓSTICO PERSISTENTE DE ERROR: Nunca oculta el error ni resetea en silencio */}
+          {/* DIAGNÓSTICO PERSISTENTE DE ERROR: Mantiene el error visible sin colapsar */}
           {error && (
             <div className="mt-6 px-5 py-4 bg-red-950/80 border-2 border-red-500 rounded-2xl text-red-200 text-xs w-full shadow-2xl animate-fade-in space-y-2">
               <p className="font-bold uppercase tracking-wider text-red-400">🚨 Reporte de Diagnóstico:</p>
               <p className="font-mono bg-black/40 p-2 rounded break-all">{error}</p>
               <button 
                 onClick={clearFile}
-                className="mt-2 w-full py-2 bg-red-800 hover:bg-red-700 text-white font-bold rounded-lg transition-colors text-xs uppercase"
+                className="mt-2 w-full py-2 bg-red-800 hover:bg-red-700 text-white font-bold rounded-lg transition-colors text-xs uppercase cursor-pointer"
               >
                 Intentar de nuevo
               </button>
@@ -403,7 +411,7 @@ export default function Home() {
           )}
         </div>
 
-        {/* ESTADO DE CARGA CON ESTADO OBSERVABLE */}
+        {/* ESTADO DE CARGA */}
         {loading && (
           <div className="flex flex-col items-center text-center mt-2 w-full px-2 animate-fade-in z-20 relative">
             <div className="w-24 h-24 rounded-full bg-emerald-600 animate-pulse flex items-center justify-center shadow-xl shadow-emerald-500/40 mb-6">
@@ -649,7 +657,7 @@ export default function Home() {
 
       {/* FOOTER */}
       <footer className="w-full text-center py-5 sm:py-6 text-[10px] sm:text-xs text-gray-500 font-medium tracking-wide z-10 mt-auto px-4 space-y-1">
-        <p>1.41 beta (Auto-Start UI con Diagnóstico Persistente)</p>
+        <p>1.42 beta (Listener DOM Nativo Puro para Auto-Start)</p>
       </footer>
     </div>
   );
