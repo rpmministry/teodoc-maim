@@ -21,7 +21,7 @@ const promesasBiblicas = [
 ];
 
 export default function Home() {
-  // ESTADOS UX EN 2 FASES
+  // ESTADOS DE UX EN 2 FASES
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -32,13 +32,11 @@ export default function Home() {
   const [versoIndex, setVersoIndex] = useState(0);
   
   const infografiaRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState('');
   const [feedbackStatus, setFeedbackStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
 
-  // Rotación de versículos
   useEffect(() => {
     let intervaloVerso: NodeJS.Timeout;
     if (loading) {
@@ -66,17 +64,24 @@ export default function Home() {
     }
   };
 
+  const formatearTamaño = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
   // ---------------------------------------------------------------------------
-  // ETAPA 1: SELECCIÓN Y VALIDACIÓN ROBUSTA (BYPASS SAFARI ACCEPT BUG)
+  // ETAPA 1: SELECCIÓN NATIVA DIRECTA (Bypass Safari Label Security Bug)
   // ---------------------------------------------------------------------------
   const handleFileSelected = (file: File) => {
     if (!file) return;
 
-    console.log('[TeoDoc] ARCHIVO SELECCIONADO', {
+    console.log('[TeoDoc] ARCHIVO SELECCIONADO:', {
       name: file.name,
       type: file.type,
       size: file.size,
-      sizeMB: (file.size / 1024 / 1024).toFixed(2),
     });
 
     const maxSize = 500 * 1024 * 1024;
@@ -87,68 +92,22 @@ export default function Home() {
 
     const allowedExtensions = ['.mp3', '.wav', '.m4a', '.aac', '.flac', '.ogg', '.mp4'];
     const fileName = file.name.toLowerCase();
-    const validExtension = allowedExtensions.some((extension) => fileName.endsWith(extension));
+    const validExtension = allowedExtensions.some(extension => fileName.endsWith(extension));
 
-    const allowedMimeTypes = [
-      'audio/mpeg',
-      'audio/wav',
-      'audio/x-wav',
-      'audio/mp4',
-      'audio/x-m4a',
-      'audio/aac',
-      'audio/flac',
-      'audio/ogg',
-      'video/mp4',
-    ];
-    // Permitimos archivos sin mime-type porque iOS a veces lo entrega en blanco
-    const validMime = !file.type || allowedMimeTypes.includes(file.type.toLowerCase());
-
-    if (!validExtension || !validMime) {
+    if (!validExtension) {
       setError('Formato no compatible. Utiliza MP3, WAV, M4A, AAC, FLAC, OGG o MP4.');
       return;
     }
 
     setError(null);
     setResultado(null);
-    setSelectedFile(file); // Solo guardamos para mostrar la tarjeta UX, no subimos aún
-  };
 
-  // Listener nativo
-  useEffect(() => {
-    const input = fileInputRef.current;
-    if (!input) return;
-
-    const onNativeChange = (event: Event) => {
-      const target = event.target as HTMLInputElement;
-      const file = target.files?.[0];
-
-      if (!file) return;
-      handleFileSelected(file);
-    };
-
-    input.addEventListener('change', onNativeChange);
-    return () => {
-      input.removeEventListener('change', onNativeChange);
-    };
-  }, []);
-
-  const formatearTamaño = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
-
-  const handleCambiarArchivo = () => {
-    setSelectedFile(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
+    // UX Fase 1: Solo guardamos el archivo en el estado de React
+    setSelectedFile(file);
   };
 
   // ---------------------------------------------------------------------------
-  // ETAPA 2: SUBIDA A CLOUDINARY AL DAR CLICK EN "ANALIZAR"
+  // ETAPA 2: PROCESAMIENTO A CLOUDINARY (Lanzado manualmente por el usuario)
   // ---------------------------------------------------------------------------
   const handleAnalizarClick = async () => {
     if (!selectedFile) return;
@@ -156,7 +115,7 @@ export default function Home() {
     setError(null);
     setLoading(true);
     setProgress(5);
-    setStatusText('Preparando archivo...');
+    setStatusText('Subiendo prédica a Cloudinary...');
 
     try {
       await uploadFileToCloudinary(selectedFile);
@@ -178,9 +137,6 @@ export default function Home() {
     const formData = new FormData();
     formData.append('file', safeBlob, file.name);
     formData.append('upload_preset', uploadPreset);
-
-    setProgress(10);
-    setStatusText('Subiendo prédica a Cloudinary...');
 
     const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/video/upload`, {
       method: 'POST',
@@ -233,7 +189,7 @@ export default function Home() {
       const dataTranscribe = await resTranscribe.json();
       const textoTranscrito = dataTranscribe.text;
       
-      setStatusText('Analizando estructura teológica profunda (OpenRouter / Gemini)...');
+      setStatusText('Analizando estructura teológica profunda...');
       setProgress(50);
       const timerAnalyze = setInterval(() => {
         setProgress((prev) => prev >= 98 ? 98 : prev + Math.max(1, Math.floor((99 - prev) * 0.05)));
@@ -266,9 +222,8 @@ export default function Home() {
     setError(null); 
     setProgress(0);
     setSelectedFile(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
+    const input = document.getElementById('teodoc-file-input') as HTMLInputElement | null;
+    if (input) input.value = '';
   };
 
   const descargarInfografia = async () => {
@@ -345,18 +300,6 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-[#0B0C10] bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#1C1635] via-[#0B0C10] to-[#070709] text-white font-sans selection:bg-purple-500/30 flex flex-col relative overflow-x-hidden">
       
-      {/* 
-        EL INPUT SE SECRETO DE iOS SAFARI (SIN ACCEPT)
-        Cero filtros en HTML. La validación se hace 100% en JavaScript.
-      */}
-      <input
-        ref={fileInputRef}
-        id="teodoc-file-input"
-        type="file"
-        className="fixed -left-[9999px] w-px h-px opacity-0"
-        tabIndex={-1}
-      />
-
       <nav className="w-full flex flex-wrap gap-4 justify-between items-center px-4 sm:px-8 py-4 sm:py-6 z-10">
         <div className="flex items-center gap-2 sm:gap-3">
           <div className="w-8 h-8 sm:w-9 sm:h-9 bg-purple-600 rounded-xl flex items-center justify-center border border-white/10 shrink-0">
@@ -386,7 +329,7 @@ export default function Home() {
 
       <main className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 z-10 w-full max-w-5xl mx-auto -mt-4 sm:-mt-6 relative">
         
-        {/* TÍTULO */}
+        {/* TÍTULO PRINCIPAL */}
         {!loading && !resultado && (
           <div className="text-center space-y-3 sm:space-y-4 mb-8 sm:mb-12 animate-fade-in-up">
             <h1 className="text-3xl sm:text-4xl md:text-6xl font-extrabold tracking-tight text-white drop-shadow-sm px-2">Analiza tus prédicas.</h1>
@@ -395,96 +338,81 @@ export default function Home() {
         )}
 
         {/* ========================================================================= */}
-        {/* FASE A: BOTÓN DE SUBIDA (Solo visible si NO hay archivo seleccionado) */}
+        {/* FASE A: BOTÓN DE SUBIDA (INPUT CLICK-JACKING PARA SAFARI iOS) */}
         {/* ========================================================================= */}
-        {!loading && !resultado && !selectedFile && (
-          <div className="flex flex-col items-center w-full max-w-lg relative z-20 animate-fade-in">
-            <label
-              htmlFor="teodoc-file-input"
-              className="relative block w-32 h-32 sm:w-40 sm:h-40 md:w-44 md:h-44 cursor-pointer"
-            >
-              <div className="absolute inset-0 flex flex-col items-center justify-center rounded-full transition-all duration-300 bg-purple-600 hover:bg-purple-500 shadow-xl shadow-purple-500/20 hover:scale-105">
-                <svg
-                  className="w-12 h-12 text-white mb-2 pointer-events-none"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="1.5"
-                    d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 01-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A6 6 0 009 10.172V5L8 4z"
-                  />
+        {!loading && !resultado && (
+          <div className="w-full max-w-lg animate-fade-in">
+            <div className="relative">
+              
+              {/* EL INPUT NATIVO REAL, SIN ACCEPT Y SUPERPUESTO (Click-Jacking) */}
+              <input
+                id="teodoc-file-input"
+                type="file"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (!file) return;
+                  handleFileSelected(file);
+                }}
+                className="absolute inset-0 z-20 w-full h-full opacity-0 cursor-pointer"
+              />
+
+              {/* DISEÑO VISUAL DEL BOTÓN DEBAJO DEL INPUT INVISIBLE */}
+              <div className="relative z-10 flex flex-col items-center justify-center w-32 h-32 sm:w-40 sm:h-40 md:w-44 md:h-44 mx-auto rounded-full bg-purple-600 hover:bg-purple-500 shadow-xl shadow-purple-500/20 transition-all duration-300 pointer-events-none">
+                <svg className="w-12 h-12 text-white mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 01-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A6 6 0 009 10.172V5L8 4z"></path>
                 </svg>
-                <span className="text-xs font-bold text-white uppercase tracking-widest text-center px-2 pointer-events-none">
-                  Subir Audio
-                </span>
+                <span className="text-xs font-bold text-white uppercase tracking-widest text-center px-2">Subir Audio</span>
               </div>
-            </label>
-            <div className="flex flex-col items-center mt-6 space-y-2">
-              <p className="text-gray-500 text-xs text-center max-w-xs">
-                Soporta MP3, WAV, M4A, FLAC, AAC. <br/> Archivos de hasta 500 MB.
-              </p>
             </div>
+
+            <p className="text-gray-500 text-xs text-center mt-6">
+              Soporta MP3, WAV, M4A, FLAC, AAC. <br/> Archivos de hasta 500 MB.
+            </p>
           </div>
         )}
 
         {/* ========================================================================= */}
-        {/* FASE B: TARJETA DE ARCHIVO */}
+        {/* FASE B: TARJETA DE ARCHIVO Y BOTÓN DE ANALIZAR */}
         {/* ========================================================================= */}
-        {!loading && !resultado && selectedFile && (
-          <div className="flex flex-col items-center w-full max-w-lg relative z-20 animate-fade-in space-y-6">
-            
-            <div className="w-full bg-[#1A1D27] border border-gray-800 rounded-2xl p-6 shadow-2xl relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 to-indigo-500"></div>
-              
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center shrink-0 border border-purple-500/20">
-                  <svg className="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path></svg>
+        {selectedFile && !loading && !resultado && (
+          <div className="mt-8 w-full max-w-lg animate-fade-in">
+            <div className="bg-[#13161F] border border-purple-500/30 rounded-2xl p-5 shadow-xl">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-xl bg-purple-600/20 flex items-center justify-center shrink-0">
+                  <span className="text-2xl">🎵</span>
                 </div>
-                <div className="flex-1 overflow-hidden">
-                  <h3 className="text-white font-bold text-base truncate" title={selectedFile.name}>{selectedFile.name}</h3>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-xs font-mono text-gray-400 bg-gray-800/50 px-2 py-0.5 rounded">
-                      {selectedFile.name.split('.').pop()?.toUpperCase() || 'AUDIO'}
-                    </span>
-                    <span className="text-xs text-gray-500 font-medium">·</span>
-                    <span className="text-xs text-gray-400 font-medium">{formatearTamaño(selectedFile.size)}</span>
-                  </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-white font-semibold truncate">{selectedFile.name}</p>
+                  <p className="text-gray-400 text-sm mt-1">
+                    {selectedFile.type || 'Audio'} · {formatearTamaño(selectedFile.size)}
+                  </p>
                 </div>
               </div>
 
-              <div className="mt-6 flex flex-col sm:flex-row gap-3">
-                <a 
-                  href={URL.createObjectURL(selectedFile)} 
-                  download={selectedFile.name}
-                  className="flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 text-xs font-bold transition-all"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4-4m0 0l-4-4m4 4V4"></path></svg>
-                  Descargar Archivo
-                </a>
-                <button 
-                  onClick={handleCambiarArchivo}
-                  className="flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 text-xs font-bold transition-all"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-                  Cambiar Archivo
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedFile(null);
+                  const input = document.getElementById('teodoc-file-input') as HTMLInputElement | null;
+                  if (input) input.value = '';
+                }}
+                className="mt-4 text-gray-400 hover:text-white text-sm transition-colors"
+              >
+                Cambiar archivo
+              </button>
             </div>
 
             <button
+              type="button"
               onClick={handleAnalizarClick}
-              className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-full font-black text-sm uppercase tracking-widest shadow-xl shadow-purple-500/25 hover:scale-105 transition-all"
+              className="mt-5 w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-purple-500/20 transition-all uppercase tracking-widest text-sm"
             >
               Analizar Prédica
             </button>
-
           </div>
         )}
 
-        {/* ERROR DE SUBIDA O VALIDACIÓN */}
+        {/* ERROR DE VALIDACIÓN / SUBIDA */}
         {!loading && !resultado && error && (
           <div className="mt-6 px-5 py-4 bg-red-950/80 border-2 border-red-500 rounded-2xl text-red-200 text-xs w-full max-w-sm shadow-2xl animate-fade-in space-y-2 text-center relative z-20">
             <p className="font-bold uppercase tracking-wider text-red-400">🚨 Error:</p>
@@ -493,7 +421,7 @@ export default function Home() {
         )}
 
         {/* ========================================================================= */}
-        {/* FASE C: ESTADO DE CARGA */}
+        {/* FASE C: ESTADO DE CARGA (Procesando con la IA) */}
         {/* ========================================================================= */}
         {loading && (
           <div className="flex flex-col items-center text-center mt-2 w-full px-2 animate-fade-in z-20 relative">
@@ -593,7 +521,7 @@ export default function Home() {
                 <div className="grid md:grid-cols-2 gap-5 sm:gap-6">
                   <section className="bg-blue-900/10 p-5 sm:p-8 rounded-xl sm:rounded-2xl border border-blue-900/30">
                     <h3 className="text-xs sm:text-sm font-bold text-blue-400 mb-4 sm:mb-6 uppercase tracking-[0.15em] flex items-center gap-2 sm:gap-3">
-                      <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+                      <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 012-2h2a2 2 0 012 2h-2M9 5a2 2 0 002 2h2a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
                       Aplicación Práctica
                     </h3>
                     <ul className="space-y-3 sm:space-y-4">
@@ -740,7 +668,7 @@ export default function Home() {
 
       {/* FOOTER */}
       <footer className="w-full text-center py-5 sm:py-6 text-[10px] sm:text-xs text-gray-500 font-medium tracking-wide z-10 mt-auto px-4 space-y-1">
-        <p>1.54 beta (Input sin Accept - Safari Fix)</p>
+        <p>1.55 beta (Click-Jacking Nativo con UX de 2 Fases)</p>
       </footer>
     </div>
   );
