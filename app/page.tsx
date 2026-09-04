@@ -71,30 +71,26 @@ export default function Home() {
   };
 
   // ---------------------------------------------------------------------------
-  // FASE 1: CAPTURA FÍSICA SEGURA (Sin filtros, sin bloqueos de Safari)
+  // PRUEBA DE AISLAMIENTO: CAPTURA PURA SIN VALIDACIÓN NI CSS INVISIBLE
   // ---------------------------------------------------------------------------
   const handleNativeFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    
-    if (!file) {
-      setError("Safari no entregó ningún archivo.");
+    const files = e.currentTarget.files;
+
+    if (!files || files.length === 0) {
+      setError("iPhone/iPad no devolvió el archivo. Problema de Safari detectado.");
       return;
     }
 
-    const validExtensions = ["mp3", "wav", "m4a", "aac", "flac", "ogg", "mp4", "caf", "wma"];
-    const extension = file.name.slice((file.name.lastIndexOf(".") - 1 >>> 0) + 2).toLowerCase();
-    
-    if (!validExtensions.includes(extension) && !file.type.startsWith('audio/') && !file.type.startsWith('video/')) {
-      setError("Formato no reconocido. Usa archivos de audio comunes.");
-      return;
-    }
+    const file = files[0];
 
+    // Prueba solicitada: No hay validación de extensión inmediata. 
+    // Capturamos cualquier archivo que iOS nos tire, directo a memoria.
     setSelectedFile(file);
     setError(null);
   };
 
   // ---------------------------------------------------------------------------
-  // FASE 2: MOTOR DE SUBIDA DE DOBLE RUTA (Cloudinary /video/upload)
+  // MOTOR DE SUBIDA DE DOBLE RUTA (Cloudinary /video/upload)
   // ---------------------------------------------------------------------------
   const uploadNormal = async (file: File) => {
     const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'antbfat3';
@@ -160,7 +156,7 @@ export default function Home() {
   }
 
   // ---------------------------------------------------------------------------
-  // FASE 3: EL PIPELINE COMPLETO (Se activa con el botón "Analizar")
+  // EL PIPELINE COMPLETO
   // ---------------------------------------------------------------------------
   const executeAnalysis = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -174,12 +170,12 @@ export default function Home() {
 
     try {
       let audioUrl = "";
-      if (selectedFile.size <= 104857600) { // <= 100 MB
+      if (selectedFile.size <= 104857600) { // <= 100 MB (upload normal)
         setProgress(15);
         audioUrl = await uploadNormal(selectedFile);
         setProgress(25);
       } else {
-        audioUrl = await uploadChunked(selectedFile); // > 100 MB
+        audioUrl = await uploadChunked(selectedFile); // > 100 MB (chunked retry)
       }
 
       setProgress(30);
@@ -220,7 +216,6 @@ export default function Home() {
     }
   };
 
-  // Función para reiniciar el formulario cuando hay error o se descarta la selección
   const clearFile = () => {
     setSelectedFile(null); 
     setError(null); 
@@ -228,7 +223,6 @@ export default function Home() {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  // Función para volver a la pantalla de inicio desde el resultado (SOLUCIÓN DEL ERROR TS2304)
   const nuevoAnalisis = () => {
     setSelectedFile(null); 
     setResultado(null); 
@@ -347,51 +341,51 @@ export default function Home() {
           </div>
         )}
 
+        {/* 
+          LA PRUEBA DEFINITIVA: INPUT NATIVO VISIBLE. 
+          Nada de position absolute, nada de opacity 0. 
+        */}
         {!loading && !resultado && (
           <div className="flex flex-col items-center w-full max-w-lg relative z-20 animate-fade-in">
             
-            <div className={`relative flex flex-col items-center justify-center transition-all duration-500 ease-in-out group ${
-              selectedFile ? 'w-16 h-16 sm:w-20 sm:h-20 mb-4' : 'w-32 h-32 sm:w-40 sm:h-40 md:w-44 md:h-44'
-            }`}>
-              
-              <div className={`absolute inset-0 rounded-full flex flex-col items-center justify-center pointer-events-none transition-colors duration-300 shadow-xl ${
-                selectedFile ? 'bg-emerald-600 shadow-emerald-500/20' : 'bg-purple-600 shadow-purple-500/20 group-hover:scale-105'
-              }`}>
-                {selectedFile ? (
-                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
-                ) : (
-                  <>
-                    <svg className="w-12 h-12 text-white mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
-                    </svg>
-                    <span className="text-xs font-bold text-white uppercase tracking-widest text-center px-2">Subir Audio</span>
-                  </>
-                )}
+            {!selectedFile ? (
+              <div className="w-full flex flex-col items-center bg-[#1A1D27] border border-purple-500/30 rounded-3xl p-8 shadow-2xl">
+                <h3 className="text-lg font-bold text-white mb-6 uppercase tracking-widest text-center">
+                  Prueba Nativa iOS (Fase 1)
+                </h3>
+                
+                {/* ESTE ES EL BOTÓN NATIVO EN SU FORMA MÁS PURA */}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  onChange={handleNativeFileChange}
+                  className="block w-full text-sm text-gray-400
+                    file:mr-4 file:py-3 file:px-6
+                    file:rounded-full file:border-0
+                    file:text-sm file:font-bold
+                    file:bg-purple-600 file:text-white
+                    hover:file:bg-purple-500 cursor-pointer mb-6"
+                />
+                
+                <p className="text-gray-500 text-xs text-center">
+                  Toca arriba para abrir Safari Files. <br /> Sin trucos, sin filtros que lo bloqueen.
+                </p>
               </div>
-
-              <input
-                ref={fileInputRef}
-                type="file"
-                onChange={handleNativeFileChange}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-50 rounded-full"
-                title={selectedFile ? "Toca para cambiar de audio" : "Seleccionar grabación"}
-              />
-            </div>
-
-            {selectedFile && (
-              <form onSubmit={executeAnalysis} className="flex flex-col items-center animate-fade-in w-full mt-2">
-                <div className="bg-[#1A1C23] border border-emerald-500/30 p-4 rounded-2xl mb-6 flex items-center justify-between w-full max-w-sm shadow-lg">
-                  <div className="flex flex-col overflow-hidden text-left flex-1">
-                    <span className="text-sm font-bold text-emerald-400 truncate pr-2">{selectedFile.name}</span>
-                    <span className="text-[10px] text-gray-400 mt-0.5">{formatearTamaño(selectedFile.size)}</span>
-                  </div>
+            ) : (
+              <form onSubmit={executeAnalysis} className="flex flex-col items-center animate-fade-in w-full">
+                {/* LA CONFIRMACIÓN VISUAL SOLICITADA */}
+                <div className="bg-[#1A1D27] border-2 border-emerald-500 p-6 rounded-3xl mb-6 flex flex-col items-center justify-center w-full max-w-sm shadow-lg shadow-emerald-500/20 text-center">
+                  <span className="text-4xl mb-3">✅</span>
+                  <span className="text-lg font-bold text-emerald-400 tracking-widest mb-2">ARCHIVO RECIBIDO</span>
+                  <span className="text-sm text-white font-mono break-all px-2">{selectedFile.name}</span>
+                  <span className="text-xs text-gray-400 mt-2 bg-black/30 px-3 py-1 rounded-full">{formatearTamaño(selectedFile.size)}</span>
+                  
                   <button 
                     type="button"
                     onClick={clearFile}
-                    className="ml-2 text-gray-500 hover:text-red-400 bg-white/5 rounded-full p-1.5 transition-colors"
-                    title="Eliminar archivo"
+                    className="mt-4 text-xs text-gray-400 hover:text-red-400 underline decoration-gray-600 hover:decoration-red-400 transition-colors"
                   >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    Elegir otro archivo
                   </button>
                 </div>
 
@@ -403,10 +397,6 @@ export default function Home() {
                 </button>
               </form>
             )}
-            
-            <p className="text-gray-500 text-xs mt-6 text-center max-w-xs">
-              {!selectedFile && "Soporta MP3, WAV, M4A, FLAC, AAC, OGG. Archivos de hasta 500 MB."}
-            </p>
 
             {error && <div className="mt-8 px-5 py-3 bg-red-900/30 border border-red-500/50 rounded-xl text-red-200 text-sm w-full max-w-sm text-center animate-fade-in">{error}</div>}
           </div>
@@ -658,7 +648,7 @@ export default function Home() {
 
       {/* FOOTER */}
       <footer className="w-full text-center py-5 sm:py-6 text-[10px] sm:text-xs text-gray-500 font-medium tracking-wide z-10 mt-auto px-4 space-y-1">
-        <p>1.30 beta</p>
+        <p>1.32 beta (Aislamiento Nativo Apple)</p>
       </footer>
     </div>
   );
