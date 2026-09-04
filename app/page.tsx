@@ -73,7 +73,7 @@ export default function Home() {
   };
 
   // ---------------------------------------------------------------------------
-  // ETAPA 1: SELECCIÓN NATIVA DIRECTA
+  // ETAPA 1: SELECCIÓN NATIVA DIRECTA (Input persistente para Safari iOS)
   // ---------------------------------------------------------------------------
   const handleFileSelected = (file: File) => {
     if (!file) return;
@@ -107,6 +107,8 @@ export default function Home() {
 
   const handleCambiarArchivo = () => {
     setSelectedFile(null);
+    const input = document.getElementById('teodoc-file-input') as HTMLInputElement | null;
+    if (input) input.value = '';
   };
 
   // ---------------------------------------------------------------------------
@@ -257,6 +259,8 @@ export default function Home() {
     setError(null); 
     setProgress(0);
     setSelectedFile(null);
+    const input = document.getElementById('teodoc-file-input') as HTMLInputElement | null;
+    if (input) input.value = '';
   };
 
   const descargarInfografia = async () => {
@@ -371,9 +375,9 @@ export default function Home() {
         )}
 
         {/* ========================================================================= */}
-        {/* FASE A: BOTÓN NATIVO VISIBLE */}
+        {/* FASE A: INPUT NATIVO PERSISTENTE (Para evitar unmount bug de Safari) */}
         {/* ========================================================================= */}
-        {!selectedFile && !loading && !resultado && (
+        {!loading && !resultado && (
           <div className="w-full max-w-lg animate-fade-in">
             <div className="relative">
               <input
@@ -384,7 +388,7 @@ export default function Home() {
                   if (!file) return;
                   handleFileSelected(file);
                 }}
-                className="
+                className={`
                   block
                   w-full
                   max-w-lg
@@ -408,18 +412,21 @@ export default function Home() {
                   file:font-bold
                   file:text-white
                   hover:file:bg-purple-500
-                "
+                  ${selectedFile ? 'hidden' : ''}
+                `}
               />
             </div>
 
-            <p className="text-gray-500 text-xs text-center mt-6">
-              Soporta MP3, WAV, M4A, FLAC, AAC. <br/> Archivos de hasta 500 MB.
-            </p>
+            {!selectedFile && (
+              <p className="text-gray-500 text-xs text-center mt-6">
+                Soporta MP3, WAV, M4A, FLAC, AAC. <br/> Archivos de hasta 500 MB.
+              </p>
+            )}
           </div>
         )}
 
         {/* ========================================================================= */}
-        {/* FASE B: TARJETA DE ARCHIVO (BOTÓN INTEGRADO) */}
+        {/* FASE B: TARJETA DE ARCHIVO Y BOTÓN "ANALIZAR PRÉDICA" */}
         {/* ========================================================================= */}
         {selectedFile && !loading && !resultado && (
           <div className="mt-4 sm:mt-8 w-full max-w-lg animate-fade-in pb-6">
@@ -717,7 +724,7 @@ export default function Home() {
 
       {/* FOOTER */}
       <footer className="w-full text-center py-5 sm:py-6 text-[10px] sm:text-xs text-gray-500 font-medium tracking-wide z-10 mt-auto px-4 space-y-1">
-        <p>1.61 beta (Boton Analizar Integrado en Tarjeta Fase B)</p>
+        <p>1.62 beta (Fix Unmount Bug Safari: Input nativo montado pero oculto)</p>
       </footer>
     </div>
   );
