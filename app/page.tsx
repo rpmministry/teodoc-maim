@@ -195,19 +195,22 @@ export default function Home() {
     }
   };
 
+  // ---------------------------------------------------------------------------
+  // DISPARADOR AISLADO CON SEÑAL DE DIAGNÓSTICO INMEDIATA (5%)
+  // ---------------------------------------------------------------------------
   const iniciarAnalisis = () => {
     setError(null);
+    setLoading(true);
+    setProgress(5); // SEÑAL INEQUÍVOCA: Si ves el 5%, el botón de iOS SÍ respondió.
+
     const fileToProcess = fileInputRef.current?.files?.[0] ?? selectedFileRef.current;
 
     if (!fileToProcess) {
-      setError("⚠️ Por favor selecciona un archivo de audio primero.");
+      setLoading(false);
+      setProgress(0);
+      setError("Safari no entregó el archivo seleccionado.");
       return;
     }
-
-    setLoading(true);
-    setProgress(5);
-    setResultado(null);
-    setVersoIndex(0);
 
     runPipeline(fileToProcess);
   };
@@ -278,7 +281,7 @@ export default function Home() {
         doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.setTextColor(colorAcento[0], colorAcento[1], colorAcento[2]);
         doc.text(v.cita, margin + 5, y); y += 5;
         doc.setFont("helvetica", "italic"); doc.setTextColor(80, 80, 80);
-        const vTextoLineas = doc.splitTextToSize(`"${v.texto}"`, pageWidth - margin * 2 - 10);
+        const vTextoLineas = doc.splitTextToSize(`"${v.texto}"`, margin + 5, pageWidth - margin * 2 - 10);
         doc.text(vTextoLineas, margin + 5, y); y += vTextoLineas.length * 5 + 5;
       });
       y += 5;
@@ -341,7 +344,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* INPUT PERMANENTE EN EL DOM (Se oculta con CSS en vez de desmontarse con React) */}
+        {/* INPUT PERMANENTE EN EL DOM */}
         <div className={`w-full flex flex-col items-center max-w-lg relative z-20 animate-fade-in ${loading || resultado ? 'hidden' : 'block'}`}>
           <div className="w-full flex flex-col items-center bg-[#1A1D27] border border-purple-500/30 rounded-3xl p-6 sm:p-8 shadow-2xl">
             
@@ -385,14 +388,10 @@ export default function Home() {
               Paso 2: Procesar
             </h3>
 
-            {/* BOTÓN CON DOBLE EVENTO NATIVO (onClick + onTouchEnd para Safari iOS) */}
+            {/* BOTÓN LIMPIO Y ESTÁNDAR (Únicamente onClick, sin conflictos de touchend) */}
             <button
               type="button"
               onClick={iniciarAnalisis}
-              onTouchEnd={(e) => {
-                e.preventDefault();
-                iniciarAnalisis();
-              }}
               className="w-full py-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-lg shadow-[0_0_30px_rgba(16,185,129,0.4)] transition-all hover:scale-[1.02] cursor-pointer"
             >
               Analizar Predicación
@@ -652,7 +651,7 @@ export default function Home() {
 
       {/* FOOTER */}
       <footer className="w-full text-center py-5 sm:py-6 text-[10px] sm:text-xs text-gray-500 font-medium tracking-wide z-10 mt-auto px-4 space-y-1">
-        <p>1.38 beta (Eventos Táctiles Nativos y DOM Permanente)</p>
+        <p>1.39 beta (Limpieza de eventos táctiles y diagnóstico 5%)</p>
       </footer>
     </div>
   );
