@@ -38,6 +38,7 @@ export default function Home() {
   // ESTADO DE DIAGNÓSTICO: Semáforo de carga del Script de Cloudinary
   const [cloudinaryLoaded, setCloudinaryLoaded] = useState(false);
   
+  const widgetRef = useRef<any>(null);
   const infografiaRef = useRef<HTMLDivElement>(null);
 
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
@@ -65,7 +66,29 @@ export default function Home() {
   }, []);
 
   // ---------------------------------------------------------------------------
-  // APERTURA DIRECTA DE CLOUDINARY (Sin pre-inicializaciones frágiles)
+  // RESTAURADA: Función para enviar sugerencias (La que causó el error TS2304)
+  // ---------------------------------------------------------------------------
+  const enviarSugerencia = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!feedbackMsg.trim()) return;
+    setFeedbackStatus('sending');
+    try {
+      const res = await fetch("https://formsubmit.co/ajax/recursosparaministerios@gmail.com", {
+        method: "POST",
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify({ _subject: "💡 Nueva Sugerencia - TeoDoc", mensaje: feedbackMsg })
+      });
+      if (res.ok) {
+        setFeedbackStatus('success');
+        setTimeout(() => { setShowFeedbackModal(false); setFeedbackStatus('idle'); setFeedbackMsg(''); }, 3000);
+      } else throw new Error("Error en servidor");
+    } catch (err) {
+      setFeedbackStatus('error');
+    }
+  };
+
+  // ---------------------------------------------------------------------------
+  // APERTURA DIRECTA DE CLOUDINARY
   // ---------------------------------------------------------------------------
   const handleOpenWidget = () => {
     setError(null);
@@ -77,7 +100,7 @@ export default function Home() {
         return;
       }
 
-      // 2. Apertura dinámica de una sola llamada (Recomendado oficialmente)
+      // 2. Apertura dinámica de una sola llamada
       window.cloudinary.openUploadWidget(
         {
           cloudName: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'antbfat3',
@@ -137,7 +160,7 @@ export default function Home() {
   };
 
   // ---------------------------------------------------------------------------
-  // PIPELINE DE PROCESAMIENTO BACKEND (Cloudinary ya hizo el upload pesado)
+  // PIPELINE DE PROCESAMIENTO BACKEND
   // ---------------------------------------------------------------------------
   const startAnalysisPipeline = async (audioUrl: string) => {
     setLoading(true);
@@ -336,7 +359,7 @@ export default function Home() {
               </span>
             </button>
             
-            {/* DIAGNÓSTICO VISUAL DEL SCRIPT (Prueba exigida por auditoría) */}
+            {/* DIAGNÓSTICO VISUAL DEL SCRIPT */}
             <div className="flex flex-col items-center mt-6 space-y-2">
               <div className="flex items-center gap-2 text-[10px] sm:text-xs font-medium uppercase tracking-wider">
                 <span className={`w-2 h-2 rounded-full ${cloudinaryLoaded ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`}></span>
@@ -358,7 +381,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* ESTADO DE CARGA */}
+        {/* ESTADO DE CARGA CON DIAGNÓSTICO VISIBLE */}
         {loading && (
           <div className="flex flex-col items-center text-center mt-2 w-full px-2 animate-fade-in z-20 relative">
             <div className="w-24 h-24 rounded-full bg-emerald-600 animate-pulse flex items-center justify-center shadow-xl shadow-emerald-500/40 mb-6">
@@ -604,7 +627,7 @@ export default function Home() {
 
       {/* FOOTER */}
       <footer className="w-full text-center py-5 sm:py-6 text-[10px] sm:text-xs text-gray-500 font-medium tracking-wide z-10 mt-auto px-4 space-y-1">
-        <p>1.45 beta (Cloudinary Widget UI Nativa)</p>
+        <p>1.46 beta (Cloudinary Upload Widget Activo en Root App)</p>
       </footer>
     </div>
   );
