@@ -33,44 +33,12 @@ export default function Home() {
   
   const infografiaRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const lastProcessedFileRef = useRef<string | null>(null);
 
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState('');
   const [feedbackStatus, setFeedbackStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
 
-  // ---------------------------------------------------------------------------
-  // ESTADO Y LÓGICA PARA LA MINICONCOLA DE DIAGNÓSTICO
-  // ---------------------------------------------------------------------------
-  const [debugLogs, setDebugLogs] = useState<string[]>([]);
-
-  useEffect(() => {
-    // Interceptar console.log
-    const originalLog = console.log;
-    const originalError = console.error;
-
-    console.log = (...args) => {
-      const msg = args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' ');
-      setDebugLogs(prev => [...prev, `[LOG] ${msg}`]);
-      originalLog(...args);
-    };
-
-    console.error = (...args) => {
-      const msg = args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' ');
-      setDebugLogs(prev => [...prev, `[ERR] ${msg}`]);
-      originalError(...args);
-    };
-
-    console.log('[TeoDoc] Interceptor de logs activado');
-
-    return () => {
-      console.log = originalLog;
-      console.error = originalError;
-    };
-  }, []);
-
-  // ---------------------------------------------------------------------------
-  // EFECTOS GENERALES
-  // ---------------------------------------------------------------------------
   useEffect(() => {
     let intervaloVerso: NodeJS.Timeout;
     if (loading) {
@@ -107,17 +75,15 @@ export default function Home() {
   };
 
   // ---------------------------------------------------------------------------
-  // ETAPA 1: SELECCIÓN NATIVA DIRECTA
+  // ETAPA 1: SELECCIÓN Y VALIDACIÓN
   // ---------------------------------------------------------------------------
   const handleFileSelected = (file: File) => {
     if (!file) return;
 
-    console.log('[TeoDoc] ARCHIVO SELECCIONADO:', {
-      name: file.name,
-      type: file.type,
-      size: file.size,
-      sizeMB: (file.size / 1024 / 1024).toFixed(2),
-    });
+    // Evitamos re-procesar el mismo archivo múltiples veces en el escáner
+    const fileKey = `${file.name}-${file.size}`;
+    if (lastProcessedFileRef.current === fileKey) return;
+    lastProcessedFileRef.current = fileKey;
 
     const maxSize = 500 * 1024 * 1024;
     if (file.size > maxSize) {
@@ -140,83 +106,39 @@ export default function Home() {
   };
 
   // ---------------------------------------------------------------------------
-  // INTERCEPCIÓN MULTIPLE Y CHEQUEO INICIAL iOS
+  // ESCÁNER ACTIVO: LA CURA PARA LA RESTAURACIÓN SILENCIOSA DE SAFARI
   // ---------------------------------------------------------------------------
   useEffect(() => {
     const input = fileInputRef.current;
     if (!input) return;
 
-    const processFileFromInput = (source: string) => {
-      // Extracción explícita para evitar falsos positivos
-      const file = input.files && input.files.length > 0 
-        ? input.files[0] 
-        : null;
-
-      console.log(`[TeoDoc][iOS] ${source}:`, {
-        hasFile: !!file,
-        name: file?.name || null,
-        type: file?.type || null,
-        size: file?.size || 0,
-      });
-
-      if (!file) return;
-
-      handleFileSelected(file);
-    };
-
-    const handleChange = () => {
-      processFileFromInput('CHANGE');
-    };
-
-    const handleInput = () => {
-      processFileFromInput('INPUT');
-    };
-
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        setTimeout(() => {
-          processFileFromInput('VISIBILITY');
-        }, 300);
+    const scanInputForFiles = () => {
+      const file = input.files && input.files.length > 0 ? input.files[0] : null;
+      if (file) {
+        handleFileSelected(file);
       }
     };
 
-    const handleFocus = () => {
-      setTimeout(() => {
-        processFileFromInput('FOCUS');
-      }, 300);
-    };
+    // 1. Polling: Escaneamos activamente cada 500ms. Si Safari inyecta 
+    // silenciosamente el archivo al volver de la RAM, lo atrapamos de inmediato.
+    const intervalId = setInterval(scanInputForFiles, 500);
 
-    const handlePageShow = () => {
-      setTimeout(() => {
-        processFileFromInput('PAGESHOW');
-      }, 300);
-    };
-
-    input.addEventListener('change', handleChange);
-    input.addEventListener('input', handleInput);
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('focus', handleFocus);
-    window.addEventListener('pageshow', handlePageShow);
-
-    // iOS Safari puede restaurar el archivo en input.files sin emitir
-    // nuevamente un evento change. Comprobar el estado inmediatamente.
-    setTimeout(() => {
-      processFileFromInput('INITIAL_CHECK');
-    }, 500);
+    // 2. Eventos clásicos como red de respaldo
+    input.addEventListener('change', scanInputForFiles);
+    document.addEventListener('visibilitychange', scanInputForFiles);
+    window.addEventListener('focus', scanInputForFiles);
 
     return () => {
-      input.removeEventListener('change', handleChange);
-      input.removeEventListener('input', handleInput);
-
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('focus', handleFocus);
-      window.removeEventListener('pageshow', handlePageShow);
+      clearInterval(intervalId);
+      input.removeEventListener('change', scanInputForFiles);
+      document.removeEventListener('visibilitychange', scanInputForFiles);
+      window.removeEventListener('focus', scanInputForFiles);
     };
   }, []);
 
   const handleCambiarArchivo = () => {
     setSelectedFile(null);
+    lastProcessedFileRef.current = null; // Reiniciar para permitir seleccionar el mismo archivo
     const input = document.getElementById('teodoc-file-input') as HTMLInputElement | null;
     if (input) input.value = '';
   };
@@ -230,12 +152,6 @@ export default function Home() {
       return;
     }
 
-    console.log('[TeoDoc] INICIANDO ANÁLISIS', {
-      name: selectedFile.name,
-      size: selectedFile.size,
-      type: selectedFile.type,
-    });
-
     setError(null);
     setLoading(true);
     setProgress(5);
@@ -244,7 +160,6 @@ export default function Home() {
     try {
       await uploadFileToCloudinary(selectedFile);
     } catch (err: any) {
-      console.error('[TeoDoc] ERROR AL INICIAR ANÁLISIS:', err);
       setLoading(false);
       setProgress(0);
       setError(err?.message || 'No fue posible procesar el archivo.');
@@ -255,22 +170,8 @@ export default function Home() {
     const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'antbfat3';
     const uploadPreset = 'teodoc_preset';
 
-    console.log('[TeoDoc] CLOUDINARY: INICIO', {
-      name: file.name,
-      size: file.size,
-      type: file.type,
-    });
-
     const buffer = await file.arrayBuffer();
-    console.log('[TeoDoc] CLOUDINARY: ARRAYBUFFER OK', {
-      bytes: buffer.byteLength,
-    });
-
     const safeBlob = new Blob([buffer], { type: file.type || 'application/octet-stream' });
-    console.log('[TeoDoc] CLOUDINARY: BLOB OK', {
-      size: safeBlob.size,
-      type: safeBlob.type,
-    });
 
     const formData = new FormData();
     formData.append('file', safeBlob, file.name);
@@ -278,7 +179,6 @@ export default function Home() {
 
     setProgress(10);
     setStatusText('Subiendo prédica a Cloudinary...');
-    console.log('[TeoDoc] CLOUDINARY: ENVIANDO ARCHIVO');
 
     const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/video/upload`, {
       method: 'POST',
@@ -287,18 +187,11 @@ export default function Home() {
 
     const responseText = await response.text();
 
-    console.log('[TeoDoc] CLOUDINARY: RESPUESTA COMPLETA', {
-      status: response.status,
-      body: responseText,
-    });
-
     if (!response.ok) {
       let message = `Cloudinary respondió con error ${response.status}.`;
       try {
         const data = JSON.parse(responseText);
-        if (data?.error?.message) {
-          message = data.error.message;
-        }
+        if (data?.error?.message) { message = data.error.message; }
       } catch { /* Ignorar */ }
       throw new Error(message);
     }
@@ -316,7 +209,6 @@ export default function Home() {
 
     setProgress(30);
     setStatusText('Archivo recibido. Extrayendo transcripción...');
-
     await startAnalysisPipeline(data.secure_url);
   };
 
@@ -332,7 +224,7 @@ export default function Home() {
       });
       clearInterval(timerTranscribe);
 
-      if (!resTranscribe.ok) throw new Error('Error procesando la transcripción en AssemblyAI/Deepgram.');
+      if (!resTranscribe.ok) throw new Error('Error procesando la transcripción.');
       const dataTranscribe = await resTranscribe.json();
       const textoTranscrito = dataTranscribe.text;
       
@@ -369,6 +261,7 @@ export default function Home() {
     setError(null); 
     setProgress(0);
     setSelectedFile(null);
+    lastProcessedFileRef.current = null;
     const input = document.getElementById('teodoc-file-input') as HTMLInputElement | null;
     if (input) input.value = '';
   };
@@ -487,7 +380,7 @@ export default function Home() {
         {/* ========================================================================= */}
         {/* FASE A: BOTÓN NATIVO VISIBLE (Se oculta al seleccionar archivo) */}
         {/* ========================================================================= */}
-        {!loading && !resultado && (
+        {!selectedFile && !loading && !resultado && (
           <div className="w-full max-w-lg animate-fade-in">
             <div className="relative">
               <input
@@ -499,7 +392,7 @@ export default function Home() {
                   if (!file) return;
                   handleFileSelected(file);
                 }}
-                className={`
+                className="
                   block
                   w-full
                   max-w-lg
@@ -523,21 +416,18 @@ export default function Home() {
                   file:font-bold
                   file:text-white
                   hover:file:bg-purple-500
-                  ${selectedFile ? 'hidden' : ''}
-                `}
+                "
               />
             </div>
 
-            {!selectedFile && (
-              <p className="text-gray-500 text-xs text-center mt-6">
-                Soporta MP3, WAV, M4A, FLAC, AAC. <br/> Archivos de hasta 500 MB.
-              </p>
-            )}
+            <p className="text-gray-500 text-xs text-center mt-6">
+              Soporta MP3, WAV, M4A, FLAC, AAC. <br/> Archivos de hasta 500 MB.
+            </p>
           </div>
         )}
 
         {/* ========================================================================= */}
-        {/* FASE B: TARJETA DE ARCHIVO Y BOTÓN "ANALIZAR PRÉDICA" */}
+        {/* FASE B: TARJETA DE ARCHIVO (BOTÓN INTEGRADO) */}
         {/* ========================================================================= */}
         {selectedFile && !loading && !resultado && (
           <div className="mt-4 sm:mt-8 w-full max-w-lg animate-fade-in pb-6">
@@ -588,7 +478,7 @@ export default function Home() {
         )}
 
         {/* ========================================================================= */}
-        {/* FASE C: ESTADO DE CARGA Y DIAGNÓSTICO ESTRUCTURADO (Procesamiento) */}
+        {/* FASE C: ESTADO DE CARGA Y DIAGNÓSTICO (Procesamiento) */}
         {/* ========================================================================= */}
         {loading && (
           <div className="flex flex-col items-center text-center mt-2 w-full px-2 animate-fade-in z-20 relative">
@@ -795,18 +685,6 @@ export default function Home() {
         )}
       </main>
 
-      {/* MINICONSOLA MANUAL DE DEBUG (BORRAR DESPUES) */}
-      <div className="w-full max-w-5xl mx-auto px-4 mb-10 z-50">
-        <div className="bg-black border border-gray-700 rounded-xl p-4 max-h-[300px] overflow-y-auto">
-          <h3 className="text-red-500 font-bold text-xs mb-2">DEBUG CONSOLE:</h3>
-          {debugLogs.map((log, i) => (
-            <div key={i} className="text-[10px] font-mono text-green-400 border-b border-gray-800 pb-1 mb-1">
-              {log}
-            </div>
-          ))}
-        </div>
-      </div>
-
       {/* MODAL DE SUGERENCIAS */}
       {showFeedbackModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-fade-in">
@@ -847,7 +725,7 @@ export default function Home() {
 
       {/* FOOTER */}
       <footer className="w-full text-center py-5 sm:py-6 text-[10px] sm:text-xs text-gray-500 font-medium tracking-wide z-10 mt-auto px-4 space-y-1">
-        <p>1.66 beta (Miniconsola DOM inyectada para cacería visual de logs)</p>
+        <p>1.67 beta (Active Polling Scanner y Limpieza de Consola Fix iOS)</p>
       </footer>
     </div>
   );
