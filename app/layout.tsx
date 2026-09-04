@@ -5,7 +5,7 @@ import './globals.css';
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
 const lora = Lora({ subsets: ['latin'], variable: '--font-serif' });
 
-export metadata: Metadata = {
+export const metadata: Metadata = {
   title: 'TeoDoc - Analizador Ministerial',
   description: 'Transcripción instantánea y extracción de estructura teológica impulsada por IA.',
 };
