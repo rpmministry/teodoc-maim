@@ -32,7 +32,6 @@ export default function Home() {
   const [versoIndex, setVersoIndex] = useState(0);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const processButtonRef = useRef<HTMLButtonElement>(null); // Referencia para el evento nativo DOM
   const infografiaRef = useRef<HTMLDivElement>(null);
 
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
@@ -46,24 +45,6 @@ export default function Home() {
     }
     return () => clearInterval(intervaloVerso);
   }, [loading]);
-
-  // ---------------------------------------------------------------------------
-  // BYPASS DE REACT: INSTALADOR DE EVENTO NATIVO DOM PARA EL BOTÓN EN SAFARI
-  // ---------------------------------------------------------------------------
-  useEffect(() => {
-    const button = processButtonRef.current;
-    if (!button) return;
-
-    const handleNativePress = (e: Event) => {
-      e.preventDefault();
-      iniciarAnalisis();
-    };
-
-    button.addEventListener("click", handleNativePress);
-    return () => {
-      button.removeEventListener("click", handleNativePress);
-    };
-  }, []);
 
   const enviarSugerencia = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -92,16 +73,9 @@ export default function Home() {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  const handleNativeFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.currentTarget.files?.[0];
-    if (file) {
-      selectedFileRef.current = file;
-      setFileName(file.name);
-      setFileSize(file.size);
-      setError(null);
-    }
-  };
-
+  // ---------------------------------------------------------------------------
+  // MOTOR DE SUBIDA RESILIENTE (Cloudinary)
+  // ---------------------------------------------------------------------------
   const uploadNormal = async (file: File) => {
     const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'antbfat3';
     const formData = new FormData();
@@ -214,21 +188,29 @@ export default function Home() {
     }
   };
 
-  const iniciarAnalisis = () => {
-    setError(null);
-    setLoading(true);
-    setProgress(5); // TEST VISUAL INMEDIATO: Si ves 5%, el toque nativo llegó con éxito.
-
-    const fileToProcess = fileInputRef.current?.files?.[0] ?? selectedFileRef.current;
-
-    if (!fileToProcess) {
-      setLoading(false);
-      setProgress(0);
-      setError("Safari no entregó el archivo seleccionado.");
+  // ---------------------------------------------------------------------------
+  // EL DISPARADOR MAESTRO (UX ADOBE PODCAST): AUTO-START AL SELECCIONAR EL ARCHIVO
+  // ---------------------------------------------------------------------------
+  const handleNativeFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.currentTarget.files?.[0];
+    
+    if (!file) {
+      setError("No se pudo obtener el archivo.");
       return;
     }
 
-    runPipeline(fileToProcess);
+    selectedFileRef.current = file;
+    setFileName(file.name);
+    setFileSize(file.size);
+    setError(null);
+
+    // Arrancamos el procesamiento de inmediato sin requerir un segundo toque en ningún botón
+    setLoading(true);
+    setProgress(5);
+    setResultado(null);
+    setVersoIndex(0);
+
+    runPipeline(file);
   };
 
   const clearFile = () => {
@@ -360,60 +342,31 @@ export default function Home() {
           </div>
         )}
 
-        {/* INPUT PERMANENTE EN EL DOM */}
+        {/* INPUT PERMANENTE EN EL DOM (Se oculta limpiamente al procesar) */}
         <div className={`w-full flex flex-col items-center max-w-lg relative z-20 animate-fade-in ${loading || resultado ? 'hidden' : 'block'}`}>
           <div className="w-full flex flex-col items-center bg-[#1A1D27] border border-purple-500/30 rounded-3xl p-6 sm:p-8 shadow-2xl">
             
             <h3 className="text-lg font-bold text-white mb-2 uppercase tracking-widest text-center">
-              Paso 1: Seleccionar Audio
+              Seleccionar Audio
             </h3>
             <p className="text-gray-500 text-xs text-center mb-6">
-              Elige tu archivo de audio o nota de voz.
+              Toca abajo para elegir tu prédica. El análisis comenzará al instante.
             </p>
             
+            {/* EL INPUT NATIVO PURIFICADO: Al seleccionar archivo, arranca automáticamente */}
             <input
               ref={fileInputRef}
               type="file"
               onChange={handleNativeFileChange}
               className="block w-full text-sm text-gray-400
-                file:mr-4 file:py-3 file:px-6
+                file:mr-4 file:py-4 file:px-8
                 file:rounded-full file:border-0
                 file:text-sm file:font-bold
                 file:bg-purple-600 file:text-white
-                hover:file:bg-purple-500 cursor-pointer mb-6"
+                hover:file:bg-purple-500 cursor-pointer mb-4"
             />
 
-            {fileName && (
-              <div className="w-full bg-black/40 border border-emerald-500/50 p-4 rounded-2xl mb-6 flex items-center justify-between">
-                <div className="flex flex-col overflow-hidden text-left flex-1">
-                  <span className="text-xs font-bold text-emerald-400 truncate pr-2">✅ {fileName}</span>
-                  {fileSize && <span className="text-[10px] text-gray-400 mt-0.5">{formatearTamaño(fileSize)}</span>}
-                </div>
-                <button 
-                  type="button"
-                  onClick={clearFile}
-                  className="ml-2 text-gray-500 hover:text-red-400 bg-white/5 rounded-full p-1.5 transition-colors"
-                  title="Quitar archivo"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                </button>
-              </div>
-            )}
-
-            <h3 className="text-lg font-bold text-white mb-4 uppercase tracking-widest text-center border-t border-white/10 pt-6 w-full">
-              Paso 2: Procesar
-            </h3>
-
-            {/* BOTÓN CON EVENT LISTENER NATIVO DOM (Bypass total de React synthetic events) */}
-            <button
-              ref={processButtonRef}
-              type="button"
-              className="w-full py-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-lg shadow-[0_0_30px_rgba(16,185,129,0.4)] transition-all hover:scale-[1.02] cursor-pointer"
-            >
-              Analizar Predicación
-            </button>
-
-            <p className="text-gray-500 text-xs mt-6 text-center max-w-xs">
+            <p className="text-gray-500 text-xs mt-2 text-center max-w-xs">
               Soporta MP3, WAV, M4A, FLAC, AAC, OGG. <br/> Archivos de hasta 500 MB.
             </p>
           </div>
@@ -667,7 +620,7 @@ export default function Home() {
 
       {/* FOOTER */}
       <footer className="w-full text-center py-5 sm:py-6 text-[10px] sm:text-xs text-gray-500 font-medium tracking-wide z-10 mt-auto px-4 space-y-1">
-        <p>1.40 beta (Bypass React con Event Listener Nativo DOM)</p>
+        <p>1.41 beta (Auto-Start UX Adobe Podcast)</p>
       </footer>
     </div>
   );
