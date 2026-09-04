@@ -32,6 +32,7 @@ export default function Home() {
   const [versoIndex, setVersoIndex] = useState(0);
   
   const infografiaRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState('');
@@ -104,6 +105,35 @@ export default function Home() {
     setResultado(null);
     setSelectedFile(file);
   };
+
+  // ---------------------------------------------------------------------------
+  // INTERCEPCIÓN DE EVENTOS NATIVOS DOM (Bypass React Synthetic Events Bug iOS)
+  // ---------------------------------------------------------------------------
+  useEffect(() => {
+    const input = fileInputRef.current;
+    if (!input) return;
+
+    const processNativeFile = () => {
+      const file = input.files?.[0];
+      if (!file) return;
+
+      console.log('[TeoDoc][iOS] FILE EVENT NATIVO:', {
+        name: file.name,
+        type: file.type,
+        size: file.size,
+      });
+
+      handleFileSelected(file);
+    };
+
+    input.addEventListener('change', processNativeFile);
+    input.addEventListener('input', processNativeFile);
+
+    return () => {
+      input.removeEventListener('change', processNativeFile);
+      input.removeEventListener('input', processNativeFile);
+    };
+  }, []);
 
   const handleCambiarArchivo = () => {
     setSelectedFile(null);
@@ -364,9 +394,10 @@ export default function Home() {
         </div>
       </nav>
 
+      {/* REAJUSTE DE LAYOUT MÓVIL: justify-start y padding top/bottom */}
       <main className="flex-1 flex flex-col items-center justify-start px-4 sm:px-6 lg:px-8 z-10 w-full max-w-5xl mx-auto pt-6 sm:pt-10 pb-12 relative">
         
-        {/* TÍTULO PRINCIPAL */}
+        {/* TÍTULO PRINCIPAL (Se oculta al seleccionar archivo) */}
         {!selectedFile && !loading && !resultado && (
           <div className="text-center space-y-3 sm:space-y-4 mb-8 sm:mb-12 animate-fade-in-up">
             <h1 className="text-3xl sm:text-4xl md:text-6xl font-extrabold tracking-tight text-white drop-shadow-sm px-2">Analiza tus prédicas.</h1>
@@ -375,12 +406,13 @@ export default function Home() {
         )}
 
         {/* ========================================================================= */}
-        {/* FASE A: INPUT NATIVO PERSISTENTE (Para evitar unmount bug de Safari) */}
+        {/* FASE A: BOTÓN NATIVO VISIBLE (El input no se oculta de la estructura, solo visualmente) */}
         {/* ========================================================================= */}
         {!loading && !resultado && (
           <div className="w-full max-w-lg animate-fade-in">
             <div className="relative">
               <input
+                ref={fileInputRef}
                 id="teodoc-file-input"
                 type="file"
                 onChange={(event) => {
@@ -426,7 +458,7 @@ export default function Home() {
         )}
 
         {/* ========================================================================= */}
-        {/* FASE B: TARJETA DE ARCHIVO Y BOTÓN "ANALIZAR PRÉDICA" */}
+        {/* FASE B: TARJETA DE ARCHIVO (BOTÓN INTEGRADO) */}
         {/* ========================================================================= */}
         {selectedFile && !loading && !resultado && (
           <div className="mt-4 sm:mt-8 w-full max-w-lg animate-fade-in pb-6">
@@ -724,7 +756,7 @@ export default function Home() {
 
       {/* FOOTER */}
       <footer className="w-full text-center py-5 sm:py-6 text-[10px] sm:text-xs text-gray-500 font-medium tracking-wide z-10 mt-auto px-4 space-y-1">
-        <p>1.62 beta (Fix Unmount Bug Safari: Input nativo montado pero oculto)</p>
+        <p>1.63 beta (Fase A Persistente + Event Listener Nativo DOM iOS Safari Fix)</p>
       </footer>
     </div>
   );
