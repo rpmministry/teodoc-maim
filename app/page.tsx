@@ -1,5 +1,5 @@
 'use client';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Script from 'next/script';
 import { jsPDF } from 'jspdf';
 import domtoimage from 'dom-to-image-more';
@@ -35,13 +35,16 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [versoIndex, setVersoIndex] = useState(0);
   
-  const widgetRef = useRef<any>(null);
+  // ESTADO DE DIAGNÓSTICO: Semáforo de carga del Script de Cloudinary
+  const [cloudinaryLoaded, setCloudinaryLoaded] = useState(false);
+  
   const infografiaRef = useRef<HTMLDivElement>(null);
 
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState('');
   const [feedbackStatus, setFeedbackStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
 
+  // Rotación de versículos durante la carga
   useEffect(() => {
     let intervaloVerso: NodeJS.Timeout;
     if (loading) {
@@ -50,89 +53,91 @@ export default function Home() {
     return () => clearInterval(intervaloVerso);
   }, [loading]);
 
-  // ---------------------------------------------------------------------------
-  // INICIALIZACIÓN TEMPRANA DEL CLOUDINARY UPLOAD WIDGET
-  // ---------------------------------------------------------------------------
+  // Polling de seguridad para encender el semáforo visual de Cloudinary
   useEffect(() => {
-    const initWidget = () => {
-      if (typeof window !== 'undefined' && window.cloudinary && !widgetRef.current) {
-        widgetRef.current = window.cloudinary.createUploadWidget(
-          {
-            cloudName: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'antbfat3',
-            uploadPreset: 'teodoc_preset',
-            sources: ['local', 'google_drive', 'dropbox'],
-            resourceType: 'video', // Cloudinary procesa audios como video/media
-            clientAllowedFormats: ['mp3', 'wav', 'm4a', 'aac', 'flac', 'ogg', 'mp4'],
-            maxFileSize: 524288000, // 500 MB
-            multiple: false,
-            language: 'es',
-            text: {
-              es: {
-                menu: { files: "Mis Archivos" },
-                local: { browse: "Seleccionar Prédica", dd_title_single: "Arrastra tu audio o prédica aquí" }
-              }
-            },
-            styles: {
-              palette: {
-                window: "#1A1D27", windowBorder: "#8E44AD", tabIcon: "#8E44AD",
-                menuIcons: "#FFFFFF", textDark: "#000000", textLight: "#FFFFFF",
-                link: "#10B981", action: "#8E44AD", inactiveTabIcon: "#A0AEC0",
-                error: "#EF4444", inProgress: "#10B981", complete: "#10B981", sourceBg: "#13161F"
-              }
-            }
-          },
-          (err: any, result: any) => {
-            if (!err && result && result.event === "success") {
-              const uploadedUrl = result.info.secure_url;
-              // Disparamos automáticamente el pipeline con la URL segura obtenida por Cloudinary
-              startAnalysisPipeline(uploadedUrl);
-            }
-          }
-        );
+    const checkCloudinary = setInterval(() => {
+      if (typeof window !== 'undefined' && window.cloudinary) {
+        setCloudinaryLoaded(true);
+        clearInterval(checkCloudinary);
       }
-    };
-
-    const interval = setInterval(() => {
-      if (widgetRef.current) {
-        clearInterval(interval);
-      } else {
-        initWidget();
-      }
-    }, 400);
-
-    return () => clearInterval(interval);
+    }, 500);
+    return () => clearInterval(checkCloudinary);
   }, []);
 
+  // ---------------------------------------------------------------------------
+  // APERTURA DIRECTA DE CLOUDINARY (Sin pre-inicializaciones frágiles)
+  // ---------------------------------------------------------------------------
   const handleOpenWidget = () => {
     setError(null);
-    if (widgetRef.current) {
-      widgetRef.current.open();
-    } else {
-      setError("El sistema de subida Cloudinary se está cargando. Intenta de nuevo en un segundo.");
-    }
-  };
 
-  const enviarSugerencia = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!feedbackMsg.trim()) return;
-    setFeedbackStatus('sending');
     try {
-      const res = await fetch("https://formsubmit.co/ajax/recursosparaministerios@gmail.com", {
-        method: "POST",
-        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-        body: JSON.stringify({ _subject: "💡 Nueva Sugerencia - TeoDoc", mensaje: feedbackMsg })
-      });
-      if (res.ok) {
-        setFeedbackStatus('success');
-        setTimeout(() => { setShowFeedbackModal(false); setFeedbackStatus('idle'); setFeedbackMsg(''); }, 3000);
-      } else throw new Error("Error en servidor");
-    } catch (err) {
-      setFeedbackStatus('error');
+      // 1. Verificación de existencia del motor de subida
+      if (typeof window === 'undefined' || !window.cloudinary) {
+        setError('El sistema de subida todavía no está disponible. Espera unos segundos o recarga la página.');
+        return;
+      }
+
+      // 2. Apertura dinámica de una sola llamada (Recomendado oficialmente)
+      window.cloudinary.openUploadWidget(
+        {
+          cloudName: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'antbfat3',
+          uploadPreset: 'teodoc_preset',
+          sources: ['local'],
+          resourceType: 'video', // Audio se procesa como video en Cloudinary
+          maxFileSize: 524288000, // 500 MB
+          multiple: false,
+          clientAllowedFormats: ['mp3', 'wav', 'm4a', 'aac', 'flac', 'ogg', 'mp4'],
+          language: 'es',
+          text: {
+            es: {
+              menu: { files: "Mis Archivos" },
+              local: { browse: "Seleccionar Prédica", dd_title_single: "Arrastra tu audio o prédica aquí" }
+            }
+          },
+          styles: {
+            palette: {
+              window: "#1A1D27", windowBorder: "#8E44AD", tabIcon: "#8E44AD",
+              menuIcons: "#FFFFFF", textDark: "#000000", textLight: "#FFFFFF",
+              link: "#10B981", action: "#8E44AD", inactiveTabIcon: "#A0AEC0",
+              error: "#EF4444", inProgress: "#10B981", complete: "#10B981", sourceBg: "#13161F"
+            }
+          }
+        },
+        (error: any, result: any) => {
+          if (error) {
+            console.error('Cloudinary Widget Error:', error);
+            setError(
+              typeof error === 'string'
+                ? error
+                : error?.statusText || error?.message || 'Error al seleccionar o subir el archivo.'
+            );
+            return;
+          }
+
+          if (result?.event === 'success') {
+            const uploadedUrl = result.info?.secure_url;
+
+            if (!uploadedUrl) {
+              setError('Cloudinary terminó la subida pero no devolvió la URL segura del archivo.');
+              return;
+            }
+
+            // Subida completada: Lanzar el pipeline backend
+            startAnalysisPipeline(uploadedUrl);
+          }
+        }
+      );
+    } catch (err: any) {
+      console.error('Cloudinary initialization error:', err);
+      setError(
+        err?.message ||
+        'No fue posible abrir el sistema de selección de archivos del iPhone/iPad.'
+      );
     }
   };
 
   // ---------------------------------------------------------------------------
-  // PIPELINE DE PROCESAMIENTO POST-SUBIDA NUBE (Cloudinary ya hizo el upload)
+  // PIPELINE DE PROCESAMIENTO BACKEND (Cloudinary ya hizo el upload pesado)
   // ---------------------------------------------------------------------------
   const startAnalysisPipeline = async (audioUrl: string) => {
     setLoading(true);
@@ -265,8 +270,13 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-[#0B0C10] bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#1C1635] via-[#0B0C10] to-[#070709] text-white font-sans selection:bg-purple-500/30 flex flex-col relative overflow-x-hidden">
       
-      {/* SCRIPT OFICIAL DE CLOUDINARY UPLOAD WIDGET */}
-      <Script src="https://upload-widget.cloudinary.com/global/all.js" strategy="afterInteractive" />
+      {/* SCRIPT LATEST OFICIAL DE CLOUDINARY UPLOAD WIDGET */}
+      <Script 
+        src="https://upload-widget.cloudinary.com/latest/global/all.js" 
+        strategy="afterInteractive" 
+        onLoad={() => setCloudinaryLoaded(true)}
+        onError={() => setCloudinaryLoaded(false)}
+      />
 
       <nav className="w-full flex flex-wrap gap-4 justify-between items-center px-4 sm:px-8 py-4 sm:py-6 z-10">
         <div className="flex items-center gap-2 sm:gap-3">
@@ -304,24 +314,40 @@ export default function Home() {
           </div>
         )}
 
-        {/* BOTÓN NATIVO GATILLO DEL CLOUDINARY UPLOAD WIDGET */}
+        {/* BOTÓN MAESTRO DE CLOUDINARY WIDGET */}
         {!loading && !resultado && (
           <div className="flex flex-col items-center w-full max-w-lg relative z-20 animate-fade-in">
             
             <button
               type="button"
               onClick={handleOpenWidget}
-              className="relative flex flex-col items-center justify-center w-32 h-32 sm:w-40 sm:h-40 md:w-44 md:h-44 rounded-full bg-purple-600 hover:bg-purple-500 shadow-xl shadow-purple-500/20 hover:scale-105 transition-all duration-300 cursor-pointer outline-none group"
+              disabled={!cloudinaryLoaded}
+              className={`relative flex flex-col items-center justify-center w-32 h-32 sm:w-40 sm:h-40 md:w-44 md:h-44 rounded-full transition-all duration-300 outline-none group ${
+                cloudinaryLoaded 
+                  ? 'bg-purple-600 hover:bg-purple-500 shadow-xl shadow-purple-500/20 hover:scale-105 cursor-pointer' 
+                  : 'bg-gray-800 opacity-50 cursor-not-allowed'
+              }`}
             >
               <svg className="w-12 h-12 text-white mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
               </svg>
-              <span className="text-xs font-bold text-white uppercase tracking-widest text-center px-2">Subir Audio</span>
+              <span className="text-xs font-bold text-white uppercase tracking-widest text-center px-2">
+                {cloudinaryLoaded ? 'Subir Audio' : 'Cargando...'}
+              </span>
             </button>
             
-            <p className="text-gray-500 text-xs mt-6 text-center max-w-xs">
-              Soporta MP3, WAV, M4A, FLAC, AAC, OGG. <br/> Archivos de hasta 500 MB.
-            </p>
+            {/* DIAGNÓSTICO VISUAL DEL SCRIPT (Prueba exigida por auditoría) */}
+            <div className="flex flex-col items-center mt-6 space-y-2">
+              <div className="flex items-center gap-2 text-[10px] sm:text-xs font-medium uppercase tracking-wider">
+                <span className={`w-2 h-2 rounded-full ${cloudinaryLoaded ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`}></span>
+                <span className={cloudinaryLoaded ? 'text-emerald-400' : 'text-red-400'}>
+                  {cloudinaryLoaded ? '● Sistema de subida listo' : '● Sistema de subida no disponible'}
+                </span>
+              </div>
+              <p className="text-gray-500 text-xs text-center max-w-xs">
+                Soporta MP3, WAV, M4A, FLAC, AAC. <br/> Archivos de hasta 500 MB.
+              </p>
+            </div>
 
             {error && (
               <div className="mt-6 px-5 py-4 bg-red-950/80 border-2 border-red-500 rounded-2xl text-red-200 text-xs w-full max-w-sm shadow-2xl animate-fade-in space-y-2 text-center">
@@ -332,7 +358,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* ESTADO DE CARGA CON DIAGNÓSTICO VISIBLE */}
+        {/* ESTADO DE CARGA */}
         {loading && (
           <div className="flex flex-col items-center text-center mt-2 w-full px-2 animate-fade-in z-20 relative">
             <div className="w-24 h-24 rounded-full bg-emerald-600 animate-pulse flex items-center justify-center shadow-xl shadow-emerald-500/40 mb-6">
@@ -578,7 +604,7 @@ export default function Home() {
 
       {/* FOOTER */}
       <footer className="w-full text-center py-5 sm:py-6 text-[10px] sm:text-xs text-gray-500 font-medium tracking-wide z-10 mt-auto px-4 space-y-1">
-        <p>1.44 producción (Cloudinary Upload Widget Activo en Root App)</p>
+        <p>1.45 beta (Cloudinary Widget UI Nativa)</p>
       </footer>
     </div>
   );
