@@ -29,12 +29,13 @@ export default function Home() {
   const [versoIndex, setVersoIndex] = useState(0);
   
   const infografiaRef = useRef<HTMLDivElement>(null);
-  const ultimoArchivoProcesadoRef = useRef<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState('');
   const [feedbackStatus, setFeedbackStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
 
+  // Rotación de versículos
   useEffect(() => {
     let intervaloVerso: NodeJS.Timeout;
     if (loading) {
@@ -63,43 +64,13 @@ export default function Home() {
   };
 
   // ---------------------------------------------------------------------------
-  // MANEJO DE EVENTOS DUALES Y ANÁLISIS DE ARCHIVO
+  // SELECCIÓN NATIVA DE ARCHIVOS
+  // Listener DOM nativo para máxima compatibilidad con Safari/iOS.
   // ---------------------------------------------------------------------------
-  const handleFileInput = async (event: React.FormEvent<HTMLInputElement>) => {
-    const input = event.currentTarget;
-    const file = input.files?.[0];
-
+  const handleFileSelected = async (file: File) => {
     if (!file) {
-      console.log('[TeoDoc] Evento de archivo sin archivo seleccionado:', event.type);
       return;
     }
-
-    const fileKey = [file.name, file.size, file.lastModified].join('|');
-
-    // Evita subir el mismo archivo dos veces si Safari dispara 'input' y 'change' juntos
-    if (ultimoArchivoProcesadoRef.current === fileKey) {
-      console.log('[TeoDoc] Archivo duplicado ignorado:', event.type);
-      return;
-    }
-
-    ultimoArchivoProcesadoRef.current = fileKey;
-
-    console.log(`[TeoDoc] EVENTO ${event.type.toUpperCase()}`, {
-      name: file.name,
-      size: file.size,
-      type: file.type,
-    });
-
-    // Diagnóstico visual en pantalla para probar en iOS
-    setStatusText(`Archivo detectado (${event.type})`);
-
-    await handleFileSelected(event);
-  };
-
-  const handleFileSelected = async (event: React.FormEvent<HTMLInputElement>) => {
-    const file = event.currentTarget.files?.[0];
-
-    if (!file) return;
 
     console.log('[TeoDoc] ARCHIVO SELECCIONADO', {
       name: file.name,
@@ -109,6 +80,7 @@ export default function Home() {
     });
 
     const maxSize = 500 * 1024 * 1024;
+
     if (file.size > maxSize) {
       setError('El archivo supera el límite permitido de 500 MB.');
       return;
@@ -127,8 +99,7 @@ export default function Home() {
     setResultado(null);
     setLoading(true);
     setProgress(2);
-    // Nota: El setStatusText de "Archivo seleccionado" fue sobrescrito por el diagnóstico visual en handleFileInput,
-    // pero pronto cambiará en uploadFileToCloudinary.
+    setStatusText('Archivo seleccionado. Preparando subida...');
 
     try {
       await uploadFileToCloudinary(file);
@@ -138,20 +109,47 @@ export default function Home() {
       setProgress(0);
       setError(error?.message || 'No fue posible subir el archivo.');
     }
-
-    // No limpiamos event.target.value aquí para no romper el ciclo en Safari.
   };
 
-  const limpiarSelectorArchivo = () => {
-    const input = document.getElementById('teodoc-file-input') as HTMLInputElement | null;
-    if (input) {
-      input.value = '';
+  useEffect(() => {
+    const input = fileInputRef.current;
+
+    if (!input) {
+      return;
     }
-    ultimoArchivoProcesadoRef.current = null;
-  };
+
+    const onNativeChange = (event: Event) => {
+      const target = event.target as HTMLInputElement;
+      const file = target.files?.[0];
+
+      console.log('[TeoDoc] EVENTO NATIVO CHANGE', {
+        hasFile: !!file,
+        name: file?.name,
+        size: file?.size,
+        type: file?.type,
+      });
+
+      if (!file) {
+        return;
+      }
+
+      handleFileSelected(file);
+    };
+
+    /*
+     * Listener DOM nativo.
+     * Evitamos depender del sistema de eventos de React
+     * para la selección de archivos en iOS.
+     */
+    input.addEventListener('change', onNativeChange);
+
+    return () => {
+      input.removeEventListener('change', onNativeChange);
+    };
+  }, []);
 
   // ---------------------------------------------------------------------------
-  // SUBIDA CLIENT-SIDE A CLOUDINARY (Bypass del límite 4.5MB de Vercel)
+  // SUBIDA CLIENT-SIDE A CLOUDINARY (Funcional en Windows)
   // ---------------------------------------------------------------------------
   const uploadFileToCloudinary = async (file: File): Promise<void> => {
     const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'antbfat3';
@@ -167,11 +165,6 @@ export default function Home() {
       sizeMB: (file.size / 1024 / 1024).toFixed(2),
     });
 
-    /*
-     * Safari/iOS WebKit Bugzilla Workaround:
-     * Safari puede enviar cuerpos vacíos al enviar File por Fetch directo.
-     * Creamos un Blob puro para asegurar la transferencia.
-     */
     const buffer = await file.arrayBuffer();
     const safeBlob = new Blob([buffer], { type: file.type || 'application/octet-stream' });
 
@@ -231,7 +224,6 @@ export default function Home() {
   // ---------------------------------------------------------------------------
   const startAnalysisPipeline = async (audioUrl: string) => {
     try {
-      // 1. TRANSCRIPCIÓN
       const timerTranscribe = setInterval(() => setProgress((prev) => (prev >= 49 ? 49 : prev + 1)), 800);
 
       const resTranscribe = await fetch('/api/transcribe', { 
@@ -243,7 +235,6 @@ export default function Home() {
       const dataTranscribe = await resTranscribe.json();
       const textoTranscrito = dataTranscribe.text;
       
-      // 2. ANÁLISIS TEOLÓGICO
       setStatusText('Analizando estructura teológica profunda (OpenRouter / Gemini)...');
       setProgress(50);
       const timerAnalyze = setInterval(() => {
@@ -258,20 +249,17 @@ export default function Home() {
       if (!resAnalyze.ok) throw new Error('Error en el análisis teológico de la IA.');
       const dataAnalyze = await resAnalyze.json();
 
-      // 3. FINALIZAR
       setProgress(100);
       setStatusText('¡Análisis teológico completado!');
       setTimeout(() => {
         setResultado(dataAnalyze);
         setLoading(false);
-        limpiarSelectorArchivo();
       }, 500);
 
     } catch (err: any) {
       setError(`❌ Fallo crítico en el pipeline: ${err.message || 'Ocurrió un error inesperado.'}`);
       setLoading(false);
       setProgress(0);
-      limpiarSelectorArchivo();
     }
   };
 
@@ -279,7 +267,6 @@ export default function Home() {
     setResultado(null); 
     setError(null); 
     setProgress(0);
-    limpiarSelectorArchivo();
   };
 
   const descargarInfografia = async () => {
@@ -357,16 +344,14 @@ export default function Home() {
     <div className="min-h-screen bg-[#0B0C10] bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#1C1635] via-[#0B0C10] to-[#070709] text-white font-sans selection:bg-purple-500/30 flex flex-col relative overflow-x-hidden">
       
       {/* 
-        EL INPUT MAESTRO:
-        Montado permanentemente y fuera del bloque condicional de loading
-        para evitar que React destruya la memoria de WebKit en iOS.
+        INPUT MAESTRO NATIVO:
+        Sin handlers de React, puro DOM.
       */}
       <input
+        ref={fileInputRef}
         id="teodoc-file-input"
         type="file"
         accept=".mp3,.wav,.m4a,.aac,.flac,.ogg,.mp4,audio/mpeg,audio/wav,audio/mp4,video/mp4"
-        onInput={handleFileInput}
-        onChange={handleFileInput}
         className="fixed -left-[9999px] w-px h-px opacity-0"
         tabIndex={-1}
       />
@@ -407,7 +392,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* SELECTOR NATIVO MEDIANTE LABEL (No usa JavaScript onClick ni fileInputRef) */}
+        {/* SELECTOR NATIVO MEDIANTE LABEL (Puro DOM sin React onClick) */}
         {!loading && !resultado && (
           <div className="flex flex-col items-center w-full max-w-lg relative z-20 animate-fade-in">
             
@@ -697,7 +682,7 @@ export default function Home() {
 
       {/* FOOTER */}
       <footer className="w-full text-center py-5 sm:py-6 text-[10px] sm:text-xs text-gray-500 font-medium tracking-wide z-10 mt-auto px-4 space-y-1">
-        <p>1.51 beta (Input Maestro Permanente y Bypass de WebKit Dismount Bug)</p>
+        <p>1.52 beta (Listener DOM Nativo y Prevención de Desmontaje WebKit)</p>
       </footer>
     </div>
   );
