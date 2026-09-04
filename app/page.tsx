@@ -16,7 +16,7 @@ interface PredicaAnalisis {
 const promesasBiblicas = [
   { cita: "Isaías 41:10", texto: "No temas, porque yo estoy contigo; no desmayes..." },
   { cita: "Jeremías 29:11", texto: "Porque yo sé los pensamientos que tengo acerca de vosotros..." },
-  { cita: "Romanos 8:28", texto: "Y sabemos que al que aman a Dios, todas las cosas les ayudan a bien..." },
+  { cita: "Romanos 8:28", texto: "Y sabemos que a los que aman a Dios, todas las cosas les ayudan a bien..." },
   { cita: "Josué 1:9", texto: "Mira que te mando que te esfuerces y seas valiente..." }
 ];
 
@@ -73,7 +73,7 @@ export default function Home() {
   };
 
   // ---------------------------------------------------------------------------
-  // MANEJADOR GENERAL DE SELECCIÓN DE ARCHIVOS (Optimizado Web y Android)
+  // MANEJADOR GENERAL DE SELECCIÓN DE ARCHIVOS
   // ---------------------------------------------------------------------------
   const handleFileSelected = (file: File) => {
     if (!file) return;
@@ -389,7 +389,7 @@ export default function Home() {
         )}
 
         {/* ========================================================================= */}
-        {/* FASE B: TARJETA DE ARCHIVO Y BOTÓN "ANALIZAR PRÉDICA" */}
+        {/* FASE B: TARJETA DE ARCHIVO Y BOTÓN "ANALIZAR PRÉDICA" (Verde brillante) */}
         {/* ========================================================================= */}
         {selectedFile && !loading && !resultado && (
           <div className="mt-4 sm:mt-8 w-full max-w-lg animate-fade-in pb-6">
@@ -422,7 +422,7 @@ export default function Home() {
               <button
                 type="button"
                 onClick={handleAnalizarClick}
-                className="mt-5 w-full bg-purple-600 hover:bg-purple-500 active:bg-purple-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-purple-500/20 transition-all uppercase tracking-widest text-sm"
+                className="mt-5 w-full bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-emerald-500/30 transition-all uppercase tracking-widest text-sm"
               >
                 Analizar Prédica
               </button>
