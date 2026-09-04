@@ -306,7 +306,7 @@ export default function Home() {
         doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.setTextColor(colorAcento[0], colorAcento[1], colorAcento[2]);
         doc.text(v.cita, margin + 5, y); y += 5;
         doc.setFont("helvetica", "italic"); doc.setTextColor(80, 80, 80);
-        const vTextoLineas = doc.splitTextToSize(`"${v.texto}"`, margin + 5, y, { maxWidth: pageWidth - margin * 2 - 10 });
+        const vTextoLineas = doc.splitTextToSize(`"${v.texto}"`, pageWidth - margin * 2 - 10);
         doc.text(vTextoLineas, margin + 5, y); y += vTextoLineas.length * 5 + 5;
       });
       y += 5;
