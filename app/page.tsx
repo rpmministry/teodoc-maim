@@ -27,6 +27,7 @@ export default function Home() {
 
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [statusText, setStatusText] = useState<string>('Preparando archivo...');
   const [resultado, setResultado] = useState<PredicaAnalisis | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [versoIndex, setVersoIndex] = useState(0);
@@ -74,9 +75,10 @@ export default function Home() {
   };
 
   // ---------------------------------------------------------------------------
-  // MOTOR DE SUBIDA RESILIENTE (Cloudinary)
+  // MOTOR DE SUBIDA RESILIENTE (Cloudinary) CON DIAGNÓSTICO VISIBLE
   // ---------------------------------------------------------------------------
   const uploadNormal = async (file: File) => {
+    setStatusText('Subiendo audio a la nube (Cloudinary)...');
     const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'antbfat3';
     const formData = new FormData();
     formData.append("file", file);
@@ -87,7 +89,7 @@ export default function Home() {
       body: formData,
     });
 
-    if (!response.ok) throw new Error(`Error Cloudinary: ${response.status}`);
+    if (!response.ok) throw new Error(`Error Cloudinary HTTP ${response.status}`);
     const data = await response.json();
     return data.secure_url;
   };
@@ -118,6 +120,7 @@ export default function Home() {
   };
 
   const uploadChunked = async (file: File) => {
+    setStatusText('Subiendo archivo pesado por bloques...');
     const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'antbfat3';
     const chunkSize = 10 * 1024 * 1024; // 10MB
     const totalChunks = Math.ceil(file.size / chunkSize);
@@ -133,6 +136,7 @@ export default function Home() {
       
       const currentProgress = Math.floor(((i + 1) / totalChunks) * 25);
       setProgress(currentProgress);
+      setStatusText(`Subiendo bloque ${i + 1} de ${totalChunks}...`);
 
       if (i === totalChunks - 1 && data) secureUrl = data.secure_url;
     }
@@ -150,6 +154,7 @@ export default function Home() {
         audioUrl = await uploadChunked(fileToProcess); // > 100 MB
       }
 
+      setStatusText('Extrayendo texto (Transcripción con IA)...');
       setProgress(30);
       const timerTranscribe = setInterval(() => setProgress((prev) => (prev >= 49 ? 49 : prev + 1)), 800);
 
@@ -158,10 +163,11 @@ export default function Home() {
       });
       clearInterval(timerTranscribe);
 
-      if (!resTranscribe.ok) throw new Error('Error en el motor de transcripción.');
+      if (!resTranscribe.ok) throw new Error('Error en el motor de transcripción (AssemblyAI/Deepgram).');
       const dataTranscribe = await resTranscribe.json();
       const textoTranscrito = dataTranscribe.text;
       
+      setStatusText('Analizando teología profunda (OpenRouter / Gemini)...');
       setProgress(50);
       const timerAnalyze = setInterval(() => {
         setProgress((prev) => prev >= 98 ? 98 : prev + Math.max(1, Math.floor((99 - prev) * 0.05)));
@@ -176,26 +182,28 @@ export default function Home() {
       const dataAnalyze = await resAnalyze.json();
 
       setProgress(100);
+      setStatusText('¡Análisis completado con éxito!');
       setTimeout(() => {
         setResultado(dataAnalyze);
         setLoading(false);
       }, 500);
 
     } catch (err: any) {
-      setError(err.message || 'Ocurrió un error inesperado en la red.');
+      // DIAGNÓSTICO PERSISTENTE: No ocultamos el error ni reseteamos silenciosamente
+      setError(`❌ Fallo crítico: ${err.message || 'Ocurrió un error inesperado.'}`);
       setLoading(false);
       setProgress(0);
     }
   };
 
   // ---------------------------------------------------------------------------
-  // EL DISPARADOR MAESTRO (UX ADOBE PODCAST): AUTO-START AL SELECCIONAR EL ARCHIVO
+  // DISPARADOR MAESTRO (UX ADOBE PODCAST): AUTO-START INMEDIATO EN CAMBIO NATIVO
   // ---------------------------------------------------------------------------
   const handleNativeFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.currentTarget.files?.[0];
     
     if (!file) {
-      setError("No se pudo obtener el archivo.");
+      setError("Safari no entregó ningún archivo válido.");
       return;
     }
 
@@ -204,9 +212,10 @@ export default function Home() {
     setFileSize(file.size);
     setError(null);
 
-    // Arrancamos el procesamiento de inmediato sin requerir un segundo toque en ningún botón
+    // Arrancamos de inmediato con feedback visible al 5%
     setLoading(true);
     setProgress(5);
+    setStatusText('Archivo recibido. Iniciando conexión...');
     setResultado(null);
     setVersoIndex(0);
 
@@ -353,7 +362,6 @@ export default function Home() {
               Toca abajo para elegir tu prédica. El análisis comenzará al instante.
             </p>
             
-            {/* EL INPUT NATIVO PURIFICADO: Al seleccionar archivo, arranca automáticamente */}
             <input
               ref={fileInputRef}
               type="file"
@@ -366,15 +374,36 @@ export default function Home() {
                 hover:file:bg-purple-500 cursor-pointer mb-4"
             />
 
+            {fileName && (
+              <div className="w-full bg-black/40 border border-emerald-500/50 p-4 rounded-2xl mb-4 flex items-center justify-between">
+                <div className="flex flex-col overflow-hidden text-left flex-1">
+                  <span className="text-xs font-bold text-emerald-400 truncate pr-2">✅ {fileName}</span>
+                  {fileSize && <span className="text-[10px] text-gray-400 mt-0.5">{formatearTamaño(fileSize)}</span>}
+                </div>
+              </div>
+            )}
+
             <p className="text-gray-500 text-xs mt-2 text-center max-w-xs">
               Soporta MP3, WAV, M4A, FLAC, AAC, OGG. <br/> Archivos de hasta 500 MB.
             </p>
           </div>
 
-          {error && <div className="mt-8 px-5 py-3 bg-red-900/30 border border-red-500/50 rounded-xl text-red-200 text-sm w-full max-w-sm text-center animate-fade-in">{error}</div>}
+          {/* DIAGNÓSTICO PERSISTENTE DE ERROR: Nunca oculta el error ni resetea en silencio */}
+          {error && (
+            <div className="mt-6 px-5 py-4 bg-red-950/80 border-2 border-red-500 rounded-2xl text-red-200 text-xs w-full shadow-2xl animate-fade-in space-y-2">
+              <p className="font-bold uppercase tracking-wider text-red-400">🚨 Reporte de Diagnóstico:</p>
+              <p className="font-mono bg-black/40 p-2 rounded break-all">{error}</p>
+              <button 
+                onClick={clearFile}
+                className="mt-2 w-full py-2 bg-red-800 hover:bg-red-700 text-white font-bold rounded-lg transition-colors text-xs uppercase"
+              >
+                Intentar de nuevo
+              </button>
+            </div>
+          )}
         </div>
 
-        {/* ESTADO DE CARGA */}
+        {/* ESTADO DE CARGA CON ESTADO OBSERVABLE */}
         {loading && (
           <div className="flex flex-col items-center text-center mt-2 w-full px-2 animate-fade-in z-20 relative">
             <div className="w-24 h-24 rounded-full bg-emerald-600 animate-pulse flex items-center justify-center shadow-xl shadow-emerald-500/40 mb-6">
@@ -383,10 +412,10 @@ export default function Home() {
             
             <div className="text-emerald-400 font-bold mb-4 text-center">
               <span className="text-xs sm:text-sm uppercase tracking-widest block mb-1">
-                {progress <= 25 ? 'Asegurando audio en la nube...' : progress <= 50 ? 'Extrayendo texto...' : 'Analizando teología...'}
+                {statusText}
               </span>
               <span className="text-[10px] text-gray-500 font-normal">
-                {fileName ? `Procesando: ${fileName}` : ''}
+                {fileName ? `Archivo: ${fileName}` : ''}
               </span>
             </div>
 
@@ -620,7 +649,7 @@ export default function Home() {
 
       {/* FOOTER */}
       <footer className="w-full text-center py-5 sm:py-6 text-[10px] sm:text-xs text-gray-500 font-medium tracking-wide z-10 mt-auto px-4 space-y-1">
-        <p>1.41 beta (Auto-Start UX Adobe Podcast)</p>
+        <p>1.41 beta (Auto-Start UI con Diagnóstico Persistente)</p>
       </footer>
     </div>
   );
