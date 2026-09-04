@@ -1,14 +1,7 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
-import Script from 'next/script';
+import { useState, useRef, useEffect } from 'react';
 import { jsPDF } from 'jspdf';
 import domtoimage from 'dom-to-image-more';
-
-declare global {
-  interface Window {
-    cloudinary: any;
-  }
-}
 
 interface Versiculo { cita: string; texto: string; }
 interface PuntoDesarrollo { punto: string; explicacion: string; versiculos: Versiculo[]; }
@@ -35,10 +28,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [versoIndex, setVersoIndex] = useState(0);
   
-  // ESTADO DE DIAGNÓSTICO: Semáforo de carga del Script de Cloudinary
-  const [cloudinaryLoaded, setCloudinaryLoaded] = useState(false);
-  
-  const widgetRef = useRef<any>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const infografiaRef = useRef<HTMLDivElement>(null);
 
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
@@ -54,20 +44,6 @@ export default function Home() {
     return () => clearInterval(intervaloVerso);
   }, [loading]);
 
-  // Polling de seguridad para encender el semáforo visual de Cloudinary
-  useEffect(() => {
-    const checkCloudinary = setInterval(() => {
-      if (typeof window !== 'undefined' && window.cloudinary) {
-        setCloudinaryLoaded(true);
-        clearInterval(checkCloudinary);
-      }
-    }, 500);
-    return () => clearInterval(checkCloudinary);
-  }, []);
-
-  // ---------------------------------------------------------------------------
-  // RESTAURADA: Función para enviar sugerencias (La que causó el error TS2304)
-  // ---------------------------------------------------------------------------
   const enviarSugerencia = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!feedbackMsg.trim()) return;
@@ -87,89 +63,130 @@ export default function Home() {
     }
   };
 
-  // ---------------------------------------------------------------------------
-  // APERTURA DIRECTA DE CLOUDINARY
-  // ---------------------------------------------------------------------------
-  const handleOpenWidget = () => {
-    setError(null);
-
-    try {
-      // 1. Verificación de existencia del motor de subida
-      if (typeof window === 'undefined' || !window.cloudinary) {
-        setError('El sistema de subida todavía no está disponible. Espera unos segundos o recarga la página.');
-        return;
-      }
-
-      // 2. Apertura dinámica de una sola llamada
-      window.cloudinary.openUploadWidget(
-        {
-          cloudName: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'antbfat3',
-          uploadPreset: 'teodoc_preset',
-          sources: ['local'],
-          resourceType: 'video', // Audio se procesa como video en Cloudinary
-          maxFileSize: 524288000, // 500 MB
-          multiple: false,
-          clientAllowedFormats: ['mp3', 'wav', 'm4a', 'aac', 'flac', 'ogg', 'mp4'],
-          language: 'es',
-          text: {
-            es: {
-              menu: { files: "Mis Archivos" },
-              local: { browse: "Seleccionar Prédica", dd_title_single: "Arrastra tu audio o prédica aquí" }
-            }
-          },
-          styles: {
-            palette: {
-              window: "#1A1D27", windowBorder: "#8E44AD", tabIcon: "#8E44AD",
-              menuIcons: "#FFFFFF", textDark: "#000000", textLight: "#FFFFFF",
-              link: "#10B981", action: "#8E44AD", inactiveTabIcon: "#A0AEC0",
-              error: "#EF4444", inProgress: "#10B981", complete: "#10B981", sourceBg: "#13161F"
-            }
-          }
-        },
-        (error: any, result: any) => {
-          if (error) {
-            console.error('Cloudinary Widget Error:', error);
-            setError(
-              typeof error === 'string'
-                ? error
-                : error?.statusText || error?.message || 'Error al seleccionar o subir el archivo.'
-            );
-            return;
-          }
-
-          if (result?.event === 'success') {
-            const uploadedUrl = result.info?.secure_url;
-
-            if (!uploadedUrl) {
-              setError('Cloudinary terminó la subida pero no devolvió la URL segura del archivo.');
-              return;
-            }
-
-            // Subida completada: Lanzar el pipeline backend
-            startAnalysisPipeline(uploadedUrl);
-          }
-        }
-      );
-    } catch (err: any) {
-      console.error('Cloudinary initialization error:', err);
-      setError(
-        err?.message ||
-        'No fue posible abrir el sistema de selección de archivos del iPhone/iPad.'
-      );
-    }
+  const formatearTamaño = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
   // ---------------------------------------------------------------------------
-  // PIPELINE DE PROCESAMIENTO BACKEND
+  // MANEJO NATIVO DEL ARCHIVO (Bypass de Cloudinary Widget)
   // ---------------------------------------------------------------------------
-  const startAnalysisPipeline = async (audioUrl: string) => {
-    setLoading(true);
-    setProgress(30);
-    setStatusText('Archivo recibido en la nube. Extrayendo transcripción...');
+  const handleSelectFile = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileSelected = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
     setError(null);
     setResultado(null);
-    setVersoIndex(0);
+    setLoading(true);
+    setProgress(5);
+    setStatusText('Preparando archivo...');
 
+    try {
+      await uploadFileToCloudinary(file);
+    } catch (err: any) {
+      console.error('Upload error:', err);
+      setLoading(false);
+      setProgress(0);
+      setError(err?.message || 'No fue posible subir el archivo.');
+    }
+
+    event.target.value = '';
+  };
+
+  const uploadFileToCloudinary = async (file: File): Promise<void> => {
+    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'antbfat3';
+    const uploadPreset = 'teodoc_preset';
+
+    const formData = new FormData();
+    formData.append('upload_preset', uploadPreset);
+
+    let uploadFile: Blob | File = file;
+
+    /*
+     * Safari/iOS:
+     * Si la página está bajo control de un Service Worker,
+     * enviamos una copia Blob del archivo para sortear el bug de WebKit.
+     */
+    if (navigator.serviceWorker?.controller) {
+      const buffer = await file.arrayBuffer();
+      uploadFile = new Blob([buffer], { type: file.type || 'application/octet-stream' });
+    }
+
+    formData.append('file', uploadFile, file.name);
+
+    setLoading(true);
+    setProgress(5);
+    setStatusText('Subiendo prédica...');
+
+    await new Promise<void>((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', `https://api.cloudinary.com/v1_1/${cloudName}/video/upload`);
+
+      xhr.upload.onprogress = (event) => {
+        if (!event.lengthComputable) return;
+
+        const percentage = Math.round((event.loaded / event.total) * 100);
+        const mappedProgress = Math.max(5, Math.min(35, 5 + Math.round(percentage * 0.3)));
+        
+        setProgress(mappedProgress);
+        setStatusText(`Subiendo prédica... ${percentage}%`);
+      };
+
+      xhr.onload = async () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const response = JSON.parse(xhr.responseText);
+
+            if (!response.secure_url) {
+              throw new Error('Cloudinary no devolvió la URL segura del archivo.');
+            }
+
+            setProgress(30);
+            setStatusText('Archivo recibido en la nube. Extrayendo transcripción...');
+
+            await startAnalysisPipeline(response.secure_url);
+            resolve();
+          } catch (error) {
+            reject(error);
+          }
+          return;
+        }
+
+        let message = `Error de Cloudinary (${xhr.status}).`;
+        try {
+          const response = JSON.parse(xhr.responseText);
+          if (response?.error?.message) {
+            message = response.error.message;
+          }
+        } catch {
+          // Ignorar error de parseo
+        }
+        reject(new Error(message));
+      };
+
+      xhr.onerror = () => {
+        reject(new Error('No se pudo conectar con Cloudinary. Verifica tu conexión a Internet.'));
+      };
+
+      xhr.onabort = () => {
+        reject(new Error('La subida fue cancelada.'));
+      };
+
+      xhr.send(formData);
+    });
+  };
+
+  // ---------------------------------------------------------------------------
+  // PIPELINE DE PROCESAMIENTO BACKEND (Intacto)
+  // ---------------------------------------------------------------------------
+  const startAnalysisPipeline = async (audioUrl: string) => {
     try {
       // 1. TRANSCRIPCIÓN
       const timerTranscribe = setInterval(() => setProgress((prev) => (prev >= 49 ? 49 : prev + 1)), 800);
@@ -293,14 +310,6 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-[#0B0C10] bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#1C1635] via-[#0B0C10] to-[#070709] text-white font-sans selection:bg-purple-500/30 flex flex-col relative overflow-x-hidden">
       
-      {/* SCRIPT LATEST OFICIAL DE CLOUDINARY UPLOAD WIDGET */}
-      <Script 
-        src="https://upload-widget.cloudinary.com/latest/global/all.js" 
-        strategy="afterInteractive" 
-        onLoad={() => setCloudinaryLoaded(true)}
-        onError={() => setCloudinaryLoaded(false)}
-      />
-
       <nav className="w-full flex flex-wrap gap-4 justify-between items-center px-4 sm:px-8 py-4 sm:py-6 z-10">
         <div className="flex items-center gap-2 sm:gap-3">
           <div className="w-8 h-8 sm:w-9 sm:h-9 bg-purple-600 rounded-xl flex items-center justify-center border border-white/10 shrink-0">
@@ -337,36 +346,32 @@ export default function Home() {
           </div>
         )}
 
-        {/* BOTÓN MAESTRO DE CLOUDINARY WIDGET */}
+        {/* INPUT NATIVO + BOTÓN LIMPIO Y DIRECTO */}
         {!loading && !resultado && (
           <div className="flex flex-col items-center w-full max-w-lg relative z-20 animate-fade-in">
             
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="audio/*,video/*,.mp3,.wav,.m4a,.aac,.flac,.ogg,.mp4"
+              onChange={handleFileSelected}
+              className="hidden"
+            />
+
             <button
               type="button"
-              onClick={handleOpenWidget}
-              disabled={!cloudinaryLoaded}
-              className={`relative flex flex-col items-center justify-center w-32 h-32 sm:w-40 sm:h-40 md:w-44 md:h-44 rounded-full transition-all duration-300 outline-none group ${
-                cloudinaryLoaded 
-                  ? 'bg-purple-600 hover:bg-purple-500 shadow-xl shadow-purple-500/20 hover:scale-105 cursor-pointer' 
-                  : 'bg-gray-800 opacity-50 cursor-not-allowed'
-              }`}
+              onClick={handleSelectFile}
+              className="relative flex flex-col items-center justify-center w-32 h-32 sm:w-40 sm:h-40 md:w-44 md:h-44 rounded-full transition-all duration-300 outline-none group bg-purple-600 hover:bg-purple-500 shadow-xl shadow-purple-500/20 hover:scale-105 cursor-pointer"
             >
               <svg className="w-12 h-12 text-white mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
               </svg>
               <span className="text-xs font-bold text-white uppercase tracking-widest text-center px-2">
-                {cloudinaryLoaded ? 'Subir Audio' : 'Cargando...'}
+                Subir Audio
               </span>
             </button>
             
-            {/* DIAGNÓSTICO VISUAL DEL SCRIPT */}
             <div className="flex flex-col items-center mt-6 space-y-2">
-              <div className="flex items-center gap-2 text-[10px] sm:text-xs font-medium uppercase tracking-wider">
-                <span className={`w-2 h-2 rounded-full ${cloudinaryLoaded ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`}></span>
-                <span className={cloudinaryLoaded ? 'text-emerald-400' : 'text-red-400'}>
-                  {cloudinaryLoaded ? '● Sistema de subida listo' : '● Sistema de subida no disponible'}
-                </span>
-              </div>
               <p className="text-gray-500 text-xs text-center max-w-xs">
                 Soporta MP3, WAV, M4A, FLAC, AAC. <br/> Archivos de hasta 500 MB.
               </p>
@@ -627,7 +632,7 @@ export default function Home() {
 
       {/* FOOTER */}
       <footer className="w-full text-center py-5 sm:py-6 text-[10px] sm:text-xs text-gray-500 font-medium tracking-wide z-10 mt-auto px-4 space-y-1">
-        <p>1.46 beta (Cloudinary Upload Widget Activo en Root App)</p>
+        <p>1.47 beta (Selector Nativo + XHR con Progreso Real)</p>
       </footer>
     </div>
   );
