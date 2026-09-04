@@ -16,7 +16,7 @@ interface PredicaAnalisis {
 const promesasBiblicas = [
   { cita: "Isaías 41:10", texto: "No temas, porque yo estoy contigo; no desmayes..." },
   { cita: "Jeremías 29:11", texto: "Porque yo sé los pensamientos que tengo acerca de vosotros..." },
-  { cita: "Romanos 8:28", texto: "Y sabemos que al que aman a Dios, todas las cosas les ayudan a bien..." },
+  { cita: "Romanos 8:28", texto: "Y sabemos que a los que aman a Dios, todas las cosas les ayudan a bien..." },
   { cita: "Josué 1:9", texto: "Mira que te mando que te esfuerces y seas valiente..." }
 ];
 
@@ -330,7 +330,7 @@ export default function Home() {
         )}
 
         {/* ========================================================================= */}
-        {/* FASE A: DROPZONE MODERNA Y VISUALMENTE IMPACTANTE */}
+        {/* FASE A: ESTILO HMI / GLASSMORPHISM TIPO AUDIO-IA (Basado en referencia) */}
         {/* ========================================================================= */}
         {!selectedFile && !loading && !resultado && (
           <div className="w-full max-w-lg animate-fade-in">
@@ -347,25 +347,39 @@ export default function Home() {
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
               />
               
-              <div className="bg-[#13161F]/90 backdrop-blur-md border-2 border-dashed border-purple-500/30 group-hover:border-purple-500/60 rounded-3xl p-8 sm:p-10 text-center transition-all duration-300 shadow-2xl group-hover:shadow-purple-500/10 flex flex-col items-center justify-center">
+              {/* Contenedor tipo Glassmorphism con anillos concéntricos estilo neón */}
+              <div className="bg-[#12151E]/80 backdrop-blur-xl border border-white/10 rounded-3xl p-8 sm:p-10 text-center transition-all duration-300 shadow-2xl shadow-purple-950/20 group-hover:border-cyan-500/40 group-hover:shadow-cyan-500/10 flex flex-col items-center justify-center relative overflow-hidden">
                 
-                {/* Círculo central con ícono */}
-                <div className="w-20 h-20 rounded-full bg-purple-600/15 group-hover:bg-purple-600/25 border border-purple-500/30 flex items-center justify-center mb-5 transition-transform duration-300 group-hover:scale-105 shadow-inner">
-                  <svg className="w-9 h-9 text-purple-400 group-hover:text-purple-300 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                  </svg>
+                {/* Fondo sutil tipo radar/onda */}
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(56,189,248,0.05)_0%,_transparent_70%)] pointer-events-none"></div>
+
+                {/* Nodo de Audio Central (Estilo UI Cyber/Glass) */}
+                <div className="relative mb-6">
+                  {/* Anillo exterior animado de neón */}
+                  <div className="absolute -inset-3 rounded-full bg-gradient-to-r from-cyan-500/30 to-purple-600/30 blur-md opacity-75 group-hover:opacity-100 transition-opacity animate-pulse"></div>
+                  
+                  {/* Contenedor del ícono cristalino */}
+                  <div className="relative w-24 h-24 rounded-2xl bg-[#1A1F2C]/90 border border-white/15 backdrop-blur-md flex items-center justify-center shadow-2xl group-hover:scale-105 transition-transform duration-300">
+                    
+                    {/* Onda de sonido central estilizada */}
+                    <svg className="w-12 h-12 text-cyan-400 group-hover:text-cyan-300 transition-colors drop-shadow-[0_0_8px_rgba(34,211,238,0.5)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                    </svg>
+
+                  </div>
                 </div>
 
-                <h3 className="text-white font-bold text-base sm:text-lg mb-2 tracking-wide">
-                  Sube o selecciona tu archivo de audio
+                <h3 className="text-white font-bold text-lg sm:text-xl mb-2 tracking-wide">
+                  Selecciona tu archivo de audio
                 </h3>
 
                 <p className="text-gray-400 text-xs sm:text-sm max-w-xs mx-auto mb-6 font-light">
-                  Arrastra tu prédica aquí o <span className="text-purple-400 font-semibold underline underline-offset-4">explora tus archivos</span>
+                  Arrastra tu prédica o <span className="text-cyan-400 font-semibold underline underline-offset-4">haz clic para explorar</span>
                 </p>
 
-                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-purple-600/20 border border-purple-500/30 text-purple-300 text-xs font-semibold shadow-md">
-                  <span>MP3, WAV, M4A, FLAC, AAC · Máx. 500 MB</span>
+                {/* Badge de formatos */}
+                <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-300 text-[11px] font-semibold tracking-wider uppercase shadow-sm">
+                  <span>MP3 · WAV · M4A · AAC · MP4 (Máx. 500 MB)</span>
                 </div>
 
               </div>
@@ -378,10 +392,10 @@ export default function Home() {
         {/* ========================================================================= */}
         {selectedFile && !loading && !resultado && (
           <div className="mt-4 sm:mt-8 w-full max-w-lg animate-fade-in pb-6">
-            <div className="bg-[#13161F] border border-emerald-500/40 rounded-2xl p-5 shadow-2xl backdrop-blur-md">
+            <div className="bg-[#12151E] border border-emerald-500/40 rounded-2xl p-5 shadow-2xl backdrop-blur-md">
               
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full bg-emerald-600/20 flex items-center justify-center shrink-0 border border-emerald-500/30">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-600/20 flex items-center justify-center shrink-0 border border-emerald-500/30">
                   <span className="text-xl">🎵</span>
                 </div>
 
