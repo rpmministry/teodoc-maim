@@ -28,7 +28,6 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [versoIndex, setVersoIndex] = useState(0);
   
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const infografiaRef = useRef<HTMLDivElement>(null);
 
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
@@ -63,24 +62,40 @@ export default function Home() {
     }
   };
 
-  const formatearTamaño = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
-
   // ---------------------------------------------------------------------------
-  // MANEJO NATIVO DEL ARCHIVO (Bypass de Cloudinary Widget)
+  // MANEJO NATIVO DEL ARCHIVO (Bypass de WebKit Security Constraints)
   // ---------------------------------------------------------------------------
-  const handleSelectFile = () => {
-    fileInputRef.current?.click();
-  };
-
   const handleFileSelected = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file) return;
+
+    if (!file) {
+      return;
+    }
+
+    console.log('[TeoDoc] Archivo seleccionado:', {
+      name: file.name,
+      size: file.size,
+      type: file.type,
+    });
+
+    // Validación de Tamaño (Límite 500 MB)
+    const maxSize = 500 * 1024 * 1024;
+    if (file.size > maxSize) {
+      setError('El archivo supera el límite permitido de 500 MB.');
+      event.target.value = '';
+      return;
+    }
+
+    // Validación de Extensiones Permitidas
+    const allowedExtensions = ['.mp3', '.wav', '.m4a', '.aac', '.flac', '.ogg', '.mp4'];
+    const fileName = file.name.toLowerCase();
+    const validExtension = allowedExtensions.some((extension) => fileName.endsWith(extension));
+
+    if (!validExtension) {
+      setError('Formato no compatible. Utiliza MP3, WAV, M4A, AAC, FLAC, OGG o MP4.');
+      event.target.value = '';
+      return;
+    }
 
     setError(null);
     setResultado(null);
@@ -91,12 +106,13 @@ export default function Home() {
     try {
       await uploadFileToCloudinary(file);
     } catch (err: any) {
-      console.error('Upload error:', err);
+      console.error('[TeoDoc] Error de subida:', err);
       setLoading(false);
       setProgress(0);
       setError(err?.message || 'No fue posible subir el archivo.');
     }
 
+    // Permitir volver a elegir el mismo archivo.
     event.target.value = '';
   };
 
@@ -107,17 +123,13 @@ export default function Home() {
     const formData = new FormData();
     formData.append('upload_preset', uploadPreset);
 
-    let uploadFile: Blob | File = file;
-
     /*
-     * Safari/iOS:
-     * Si la página está bajo control de un Service Worker,
-     * enviamos una copia Blob del archivo para sortear el bug de WebKit.
+     * Safari/iOS WebKit Bugzilla Workaround:
+     * Safari (26.5+) puede enviar cuerpos vacíos al intentar subir un objeto File nativo.
+     * La solución oficial es leer el ArrayBuffer en memoria y empaquetarlo en un nuevo Blob.
      */
-    if (navigator.serviceWorker?.controller) {
-      const buffer = await file.arrayBuffer();
-      uploadFile = new Blob([buffer], { type: file.type || 'application/octet-stream' });
-    }
+    const buffer = await file.arrayBuffer();
+    const uploadFile = new Blob([buffer], { type: file.type || 'application/octet-stream' });
 
     formData.append('file', uploadFile, file.name);
 
@@ -346,30 +358,38 @@ export default function Home() {
           </div>
         )}
 
-        {/* INPUT NATIVO + BOTÓN LIMPIO Y DIRECTO */}
+        {/* INPUT NATIVO COMO BOTÓN (Solución WebKit iOS) */}
         {!loading && !resultado && (
           <div className="flex flex-col items-center w-full max-w-lg relative z-20 animate-fade-in">
             
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="audio/*,video/*,.mp3,.wav,.m4a,.aac,.flac,.ogg,.mp4"
-              onChange={handleFileSelected}
-              className="hidden"
-            />
+            <label className="relative block w-32 h-32 sm:w-40 sm:h-40 md:w-44 md:h-44 cursor-pointer">
+              <input
+                type="file"
+                accept="audio/*,video/*,.mp3,.wav,.m4a,.aac,.flac,.ogg,.mp4"
+                onChange={handleFileSelected}
+                className="absolute inset-0 z-20 w-full h-full opacity-0 cursor-pointer"
+              />
 
-            <button
-              type="button"
-              onClick={handleSelectFile}
-              className="relative flex flex-col items-center justify-center w-32 h-32 sm:w-40 sm:h-40 md:w-44 md:h-44 rounded-full transition-all duration-300 outline-none group bg-purple-600 hover:bg-purple-500 shadow-xl shadow-purple-500/20 hover:scale-105 cursor-pointer"
-            >
-              <svg className="w-12 h-12 text-white mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
-              </svg>
-              <span className="text-xs font-bold text-white uppercase tracking-widest text-center px-2">
-                Subir Audio
-              </span>
-            </button>
+              <div className="absolute inset-0 flex flex-col items-center justify-center rounded-full transition-all duration-300 bg-purple-600 hover:bg-purple-500 shadow-xl shadow-purple-500/20 hover:scale-105">
+                <svg
+                  className="w-12 h-12 text-white mb-2 pointer-events-none"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="1.5"
+                    d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"
+                  />
+                </svg>
+
+                <span className="text-xs font-bold text-white uppercase tracking-widest text-center px-2 pointer-events-none">
+                  Subir Audio
+                </span>
+              </div>
+            </label>
             
             <div className="flex flex-col items-center mt-6 space-y-2">
               <p className="text-gray-500 text-xs text-center max-w-xs">
@@ -579,7 +599,7 @@ export default function Home() {
                       </div>
 
                       <div className="mt-8 sm:mt-10 text-[#A69B85] text-[10px] sm:text-xs font-bold tracking-widest flex items-center gap-2">
-                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clipRule="evenodd"></path></svg>
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 100-2h-2V7z" clipRule="evenodd"></path></svg>
                         GENERADO POR TEODOC | RPM MINISTRY
                       </div>
                     </div>
@@ -632,7 +652,7 @@ export default function Home() {
 
       {/* FOOTER */}
       <footer className="w-full text-center py-5 sm:py-6 text-[10px] sm:text-xs text-gray-500 font-medium tracking-wide z-10 mt-auto px-4 space-y-1">
-        <p>1.47 beta (Selector Nativo + XHR con Progreso Real)</p>
+        <p>1.48 beta (Arquitectura WebKit segura: Label Wrapper y File a Blob)</p>
       </footer>
     </div>
   );
