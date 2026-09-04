@@ -107,14 +107,17 @@ export default function Home() {
   };
 
   // ---------------------------------------------------------------------------
-  // INTERCEPCIÓN MULTIPLE: DETECTAR ARCHIVO AL REGRESAR DEL SELECTOR iOS
+  // INTERCEPCIÓN MULTIPLE Y CHEQUEO INICIAL iOS
   // ---------------------------------------------------------------------------
   useEffect(() => {
     const input = fileInputRef.current;
     if (!input) return;
 
     const processFileFromInput = (source: string) => {
-      const file = input.files?.[0];
+      // Extracción explícita para evitar falsos positivos
+      const file = input.files && input.files.length > 0 
+        ? input.files[0] 
+        : null;
 
       console.log(`[TeoDoc][iOS] ${source}:`, {
         hasFile: !!file,
@@ -162,6 +165,12 @@ export default function Home() {
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('focus', handleFocus);
     window.addEventListener('pageshow', handlePageShow);
+
+    // iOS Safari puede restaurar el archivo en input.files sin emitir
+    // nuevamente un evento change. Comprobar el estado inmediatamente.
+    setTimeout(() => {
+      processFileFromInput('INITIAL_CHECK');
+    }, 500);
 
     return () => {
       input.removeEventListener('change', handleChange);
@@ -444,7 +453,7 @@ export default function Home() {
         )}
 
         {/* ========================================================================= */}
-        {/* FASE A: BOTÓN NATIVO VISIBLE (Se oculta al seleccionar archivo) */}
+        {/* FASE A: BOTÓN NATIVO VISIBLE (El input no se oculta de la estructura, solo visualmente) */}
         {/* ========================================================================= */}
         {!loading && !resultado && (
           <div className="w-full max-w-lg animate-fade-in">
@@ -496,7 +505,7 @@ export default function Home() {
         )}
 
         {/* ========================================================================= */}
-        {/* FASE B: TARJETA DE ARCHIVO Y BOTÓN "ANALIZAR PRÉDICA" */}
+        {/* FASE B: TARJETA DE ARCHIVO (BOTÓN INTEGRADO) */}
         {/* ========================================================================= */}
         {selectedFile && !loading && !resultado && (
           <div className="mt-4 sm:mt-8 w-full max-w-lg animate-fade-in pb-6">
@@ -794,7 +803,7 @@ export default function Home() {
 
       {/* FOOTER */}
       <footer className="w-full text-center py-5 sm:py-6 text-[10px] sm:text-xs text-gray-500 font-medium tracking-wide z-10 mt-auto px-4 space-y-1">
-        <p>1.64 beta (Super Malla de Eventos de Ciclo de Vida iOS Safari)</p>
+        <p>1.65 beta (Initial Check iOS Safari Fix)</p>
       </footer>
     </div>
   );
