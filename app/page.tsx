@@ -21,13 +21,14 @@ const promesasBiblicas = [
 ];
 
 export default function Home() {
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [resultado, setResultado] = useState<PredicaAnalisis | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [versoIndex, setVersoIndex] = useState(0);
   
+  // LA FUENTE DE VERDAD ABSOLUTA
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const infografiaRef = useRef<HTMLDivElement>(null);
 
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
@@ -61,77 +62,8 @@ export default function Home() {
     }
   };
 
-  const formatearTamaño = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
-
   // ---------------------------------------------------------------------------
-  // FASE 1: CAPTURA DOM NATIVA (Bypass total de los eventos de React en Safari)
-  // Crea un input temporal inyectado directo al HTML del navegador.
-  // ---------------------------------------------------------------------------
-  const handleNativeDOMClick = () => {
-    setError(null);
-
-    // 1. Limpiamos cualquier input fantasma anterior
-    const existingInput = document.getElementById('ios-native-file-input');
-    if (existingInput) document.body.removeChild(existingInput);
-
-    // 2. Creamos el input con JS puro
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.id = 'ios-native-file-input';
-    // Permitimos todo en el selector nativo para que iOS no descarte en silencio
-    input.accept = ".mp3,.wav,.m4a,.aac,.flac,.ogg,.mp4,.caf,.wma,audio/*";
-    
-    // 3. Lo escondemos pero lo mantenemos en el flujo visual del navegador
-    input.style.position = 'absolute';
-    input.style.left = '-9999px';
-    input.style.opacity = '0';
-
-    // 4. Lo inyectamos físicamente en la raíz del documento
-    document.body.appendChild(input);
-
-    // 5. Escuchamos los eventos a nivel navegador
-    const handleSelection = (e: Event) => {
-      const target = e.target as HTMLInputElement;
-      if (target.files && target.files.length > 0) {
-        const file = target.files[0];
-        
-        // Validación post-captura (evita bloqueos previos del OS)
-        const validExtensions = ["mp3", "wav", "m4a", "aac", "flac", "ogg", "mp4", "caf", "wma"];
-        const extension = file.name.slice((file.name.lastIndexOf(".") - 1 >>> 0) + 2).toLowerCase();
-        
-        if (!validExtensions.includes(extension) && !file.type.startsWith('audio/') && !file.type.startsWith('video/')) {
-          setError("Formato no reconocido. Usa archivos de audio.");
-        } else {
-          // Entregamos el archivo crudo y seguro al estado de React
-          setSelectedFile(file);
-          setError(null);
-        }
-      }
-
-      // 6. Destruimos el input temporal para mantener limpia la memoria
-      setTimeout(() => {
-        if (document.body.contains(input)) {
-          document.body.removeChild(input);
-        }
-      }, 500);
-    };
-
-    // Safari iOS requiere escuchar ambos para mayor confiabilidad
-    input.addEventListener('change', handleSelection);
-    input.addEventListener('input', handleSelection);
-
-    // 7. Simular clic nativo
-    input.click();
-  };
-
-  // ---------------------------------------------------------------------------
-  // FASE 2: MOTOR DE SUBIDA CLOUDINARY
+  // MOTOR DE SUBIDA DE DOBLE RUTA (Cloudinary /video/upload)
   // ---------------------------------------------------------------------------
   const uploadNormal = async (file: File) => {
     const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'antbfat3';
@@ -197,11 +129,18 @@ export default function Home() {
   }
 
   // ---------------------------------------------------------------------------
-  // FASE 3: EL PIPELINE COMPLETO (Se activa con el botón explícito de Análisis)
+  // EL PIPELINE COMPLETO (Se activa con el botón "Analizar")
   // ---------------------------------------------------------------------------
   const executeAnalysis = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedFile) return;
+    
+    // EXTRACCIÓN NATIVA DIRECTA (Bypass del React State "onChange" Bug en Safari)
+    const fileToProcess = fileInputRef.current?.files?.[0];
+
+    if (!fileToProcess) {
+      setError("⚠️ Por favor selecciona un archivo de audio primero.");
+      return;
+    }
 
     setLoading(true);
     setProgress(0);
@@ -211,12 +150,12 @@ export default function Home() {
 
     try {
       let audioUrl = "";
-      if (selectedFile.size <= 104857600) { // <= 100 MB (upload normal)
+      if (fileToProcess.size <= 104857600) { // <= 100 MB (upload normal)
         setProgress(15);
-        audioUrl = await uploadNormal(selectedFile);
+        audioUrl = await uploadNormal(fileToProcess);
         setProgress(25);
       } else {
-        audioUrl = await uploadChunked(selectedFile); // > 100 MB (chunked retry)
+        audioUrl = await uploadChunked(fileToProcess); // > 100 MB (chunked retry)
       }
 
       setProgress(30);
@@ -257,17 +196,11 @@ export default function Home() {
     }
   };
 
-  const clearFile = () => {
-    setSelectedFile(null); 
-    setError(null); 
-    setProgress(0);
-  };
-
   const nuevoAnalisis = () => {
-    setSelectedFile(null); 
     setResultado(null); 
     setError(null); 
     setProgress(0);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const descargarInfografia = async () => {
@@ -380,56 +313,52 @@ export default function Home() {
           </div>
         )}
 
+        {/* ----------------------------------------------------------------------
+            PRUEBA DE AISLAMIENTO: FORMULARIO PERMANENTE Y EXPLÍCITO
+            ---------------------------------------------------------------------- */}
         {!loading && !resultado && (
-          <div className="flex flex-col items-center w-full max-w-lg relative z-20 animate-fade-in">
-            
-            {/* ESTADO 1: BOTÓN DE SUBIDA (Activa la función JS Nativa) */}
-            {!selectedFile ? (
-              <div className="flex flex-col items-center w-full">
-                <button
-                  type="button"
-                  onClick={handleNativeDOMClick}
-                  className="relative flex flex-col items-center justify-center w-32 h-32 sm:w-40 sm:h-40 md:w-44 md:h-44 rounded-full bg-purple-600 hover:bg-purple-500 shadow-xl shadow-purple-500/20 hover:scale-105 transition-all duration-300 cursor-pointer outline-none group"
-                >
-                  <svg className="w-12 h-12 text-white mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
-                  </svg>
-                  <span className="text-xs font-bold text-white uppercase tracking-widest text-center px-2">Subir Audio</span>
-                </button>
-                <p className="text-gray-500 text-xs mt-6 text-center max-w-xs">
-                  Soporta MP3, WAV, M4A, FLAC, AAC, OGG. <br/> Archivos de hasta 500 MB.
-                </p>
-              </div>
-            ) : (
-              // ESTADO 2: ARCHIVO RECIBIDO (Confirmación visual explícita)
-              <form onSubmit={executeAnalysis} className="flex flex-col items-center animate-fade-in w-full">
-                
-                <div className="bg-[#1A1D27] border-2 border-emerald-500 p-6 rounded-3xl mb-6 flex flex-col items-center justify-center w-full max-w-sm shadow-lg shadow-emerald-500/20 text-center">
-                  <span className="text-4xl mb-3">✅</span>
-                  <span className="text-lg font-bold text-emerald-400 tracking-widest mb-2">ARCHIVO RECIBIDO</span>
-                  <span className="text-sm text-white font-mono break-all px-2">{selectedFile.name}</span>
-                  <span className="text-xs text-gray-400 mt-2 bg-black/30 px-3 py-1 rounded-full">{formatearTamaño(selectedFile.size)}</span>
-                  
-                  <button 
-                    type="button"
-                    onClick={clearFile}
-                    className="mt-4 text-xs text-gray-400 hover:text-red-400 underline decoration-gray-600 hover:decoration-red-400 transition-colors"
-                  >
-                    Elegir otro archivo
-                  </button>
-                </div>
+          <form onSubmit={executeAnalysis} className="flex flex-col items-center w-full max-w-lg relative z-20 animate-fade-in">
+            <div className="w-full bg-[#1A1D27] border border-purple-500/30 rounded-3xl p-6 sm:p-8 shadow-2xl flex flex-col items-center">
+              
+              <h3 className="text-lg font-bold text-white mb-2 uppercase tracking-widest text-center">
+                Paso 1: Seleccionar Audio
+              </h3>
+              <p className="text-gray-500 text-xs text-center mb-6">
+                El nombre de tu archivo aparecerá al lado del botón.
+              </p>
+              
+              {/* EL INPUT NATIVO REAL Y VISIBLE */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                // onChange ya no controla el estado de React. Safari manda.
+                className="block w-full text-sm text-gray-400 
+                  file:mr-4 file:py-3 file:px-6 
+                  file:rounded-full file:border-0 
+                  file:text-sm file:font-bold 
+                  file:bg-purple-600 file:text-white 
+                  hover:file:bg-purple-500 cursor-pointer mb-8"
+              />
 
-                <button
-                  type="submit"
-                  className="w-full max-w-sm py-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-lg shadow-[0_0_30px_rgba(16,185,129,0.4)] transition-all hover:scale-[1.02]"
-                >
-                  Analizar Predicación
-                </button>
-              </form>
-            )}
+              <h3 className="text-lg font-bold text-white mb-4 uppercase tracking-widest text-center border-t border-white/10 pt-6 w-full">
+                Paso 2: Procesar
+              </h3>
 
-            {error && <div className="mt-8 px-5 py-3 bg-red-900/30 border border-red-500/50 rounded-xl text-red-200 text-sm w-full max-w-sm text-center animate-fade-in">{error}</div>}
-          </div>
+              {/* BOTÓN DE ANÁLISIS SIEMPRE VISIBLE */}
+              <button
+                type="submit"
+                className="w-full py-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-lg shadow-[0_0_30px_rgba(16,185,129,0.4)] transition-all hover:scale-[1.02]"
+              >
+                Analizar Predicación
+              </button>
+
+              <p className="text-gray-500 text-xs mt-6 text-center max-w-xs">
+                Soporta archivos de audio y video. <br/> Tamaño límite: 500 MB.
+              </p>
+            </div>
+
+            {error && <div className="mt-8 px-5 py-3 bg-red-900/30 border border-red-500/50 rounded-xl text-red-200 text-sm w-full text-center animate-fade-in">{error}</div>}
+          </form>
         )}
 
         {/* ESTADO DE CARGA */}
@@ -444,7 +373,7 @@ export default function Home() {
                 {progress <= 25 ? 'Asegurando audio en la nube...' : progress <= 50 ? 'Extrayendo texto...' : 'Analizando teología...'}
               </span>
               <span className="text-[10px] text-gray-500 font-normal">
-                {selectedFile ? `Procesando: ${selectedFile.name}` : ''}
+                {fileInputRef.current?.files?.[0] ? `Procesando: ${fileInputRef.current.files[0].name}` : 'Procesando archivo...'}
               </span>
             </div>
 
@@ -678,7 +607,7 @@ export default function Home() {
 
       {/* FOOTER */}
       <footer className="w-full text-center py-5 sm:py-6 text-[10px] sm:text-xs text-gray-500 font-medium tracking-wide z-10 mt-auto px-4 space-y-1">
-        <p>1.33 beta (Captura DOM Nativa)</p>
+        <p>1.34 beta (Bypass React State Bug)</p>
       </footer>
     </div>
   );
