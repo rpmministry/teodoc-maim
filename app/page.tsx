@@ -74,7 +74,7 @@ export default function Home() {
   };
 
   // ---------------------------------------------------------------------------
-  // ETAPA 1: SELECCIÓN NATIVA DIRECTA (Input persistente para Safari iOS)
+  // ETAPA 1: SELECCIÓN NATIVA DIRECTA
   // ---------------------------------------------------------------------------
   const handleFileSelected = (file: File) => {
     if (!file) return;
@@ -107,31 +107,69 @@ export default function Home() {
   };
 
   // ---------------------------------------------------------------------------
-  // INTERCEPCIÓN DE EVENTOS NATIVOS DOM (Bypass React Synthetic Events Bug iOS)
+  // INTERCEPCIÓN MULTIPLE: DETECTAR ARCHIVO AL REGRESAR DEL SELECTOR iOS
   // ---------------------------------------------------------------------------
   useEffect(() => {
     const input = fileInputRef.current;
     if (!input) return;
 
-    const processNativeFile = () => {
+    const processFileFromInput = (source: string) => {
       const file = input.files?.[0];
-      if (!file) return;
 
-      console.log('[TeoDoc][iOS] FILE EVENT NATIVO:', {
-        name: file.name,
-        type: file.type,
-        size: file.size,
+      console.log(`[TeoDoc][iOS] ${source}:`, {
+        hasFile: !!file,
+        name: file?.name || null,
+        type: file?.type || null,
+        size: file?.size || 0,
       });
+
+      if (!file) return;
 
       handleFileSelected(file);
     };
 
-    input.addEventListener('change', processNativeFile);
-    input.addEventListener('input', processNativeFile);
+    const handleChange = () => {
+      processFileFromInput('CHANGE');
+    };
+
+    const handleInput = () => {
+      processFileFromInput('INPUT');
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        setTimeout(() => {
+          processFileFromInput('VISIBILITY');
+        }, 300);
+      }
+    };
+
+    const handleFocus = () => {
+      setTimeout(() => {
+        processFileFromInput('FOCUS');
+      }, 300);
+    };
+
+    const handlePageShow = () => {
+      setTimeout(() => {
+        processFileFromInput('PAGESHOW');
+      }, 300);
+    };
+
+    input.addEventListener('change', handleChange);
+    input.addEventListener('input', handleInput);
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+    window.addEventListener('pageshow', handlePageShow);
 
     return () => {
-      input.removeEventListener('change', processNativeFile);
-      input.removeEventListener('input', processNativeFile);
+      input.removeEventListener('change', handleChange);
+      input.removeEventListener('input', handleInput);
+
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('pageshow', handlePageShow);
     };
   }, []);
 
@@ -406,7 +444,7 @@ export default function Home() {
         )}
 
         {/* ========================================================================= */}
-        {/* FASE A: BOTÓN NATIVO VISIBLE (El input no se oculta de la estructura, solo visualmente) */}
+        {/* FASE A: BOTÓN NATIVO VISIBLE (Se oculta al seleccionar archivo) */}
         {/* ========================================================================= */}
         {!loading && !resultado && (
           <div className="w-full max-w-lg animate-fade-in">
@@ -458,7 +496,7 @@ export default function Home() {
         )}
 
         {/* ========================================================================= */}
-        {/* FASE B: TARJETA DE ARCHIVO (BOTÓN INTEGRADO) */}
+        {/* FASE B: TARJETA DE ARCHIVO Y BOTÓN "ANALIZAR PRÉDICA" */}
         {/* ========================================================================= */}
         {selectedFile && !loading && !resultado && (
           <div className="mt-4 sm:mt-8 w-full max-w-lg animate-fade-in pb-6">
@@ -756,7 +794,7 @@ export default function Home() {
 
       {/* FOOTER */}
       <footer className="w-full text-center py-5 sm:py-6 text-[10px] sm:text-xs text-gray-500 font-medium tracking-wide z-10 mt-auto px-4 space-y-1">
-        <p>1.63 beta (Fase A Persistente + Event Listener Nativo DOM iOS Safari Fix)</p>
+        <p>1.64 beta (Super Malla de Eventos de Ciclo de Vida iOS Safari)</p>
       </footer>
     </div>
   );
