@@ -73,7 +73,7 @@ export default function Home() {
   };
 
   // ---------------------------------------------------------------------------
-  // ETAPA 1: SELECCIÓN NATIVA DIRECTA (SIN CAMBIOS, YA FUNCIONA EN iOS)
+  // ETAPA 1: SELECCIÓN NATIVA DIRECTA
   // ---------------------------------------------------------------------------
   const handleFileSelected = (file: File) => {
     if (!file) return;
@@ -149,7 +149,7 @@ export default function Home() {
       type: file.type,
     });
 
-    // 1. Lectura del archivo a memoria (Workaround Safari WebKit)
+    // 1. Lectura del archivo a memoria
     const buffer = await file.arrayBuffer();
     console.log('[TeoDoc] CLOUDINARY: ARRAYBUFFER OK', {
       bytes: buffer.byteLength,
@@ -181,7 +181,6 @@ export default function Home() {
 
     console.log('[TeoDoc] CLOUDINARY: RESPUESTA COMPLETA', {
       status: response.status,
-      ok: response.ok,
       body: responseText,
     });
 
@@ -214,7 +213,7 @@ export default function Home() {
   };
 
   // ---------------------------------------------------------------------------
-  // ETAPA 3: PIPELINE BACKEND (Transcripción y Análisis IA - No modificar)
+  // ETAPA 3: PIPELINE BACKEND (Transcripción y Análisis IA)
   // ---------------------------------------------------------------------------
   const startAnalysisPipeline = async (audioUrl: string) => {
     try {
@@ -367,8 +366,8 @@ export default function Home() {
 
       <main className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 z-10 w-full max-w-5xl mx-auto -mt-4 sm:-mt-6 relative">
         
-        {/* TÍTULO PRINCIPAL */}
-        {!loading && !resultado && (
+        {/* TÍTULO PRINCIPAL (Se oculta al seleccionar archivo) */}
+        {!selectedFile && !loading && !resultado && (
           <div className="text-center space-y-3 sm:space-y-4 mb-8 sm:mb-12 animate-fade-in-up">
             <h1 className="text-3xl sm:text-4xl md:text-6xl font-extrabold tracking-tight text-white drop-shadow-sm px-2">Analiza tus prédicas.</h1>
             <p className="text-xs sm:text-sm md:text-base text-gray-400 max-w-lg mx-auto font-medium px-4">Transcripción instantánea y extracción de estructura teológica impulsada por IA.</p>
@@ -376,9 +375,9 @@ export default function Home() {
         )}
 
         {/* ========================================================================= */}
-        {/* FASE A: BOTÓN NATIVO VISIBLE (Sin accepts ni labels) */}
+        {/* FASE A: BOTÓN NATIVO VISIBLE (Se oculta al seleccionar archivo) */}
         {/* ========================================================================= */}
-        {!loading && !resultado && !selectedFile && (
+        {!selectedFile && !loading && !resultado && (
           <div className="w-full max-w-lg animate-fade-in">
             <div className="relative">
               <input
@@ -716,7 +715,7 @@ export default function Home() {
 
       {/* FOOTER */}
       <footer className="w-full text-center py-5 sm:py-6 text-[10px] sm:text-xs text-gray-500 font-medium tracking-wide z-10 mt-auto px-4 space-y-1">
-        <p>1.57 beta (Diagnóstico Detallado Cloudinary Client-Side)</p>
+        <p>1.58 beta (Fase A Condicionada Fix y Diagnóstico Cloudinary Activo)</p>
       </footer>
     </div>
   );
