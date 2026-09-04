@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>TeoDoc iOS File Test</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      padding: 24px;
+      background: #0b0c10;
+      color: white;
+      font-family: Arial, sans-serif;
+      min-height: 100vh;
+    }
+    .container {
+      max-width: 700px;
+      margin: 0 auto;
+    }
+    h1 {
+      font-size: 28px;
+      margin-bottom: 8px;
+    }
+    p {
+      color: #a0aec0;
+      line-height: 1.5;
+    }
+    .test {
+      margin-top: 24px;
+      padding: 20px;
+      border: 1px solid #333;
+      border-radius: 16px;
+      background: #151821;
+    }
+    .button {
+      display: block;
+      width: 100%;
+      padding: 20px;
+      border-radius: 12px;
+      background: #8b5cf6;
+      color: white;
+      font-weight: bold;
+      text-align: center;
+      cursor: pointer;
+      margin-top: 16px;
+    }
+    input[type="file"] {
+      display: block;
+      width: 100%;
+      margin-top: 16px;
+      padding: 12px;
+      background: #202431;
+      color: white;
+      border-radius: 10px;
+      border: 1px solid #444;
+    }
+    .result {
+      margin-top: 20px;
+      padding: 16px;
+      border-radius: 12px;
+      background: #090b10;
+      border: 1px solid #2d3748;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-family: monospace;
+      font-size: 13px;
+    }
+    .ok {
+      color: #34d399;
+    }
+    .error {
+      color: #f87171;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>Prueba de archivos — iPhone/iPad</h1>
+    <p>
+      Esta página NO utiliza React, Cloudinary, Vercel Functions ni ningún sistema de subida.
+      Solo comprueba si Safari entrega correctamente el archivo seleccionado a una página web.
+    </p>
+
+    <div class="test">
+      <h2>Prueba A — input nativo</h2>
+      <input id="fileA" type="file" />
+      <div id="resultA" class="result">Esperando selección...</div>
+    </div>
+
+    <div class="test">
+      <h2>Prueba B — audio/video</h2>
+      <label class="button" for="fileB">SELECCIONAR AUDIO</label>
+      <input id="fileB" type="file" accept="audio/*,video/*" />
+      <div id="resultB" class="result">Esperando selección...</div>
+    </div>
+  </div>
+
+  <script>
+    function mostrarArchivo(resultElement, archivo, evento) {
+      if (!archivo) {
+        resultElement.innerHTML = '<span class="error">EVENTO RECIBIDO PERO SIN ARCHIVO</span>';
+        return;
+      }
+
+      resultElement.innerHTML =
+        '<span class="ok">ARCHIVO RECIBIDO</span>\n\n' +
+        'Evento: ' + evento + '\n' +
+        'Nombre: ' + archivo.name + '\n' +
+        'Tipo: ' + (archivo.type || '(vacío)') + '\n' +
+        'Tamaño: ' + archivo.size + ' bytes\n' +
+        'Tamaño MB: ' + (archivo.size / 1024 / 1024).toFixed(2) + '\n' +
+        'Última modificación: ' + archivo.lastModified;
+    }
+
+    function configurar(inputId, resultId) {
+      const input = document.getElementById(inputId);
+      const result = document.getElementById(resultId);
+
+      input.addEventListener('input', function(event) {
+        console.log('[TEST] INPUT EVENT', inputId, input.files);
+        const file = input.files && input.files[0];
+        mostrarArchivo(result, file, 'input');
+      });
+
+      input.addEventListener('change', function(event) {
+        console.log('[TEST] CHANGE EVENT', inputId, input.files);
+        const file = input.files && input.files[0];
+        mostrarArchivo(result, file, 'change');
+      });
+
+      input.addEventListener('cancel', function() {
+        console.log('[TEST] CANCEL EVENT', inputId);
+        result.innerHTML = '<span class="error">CANCEL EVENT</span>';
+      });
+    }
+
+    configurar('fileA', 'resultA');
+    configurar('fileB', 'resultB');
+
+    console.log('[TEST] Página iOS cargada correctamente');
+  </script>
+</body>
+</html>
