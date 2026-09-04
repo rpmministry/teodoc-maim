@@ -21,9 +21,12 @@ const promesasBiblicas = [
 ];
 
 export default function Home() {
+  // ESTADOS DE LA NUEVA UX (SELECCIÓN SEPARADA DEL PROCESAMIENTO)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [statusText, setStatusText] = useState<string>('Preparando sistema...');
+  const [statusText, setStatusText] = useState<string>('');
+  
   const [resultado, setResultado] = useState<PredicaAnalisis | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [versoIndex, setVersoIndex] = useState(0);
@@ -64,13 +67,10 @@ export default function Home() {
   };
 
   // ---------------------------------------------------------------------------
-  // SELECCIÓN NATIVA DE ARCHIVOS
-  // Listener DOM nativo para máxima compatibilidad con Safari/iOS.
+  // ETAPA 1: SELECCIÓN NATIVA DE ARCHIVOS (Sin Subida)
   // ---------------------------------------------------------------------------
-  const handleFileSelected = async (file: File) => {
-    if (!file) {
-      return;
-    }
+  const handleFileSelected = (file: File) => {
+    if (!file) return;
 
     console.log('[TeoDoc] ARCHIVO SELECCIONADO', {
       name: file.name,
@@ -80,7 +80,6 @@ export default function Home() {
     });
 
     const maxSize = 500 * 1024 * 1024;
-
     if (file.size > maxSize) {
       setError('El archivo supera el límite permitido de 500 MB.');
       return;
@@ -97,26 +96,14 @@ export default function Home() {
 
     setError(null);
     setResultado(null);
-    setLoading(true);
-    setProgress(2);
-    setStatusText('Archivo seleccionado. Preparando subida...');
-
-    try {
-      await uploadFileToCloudinary(file);
-    } catch (error: any) {
-      console.error('[TeoDoc] ERROR DE SUBIDA:', error);
-      setLoading(false);
-      setProgress(0);
-      setError(error?.message || 'No fue posible subir el archivo.');
-    }
+    // IMPORTANTE: NO SETEAMOS LOADING A TRUE AQUÍ. 
+    // SOLO GUARDAMOS EL ARCHIVO PARA MOSTRAR LA TARJETA.
+    setSelectedFile(file);
   };
 
   useEffect(() => {
     const input = fileInputRef.current;
-
-    if (!input) {
-      return;
-    }
+    if (!input) return;
 
     const onNativeChange = (event: Event) => {
       const target = event.target as HTMLInputElement;
@@ -129,41 +116,55 @@ export default function Home() {
         type: file?.type,
       });
 
-      if (!file) {
-        return;
-      }
-
+      if (!file) return;
       handleFileSelected(file);
     };
 
-    /*
-     * Listener DOM nativo.
-     * Evitamos depender del sistema de eventos de React
-     * para la selección de archivos en iOS.
-     */
     input.addEventListener('change', onNativeChange);
-
     return () => {
       input.removeEventListener('change', onNativeChange);
     };
   }, []);
 
-  // ---------------------------------------------------------------------------
-  // SUBIDA CLIENT-SIDE A CLOUDINARY (Funcional en Windows)
-  // ---------------------------------------------------------------------------
-  const uploadFileToCloudinary = async (file: File): Promise<void> => {
-    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'antbfat3';
-    const uploadPreset = 'teodoc_preset';
+  const formatearTamaño = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
 
+  const handleCambiarArchivo = () => {
+    setSelectedFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  // ---------------------------------------------------------------------------
+  // ETAPA 2: SUBIDA A CLOUDINARY AL DAR CLICK EN "ANALIZAR"
+  // ---------------------------------------------------------------------------
+  const handleAnalizarClick = async () => {
+    if (!selectedFile) return;
+
+    setError(null);
+    setLoading(true);
     setProgress(5);
     setStatusText('Preparando archivo...');
 
-    console.log('[TeoDoc] Preparando subida:', {
-      name: file.name,
-      type: file.type,
-      size: file.size,
-      sizeMB: (file.size / 1024 / 1024).toFixed(2),
-    });
+    try {
+      await uploadFileToCloudinary(selectedFile);
+    } catch (err: any) {
+      console.error('[TeoDoc] ERROR DE SUBIDA:', err);
+      setLoading(false);
+      setProgress(0);
+      setError(err?.message || 'No fue posible subir el archivo.');
+    }
+  };
+
+  const uploadFileToCloudinary = async (file: File): Promise<void> => {
+    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'antbfat3';
+    const uploadPreset = 'teodoc_preset';
 
     const buffer = await file.arrayBuffer();
     const safeBlob = new Blob([buffer], { type: file.type || 'application/octet-stream' });
@@ -191,9 +192,7 @@ export default function Home() {
         if (data?.error?.message) {
           message = data.error.message;
         }
-      } catch {
-        // La respuesta no era JSON
-      }
+      } catch { /* Ignorar */ }
       throw new Error(message);
     }
 
@@ -208,10 +207,7 @@ export default function Home() {
       throw new Error('Cloudinary no devolvió la URL segura del archivo.');
     }
 
-    console.log('[TeoDoc] SUBIDA CLOUDINARY EXITOSA', {
-      secure_url: data.secure_url,
-      public_id: data.public_id,
-    });
+    console.log('[TeoDoc] SUBIDA CLOUDINARY EXITOSA', { secure_url: data.secure_url });
 
     setProgress(30);
     setStatusText('Archivo recibido. Extrayendo transcripción...');
@@ -220,7 +216,7 @@ export default function Home() {
   };
 
   // ---------------------------------------------------------------------------
-  // PIPELINE BACKEND: TRANSCRIPCIÓN Y ANÁLISIS
+  // ETAPA 3: PIPELINE BACKEND (Transcripción y Análisis IA)
   // ---------------------------------------------------------------------------
   const startAnalysisPipeline = async (audioUrl: string) => {
     try {
@@ -267,6 +263,10 @@ export default function Home() {
     setResultado(null); 
     setError(null); 
     setProgress(0);
+    setSelectedFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   const descargarInfografia = async () => {
@@ -343,10 +343,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-[#0B0C10] bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#1C1635] via-[#0B0C10] to-[#070709] text-white font-sans selection:bg-purple-500/30 flex flex-col relative overflow-x-hidden">
       
-      {/* 
-        INPUT MAESTRO NATIVO:
-        Sin handlers de React, puro DOM.
-      */}
+      {/* INPUT NATIVO MAESTRO */}
       <input
         ref={fileInputRef}
         id="teodoc-file-input"
@@ -385,6 +382,7 @@ export default function Home() {
 
       <main className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 z-10 w-full max-w-5xl mx-auto -mt-4 sm:-mt-6 relative">
         
+        {/* TÍTULO PRINCIPAL (Oculto solo cuando está CARGANDO o hay RESULTADO) */}
         {!loading && !resultado && (
           <div className="text-center space-y-3 sm:space-y-4 mb-8 sm:mb-12 animate-fade-in-up">
             <h1 className="text-3xl sm:text-4xl md:text-6xl font-extrabold tracking-tight text-white drop-shadow-sm px-2">Analiza tus prédicas.</h1>
@@ -392,10 +390,11 @@ export default function Home() {
           </div>
         )}
 
-        {/* SELECTOR NATIVO MEDIANTE LABEL (Puro DOM sin React onClick) */}
-        {!loading && !resultado && (
+        {/* ========================================================================= */}
+        {/* FASE A: BOTÓN DE SUBIDA (Solo visible si NO hay archivo seleccionado) */}
+        {/* ========================================================================= */}
+        {!loading && !resultado && !selectedFile && (
           <div className="flex flex-col items-center w-full max-w-lg relative z-20 animate-fade-in">
-            
             <label
               htmlFor="teodoc-file-input"
               className="relative block w-32 h-32 sm:w-40 sm:h-40 md:w-44 md:h-44 cursor-pointer"
@@ -414,29 +413,84 @@ export default function Home() {
                     d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 01-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A6 6 0 009 10.172V5L8 4z"
                   />
                 </svg>
-
                 <span className="text-xs font-bold text-white uppercase tracking-widest text-center px-2 pointer-events-none">
                   Subir Audio
                 </span>
               </div>
             </label>
-            
             <div className="flex flex-col items-center mt-6 space-y-2">
               <p className="text-gray-500 text-xs text-center max-w-xs">
                 Soporta MP3, WAV, M4A, FLAC, AAC. <br/> Archivos de hasta 500 MB.
               </p>
             </div>
-
-            {error && (
-              <div className="mt-6 px-5 py-4 bg-red-950/80 border-2 border-red-500 rounded-2xl text-red-200 text-xs w-full max-w-sm shadow-2xl animate-fade-in space-y-2 text-center">
-                <p className="font-bold uppercase tracking-wider text-red-400">🚨 Error de Subida:</p>
-                <p className="font-mono bg-black/40 p-2 rounded break-all">{error}</p>
-              </div>
-            )}
           </div>
         )}
 
-        {/* ESTADO DE CARGA Y DIAGNÓSTICO */}
+        {/* ========================================================================= */}
+        {/* FASE B: TARJETA DE ARCHIVO (Archivo seleccionado, esperando confirmación) */}
+        {/* ========================================================================= */}
+        {!loading && !resultado && selectedFile && (
+          <div className="flex flex-col items-center w-full max-w-lg relative z-20 animate-fade-in space-y-6">
+            
+            <div className="w-full bg-[#1A1D27] border border-gray-800 rounded-2xl p-6 shadow-2xl relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 to-indigo-500"></div>
+              
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center shrink-0 border border-purple-500/20">
+                  <svg className="w-6 h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"></path></svg>
+                </div>
+                <div className="flex-1 overflow-hidden">
+                  <h3 className="text-white font-bold text-base truncate" title={selectedFile.name}>{selectedFile.name}</h3>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-xs font-mono text-gray-400 bg-gray-800/50 px-2 py-0.5 rounded">
+                      {selectedFile.name.split('.').pop()?.toUpperCase() || 'AUDIO'}
+                    </span>
+                    <span className="text-xs text-gray-500 font-medium">·</span>
+                    <span className="text-xs text-gray-400 font-medium">{formatearTamaño(selectedFile.size)}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6 flex flex-col sm:flex-row gap-3">
+                <a 
+                  href={URL.createObjectURL(selectedFile)} 
+                  download={selectedFile.name}
+                  className="flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 text-xs font-bold transition-all"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4-4m0 0l-4-4m4 4V4"></path></svg>
+                  Descargar Archivo
+                </a>
+                <button 
+                  onClick={handleCambiarArchivo}
+                  className="flex-1 flex items-center justify-center gap-2 py-2 px-4 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 text-xs font-bold transition-all"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                  Cambiar Archivo
+                </button>
+              </div>
+            </div>
+
+            <button
+              onClick={handleAnalizarClick}
+              className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-full font-black text-sm uppercase tracking-widest shadow-xl shadow-purple-500/25 hover:scale-105 transition-all"
+            >
+              Analizar Prédica
+            </button>
+
+          </div>
+        )}
+
+        {/* ERROR DE SUBIDA (Visible en Etapa A o B) */}
+        {!loading && !resultado && error && (
+          <div className="mt-6 px-5 py-4 bg-red-950/80 border-2 border-red-500 rounded-2xl text-red-200 text-xs w-full max-w-sm shadow-2xl animate-fade-in space-y-2 text-center relative z-20">
+            <p className="font-bold uppercase tracking-wider text-red-400">🚨 Error:</p>
+            <p className="font-mono bg-black/40 p-2 rounded break-all">{error}</p>
+          </div>
+        )}
+
+        {/* ========================================================================= */}
+        {/* FASE C: ESTADO DE CARGA (Procesando el Analizar Prédica) */}
+        {/* ========================================================================= */}
         {loading && (
           <div className="flex flex-col items-center text-center mt-2 w-full px-2 animate-fade-in z-20 relative">
             <div className="w-24 h-24 rounded-full bg-emerald-600 animate-pulse flex items-center justify-center shadow-xl shadow-emerald-500/40 mb-6">
@@ -682,7 +736,7 @@ export default function Home() {
 
       {/* FOOTER */}
       <footer className="w-full text-center py-5 sm:py-6 text-[10px] sm:text-xs text-gray-500 font-medium tracking-wide z-10 mt-auto px-4 space-y-1">
-        <p>1.52 beta (Listener DOM Nativo y Prevención de Desmontaje WebKit)</p>
+        <p>1.53 beta (UX HappyScribe: Selección en 2 Fases)</p>
       </footer>
     </div>
   );
