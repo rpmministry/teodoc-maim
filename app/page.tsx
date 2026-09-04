@@ -80,7 +80,6 @@ export default function Home() {
   const handleFileSelected = (file: File) => {
     if (!file) return;
 
-    // Evitamos re-procesar el mismo archivo múltiples veces en el escáner
     const fileKey = `${file.name}-${file.size}`;
     if (lastProcessedFileRef.current === fileKey) return;
     lastProcessedFileRef.current = fileKey;
@@ -453,6 +452,8 @@ export default function Home() {
                 Cambiar archivo
               </button>
 
+              <p style={{color: 'red', fontSize: '20px'}}>MARCADOR-DE-PRUEBA-123</p>
+
               <button
                 type="button"
                 onClick={handleAnalizarClick}
@@ -721,7 +722,7 @@ export default function Home() {
 
       {/* FOOTER */}
       <footer className="w-full text-center py-5 sm:py-6 text-[10px] sm:text-xs text-gray-500 font-medium tracking-wide z-10 mt-auto px-4 space-y-1">
-        <p>1.68 beta (Diagnóstico de Click en Analizar Prédica)</p>
+        <p>1.69 beta (Test Marker Marcador de Prueba iOS)</p>
       </footer>
     </div>
   );
