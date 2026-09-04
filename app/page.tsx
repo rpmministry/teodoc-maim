@@ -48,14 +48,16 @@ export default function Home() {
   }, [loading]);
 
   // ---------------------------------------------------------------------------
-  // BYPASS TOTAL DE REACT SYNTHETIC EVENTS: LISTENER DOM NATIVO PURO
-  // Atrapa el archivo de Safari directamente a nivel navegador, sin intermediarios.
+  // ARQUITECTURA ROBUSTA DE RETORNO (Focus + VisibilityChange + DOM Inspection)
+  // Resuelve el bug de WebKit donde iOS selecciona el archivo pero omite el "change".
   // ---------------------------------------------------------------------------
   useEffect(() => {
     const input = fileInputRef.current;
     if (!input) return;
 
-    const handleNativeChange = () => {
+    let esperandoRegreso = false;
+
+    const procesarArchivoDetectado = () => {
       const file = input.files?.[0];
       if (!file) return;
 
@@ -64,7 +66,7 @@ export default function Home() {
       setFileSize(file.size);
       setError(null);
 
-      // Auto-start inmediato con diagnóstico observable al 5%
+      // Auto-start inmediato
       setLoading(true);
       setProgress(5);
       setStatusText(`Archivo recibido: ${file.name}. Conectando con la nube...`);
@@ -74,12 +76,35 @@ export default function Home() {
       runPipeline(file);
     };
 
-    input.addEventListener("change", handleNativeChange);
-    input.addEventListener("input", handleNativeChange);
+    const marcarPickerAbierto = () => {
+      esperandoRegreso = true;
+    };
+
+    const verificarRegresoDeSafari = () => {
+      if (!esperandoRegreso) return;
+      esperandoRegreso = false;
+
+      // Breve retardo para que WebKit termine de volcar el archivo al DOM del input
+      setTimeout(procesarArchivoDetectado, 200);
+    };
+
+    // Eventos de control nativos
+    input.addEventListener("click", marcarPickerAbierto);
+    input.addEventListener("change", procesarArchivoDetectado);
+    input.addEventListener("input", procesarArchivoDetectado);
+
+    window.addEventListener("focus", verificarRegresoDeSafari);
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") {
+        verificarRegresoDeSafari();
+      }
+    });
 
     return () => {
-      input.removeEventListener("change", handleNativeChange);
-      input.removeEventListener("input", handleNativeChange);
+      input.removeEventListener("click", marcarPickerAbierto);
+      input.removeEventListener("change", procesarArchivoDetectado);
+      input.removeEventListener("input", procesarArchivoDetectado);
+      window.removeEventListener("focus", verificarRegresoDeSafari);
     };
   }, []);
 
@@ -360,7 +385,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* INPUT PERMANENTE EN EL DOM SIN REACT ONCHANGE PROPS (Controlado por useEffect nativo) */}
+        {/* INPUT PERMANENTE EN EL DOM (Controlado por Focus + VisibilityChange nativo) */}
         <div className={`w-full flex flex-col items-center max-w-lg relative z-20 animate-fade-in ${loading || resultado ? 'hidden' : 'block'}`}>
           <div className="w-full flex flex-col items-center bg-[#1A1D27] border border-purple-500/30 rounded-3xl p-6 sm:p-8 shadow-2xl">
             
@@ -630,7 +655,7 @@ export default function Home() {
             
             {feedbackStatus === 'success' ? (
               <div className="text-green-400 text-center py-8 font-medium">
-                ¡Gracias! Tu mensaje ha sido enviado correctamente.
+                ¡Gracias! Masaje enviado.
               </div>
             ) : (
               <form onSubmit={enviarSugerencia} className="flex flex-col gap-4">
@@ -657,7 +682,7 @@ export default function Home() {
 
       {/* FOOTER */}
       <footer className="w-full text-center py-5 sm:py-6 text-[10px] sm:text-xs text-gray-500 font-medium tracking-wide z-10 mt-auto px-4 space-y-1">
-        <p>1.42 beta (Listener DOM Nativo Puro para Auto-Start)</p>
+        <p>1.42 beta (Detección por Focus/VisibilityChange y DOM Permanente)</p>
       </footer>
     </div>
   );
