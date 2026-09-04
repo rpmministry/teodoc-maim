@@ -306,7 +306,7 @@ export default function Home() {
         doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.setTextColor(colorAcento[0], colorAcento[1], colorAcento[2]);
         doc.text(v.cita, margin + 5, y); y += 5;
         doc.setFont("helvetica", "italic"); doc.setTextColor(80, 80, 80);
-        const vTextoLineas = doc.splitTextToSize(`"${v.texto}"`, pageWidth - margin * 2 - 10);
+        const vTextoLineas = doc.splitTextToSize(`"${v.texto}"`, margin + 5, y, { maxWidth: pageWidth - margin * 2 - 10 });
         doc.text(vTextoLineas, margin + 5, y); y += vTextoLineas.length * 5 + 5;
       });
       y += 5;
@@ -360,7 +360,6 @@ export default function Home() {
         </div>
       </nav>
 
-      {/* REAJUSTE DE LAYOUT MÓVIL: justify-start y padding top/bottom */}
       <main className="flex-1 flex flex-col items-center justify-start px-4 sm:px-6 lg:px-8 z-10 w-full max-w-5xl mx-auto pt-6 sm:pt-10 pb-12 relative">
         
         {/* TÍTULO PRINCIPAL */}
@@ -420,17 +419,22 @@ export default function Home() {
         )}
 
         {/* ========================================================================= */}
-        {/* FASE B: TARJETA DE ARCHIVO Y BOTÓN "ANALIZAR PRÉDICA" */}
+        {/* FASE B: TARJETA DE ARCHIVO (BOTÓN INTEGRADO) */}
         {/* ========================================================================= */}
         {selectedFile && !loading && !resultado && (
           <div className="mt-4 sm:mt-8 w-full max-w-lg animate-fade-in pb-6">
             <div className="bg-[#13161F] border border-purple-500/30 rounded-2xl p-5 shadow-xl">
+              
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-xl bg-purple-600/20 flex items-center justify-center shrink-0">
                   <span className="text-2xl">🎵</span>
                 </div>
+
                 <div className="min-w-0 flex-1">
-                  <p className="text-white font-semibold truncate">{selectedFile.name}</p>
+                  <p className="text-white font-semibold truncate">
+                    {selectedFile.name}
+                  </p>
+
                   <p className="text-gray-400 text-sm mt-1">
                     {selectedFile.type || 'Audio'} · {formatearTamaño(selectedFile.size)}
                   </p>
@@ -444,15 +448,16 @@ export default function Home() {
               >
                 Cambiar archivo
               </button>
-            </div>
 
-            <button
-              type="button"
-              onClick={handleAnalizarClick}
-              className="mt-5 mb-6 w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-purple-500/20 transition-all uppercase tracking-widest text-sm"
-            >
-              Analizar Prédica
-            </button>
+              <button
+                type="button"
+                onClick={handleAnalizarClick}
+                className="mt-5 w-full bg-purple-600 hover:bg-purple-500 active:bg-purple-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-purple-500/20 transition-all uppercase tracking-widest text-sm"
+              >
+                Analizar Prédica
+              </button>
+
+            </div>
           </div>
         )}
 
@@ -712,7 +717,7 @@ export default function Home() {
 
       {/* FOOTER */}
       <footer className="w-full text-center py-5 sm:py-6 text-[10px] sm:text-xs text-gray-500 font-medium tracking-wide z-10 mt-auto px-4 space-y-1">
-        <p>1.60 beta (Layout Movil Justify-Start + Boton Analizar restaurado)</p>
+        <p>1.61 beta (Boton Analizar Integrado en Tarjeta Fase B)</p>
       </footer>
     </div>
   );
