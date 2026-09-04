@@ -21,6 +21,8 @@ const promesasBiblicas = [
 ];
 
 export default function Home() {
+  useEffect(() => {  alert('✅ PASO 1: React hidrató correctamente en este dispositivo');}, []);
+
   // ESTADOS DE UX EN 2 FASES
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
@@ -78,6 +80,7 @@ export default function Home() {
   // ETAPA 1: SELECCIÓN Y VALIDACIÓN
   // ---------------------------------------------------------------------------
   const handleFileSelected = (file: File) => {
+    alert('✅ PASO 2: handleFileSelected SÍ recibió: ' + file.name + ' (' + file.size + ' bytes)');
     if (!file) return;
 
     // Evitamos re-procesar el mismo archivo múltiples veces en el escáner
@@ -378,21 +381,16 @@ export default function Home() {
         )}
 
         {/* ========================================================================= */}
-        {/* FASE A: BOTÓN NATIVO VISIBLE (Se oculta al seleccionar archivo) */}
+        {/* FASE A: BOTÓN NATIVO VISIBLE */}
         {/* ========================================================================= */}
-        {!selectedFile && !loading && !resultado && (
+        {!loading && !resultado && (
           <div className="w-full max-w-lg animate-fade-in">
             <div className="relative">
               <input
                 ref={fileInputRef}
                 id="teodoc-file-input"
                 type="file"
-                onChange={(event) => {
-                  const file = event.target.files?.[0];
-                  if (!file) return;
-                  handleFileSelected(file);
-                }}
-                className="
+                className={`
                   block
                   w-full
                   max-w-lg
@@ -416,18 +414,21 @@ export default function Home() {
                   file:font-bold
                   file:text-white
                   hover:file:bg-purple-500
-                "
+                  ${selectedFile ? 'hidden' : ''}
+                `}
               />
             </div>
 
-            <p className="text-gray-500 text-xs text-center mt-6">
-              Soporta MP3, WAV, M4A, FLAC, AAC. <br/> Archivos de hasta 500 MB.
-            </p>
+            {!selectedFile && (
+              <p className="text-gray-500 text-xs text-center mt-6">
+                Soporta MP3, WAV, M4A, FLAC, AAC. <br/> Archivos de hasta 500 MB.
+              </p>
+            )}
           </div>
         )}
 
         {/* ========================================================================= */}
-        {/* FASE B: TARJETA DE ARCHIVO (BOTÓN INTEGRADO) */}
+        {/* FASE B: TARJETA DE ARCHIVO Y BOTÓN "ANALIZAR PRÉDICA" */}
         {/* ========================================================================= */}
         {selectedFile && !loading && !resultado && (
           <div className="mt-4 sm:mt-8 w-full max-w-lg animate-fade-in pb-6">
