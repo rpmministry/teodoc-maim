@@ -21,8 +21,6 @@ const promesasBiblicas = [
 ];
 
 export default function Home() {
-  useEffect(() => {  alert('✅ PASO 1: React hidrató correctamente en este dispositivo');}, []);
-
   // ESTADOS DE UX EN 2 FASES
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
@@ -80,7 +78,6 @@ export default function Home() {
   // ETAPA 1: SELECCIÓN Y VALIDACIÓN
   // ---------------------------------------------------------------------------
   const handleFileSelected = (file: File) => {
-    alert('✅ PASO 2: handleFileSelected SÍ recibió: ' + file.name + ' (' + file.size + ' bytes)');
     if (!file) return;
 
     // Evitamos re-procesar el mismo archivo múltiples veces en el escáner
@@ -122,11 +119,8 @@ export default function Home() {
       }
     };
 
-    // 1. Polling: Escaneamos activamente cada 500ms. Si Safari inyecta 
-    // silenciosamente el archivo al volver de la RAM, lo atrapamos de inmediato.
     const intervalId = setInterval(scanInputForFiles, 500);
 
-    // 2. Eventos clásicos como red de respaldo
     input.addEventListener('change', scanInputForFiles);
     document.addEventListener('visibilitychange', scanInputForFiles);
     window.addEventListener('focus', scanInputForFiles);
@@ -141,7 +135,7 @@ export default function Home() {
 
   const handleCambiarArchivo = () => {
     setSelectedFile(null);
-    lastProcessedFileRef.current = null; // Reiniciar para permitir seleccionar el mismo archivo
+    lastProcessedFileRef.current = null;
     const input = document.getElementById('teodoc-file-input') as HTMLInputElement | null;
     if (input) input.value = '';
   };
@@ -150,6 +144,7 @@ export default function Home() {
   // ETAPA 2: PROCESAMIENTO A CLOUDINARY
   // ---------------------------------------------------------------------------
   const handleAnalizarClick = async () => {
+    alert('✅ Botón Analizar SÍ se presionó');
     if (!selectedFile) {
       setError('Primero selecciona un archivo.');
       return;
@@ -726,7 +721,7 @@ export default function Home() {
 
       {/* FOOTER */}
       <footer className="w-full text-center py-5 sm:py-6 text-[10px] sm:text-xs text-gray-500 font-medium tracking-wide z-10 mt-auto px-4 space-y-1">
-        <p>1.67 beta (Active Polling Scanner y Limpieza de Consola Fix iOS)</p>
+        <p>1.68 beta (Diagnóstico de Click en Analizar Prédica)</p>
       </footer>
     </div>
   );
