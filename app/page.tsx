@@ -110,7 +110,7 @@ export default function Home() {
   };
 
   // ---------------------------------------------------------------------------
-  // ETAPA 2: PROCESAMIENTO A CLOUDINARY (GATILLADO POR BOTÓN Y CON DIAGNÓSTICO)
+  // ETAPA 2: PROCESAMIENTO A CLOUDINARY
   // ---------------------------------------------------------------------------
   const handleAnalizarClick = async () => {
     if (!selectedFile) {
@@ -149,20 +149,17 @@ export default function Home() {
       type: file.type,
     });
 
-    // 1. Lectura del archivo a memoria
     const buffer = await file.arrayBuffer();
     console.log('[TeoDoc] CLOUDINARY: ARRAYBUFFER OK', {
       bytes: buffer.byteLength,
     });
 
-    // 2. Creación del Blob puro
     const safeBlob = new Blob([buffer], { type: file.type || 'application/octet-stream' });
     console.log('[TeoDoc] CLOUDINARY: BLOB OK', {
       size: safeBlob.size,
       type: safeBlob.type,
     });
 
-    // 3. Empaquetado del Form Data
     const formData = new FormData();
     formData.append('file', safeBlob, file.name);
     formData.append('upload_preset', uploadPreset);
@@ -171,7 +168,6 @@ export default function Home() {
     setStatusText('Subiendo prédica a Cloudinary...');
     console.log('[TeoDoc] CLOUDINARY: ENVIANDO ARCHIVO');
 
-    // 4. Subida a red
     const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/video/upload`, {
       method: 'POST',
       body: formData,
@@ -213,7 +209,7 @@ export default function Home() {
   };
 
   // ---------------------------------------------------------------------------
-  // ETAPA 3: PIPELINE BACKEND (Transcripción y Análisis IA)
+  // ETAPA 3: PIPELINE BACKEND
   // ---------------------------------------------------------------------------
   const startAnalysisPipeline = async (audioUrl: string) => {
     try {
@@ -364,9 +360,10 @@ export default function Home() {
         </div>
       </nav>
 
-      <main className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 z-10 w-full max-w-5xl mx-auto -mt-4 sm:-mt-6 relative">
+      {/* AQUÍ ESTÁ EL CAMBIO CLAVE DE LAYOUT PARA iOS: justify-start y padding top/bottom */}
+      <main className="flex-1 flex flex-col items-center justify-start px-4 sm:px-6 lg:px-8 z-10 w-full max-w-5xl mx-auto pt-6 sm:pt-10 pb-12 relative">
         
-        {/* TÍTULO PRINCIPAL (Se oculta al seleccionar archivo) */}
+        {/* TÍTULO PRINCIPAL */}
         {!selectedFile && !loading && !resultado && (
           <div className="text-center space-y-3 sm:space-y-4 mb-8 sm:mb-12 animate-fade-in-up">
             <h1 className="text-3xl sm:text-4xl md:text-6xl font-extrabold tracking-tight text-white drop-shadow-sm px-2">Analiza tus prédicas.</h1>
@@ -375,7 +372,7 @@ export default function Home() {
         )}
 
         {/* ========================================================================= */}
-        {/* FASE A: BOTÓN NATIVO VISIBLE (Se oculta al seleccionar archivo) */}
+        {/* FASE A: BOTÓN NATIVO VISIBLE */}
         {/* ========================================================================= */}
         {!selectedFile && !loading && !resultado && (
           <div className="w-full max-w-lg animate-fade-in">
@@ -423,10 +420,10 @@ export default function Home() {
         )}
 
         {/* ========================================================================= */}
-        {/* FASE B: TARJETA DE ARCHIVO Y BOTÓN "ANALIZAR PRÉDICA" */}
+        {/* FASE B: TARJETA DE ARCHIVO Y BOTÓN DE PRUEBA CSS */}
         {/* ========================================================================= */}
         {selectedFile && !loading && !resultado && (
-          <div className="mt-8 w-full max-w-lg animate-fade-in">
+          <div className="mt-4 sm:mt-8 w-full max-w-lg animate-fade-in">
             <div className="bg-[#13161F] border border-purple-500/30 rounded-2xl p-5 shadow-xl">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 rounded-xl bg-purple-600/20 flex items-center justify-center shrink-0">
@@ -449,10 +446,11 @@ export default function Home() {
               </button>
             </div>
 
+            {/* BOTÓN ROJO DE DIAGNÓSTICO (FORZADO VISIBLE) */}
             <button
               type="button"
               onClick={handleAnalizarClick}
-              className="mt-5 w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-purple-500/20 transition-all uppercase tracking-widest text-sm"
+              className="mt-5 mb-6 w-full !block !visible !opacity-100 bg-red-600 text-white font-black py-6 rounded-xl uppercase tracking-widest text-sm"
             >
               Analizar Prédica
             </button>
@@ -715,7 +713,7 @@ export default function Home() {
 
       {/* FOOTER */}
       <footer className="w-full text-center py-5 sm:py-6 text-[10px] sm:text-xs text-gray-500 font-medium tracking-wide z-10 mt-auto px-4 space-y-1">
-        <p>1.58 beta (Fase A Condicionada Fix y Diagnóstico Cloudinary Activo)</p>
+        <p>1.59 beta (Prueba de Visibilidad CSS en iOS)</p>
       </footer>
     </div>
   );
