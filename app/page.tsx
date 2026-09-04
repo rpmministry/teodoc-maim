@@ -73,12 +73,8 @@ export default function Home() {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  // ---------------------------------------------------------------------------
-  // CAPTURA NATIVA ESTABLE
-  // ---------------------------------------------------------------------------
   const handleNativeFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.currentTarget.files?.[0];
-    
     if (file) {
       selectedFileRef.current = file;
       setFileName(file.name);
@@ -87,9 +83,6 @@ export default function Home() {
     }
   };
 
-  // ---------------------------------------------------------------------------
-  // MOTOR DE SUBIDA RESILIENTE (Cloudinary)
-  // ---------------------------------------------------------------------------
   const uploadNormal = async (file: File) => {
     const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'antbfat3';
     const formData = new FormData();
@@ -153,24 +146,7 @@ export default function Home() {
     return secureUrl;
   };
 
-  // ---------------------------------------------------------------------------
-  // PIPELINE DE EJECUCIÓN (Sin <form>, sin type="submit", con prioridad DOM)
-  // ---------------------------------------------------------------------------
-  const executeAnalysis = async () => {
-    // Prioridad invertida: DOM nativo primero, referencia de React como respaldo secundario
-    const fileToProcess = fileInputRef.current?.files?.[0] ?? selectedFileRef.current;
-
-    if (!fileToProcess) {
-      setError("⚠️ Por favor selecciona un archivo de audio primero.");
-      return;
-    }
-
-    setLoading(true);
-    setProgress(0);
-    setError(null);
-    setResultado(null);
-    setVersoIndex(0);
-
+  const runPipeline = async (fileToProcess: File) => {
     try {
       let audioUrl = "";
       if (fileToProcess.size <= 104857600) { // <= 100 MB
@@ -217,6 +193,23 @@ export default function Home() {
       setLoading(false);
       setProgress(0);
     }
+  };
+
+  const iniciarAnalisis = () => {
+    setError(null);
+    const fileToProcess = fileInputRef.current?.files?.[0] ?? selectedFileRef.current;
+
+    if (!fileToProcess) {
+      setError("⚠️ Por favor selecciona un archivo de audio primero.");
+      return;
+    }
+
+    setLoading(true);
+    setProgress(5);
+    setResultado(null);
+    setVersoIndex(0);
+
+    runPipeline(fileToProcess);
   };
 
   const clearFile = () => {
@@ -348,69 +341,70 @@ export default function Home() {
           </div>
         )}
 
-        {!loading && !resultado && (
-          <div className="flex flex-col items-center w-full max-w-lg relative z-20 animate-fade-in">
+        {/* INPUT PERMANENTE EN EL DOM (Se oculta con CSS en vez de desmontarse con React) */}
+        <div className={`w-full flex flex-col items-center max-w-lg relative z-20 animate-fade-in ${loading || resultado ? 'hidden' : 'block'}`}>
+          <div className="w-full flex flex-col items-center bg-[#1A1D27] border border-purple-500/30 rounded-3xl p-6 sm:p-8 shadow-2xl">
             
-            {/* CONTENEDOR DIV LIMPIO (SIN <form> NI SUBMIT NATIVO) */}
-            <div className="w-full flex flex-col items-center bg-[#1A1D27] border border-purple-500/30 rounded-3xl p-6 sm:p-8 shadow-2xl">
-              
-              <h3 className="text-lg font-bold text-white mb-2 uppercase tracking-widest text-center">
-                Paso 1: Seleccionar Audio
-              </h3>
-              <p className="text-gray-500 text-xs text-center mb-6">
-                Elige tu archivo de audio o nota de voz.
-              </p>
-              
-              <input
-                ref={fileInputRef}
-                type="file"
-                onChange={handleNativeFileChange}
-                className="block w-full text-sm text-gray-400
-                  file:mr-4 file:py-3 file:px-6
-                  file:rounded-full file:border-0
-                  file:text-sm file:font-bold
-                  file:bg-purple-600 file:text-white
-                  hover:file:bg-purple-500 cursor-pointer mb-6"
-              />
+            <h3 className="text-lg font-bold text-white mb-2 uppercase tracking-widest text-center">
+              Paso 1: Seleccionar Audio
+            </h3>
+            <p className="text-gray-500 text-xs text-center mb-6">
+              Elige tu archivo de audio o nota de voz.
+            </p>
+            
+            <input
+              ref={fileInputRef}
+              type="file"
+              onChange={handleNativeFileChange}
+              className="block w-full text-sm text-gray-400
+                file:mr-4 file:py-3 file:px-6
+                file:rounded-full file:border-0
+                file:text-sm file:font-bold
+                file:bg-purple-600 file:text-white
+                hover:file:bg-purple-500 cursor-pointer mb-6"
+            />
 
-              {fileName && (
-                <div className="w-full bg-black/40 border border-emerald-500/50 p-4 rounded-2xl mb-6 flex items-center justify-between">
-                  <div className="flex flex-col overflow-hidden text-left flex-1">
-                    <span className="text-xs font-bold text-emerald-400 truncate pr-2">✅ {fileName}</span>
-                    {fileSize && <span className="text-[10px] text-gray-400 mt-0.5">{formatearTamaño(fileSize)}</span>}
-                  </div>
-                  <button 
-                    type="button"
-                    onClick={clearFile}
-                    className="ml-2 text-gray-500 hover:text-red-400 bg-white/5 rounded-full p-1.5 transition-colors"
-                    title="Quitar archivo"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                  </button>
+            {fileName && (
+              <div className="w-full bg-black/40 border border-emerald-500/50 p-4 rounded-2xl mb-6 flex items-center justify-between">
+                <div className="flex flex-col overflow-hidden text-left flex-1">
+                  <span className="text-xs font-bold text-emerald-400 truncate pr-2">✅ {fileName}</span>
+                  {fileSize && <span className="text-[10px] text-gray-400 mt-0.5">{formatearTamaño(fileSize)}</span>}
                 </div>
-              )}
+                <button 
+                  type="button"
+                  onClick={clearFile}
+                  className="ml-2 text-gray-500 hover:text-red-400 bg-white/5 rounded-full p-1.5 transition-colors"
+                  title="Quitar archivo"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+              </div>
+            )}
 
-              <h3 className="text-lg font-bold text-white mb-4 uppercase tracking-widest text-center border-t border-white/10 pt-6 w-full">
-                Paso 2: Procesar
-              </h3>
+            <h3 className="text-lg font-bold text-white mb-4 uppercase tracking-widest text-center border-t border-white/10 pt-6 w-full">
+              Paso 2: Procesar
+            </h3>
 
-              {/* BOTÓN NORMAL TYPE="BUTTON" (Cero recargas de Safari) */}
-              <button
-                type="button"
-                onClick={executeAnalysis}
-                className="w-full py-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-lg shadow-[0_0_30px_rgba(16,185,129,0.4)] transition-all hover:scale-[1.02] cursor-pointer"
-              >
-                Analizar Predicación
-              </button>
+            {/* BOTÓN CON DOBLE EVENTO NATIVO (onClick + onTouchEnd para Safari iOS) */}
+            <button
+              type="button"
+              onClick={iniciarAnalisis}
+              onTouchEnd={(e) => {
+                e.preventDefault();
+                iniciarAnalisis();
+              }}
+              className="w-full py-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-lg shadow-[0_0_30px_rgba(16,185,129,0.4)] transition-all hover:scale-[1.02] cursor-pointer"
+            >
+              Analizar Predicación
+            </button>
 
-              <p className="text-gray-500 text-xs mt-6 text-center max-w-xs">
-                Soporta MP3, WAV, M4A, FLAC, AAC, OGG. <br/> Archivos de hasta 500 MB.
-              </p>
-            </div>
-
-            {error && <div className="mt-8 px-5 py-3 bg-red-900/30 border border-red-500/50 rounded-xl text-red-200 text-sm w-full max-w-sm text-center animate-fade-in">{error}</div>}
+            <p className="text-gray-500 text-xs mt-6 text-center max-w-xs">
+              Soporta MP3, WAV, M4A, FLAC, AAC, OGG. <br/> Archivos de hasta 500 MB.
+            </p>
           </div>
-        )}
+
+          {error && <div className="mt-8 px-5 py-3 bg-red-900/30 border border-red-500/50 rounded-xl text-red-200 text-sm w-full max-w-sm text-center animate-fade-in">{error}</div>}
+        </div>
 
         {/* ESTADO DE CARGA */}
         {loading && (
@@ -658,7 +652,7 @@ export default function Home() {
 
       {/* FOOTER */}
       <footer className="w-full text-center py-5 sm:py-6 text-[10px] sm:text-xs text-gray-500 font-medium tracking-wide z-10 mt-auto px-4 space-y-1">
-        <p>1.37 beta (Eliminación de Form Submit nativo)</p>
+        <p>1.38 beta (Eventos Táctiles Nativos y DOM Permanente)</p>
       </footer>
     </div>
   );
