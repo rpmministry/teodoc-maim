@@ -5,7 +5,7 @@ import './globals.css';
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
 const lora = Lora({ subsets: ['latin'], variable: '--font-serif' });
 
-export const metadata: Metadata = {
+export metadata: Metadata = {
   title: 'TeoDoc - Analizador Ministerial',
   description: 'Transcripción instantánea y extracción de estructura teológica impulsada por IA.',
 };
@@ -28,13 +28,12 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{
             __html: `
               window.onerror = function(msg, url, line, col, error) {
-                alert('🔴 ERROR JS: ' + msg + ' | Línea: ' + line + ':' + col + (error && error.stack ? ' | Stack: ' + error.stack.substring(0, 300) : ''));
+                alert('🔴 ERROR JS\\nArchivo: ' + url + '\\nMsg: ' + msg + '\\nLínea: ' + line + ':' + col);
                 return false;
               };
               window.addEventListener('unhandledrejection', function(e) {
                 alert('🔴 PROMESA RECHAZADA: ' + (e.reason && e.reason.message ? e.reason.message : e.reason));
               });
-              window.onerror('__TEST__', '', 0, 0, null);
             `,
           }}
         />
