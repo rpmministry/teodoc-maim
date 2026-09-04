@@ -73,7 +73,7 @@ export default function Home() {
   };
 
   // ---------------------------------------------------------------------------
-  // ETAPA 1: SELECCIÓN NATIVA DIRECTA (Puro React onChange, sin hacks DOM)
+  // ETAPA 1: SELECCIÓN NATIVA DIRECTA (SIN CAMBIOS, YA FUNCIONA EN iOS)
   // ---------------------------------------------------------------------------
   const handleFileSelected = (file: File) => {
     if (!file) return;
@@ -102,8 +102,6 @@ export default function Home() {
 
     setError(null);
     setResultado(null);
-
-    // Solo guardamos para mostrar la tarjeta, no iniciamos subida aún
     setSelectedFile(file);
   };
 
@@ -112,23 +110,32 @@ export default function Home() {
   };
 
   // ---------------------------------------------------------------------------
-  // ETAPA 2: PROCESAMIENTO A CLOUDINARY (Lanzado al tocar "ANALIZAR PRÉDICA")
+  // ETAPA 2: PROCESAMIENTO A CLOUDINARY (GATILLADO POR BOTÓN Y CON DIAGNÓSTICO)
   // ---------------------------------------------------------------------------
   const handleAnalizarClick = async () => {
-    if (!selectedFile) return;
+    if (!selectedFile) {
+      setError('Primero selecciona un archivo.');
+      return;
+    }
+
+    console.log('[TeoDoc] INICIANDO ANÁLISIS', {
+      name: selectedFile.name,
+      size: selectedFile.size,
+      type: selectedFile.type,
+    });
 
     setError(null);
     setLoading(true);
     setProgress(5);
-    setStatusText('Subiendo prédica a Cloudinary...');
+    setStatusText('Preparando archivo...');
 
     try {
       await uploadFileToCloudinary(selectedFile);
     } catch (err: any) {
-      console.error('[TeoDoc] ERROR DE SUBIDA:', err);
+      console.error('[TeoDoc] ERROR AL INICIAR ANÁLISIS:', err);
       setLoading(false);
       setProgress(0);
-      setError(err?.message || 'No fue posible subir el archivo.');
+      setError(err?.message || 'No fue posible procesar el archivo.');
     }
   };
 
@@ -136,19 +143,47 @@ export default function Home() {
     const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'antbfat3';
     const uploadPreset = 'teodoc_preset';
 
-    const buffer = await file.arrayBuffer();
-    const safeBlob = new Blob([buffer], { type: file.type || 'application/octet-stream' });
+    console.log('[TeoDoc] CLOUDINARY: INICIO', {
+      name: file.name,
+      size: file.size,
+      type: file.type,
+    });
 
+    // 1. Lectura del archivo a memoria (Workaround Safari WebKit)
+    const buffer = await file.arrayBuffer();
+    console.log('[TeoDoc] CLOUDINARY: ARRAYBUFFER OK', {
+      bytes: buffer.byteLength,
+    });
+
+    // 2. Creación del Blob puro
+    const safeBlob = new Blob([buffer], { type: file.type || 'application/octet-stream' });
+    console.log('[TeoDoc] CLOUDINARY: BLOB OK', {
+      size: safeBlob.size,
+      type: safeBlob.type,
+    });
+
+    // 3. Empaquetado del Form Data
     const formData = new FormData();
     formData.append('file', safeBlob, file.name);
     formData.append('upload_preset', uploadPreset);
 
+    setProgress(10);
+    setStatusText('Subiendo prédica a Cloudinary...');
+    console.log('[TeoDoc] CLOUDINARY: ENVIANDO ARCHIVO');
+
+    // 4. Subida a red
     const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/video/upload`, {
       method: 'POST',
       body: formData,
     });
 
     const responseText = await response.text();
+
+    console.log('[TeoDoc] CLOUDINARY: RESPUESTA COMPLETA', {
+      status: response.status,
+      ok: response.ok,
+      body: responseText,
+    });
 
     if (!response.ok) {
       let message = `Cloudinary respondió con error ${response.status}.`;
@@ -179,7 +214,7 @@ export default function Home() {
   };
 
   // ---------------------------------------------------------------------------
-  // ETAPA 3: PIPELINE BACKEND (Transcripción y Análisis IA)
+  // ETAPA 3: PIPELINE BACKEND (Transcripción y Análisis IA - No modificar)
   // ---------------------------------------------------------------------------
   const startAnalysisPipeline = async (audioUrl: string) => {
     try {
@@ -341,7 +376,7 @@ export default function Home() {
         )}
 
         {/* ========================================================================= */}
-        {/* FASE A: BOTÓN NATIVO VISIBLE (Sin accepts ni labels, puro HTML5) */}
+        {/* FASE A: BOTÓN NATIVO VISIBLE (Sin accepts ni labels) */}
         {/* ========================================================================= */}
         {!loading && !resultado && !selectedFile && (
           <div className="w-full max-w-lg animate-fade-in">
@@ -389,7 +424,7 @@ export default function Home() {
         )}
 
         {/* ========================================================================= */}
-        {/* FASE B: TARJETA DE ARCHIVO SELECCIONADO Y BOTÓN "ANALIZAR PRÉDICA" */}
+        {/* FASE B: TARJETA DE ARCHIVO Y BOTÓN "ANALIZAR PRÉDICA" */}
         {/* ========================================================================= */}
         {selectedFile && !loading && !resultado && (
           <div className="mt-8 w-full max-w-lg animate-fade-in">
@@ -434,7 +469,7 @@ export default function Home() {
         )}
 
         {/* ========================================================================= */}
-        {/* FASE C: ESTADO DE CARGA Y DIAGNÓSTICO (Procesamiento) */}
+        {/* FASE C: ESTADO DE CARGA Y DIAGNÓSTICO ESTRUCTURADO (Procesamiento) */}
         {/* ========================================================================= */}
         {loading && (
           <div className="flex flex-col items-center text-center mt-2 w-full px-2 animate-fade-in z-20 relative">
@@ -681,7 +716,7 @@ export default function Home() {
 
       {/* FOOTER */}
       <footer className="w-full text-center py-5 sm:py-6 text-[10px] sm:text-xs text-gray-500 font-medium tracking-wide z-10 mt-auto px-4 space-y-1">
-        <p>1.56 beta (Prueba Definitiva iOS: Input Nativo Puro + UX 2 Fases)</p>
+        <p>1.57 beta (Diagnóstico Detallado Cloudinary Client-Side)</p>
       </footer>
     </div>
   );
