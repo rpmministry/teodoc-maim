@@ -34,7 +34,6 @@ export default function Home() {
   const [feedbackMsg, setFeedbackMsg] = useState('');
   const [feedbackStatus, setFeedbackStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
 
-  // Rotación de versículos durante la carga
   useEffect(() => {
     let intervaloVerso: NodeJS.Timeout;
     if (loading) {
@@ -63,22 +62,65 @@ export default function Home() {
   };
 
   // ---------------------------------------------------------------------------
-  // MANEJO NATIVO DEL ARCHIVO (Bypass de WebKit Security Constraints)
+  // MANEJO DE ARCHIVO NATIVO Y SUBIDA A BACKEND LOCAL (/api/upload)
   // ---------------------------------------------------------------------------
+  const uploadFileToBackend = async (file: File): Promise<void> => {
+    setLoading(true);
+    setProgress(5);
+    setStatusText('Preparando archivo...');
+
+    const formData = new FormData();
+    // IMPORTANTE: El campo debe llamarse "audio" para coincidir con la API
+    formData.append('audio', file, file.name);
+
+    setProgress(10);
+    setStatusText('Subiendo prédica al servidor...');
+
+    const response = await fetch('/api/upload', {
+      method: 'POST',
+      body: formData,
+    });
+
+    let data: any = null;
+
+    try {
+      data = await response.json();
+    } catch {
+      throw new Error(`El servidor respondió con un formato inesperado (${response.status}).`);
+    }
+
+    if (!response.ok) {
+      throw new Error(data?.error || `Error del servidor (${response.status}).`);
+    }
+
+    if (!data?.audioUrl) {
+      throw new Error('El servidor recibió el archivo, pero no devolvió la URL de Cloudinary.');
+    }
+
+    console.log('[TeoDoc] Archivo subido correctamente al servidor:', data);
+
+    setProgress(30);
+    setStatusText('Archivo recibido. Extrayendo transcripción...');
+
+    await startAnalysisPipeline(data.audioUrl);
+  };
+
   const handleFileSelected = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
 
     if (!file) {
+      console.log('[TeoDoc] No se seleccionó archivo.');
       return;
     }
 
-    console.log('[TeoDoc] Archivo seleccionado:', {
+    console.log('[TeoDoc] ARCHIVO SELECCIONADO', {
       name: file.name,
       size: file.size,
       type: file.type,
+      sizeMB: (file.size / 1024 / 1024).toFixed(2),
     });
 
-    // Validación de Tamaño (Límite 500 MB)
+    // Validación de Tamaño Inicial
     const maxSize = 500 * 1024 * 1024;
     if (file.size > maxSize) {
       setError('El archivo supera el límite permitido de 500 MB.');
@@ -100,99 +142,19 @@ export default function Home() {
     setError(null);
     setResultado(null);
     setLoading(true);
-    setProgress(5);
-    setStatusText('Preparando archivo...');
+    setProgress(2);
+    setStatusText('Archivo seleccionado. Preparando subida...');
 
     try {
-      await uploadFileToCloudinary(file);
-    } catch (err: any) {
-      console.error('[TeoDoc] Error de subida:', err);
+      await uploadFileToBackend(file);
+    } catch (error: any) {
+      console.error('[TeoDoc] ERROR COMPLETO:', error);
       setLoading(false);
       setProgress(0);
-      setError(err?.message || 'No fue posible subir el archivo.');
+      setError(error?.message || 'No fue posible subir el archivo.');
     }
 
-    // Permitir volver a elegir el mismo archivo.
     event.target.value = '';
-  };
-
-  const uploadFileToCloudinary = async (file: File): Promise<void> => {
-    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'antbfat3';
-    const uploadPreset = 'teodoc_preset';
-
-    const formData = new FormData();
-    formData.append('upload_preset', uploadPreset);
-
-    /*
-     * Safari/iOS WebKit Bugzilla Workaround:
-     * Safari (26.5+) puede enviar cuerpos vacíos al intentar subir un objeto File nativo.
-     * La solución oficial es leer el ArrayBuffer en memoria y empaquetarlo en un nuevo Blob.
-     */
-    const buffer = await file.arrayBuffer();
-    const uploadFile = new Blob([buffer], { type: file.type || 'application/octet-stream' });
-
-    formData.append('file', uploadFile, file.name);
-
-    setLoading(true);
-    setProgress(5);
-    setStatusText('Subiendo prédica...');
-
-    await new Promise<void>((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      xhr.open('POST', `https://api.cloudinary.com/v1_1/${cloudName}/video/upload`);
-
-      xhr.upload.onprogress = (event) => {
-        if (!event.lengthComputable) return;
-
-        const percentage = Math.round((event.loaded / event.total) * 100);
-        const mappedProgress = Math.max(5, Math.min(35, 5 + Math.round(percentage * 0.3)));
-        
-        setProgress(mappedProgress);
-        setStatusText(`Subiendo prédica... ${percentage}%`);
-      };
-
-      xhr.onload = async () => {
-        if (xhr.status >= 200 && xhr.status < 300) {
-          try {
-            const response = JSON.parse(xhr.responseText);
-
-            if (!response.secure_url) {
-              throw new Error('Cloudinary no devolvió la URL segura del archivo.');
-            }
-
-            setProgress(30);
-            setStatusText('Archivo recibido en la nube. Extrayendo transcripción...');
-
-            await startAnalysisPipeline(response.secure_url);
-            resolve();
-          } catch (error) {
-            reject(error);
-          }
-          return;
-        }
-
-        let message = `Error de Cloudinary (${xhr.status}).`;
-        try {
-          const response = JSON.parse(xhr.responseText);
-          if (response?.error?.message) {
-            message = response.error.message;
-          }
-        } catch {
-          // Ignorar error de parseo
-        }
-        reject(new Error(message));
-      };
-
-      xhr.onerror = () => {
-        reject(new Error('No se pudo conectar con Cloudinary. Verifica tu conexión a Internet.'));
-      };
-
-      xhr.onabort = () => {
-        reject(new Error('La subida fue cancelada.'));
-      };
-
-      xhr.send(formData);
-    });
   };
 
   // ---------------------------------------------------------------------------
@@ -358,7 +320,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* INPUT NATIVO COMO BOTÓN (Solución WebKit iOS) */}
+        {/* INPUT NATIVO LABEL WRAPPER (Solución estricta para iOS WebKit) */}
         {!loading && !resultado && (
           <div className="flex flex-col items-center w-full max-w-lg relative z-20 animate-fade-in">
             
@@ -418,7 +380,7 @@ export default function Home() {
                 {statusText}
               </span>
               <span className="text-[10px] text-gray-500 font-normal">
-                Servidor Cloudinary & IA en marcha
+                Servidor Backend Local & IA en marcha
               </span>
             </div>
 
@@ -599,7 +561,7 @@ export default function Home() {
                       </div>
 
                       <div className="mt-8 sm:mt-10 text-[#A69B85] text-[10px] sm:text-xs font-bold tracking-widest flex items-center gap-2">
-                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 100-2h-2V7z" clipRule="evenodd"></path></svg>
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clipRule="evenodd"></path></svg>
                         GENERADO POR TEODOC | RPM MINISTRY
                       </div>
                     </div>
@@ -652,7 +614,7 @@ export default function Home() {
 
       {/* FOOTER */}
       <footer className="w-full text-center py-5 sm:py-6 text-[10px] sm:text-xs text-gray-500 font-medium tracking-wide z-10 mt-auto px-4 space-y-1">
-        <p>1.48 beta (Arquitectura WebKit segura: Label Wrapper y File a Blob)</p>
+        <p>1.49 beta (Upload a Backend Local Nativo)</p>
       </footer>
     </div>
   );
