@@ -21,7 +21,7 @@ const promesasBiblicas = [
 ];
 
 export default function Home() {
-  // ESTADOS DE LA NUEVA UX (SELECCIÓN SEPARADA DEL PROCESAMIENTO)
+  // ESTADOS UX EN 2 FASES
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -67,7 +67,7 @@ export default function Home() {
   };
 
   // ---------------------------------------------------------------------------
-  // ETAPA 1: SELECCIÓN NATIVA DE ARCHIVOS (Sin Subida)
+  // ETAPA 1: SELECCIÓN Y VALIDACIÓN ROBUSTA (BYPASS SAFARI ACCEPT BUG)
   // ---------------------------------------------------------------------------
   const handleFileSelected = (file: File) => {
     if (!file) return;
@@ -89,18 +89,31 @@ export default function Home() {
     const fileName = file.name.toLowerCase();
     const validExtension = allowedExtensions.some((extension) => fileName.endsWith(extension));
 
-    if (!validExtension) {
+    const allowedMimeTypes = [
+      'audio/mpeg',
+      'audio/wav',
+      'audio/x-wav',
+      'audio/mp4',
+      'audio/x-m4a',
+      'audio/aac',
+      'audio/flac',
+      'audio/ogg',
+      'video/mp4',
+    ];
+    // Permitimos archivos sin mime-type porque iOS a veces lo entrega en blanco
+    const validMime = !file.type || allowedMimeTypes.includes(file.type.toLowerCase());
+
+    if (!validExtension || !validMime) {
       setError('Formato no compatible. Utiliza MP3, WAV, M4A, AAC, FLAC, OGG o MP4.');
       return;
     }
 
     setError(null);
     setResultado(null);
-    // IMPORTANTE: NO SETEAMOS LOADING A TRUE AQUÍ. 
-    // SOLO GUARDAMOS EL ARCHIVO PARA MOSTRAR LA TARJETA.
-    setSelectedFile(file);
+    setSelectedFile(file); // Solo guardamos para mostrar la tarjeta UX, no subimos aún
   };
 
+  // Listener nativo
   useEffect(() => {
     const input = fileInputRef.current;
     if (!input) return;
@@ -108,13 +121,6 @@ export default function Home() {
     const onNativeChange = (event: Event) => {
       const target = event.target as HTMLInputElement;
       const file = target.files?.[0];
-
-      console.log('[TeoDoc] EVENTO NATIVO CHANGE', {
-        hasFile: !!file,
-        name: file?.name,
-        size: file?.size,
-        type: file?.type,
-      });
 
       if (!file) return;
       handleFileSelected(file);
@@ -183,8 +189,6 @@ export default function Home() {
 
     const responseText = await response.text();
 
-    console.log('[TeoDoc] Respuesta Cloudinary:', response.status, responseText);
-
     if (!response.ok) {
       let message = `Cloudinary respondió con error ${response.status}.`;
       try {
@@ -206,8 +210,6 @@ export default function Home() {
     if (!data?.secure_url) {
       throw new Error('Cloudinary no devolvió la URL segura del archivo.');
     }
-
-    console.log('[TeoDoc] SUBIDA CLOUDINARY EXITOSA', { secure_url: data.secure_url });
 
     setProgress(30);
     setStatusText('Archivo recibido. Extrayendo transcripción...');
@@ -343,12 +345,14 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-[#0B0C10] bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#1C1635] via-[#0B0C10] to-[#070709] text-white font-sans selection:bg-purple-500/30 flex flex-col relative overflow-x-hidden">
       
-      {/* INPUT NATIVO MAESTRO */}
+      {/* 
+        EL INPUT SE SECRETO DE iOS SAFARI (SIN ACCEPT)
+        Cero filtros en HTML. La validación se hace 100% en JavaScript.
+      */}
       <input
         ref={fileInputRef}
         id="teodoc-file-input"
         type="file"
-        accept=".mp3,.wav,.m4a,.aac,.flac,.ogg,.mp4,audio/mpeg,audio/wav,audio/mp4,video/mp4"
         className="fixed -left-[9999px] w-px h-px opacity-0"
         tabIndex={-1}
       />
@@ -382,7 +386,7 @@ export default function Home() {
 
       <main className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 lg:px-8 z-10 w-full max-w-5xl mx-auto -mt-4 sm:-mt-6 relative">
         
-        {/* TÍTULO PRINCIPAL (Oculto solo cuando está CARGANDO o hay RESULTADO) */}
+        {/* TÍTULO */}
         {!loading && !resultado && (
           <div className="text-center space-y-3 sm:space-y-4 mb-8 sm:mb-12 animate-fade-in-up">
             <h1 className="text-3xl sm:text-4xl md:text-6xl font-extrabold tracking-tight text-white drop-shadow-sm px-2">Analiza tus prédicas.</h1>
@@ -427,7 +431,7 @@ export default function Home() {
         )}
 
         {/* ========================================================================= */}
-        {/* FASE B: TARJETA DE ARCHIVO (Archivo seleccionado, esperando confirmación) */}
+        {/* FASE B: TARJETA DE ARCHIVO */}
         {/* ========================================================================= */}
         {!loading && !resultado && selectedFile && (
           <div className="flex flex-col items-center w-full max-w-lg relative z-20 animate-fade-in space-y-6">
@@ -480,7 +484,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* ERROR DE SUBIDA (Visible en Etapa A o B) */}
+        {/* ERROR DE SUBIDA O VALIDACIÓN */}
         {!loading && !resultado && error && (
           <div className="mt-6 px-5 py-4 bg-red-950/80 border-2 border-red-500 rounded-2xl text-red-200 text-xs w-full max-w-sm shadow-2xl animate-fade-in space-y-2 text-center relative z-20">
             <p className="font-bold uppercase tracking-wider text-red-400">🚨 Error:</p>
@@ -489,7 +493,7 @@ export default function Home() {
         )}
 
         {/* ========================================================================= */}
-        {/* FASE C: ESTADO DE CARGA (Procesando el Analizar Prédica) */}
+        {/* FASE C: ESTADO DE CARGA */}
         {/* ========================================================================= */}
         {loading && (
           <div className="flex flex-col items-center text-center mt-2 w-full px-2 animate-fade-in z-20 relative">
@@ -736,7 +740,7 @@ export default function Home() {
 
       {/* FOOTER */}
       <footer className="w-full text-center py-5 sm:py-6 text-[10px] sm:text-xs text-gray-500 font-medium tracking-wide z-10 mt-auto px-4 space-y-1">
-        <p>1.53 beta (UX HappyScribe: Selección en 2 Fases)</p>
+        <p>1.54 beta (Input sin Accept - Safari Fix)</p>
       </footer>
     </div>
   );
