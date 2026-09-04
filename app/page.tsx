@@ -16,12 +16,11 @@ interface PredicaAnalisis {
 const promesasBiblicas = [
   { cita: "Isaías 41:10", texto: "No temas, porque yo estoy contigo; no desmayes..." },
   { cita: "Jeremías 29:11", texto: "Porque yo sé los pensamientos que tengo acerca de vosotros..." },
-  { cita: "Romanos 8:28", texto: "Y sabemos que a los que aman a Dios, todas las cosas les ayudan a bien..." },
+  { cita: "Romanos 8:28", texto: "Y sabemos que al que aman a Dios, todas las cosas les ayudan a bien..." },
   { cita: "Josué 1:9", texto: "Mira que te mando que te esfuerces y seas valiente..." }
 ];
 
 export default function Home() {
-  // ESTADOS DE UX EN 2 FASES
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -33,7 +32,6 @@ export default function Home() {
   
   const infografiaRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const lastProcessedFileRef = useRef<string | null>(null);
 
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState('');
@@ -75,14 +73,10 @@ export default function Home() {
   };
 
   // ---------------------------------------------------------------------------
-  // ETAPA 1: SELECCIÓN Y VALIDACIÓN
+  // MANEJADOR GENERAL DE SELECCIÓN DE ARCHIVOS (Optimizado Web y Android)
   // ---------------------------------------------------------------------------
   const handleFileSelected = (file: File) => {
     if (!file) return;
-
-    const fileKey = `${file.name}-${file.size}`;
-    if (lastProcessedFileRef.current === fileKey) return;
-    lastProcessedFileRef.current = fileKey;
 
     const maxSize = 500 * 1024 * 1024;
     if (file.size > maxSize) {
@@ -104,46 +98,16 @@ export default function Home() {
     setSelectedFile(file);
   };
 
-  // ---------------------------------------------------------------------------
-  // ESCÁNER ACTIVO: LA CURA PARA LA RESTAURACIÓN SILENCIOSA DE SAFARI
-  // ---------------------------------------------------------------------------
-  useEffect(() => {
-    const input = fileInputRef.current;
-    if (!input) return;
-
-    const scanInputForFiles = () => {
-      const file = input.files && input.files.length > 0 ? input.files[0] : null;
-      if (file) {
-        handleFileSelected(file);
-      }
-    };
-
-    const intervalId = setInterval(scanInputForFiles, 500);
-
-    input.addEventListener('change', scanInputForFiles);
-    document.addEventListener('visibilitychange', scanInputForFiles);
-    window.addEventListener('focus', scanInputForFiles);
-
-    return () => {
-      clearInterval(intervalId);
-      input.removeEventListener('change', scanInputForFiles);
-      document.removeEventListener('visibilitychange', scanInputForFiles);
-      window.removeEventListener('focus', scanInputForFiles);
-    };
-  }, []);
-
   const handleCambiarArchivo = () => {
     setSelectedFile(null);
-    lastProcessedFileRef.current = null;
     const input = document.getElementById('teodoc-file-input') as HTMLInputElement | null;
     if (input) input.value = '';
   };
 
   // ---------------------------------------------------------------------------
-  // ETAPA 2: PROCESAMIENTO A CLOUDINARY
+  // PROCESAMIENTO A CLOUDINARY
   // ---------------------------------------------------------------------------
   const handleAnalizarClick = async () => {
-    alert('✅ Botón Analizar SÍ se presionó');
     if (!selectedFile) {
       setError('Primero selecciona un archivo.');
       return;
@@ -210,7 +174,7 @@ export default function Home() {
   };
 
   // ---------------------------------------------------------------------------
-  // ETAPA 3: PIPELINE BACKEND (Transcripción y Análisis IA)
+  // PIPELINE BACKEND (Transcripción y Análisis IA)
   // ---------------------------------------------------------------------------
   const startAnalysisPipeline = async (audioUrl: string) => {
     try {
@@ -258,7 +222,6 @@ export default function Home() {
     setError(null); 
     setProgress(0);
     setSelectedFile(null);
-    lastProcessedFileRef.current = null;
     const input = document.getElementById('teodoc-file-input') as HTMLInputElement | null;
     if (input) input.value = '';
   };
@@ -337,9 +300,10 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-[#0B0C10] bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#1C1635] via-[#0B0C10] to-[#070709] text-white font-sans selection:bg-purple-500/30 flex flex-col relative overflow-x-hidden">
       
+      {/* NAVBAR */}
       <nav className="w-full flex flex-wrap gap-4 justify-between items-center px-4 sm:px-8 py-4 sm:py-6 z-10">
         <div className="flex items-center gap-2 sm:gap-3">
-          <div className="w-8 h-8 sm:w-9 sm:h-9 bg-purple-600 rounded-xl flex items-center justify-center border border-white/10 shrink-0">
+          <div className="w-8 h-8 sm:w-9 sm:h-9 bg-purple-600 rounded-xl flex items-center justify-center border border-white/10 shrink-0 shadow-lg shadow-purple-600/30">
             <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
           </div>
           <span className="font-extrabold text-xl sm:text-2xl tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-gray-100 to-gray-400">TeoDoc</span>
@@ -375,16 +339,21 @@ export default function Home() {
         )}
 
         {/* ========================================================================= */}
-        {/* FASE A: BOTÓN NATIVO VISIBLE */}
+        {/* FASE A: SELECCIÓN DE ARCHIVO */}
         {/* ========================================================================= */}
-        {!loading && !resultado && (
+        {!selectedFile && !loading && !resultado && (
           <div className="w-full max-w-lg animate-fade-in">
             <div className="relative">
               <input
                 ref={fileInputRef}
                 id="teodoc-file-input"
                 type="file"
-                className={`
+                accept=".mp3,.wav,.m4a,.aac,.flac,.ogg,.mp4"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (file) handleFileSelected(file);
+                }}
+                className="
                   block
                   w-full
                   max-w-lg
@@ -408,16 +377,14 @@ export default function Home() {
                   file:font-bold
                   file:text-white
                   hover:file:bg-purple-500
-                  ${selectedFile ? 'hidden' : ''}
-                `}
+                  transition-all
+                "
               />
             </div>
 
-            {!selectedFile && (
-              <p className="text-gray-500 text-xs text-center mt-6">
-                Soporta MP3, WAV, M4A, FLAC, AAC. <br/> Archivos de hasta 500 MB.
-              </p>
-            )}
+            <p className="text-gray-500 text-xs text-center mt-6">
+              Soporta MP3, WAV, M4A, FLAC, AAC. <br/> Archivos de hasta 500 MB.
+            </p>
           </div>
         )}
 
@@ -426,10 +393,10 @@ export default function Home() {
         {/* ========================================================================= */}
         {selectedFile && !loading && !resultado && (
           <div className="mt-4 sm:mt-8 w-full max-w-lg animate-fade-in pb-6">
-            <div className="bg-[#13161F] border border-purple-500/30 rounded-2xl p-5 shadow-xl">
+            <div className="bg-[#13161F] border border-purple-500/30 rounded-2xl p-5 shadow-2xl backdrop-blur-md">
               
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-purple-600/20 flex items-center justify-center shrink-0">
+                <div className="w-12 h-12 rounded-xl bg-purple-600/20 flex items-center justify-center shrink-0 border border-purple-500/20">
                   <span className="text-2xl">🎵</span>
                 </div>
 
@@ -451,8 +418,6 @@ export default function Home() {
               >
                 Cambiar archivo
               </button>
-
-              <p style={{color: 'red', fontSize: '20px'}}>MARCADOR-DE-PRUEBA-123</p>
 
               <button
                 type="button"
@@ -722,7 +687,8 @@ export default function Home() {
 
       {/* FOOTER */}
       <footer className="w-full text-center py-5 sm:py-6 text-[10px] sm:text-xs text-gray-500 font-medium tracking-wide z-10 mt-auto px-4 space-y-1">
-        <p>1.69 beta (Test Marker Marcador de Prueba iOS)</p>
+        <p>Versión 1.1 Beta</p>
+        <p className="text-gray-400 font-medium">Desarrollado por Mauricio Andrade Luna</p>
       </footer>
     </div>
   );
