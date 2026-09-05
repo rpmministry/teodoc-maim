@@ -291,19 +291,20 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-[#07090E] text-white font-sans selection:bg-cyan-500/30 flex flex-col relative overflow-x-hidden">
       
-      {/* FONDOS Y AURORAS NEÓN */}
+      {/* FONDOS Y AURORAS NEÓN COMPATIBLES CON IOS */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
-        <div className="absolute -top-40 -left-40 w-96 h-96 bg-purple-600/30 rounded-full blur-[120px]"></div>
-        <div className="absolute top-1/3 right-[-10%] w-[500px] h-[500px] bg-cyan-600/20 rounded-full blur-[150px]"></div>
-        <div className="absolute bottom-[-10%] left-1/4 w-[600px] h-[600px] bg-pink-600/15 rounded-full blur-[150px]"></div>
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCI+PGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMSIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjA1KSIvPjwvc3ZnPg==')] opacity-50"></div>
+        <div className="absolute -top-40 -left-40 w-96 h-96 bg-purple-600/30 rounded-full blur-[100px]"></div>
+        <div className="absolute top-1/3 right-[-10%] w-[500px] h-[500px] bg-cyan-600/20 rounded-full blur-[120px]"></div>
+        <div className="absolute bottom-[-10%] left-1/4 w-[600px] h-[600px] bg-pink-600/15 rounded-full blur-[120px]"></div>
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCI+PGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMSIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjA1KSIvPjwvc3ZnPg==')] opacity-40"></div>
       </div>
 
       {/* NAVBAR */}
       <nav className="w-full flex flex-wrap gap-4 justify-between items-center px-4 sm:px-8 py-4 sm:py-6 z-10 relative">
         <div className="flex items-center gap-2 sm:gap-3">
           <div className="w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-br from-cyan-400 to-purple-600 rounded-xl flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(34,211,238,0.4)]">
-            <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
+            {/* Nuevo icono TeoDoc (ondas en lugar de la nota musical) */}
+            <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 14v-4M8 18V6M12 22V2M16 18V6M20 14v-4"></path></svg>
           </div>
           <span className="font-extrabold text-lg sm:text-xl tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-cyan-100 to-white drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]">TeoDoc</span>
         </div>
@@ -326,7 +327,7 @@ export default function Home() {
         </div>
       </nav>
 
-      <main className="flex-1 flex flex-col items-center justify-start px-4 sm:px-6 lg:px-8 z-10 w-full max-w-5xl mx-auto pt-6 sm:pt-8 pb-12 relative">
+      <main className="flex-1 flex flex-col items-center justify-start px-4 sm:px-6 lg:px-8 z-10 w-full max-w-5xl mx-auto pt-6 sm:pt-8 relative">
         
         {/* TÍTULO PRINCIPAL: TEODOC */}
         {!selectedFile && !loading && !resultado && (
@@ -343,7 +344,7 @@ export default function Home() {
           </div>
         )}
 
-        {/* FASE A: ESFERA DE CRISTAL Y ONDAS DE SONIDO */}
+        {/* FASE A: ESFERA DE CRISTAL Y ONDAS DE SONIDO (Versión ultra compatible) */}
         {!selectedFile && !loading && !resultado && (
           <div className="w-full max-w-md animate-fade-in">
             <div className="relative group cursor-pointer w-full aspect-square max-h-[400px] mx-auto">
@@ -366,18 +367,14 @@ export default function Home() {
                   <div className="absolute w-[60%] h-[60%] rounded-full border-[1.5px] border-pink-500/20"></div>
                 </div>
 
-                <div className="relative w-28 h-28 sm:w-36 sm:h-36 rounded-full bg-gradient-to-br from-cyan-500/20 via-purple-500/20 to-pink-500/20 border border-white/20 shadow-[inset_0_0_30px_rgba(255,255,255,0.1),0_0_30px_rgba(168,85,247,0.5)] flex items-center justify-center overflow-hidden z-10 group-hover:scale-110 transition-transform duration-500">
+                <div className="relative w-28 h-28 sm:w-36 sm:h-36 rounded-full bg-gradient-to-br from-cyan-500/20 via-purple-500/20 to-pink-500/20 border border-cyan-400/30 shadow-[inset_0_0_30px_rgba(34,211,238,0.2),0_0_30px_rgba(168,85,247,0.5)] flex items-center justify-center overflow-hidden z-10 group-hover:scale-110 transition-transform duration-500">
                   <div className="absolute left-0 top-0 w-1/2 h-full bg-white/5 backdrop-blur-[6px] border-r border-white/10 z-10"></div>
-                  <svg className="w-14 h-14 sm:w-16 sm:h-16 text-white drop-shadow-[0_0_12px_rgba(34,211,238,0.8)] z-20" fill="none" stroke="url(#gradient-soundwave)" viewBox="0 0 24 24">
-                    <defs>
-                      <linearGradient id="gradient-soundwave" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stopColor="#22d3ee" /> 
-                        <stop offset="50%" stopColor="#a855f7" /> 
-                        <stop offset="100%" stopColor="#ec4899" /> 
-                      </linearGradient>
-                    </defs>
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                  
+                  {/* Icono de Audio Waves nativo con color sólido (Fija el error visual de Safari) */}
+                  <svg className="w-14 h-14 sm:w-16 sm:h-16 text-cyan-400 drop-shadow-[0_0_15px_rgba(34,211,238,1)] z-20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 14v-4M8 18V6M12 22V2M16 18V6M20 14v-4" />
                   </svg>
+
                 </div>
 
                 <div className="mt-8 z-10 flex flex-col items-center">
@@ -387,7 +384,7 @@ export default function Home() {
                 
                 <div className="absolute bottom-6 flex items-center justify-center gap-1 opacity-50 z-10">
                   {[2, 4, 3, 5, 2, 6, 3, 4, 2].map((h, i) => (
-                    <div key={i} className={`w-1 bg-gradient-to-t from-orange-400 to-pink-500 rounded-full h-${h} animate-pulse`} style={{ animationDelay: `${i * 0.1}s` }}></div>
+                    <div key={i} className={`w-1 bg-gradient-to-t from-cyan-400 to-purple-500 rounded-full h-${h} animate-pulse`} style={{ animationDelay: `${i * 0.1}s` }}></div>
                   ))}
                 </div>
               </div>
@@ -396,7 +393,7 @@ export default function Home() {
         )}
 
         {/* ========================================================================= */}
-        {/* FASE B: ARCHIVO SELECCIONADO (Botón Verde y Orbe de Sonido) */}
+        {/* FASE B: ARCHIVO SELECCIONADO */}
         {/* ========================================================================= */}
         {selectedFile && !loading && !resultado && (
           <div className="mt-4 sm:mt-8 w-full max-w-lg animate-fade-in pb-6 z-20">
@@ -405,20 +402,11 @@ export default function Home() {
 
               <div className="flex items-center gap-4 relative z-10">
                 
-                {/* ICONO ORBE MODERNO DE ONDAS */}
-                <div className="relative w-14 h-14 rounded-full bg-[#0A0D14] border border-emerald-400/50 shadow-[inset_0_0_15px_rgba(16,185,129,0.3),0_0_15px_rgba(16,185,129,0.4)] flex items-center justify-center overflow-hidden shrink-0 group">
-                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_rgba(52,211,153,0.2)_0%,_transparent_70%)]"></div>
-                  <div className="absolute -left-2 top-2 w-8 h-8 bg-cyan-500/20 rounded-full blur-md"></div>
-                  <div className="absolute -right-2 bottom-2 w-8 h-8 bg-purple-500/20 rounded-full blur-md"></div>
-                  
-                  <svg className="w-7 h-7 relative z-10 drop-shadow-[0_0_8px_rgba(52,211,153,1)] animate-pulse" fill="none" stroke="url(#emerald-wave)" viewBox="0 0 24 24">
-                    <defs>
-                      <linearGradient id="emerald-wave" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stopColor="#34d399" /> 
-                        <stop offset="50%" stopColor="#a855f7" />
-                        <stop offset="100%" stopColor="#06b6d4" /> 
-                      </linearGradient>
-                    </defs>
+                {/* ICONO ORBE MODERNO DE ONDAS EN FASE B */}
+                <div className="relative w-14 h-14 rounded-full bg-[#0A0D14] border border-emerald-400/50 shadow-[0_0_20px_rgba(16,185,129,0.4)] flex items-center justify-center overflow-hidden shrink-0 group">
+                  <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/20 to-cyan-500/20"></div>
+                  {/* Ondas sólidas (Fija error de Safari) */}
+                  <svg className="w-7 h-7 text-emerald-400 relative z-10 drop-shadow-[0_0_8px_rgba(52,211,153,0.8)] animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 14v-4M8 18V6M12 22V2M16 18V6M20 14v-4" />
                   </svg>
                 </div>
@@ -589,6 +577,7 @@ export default function Home() {
               </div>
             </div>
 
+            {/* Vista previa póster */}
             {resultado.infografia && (
               <div className="w-full pt-6 sm:pt-10">
                 <div className="text-center mb-6 sm:mb-8 px-4">
@@ -643,7 +632,6 @@ export default function Home() {
                 </div>
               </div>
             )}
-
           </div>
         )}
       </main>
@@ -687,10 +675,10 @@ export default function Home() {
         </div>
       )}
 
-      {/* FOOTER ELEVADO Y VISIBLE */}
-      <footer className="w-full text-center pt-10 pb-16 sm:pb-12 text-[10px] sm:text-xs text-cyan-50/50 font-medium tracking-widest z-10 mt-auto px-4 space-y-2 uppercase">
-        <p className="drop-shadow-[0_0_5px_rgba(34,211,238,0.3)]">Versión 1.1 Beta</p>
-        <p className="text-cyan-50/30">Desarrollado por Mauricio Andrade Luna</p>
+      {/* FOOTER PERFECTAMENTE VISIBLE Y ELEVADO */}
+      <footer className="w-full flex flex-col items-center justify-center py-8 pb-12 sm:pb-10 text-[11px] sm:text-xs text-cyan-50/70 font-medium tracking-widest z-20 mt-auto px-4 space-y-2 uppercase bg-gradient-to-t from-black/80 to-transparent">
+        <p className="drop-shadow-[0_0_8px_rgba(34,211,238,0.5)] font-bold text-cyan-300">Versión 1.1 Beta</p>
+        <p className="text-cyan-50/50">Desarrollado por Mauricio Andrade Luna</p>
       </footer>
     </div>
   );
