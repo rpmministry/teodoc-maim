@@ -296,7 +296,6 @@ export default function Home() {
         <div className="absolute -top-40 -left-40 w-96 h-96 bg-purple-600/30 rounded-full blur-[120px]"></div>
         <div className="absolute top-1/3 right-[-10%] w-[500px] h-[500px] bg-cyan-600/20 rounded-full blur-[150px]"></div>
         <div className="absolute bottom-[-10%] left-1/4 w-[600px] h-[600px] bg-pink-600/15 rounded-full blur-[150px]"></div>
-        {/* Estrellas/Partículas sutiles */}
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCI+PGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMSIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjA1KSIvPjwvc3ZnPg==')] opacity-50"></div>
       </div>
 
@@ -306,7 +305,8 @@ export default function Home() {
           <div className="w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-br from-cyan-400 to-purple-600 rounded-xl flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(34,211,238,0.4)]">
             <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
           </div>
-          <span className="font-extrabold text-xl sm:text-2xl tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-cyan-100 to-white drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]">TeoDoc</span>
+          {/* Nombre pequeño en navbar para navegación rápida */}
+          <span className="font-extrabold text-lg sm:text-xl tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-cyan-100 to-white drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]">TeoDoc</span>
         </div>
         
         <div className="flex flex-wrap items-center gap-2 sm:gap-3 justify-end">
@@ -315,6 +315,11 @@ export default function Home() {
             <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
           </button>
           
+          <a href="https://collection.cloudinary.com/antbfat3/ee4582aa2bac515291b5d02c058e9c4d" target="_blank" rel="noopener noreferrer" className="group flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 text-cyan-300 hover:text-cyan-200 text-[10px] sm:text-sm font-medium transition-all backdrop-blur-md">
+            <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+            <span className="hidden sm:inline">Manual</span>
+          </a>
+
           <a href="https://www.paypal.com/ncp/payment/ZTLTVMRR95J2C" target="_blank" rel="noopener noreferrer" className="group flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:px-5 sm:py-2 rounded-full bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-400 hover:to-purple-500 text-white text-[10px] sm:text-sm font-bold shadow-[0_0_15px_rgba(236,72,153,0.4)] transition-all hover:scale-105 border border-white/10">
             <span className="hidden lg:inline">Apoyar Proyecto</span>
             <span className="lg:hidden">Apoyar</span>
@@ -324,13 +329,21 @@ export default function Home() {
 
       <main className="flex-1 flex flex-col items-center justify-start px-4 sm:px-6 lg:px-8 z-10 w-full max-w-5xl mx-auto pt-6 sm:pt-8 pb-12 relative">
         
-        {/* TÍTULO PRINCIPAL NEÓN */}
+        {/* ========================================================================= */}
+        {/* TÍTULO PRINCIPAL: TEODOC COMO PROTAGONISTA CENTRADO */}
+        {/* ========================================================================= */}
         {!selectedFile && !loading && !resultado && (
-          <div className="text-center space-y-3 sm:space-y-4 mb-8 sm:mb-10 animate-fade-in-up">
-            <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 drop-shadow-[0_0_20px_rgba(168,85,247,0.4)] px-2 pb-2">
-              Analiza tus prédicas.
+          <div className="text-center space-y-1 sm:space-y-2 mb-8 sm:mb-10 animate-fade-in-up">
+            
+            <h1 className="text-6xl sm:text-7xl md:text-8xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-white via-cyan-100 to-gray-300 drop-shadow-[0_0_15px_rgba(255,255,255,0.4)] px-2 pb-1">
+              TeoDoc
             </h1>
-            <p className="text-xs sm:text-sm md:text-base text-cyan-100/70 max-w-lg mx-auto font-medium px-4">
+            
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 drop-shadow-[0_0_20px_rgba(168,85,247,0.4)] px-2 pb-2">
+              Analiza tus prédicas.
+            </h2>
+            
+            <p className="text-xs sm:text-sm md:text-base text-cyan-100/70 max-w-lg mx-auto font-medium px-4 mt-2">
               Transcripción y extracción de estructura teológica impulsada por IA.
             </p>
           </div>
@@ -354,29 +367,22 @@ export default function Home() {
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-30"
               />
               
-              {/* Contenedor circular tipo Esfera/Burbuja */}
               <div className="absolute inset-0 bg-[#0A0D14]/40 backdrop-blur-2xl border border-white/10 rounded-full flex flex-col items-center justify-center transition-all duration-500 shadow-[0_0_50px_-10px_rgba(168,85,247,0.3)] group-hover:shadow-[0_0_80px_-10px_rgba(34,211,238,0.4)] group-hover:border-cyan-500/50 overflow-hidden">
                 
-                {/* Anillos concéntricos de radar animados */}
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-30 group-hover:opacity-60 transition-opacity">
                   <div className="w-[110%] h-[110%] rounded-full border-[1.5px] border-purple-500/20"></div>
                   <div className="absolute w-[85%] h-[85%] rounded-full border-[1.5px] border-cyan-500/20"></div>
                   <div className="absolute w-[60%] h-[60%] rounded-full border-[1.5px] border-pink-500/20"></div>
                 </div>
 
-                {/* Burbuja central brillante */}
                 <div className="relative w-28 h-28 sm:w-36 sm:h-36 rounded-full bg-gradient-to-br from-cyan-500/20 via-purple-500/20 to-pink-500/20 border border-white/20 shadow-[inset_0_0_30px_rgba(255,255,255,0.1),0_0_30px_rgba(168,85,247,0.5)] flex items-center justify-center overflow-hidden z-10 group-hover:scale-110 transition-transform duration-500">
-                  
-                  {/* Franja de cristal esmerilado (Efecto Header-pic) */}
                   <div className="absolute left-0 top-0 w-1/2 h-full bg-white/5 backdrop-blur-[6px] border-r border-white/10 z-10"></div>
-                  
-                  {/* Onda de sonido vibrante */}
                   <svg className="w-14 h-14 sm:w-16 sm:h-16 text-white drop-shadow-[0_0_12px_rgba(34,211,238,0.8)] z-20" fill="none" stroke="url(#gradient-soundwave)" viewBox="0 0 24 24">
                     <defs>
                       <linearGradient id="gradient-soundwave" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stopColor="#22d3ee" /> {/* Cyan */}
-                        <stop offset="50%" stopColor="#a855f7" /> {/* Purple */}
-                        <stop offset="100%" stopColor="#ec4899" /> {/* Pink */}
+                        <stop offset="0%" stopColor="#22d3ee" /> 
+                        <stop offset="50%" stopColor="#a855f7" /> 
+                        <stop offset="100%" stopColor="#ec4899" /> 
                       </linearGradient>
                     </defs>
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
@@ -388,7 +394,6 @@ export default function Home() {
                   <span className="text-cyan-200/60 text-xs sm:text-sm mt-1 font-light">MP3, WAV, M4A, MP4</span>
                 </div>
                 
-                {/* Visualizador de audio inferior decorativo estilo Naranja/Púrpura */}
                 <div className="absolute bottom-6 flex items-center justify-center gap-1 opacity-50 z-10">
                   {[2, 4, 3, 5, 2, 6, 3, 4, 2].map((h, i) => (
                     <div key={i} className={`w-1 bg-gradient-to-t from-orange-400 to-pink-500 rounded-full h-${h} animate-pulse`} style={{ animationDelay: `${i * 0.1}s` }}></div>
@@ -406,8 +411,6 @@ export default function Home() {
         {selectedFile && !loading && !resultado && (
           <div className="mt-4 sm:mt-8 w-full max-w-lg animate-fade-in pb-6 z-20">
             <div className="bg-[#0D111A]/80 border border-emerald-500/30 rounded-3xl p-6 sm:p-8 shadow-[0_0_40px_-10px_rgba(16,185,129,0.3)] backdrop-blur-xl relative overflow-hidden">
-              
-              {/* Brillo de fondo en la tarjeta */}
               <div className="absolute -top-10 -right-10 w-40 h-40 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
 
               <div className="flex items-center gap-4 relative z-10">
@@ -460,7 +463,6 @@ export default function Home() {
         {loading && (
           <div className="flex flex-col items-center text-center mt-4 w-full px-2 animate-fade-in z-20 relative">
             <div className="relative flex items-center justify-center mb-8">
-              {/* Aura de carga brillante */}
               <div className="absolute inset-0 bg-cyan-500/30 rounded-full blur-xl animate-pulse"></div>
               <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-[#0A0D14]/80 backdrop-blur-md flex items-center justify-center shadow-[0_0_30px_rgba(34,211,238,0.5)] border-2 border-cyan-400/50 z-10 relative overflow-hidden">
                 <div className="absolute inset-0 border-[4px] border-t-cyan-400 border-r-purple-500 border-b-pink-500 border-l-transparent rounded-full animate-spin"></div>
