@@ -75,18 +75,19 @@ export default function Home() {
   const handleFileSelected = (file: File) => {
     if (!file) return;
 
-    const maxSize = 500 * 1024 * 1024;
+    const maxSize = 500 * 1024 * 1024; // 500 MB limit frontend
     if (file.size > maxSize) {
       setError('El archivo supera el límite permitido de 500 MB.');
       return;
     }
 
-    const allowedExtensions = ['.mp3', '.wav', '.m4a', '.aac', '.flac', '.ogg', '.mp4'];
+    // Ampliación de formatos para máxima compatibilidad móvil/desktop
+    const allowedExtensions = ['.mp3', '.wav', '.m4a', '.aac', '.flac', '.ogg', '.mp4', '.wma', '.opus', '.amr', '.webm'];
     const fileName = file.name.toLowerCase();
     const validExtension = allowedExtensions.some(extension => fileName.endsWith(extension));
 
     if (!validExtension) {
-      setError('Formato no compatible. Utiliza MP3, WAV, M4A, AAC, FLAC, OGG o MP4.');
+      setError('Formato no compatible. Utiliza archivos de audio como MP3, M4A, WAV, MP4, AAC, OGG, OPUS, etc.');
       return;
     }
 
@@ -107,6 +108,11 @@ export default function Home() {
       return;
     }
 
+    // Advertencia sutil para WAV gigantescos
+    if (selectedFile.name.toLowerCase().endsWith('.wav') && selectedFile.size > 100 * 1024 * 1024) {
+      alert("⚠️ Tu archivo WAV pesa más de 100 MB. Si experimentas un error durante el análisis, te recomendamos convertirlo a MP3 o M4A para asegurar que el servidor lo procese correctamente.");
+    }
+
     setError(null);
     setLoading(true);
     setProgress(5);
@@ -117,7 +123,7 @@ export default function Home() {
     } catch (err: any) {
       setLoading(false);
       setProgress(0);
-      setError(err?.message || 'No fue posible procesar el archivo.');
+      setError(err?.message || 'No fue posible procesar el archivo. Revisa tu conexión a internet o intenta con un archivo MP3 más ligero.');
     }
   };
 
@@ -146,7 +152,12 @@ export default function Home() {
       let message = `Cloudinary respondió con error ${response.status}.`;
       try {
         const data = JSON.parse(responseText);
-        if (data?.error?.message) { message = data.error.message; }
+        if (data?.error?.message) { 
+          message = data.error.message;
+          if (message.includes("File size too large")) {
+            message = "El archivo es demasiado pesado para la red (Límite superado). Por favor usa MP3 o M4A comprimido.";
+          }
+        }
       } catch { /* Ignorar */ }
       throw new Error(message);
     }
@@ -176,7 +187,7 @@ export default function Home() {
       });
       clearInterval(timerTranscribe);
 
-      if (!resTranscribe.ok) throw new Error('Error procesando la transcripción.');
+      if (!resTranscribe.ok) throw new Error('Error procesando la transcripción. El audio podría ser demasiado largo.');
       const dataTranscribe = await resTranscribe.json();
       const textoTranscrito = dataTranscribe.text;
       
@@ -344,16 +355,17 @@ export default function Home() {
         )}
 
         {/* ========================================================================= */}
-        {/* FASE A: ESFERA DE CRISTAL REFINADA (Sin artefactos cuadrados en Chromium) */}
+        {/* FASE A: ESFERA DE CRISTAL REFINADA (Sin artefactos en Android) */}
         {/* ========================================================================= */}
         {!selectedFile && !loading && !resultado && (
           <div className="w-full max-w-md animate-fade-in">
             <div className="relative group cursor-pointer w-full aspect-square max-h-[400px] mx-auto">
+              {/* ¡Aquí está la magia de audio/* para habilitar la selección en Android y Windows! */}
               <input
                 ref={fileInputRef}
                 id="teodoc-file-input"
                 type="file"
-                accept=".mp3,.wav,.m4a,.aac,.flac,.ogg,.mp4"
+                accept="audio/*,video/mp4,.mp3,.wav,.m4a,.aac,.flac,.ogg,.wma,.opus,.amr,.mp4,.webm"
                 onChange={(event) => {
                   const file = event.target.files?.[0];
                   if (file) handleFileSelected(file);
@@ -361,29 +373,23 @@ export default function Home() {
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-30"
               />
               
-              {/* Contenedor principal: reemplazado el blur por un color sólido para evitar el cuadro difuminado */}
               <div 
                 className="absolute inset-0 bg-gradient-to-b from-[#131722] to-[#0A0D14] border border-white/10 rounded-full flex flex-col items-center justify-center transition-all duration-500 shadow-[0_0_50px_-10px_rgba(168,85,247,0.3)] group-hover:shadow-[0_0_80px_-10px_rgba(34,211,238,0.4)] group-hover:border-cyan-500/50"
-                style={{ clipPath: 'circle(50% at 50% 50%)' }} // Obliga al navegador a renderizar como un círculo perfecto
+                style={{ clipPath: 'circle(50% at 50% 50%)' }}
               >
-                
-                {/* Anillos de radar */}
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-30 group-hover:opacity-60 transition-opacity">
                   <div className="w-[110%] h-[110%] rounded-full border-[1.5px] border-purple-500/20"></div>
                   <div className="absolute w-[85%] h-[85%] rounded-full border-[1.5px] border-cyan-500/20"></div>
                   <div className="absolute w-[60%] h-[60%] rounded-full border-[1.5px] border-pink-500/20"></div>
                 </div>
 
-                {/* Burbuja central de las ondas */}
                 <div 
                   className="relative w-28 h-28 sm:w-36 sm:h-36 rounded-full bg-[#1A2030] border border-cyan-400/30 shadow-[inset_0_0_30px_rgba(34,211,238,0.2),0_0_30px_rgba(168,85,247,0.5)] flex items-center justify-center z-10 group-hover:scale-110 transition-transform duration-500"
                   style={{ clipPath: 'circle(50% at 50% 50%)' }}
                 >
-                  {/* Resplandor interno para simular cristal sin usar backdrop-blur */}
                   <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/20 via-purple-500/10 to-transparent"></div>
                   <div className="absolute left-0 top-0 w-1/2 h-full bg-gradient-to-r from-white/10 to-transparent z-10 pointer-events-none"></div>
                   
-                  {/* Onda de sonido pura (compatible con todos los navegadores) */}
                   <svg className="w-14 h-14 sm:w-16 sm:h-16 text-cyan-400 drop-shadow-[0_0_15px_rgba(34,211,238,1)] z-20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 14v-4M8 18V6M12 22V2M16 18V6M20 14v-4" />
                   </svg>
@@ -391,7 +397,9 @@ export default function Home() {
 
                 <div className="mt-8 z-10 flex flex-col items-center">
                   <span className="text-white font-bold text-base sm:text-lg tracking-wide drop-shadow-md">Toca o arrastra aquí</span>
-                  <span className="text-cyan-200/60 text-xs sm:text-sm mt-1 font-light">MP3, WAV, M4A, MP4</span>
+                  <span className="text-cyan-200/60 text-[10px] sm:text-xs mt-2 font-light text-center px-4 leading-relaxed">
+                    Soporta: MP3, M4A, WAV, MP4, AAC, OGG, WEBM, OPUS, etc.
+                  </span>
                 </div>
                 
                 <div className="absolute bottom-6 flex items-center justify-center gap-1 opacity-50 z-10">
@@ -413,8 +421,6 @@ export default function Home() {
               <div className="absolute -top-10 -right-10 w-40 h-40 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
 
               <div className="flex items-center gap-4 relative z-10">
-                
-                {/* ICONO ORBE MODERNO */}
                 <div className="relative w-14 h-14 rounded-full bg-[#0A0D14] border border-emerald-400/50 shadow-[0_0_20px_rgba(16,185,129,0.4)] flex items-center justify-center shrink-0 group" style={{ clipPath: 'circle(50% at 50% 50%)' }}>
                   <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/20 to-cyan-500/20"></div>
                   <svg className="w-7 h-7 text-emerald-400 relative z-10 drop-shadow-[0_0_8px_rgba(52,211,153,0.8)] animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
