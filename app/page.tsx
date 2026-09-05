@@ -291,7 +291,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-[#07090E] text-white font-sans selection:bg-cyan-500/30 flex flex-col relative overflow-x-hidden">
       
-      {/* FONDOS Y AURORAS NEÓN COMPATIBLES CON IOS */}
+      {/* FONDOS Y AURORAS NEÓN COMPATIBLES */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
         <div className="absolute -top-40 -left-40 w-96 h-96 bg-purple-600/30 rounded-full blur-[100px]"></div>
         <div className="absolute top-1/3 right-[-10%] w-[500px] h-[500px] bg-cyan-600/20 rounded-full blur-[120px]"></div>
@@ -303,7 +303,6 @@ export default function Home() {
       <nav className="w-full flex flex-wrap gap-4 justify-between items-center px-4 sm:px-8 py-4 sm:py-6 z-10 relative">
         <div className="flex items-center gap-2 sm:gap-3">
           <div className="w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-br from-cyan-400 to-purple-600 rounded-xl flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(34,211,238,0.4)]">
-            {/* Nuevo icono TeoDoc (ondas en lugar de la nota musical) */}
             <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 14v-4M8 18V6M12 22V2M16 18V6M20 14v-4"></path></svg>
           </div>
           <span className="font-extrabold text-lg sm:text-xl tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-cyan-100 to-white drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]">TeoDoc</span>
@@ -329,7 +328,7 @@ export default function Home() {
 
       <main className="flex-1 flex flex-col items-center justify-start px-4 sm:px-6 lg:px-8 z-10 w-full max-w-5xl mx-auto pt-6 sm:pt-8 relative">
         
-        {/* TÍTULO PRINCIPAL: TEODOC */}
+        {/* TÍTULO PRINCIPAL */}
         {!selectedFile && !loading && !resultado && (
           <div className="text-center space-y-1 sm:space-y-2 mb-8 sm:mb-10 animate-fade-in-up">
             <h1 className="text-6xl sm:text-7xl md:text-8xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-white via-cyan-100 to-gray-300 drop-shadow-[0_0_15px_rgba(255,255,255,0.4)] px-2 pb-1">
@@ -344,7 +343,9 @@ export default function Home() {
           </div>
         )}
 
-        {/* FASE A: ESFERA DE CRISTAL Y ONDAS DE SONIDO (Versión ultra compatible) */}
+        {/* ========================================================================= */}
+        {/* FASE A: ESFERA DE CRISTAL REFINADA (Sin artefactos cuadrados en Chromium) */}
+        {/* ========================================================================= */}
         {!selectedFile && !loading && !resultado && (
           <div className="w-full max-w-md animate-fade-in">
             <div className="relative group cursor-pointer w-full aspect-square max-h-[400px] mx-auto">
@@ -360,21 +361,32 @@ export default function Home() {
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-30"
               />
               
-              <div className="absolute inset-0 bg-[#0A0D14]/40 backdrop-blur-2xl border border-white/10 rounded-full flex flex-col items-center justify-center transition-all duration-500 shadow-[0_0_50px_-10px_rgba(168,85,247,0.3)] group-hover:shadow-[0_0_80px_-10px_rgba(34,211,238,0.4)] group-hover:border-cyan-500/50 overflow-hidden">
+              {/* Contenedor principal: reemplazado el blur por un color sólido para evitar el cuadro difuminado */}
+              <div 
+                className="absolute inset-0 bg-gradient-to-b from-[#131722] to-[#0A0D14] border border-white/10 rounded-full flex flex-col items-center justify-center transition-all duration-500 shadow-[0_0_50px_-10px_rgba(168,85,247,0.3)] group-hover:shadow-[0_0_80px_-10px_rgba(34,211,238,0.4)] group-hover:border-cyan-500/50"
+                style={{ clipPath: 'circle(50% at 50% 50%)' }} // Obliga al navegador a renderizar como un círculo perfecto
+              >
+                
+                {/* Anillos de radar */}
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-30 group-hover:opacity-60 transition-opacity">
                   <div className="w-[110%] h-[110%] rounded-full border-[1.5px] border-purple-500/20"></div>
                   <div className="absolute w-[85%] h-[85%] rounded-full border-[1.5px] border-cyan-500/20"></div>
                   <div className="absolute w-[60%] h-[60%] rounded-full border-[1.5px] border-pink-500/20"></div>
                 </div>
 
-                <div className="relative w-28 h-28 sm:w-36 sm:h-36 rounded-full bg-gradient-to-br from-cyan-500/20 via-purple-500/20 to-pink-500/20 border border-cyan-400/30 shadow-[inset_0_0_30px_rgba(34,211,238,0.2),0_0_30px_rgba(168,85,247,0.5)] flex items-center justify-center overflow-hidden z-10 group-hover:scale-110 transition-transform duration-500">
-                  <div className="absolute left-0 top-0 w-1/2 h-full bg-white/5 backdrop-blur-[6px] border-r border-white/10 z-10"></div>
+                {/* Burbuja central de las ondas */}
+                <div 
+                  className="relative w-28 h-28 sm:w-36 sm:h-36 rounded-full bg-[#1A2030] border border-cyan-400/30 shadow-[inset_0_0_30px_rgba(34,211,238,0.2),0_0_30px_rgba(168,85,247,0.5)] flex items-center justify-center z-10 group-hover:scale-110 transition-transform duration-500"
+                  style={{ clipPath: 'circle(50% at 50% 50%)' }}
+                >
+                  {/* Resplandor interno para simular cristal sin usar backdrop-blur */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/20 via-purple-500/10 to-transparent"></div>
+                  <div className="absolute left-0 top-0 w-1/2 h-full bg-gradient-to-r from-white/10 to-transparent z-10 pointer-events-none"></div>
                   
-                  {/* Icono de Audio Waves nativo con color sólido (Fija el error visual de Safari) */}
+                  {/* Onda de sonido pura (compatible con todos los navegadores) */}
                   <svg className="w-14 h-14 sm:w-16 sm:h-16 text-cyan-400 drop-shadow-[0_0_15px_rgba(34,211,238,1)] z-20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 14v-4M8 18V6M12 22V2M16 18V6M20 14v-4" />
                   </svg>
-
                 </div>
 
                 <div className="mt-8 z-10 flex flex-col items-center">
@@ -402,10 +414,9 @@ export default function Home() {
 
               <div className="flex items-center gap-4 relative z-10">
                 
-                {/* ICONO ORBE MODERNO DE ONDAS EN FASE B */}
-                <div className="relative w-14 h-14 rounded-full bg-[#0A0D14] border border-emerald-400/50 shadow-[0_0_20px_rgba(16,185,129,0.4)] flex items-center justify-center overflow-hidden shrink-0 group">
+                {/* ICONO ORBE MODERNO */}
+                <div className="relative w-14 h-14 rounded-full bg-[#0A0D14] border border-emerald-400/50 shadow-[0_0_20px_rgba(16,185,129,0.4)] flex items-center justify-center shrink-0 group" style={{ clipPath: 'circle(50% at 50% 50%)' }}>
                   <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/20 to-cyan-500/20"></div>
-                  {/* Ondas sólidas (Fija error de Safari) */}
                   <svg className="w-7 h-7 text-emerald-400 relative z-10 drop-shadow-[0_0_8px_rgba(52,211,153,0.8)] animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 14v-4M8 18V6M12 22V2M16 18V6M20 14v-4" />
                   </svg>
@@ -457,7 +468,7 @@ export default function Home() {
           <div className="flex flex-col items-center text-center mt-4 w-full px-2 animate-fade-in z-20 relative">
             <div className="relative flex items-center justify-center mb-8">
               <div className="absolute inset-0 bg-cyan-500/30 rounded-full blur-xl animate-pulse"></div>
-              <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-[#0A0D14]/80 backdrop-blur-md flex items-center justify-center shadow-[0_0_30px_rgba(34,211,238,0.5)] border-2 border-cyan-400/50 z-10 relative overflow-hidden">
+              <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-[#0A0D14]/80 flex items-center justify-center shadow-[0_0_30px_rgba(34,211,238,0.5)] border-2 border-cyan-400/50 z-10 relative overflow-hidden" style={{ clipPath: 'circle(50% at 50% 50%)' }}>
                 <div className="absolute inset-0 border-[4px] border-t-cyan-400 border-r-purple-500 border-b-pink-500 border-l-transparent rounded-full animate-spin"></div>
                 <span className="text-3xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-br from-cyan-300 to-white drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]">{progress}%</span>
               </div>
