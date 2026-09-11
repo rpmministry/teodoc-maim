@@ -1,5 +1,6 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
+import FluidOrb from '@/components/fluid-orb';
 
 interface Versiculo { cita: string; texto: string; }
 interface PuntoDesarrollo { punto: string; explicacion: string; versiculos: Versiculo[]; }
@@ -542,19 +543,18 @@ export default function Home() {
                 <div 
                   className="relative w-28 h-28 sm:w-36 sm:h-36 rounded-full overflow-hidden flex items-center justify-center z-10 group-hover:scale-110 transition-transform duration-500"
                   style={{
-                    backgroundColor: 'rgba(10, 13, 20, 0.66)',
                     border: '1px solid rgba(34,211,238,0.35)',
                     boxShadow: 'inset 0 0 30px rgba(34,211,238,0.18), inset 0 -14px 40px rgba(168,85,247,0.22), 0 0 40px rgba(168,85,247,0.4)',
-                    WebkitBackdropFilter: 'blur(8px)',
-                    backdropFilter: 'blur(8px)',
                     clipPath: 'circle(50% at 50% 50%)',
                   }}
                 >
+                  {!loading && !resultado && (
+                    <FluidOrb className="absolute inset-0 w-full h-full pointer-events-none" color="#22d3ee" />
+                  )}
                   <div
-                    className="absolute inset-0 opacity-50 orbe-spin-slow"
-                    style={{ background: 'conic-gradient(from 120deg, rgba(34,211,238,0.22), rgba(168,85,247,0.16) 120deg, rgba(0,0,0,0) 200deg, rgba(236,72,153,0.18) 300deg, rgba(0,0,0,0) 360deg)' }}
+                    className="absolute inset-0 pointer-events-none"
+                    style={{ background: 'radial-gradient(circle, rgba(7,9,14,0.5), rgba(7,9,14,0.08) 60%, rgba(0,0,0,0) 78%)' }}
                   />
-                  <div className="orbe-sheen" />
                   
                   <svg className="relative z-20 w-14 h-14 sm:w-16 sm:h-16 text-cyan-300 drop-shadow-[0_0_15px_rgba(34,211,238,1)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 16V4m0 0L7 9m5-5 5 5M5 20h14" />
@@ -689,16 +689,15 @@ export default function Home() {
               <div
                 className="w-28 h-28 sm:w-32 sm:h-32 rounded-full relative overflow-hidden flex items-center justify-center orbe-float"
                 style={{
-                  backgroundColor: 'rgba(10, 13, 20, 0.85)',
                   boxShadow: 'inset 0 0 30px rgba(34,211,238,0.25), inset 0 -12px 30px rgba(168,85,247,0.25), 0 0 40px rgba(168,85,247,0.35)',
                   border: '1px solid rgba(34,211,238,0.35)',
                 }}
               >
+                <FluidOrb className="absolute inset-0 w-full h-full pointer-events-none" color="#22d3ee" />
                 <div
-                  className="absolute inset-0 opacity-60 orbe-spin-medium"
-                  style={{ background: 'conic-gradient(from 200deg, rgba(34,211,238,0.28), rgba(168,85,247,0.18) 90deg, rgba(0,0,0,0) 160deg, rgba(236,72,153,0.22) 260deg, rgba(0,0,0,0) 340deg)' }}
+                  className="absolute inset-0 pointer-events-none"
+                  style={{ background: 'radial-gradient(circle, rgba(7,9,14,0.5), rgba(7,9,14,0.08) 60%, rgba(0,0,0,0) 78%)' }}
                 />
-                <div className="orbe-sheen" />
                 <span className="relative z-10 text-3xl sm:text-4xl font-black drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]">
                   <span className="grad-text" style={gradStyle('linear-gradient(to bottom right, #67e8f9, #ffffff)')}>{progress}%</span>
                 </span>
