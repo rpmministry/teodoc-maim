@@ -81,12 +81,17 @@ export default function Home() {
       return;
     }
 
-    // Ampliación de formatos para máxima compatibilidad móvil/desktop
-    const allowedExtensions = ['.mp3', '.wav', '.m4a', '.aac', '.flac', '.ogg', '.mp4', '.wma', '.opus', '.amr', '.webm'];
+    // Validación tolerante para iOS: además de la extensión se acepta por
+    // tipo MIME. Safari a veces entrega file.type vacío o usa contenedores
+    // como .mov/.caf/.aiff (grabadora de iOS), que antes se rechazaban y
+    // devolvían al usuario a la pantalla principal sin explicación.
+    const allowedExtensions = ['.mp3', '.wav', '.m4a', '.m4b', '.aac', '.flac', '.ogg', '.oga', '.mp4', '.wma', '.opus', '.amr', '.webm', '.mov', '.aiff', '.aif', '.caf', '.3gp'];
     const fileName = file.name.toLowerCase();
+    const mimeType = (file.type || '').toLowerCase();
     const validExtension = allowedExtensions.some(extension => fileName.endsWith(extension));
+    const validMime = mimeType.startsWith('audio/') || mimeType.startsWith('video/');
 
-    if (!validExtension) {
+    if (!validExtension && !validMime) {
       setError('Formato no compatible. Utiliza archivos de audio como MP3, M4A, WAV, MP4, AAC, OGG, OPUS, etc.');
       return;
     }
@@ -94,6 +99,16 @@ export default function Home() {
     setError(null);
     setResultado(null);
     setSelectedFile(file);
+  };
+
+  // Abre el selector desde un gesto real del usuario. En iOS el .click()
+  // debe ejecutarse de forma síncrona dentro del gesto, por eso se hace aquí
+  // y no en un efecto ni después de un await.
+  const abrirSelectorArchivo = () => {
+    const input = fileInputRef.current;
+    if (!input) return;
+    input.value = ''; // permite volver a elegir el mismo archivo
+    input.click();
   };
 
   const handleCambiarArchivo = () => {
@@ -358,6 +373,26 @@ export default function Home() {
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCI+PGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMSIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjA1KSIvPjwvc3ZnPg==')] opacity-40"></div>
       </div>
 
+      {/* Input de archivo PERSISTENTE: nunca se desmonta.
+          En iOS, quitar el <input type="file"> del DOM justo después de
+          seleccionar hace que Safari descarte el archivo y recargue la
+          pestaña (el usuario vuelve a la pantalla principal). Por eso vive
+          aquí, fuera de los bloques condicionales, y se dispara con
+          abrirSelectorArchivo() desde el gesto del usuario. */}
+      <input
+        ref={fileInputRef}
+        id="teodoc-file-input"
+        type="file"
+        accept="audio/*,video/*,.mp3,.wav,.m4a,.m4b,.aac,.flac,.ogg,.oga,.wma,.opus,.amr,.webm,.mp4,.mov,.aiff,.aif,.caf,.3gp"
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          if (file) handleFileSelected(file);
+        }}
+        className="sr-only"
+        tabIndex={-1}
+        aria-hidden="true"
+      />
+
       {/* NAVBAR */}
       <nav className="w-full flex flex-wrap gap-4 justify-between items-center px-4 sm:px-8 py-4 sm:py-6 z-10 relative">
         <div className="flex items-center gap-2 sm:gap-3">
@@ -407,20 +442,19 @@ export default function Home() {
         {/* ========================================================================= */}
         {!selectedFile && !loading && !resultado && (
           <div className="w-full max-w-md animate-fade-in">
-            <div className="relative group cursor-pointer w-full aspect-square max-h-[400px] mx-auto">
-              {/* ¡Aquí está la magia de audio/* para habilitar la selección en Android y Windows! */}
-              <input
-                ref={fileInputRef}
-                id="teodoc-file-input"
-                type="file"
-                accept="audio/*,video/*,.mp3,.wav,.m4a,.aac,.flac,.ogg,.wma,.opus,.amr,.mp4,.webm"
-                onChange={(event) => {
-                  const file = event.target.files?.[0];
-                  if (file) handleFileSelected(file);
-                }}
-                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-30"
-              />
-              
+            <div
+              className="relative group cursor-pointer w-full aspect-square max-h-[400px] mx-auto"
+              onClick={abrirSelectorArchivo}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  abrirSelectorArchivo();
+                }
+              }}
+              role="button"
+              tabIndex={0}
+              aria-label="Seleccionar archivo de audio"
+            >
               <div 
                 className="absolute inset-0 bg-gradient-to-b from-[#131722] to-[#0A0D14] border border-white/10 rounded-full flex flex-col items-center justify-center transition-all duration-500 shadow-[0_0_50px_-10px_rgba(168,85,247,0.3)] group-hover:shadow-[0_0_80px_-10px_rgba(34,211,238,0.4)] group-hover:border-cyan-500/50"
                 style={{ clipPath: 'circle(50% at 50% 50%)' }}
