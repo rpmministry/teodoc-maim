@@ -15,19 +15,6 @@ interface PredicaAnalisis {
 const ALLOWED_EXTENSIONS = ['.mp3', '.wav', '.m4a', '.m4b', '.aac', '.flac', '.ogg', '.oga', '.opus', '.wma', '.amr', '.webm', '.mp4', '.mov', '.aiff', '.aif', '.caf', '.3gp'];
 const MAX_FILE_SIZE = 500 * 1024 * 1024;
 
-// Estilo de texto degradado explícito (sRGB + prefijo -webkit-) para que se
-// vea en iOS 15 / Safari 15, donde `background-clip:text` sin prefijo y los
-// degradados con `in oklab` de Tailwind v4 no se aplican.
-function gradStyle(gradient: string): React.CSSProperties {
-  return {
-    backgroundImage: gradient,
-    backgroundClip: 'text',
-    WebkitBackgroundClip: 'text',
-    color: 'transparent',
-    WebkitTextFillColor: 'transparent',
-  };
-}
-
 function validarArchivo(file: File): string | null {
   if (file.size > MAX_FILE_SIZE) return 'El archivo supera el límite permitido de 500 MB.';
   const fileName = file.name.toLowerCase();
@@ -325,63 +312,65 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-[#07090E] text-white font-sans selection:bg-cyan-500/30 flex flex-col relative overflow-x-hidden">
-      
-      {/* FONDOS Y AURORAS NEÓN COMPATIBLES */}
-      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
-        <div className="absolute -top-40 -left-40 w-96 h-96 bg-purple-600/30 rounded-full blur-[100px]"></div>
-        <div className="absolute top-1/3 right-[-10%] w-[500px] h-[500px] bg-cyan-600/20 rounded-full blur-[120px]"></div>
-        <div className="absolute bottom-[-10%] left-1/4 w-[600px] h-[600px] bg-pink-600/15 rounded-full blur-[120px]"></div>
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCI+PGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMSIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjA1KSIvPjwvc3ZnPg==')] opacity-40"></div>
-      </div>
-
-      {/* NAVBAR */}
-      <nav className="w-full flex flex-wrap gap-4 justify-between items-center px-4 sm:px-8 py-4 sm:py-6 z-10 relative">
-        <div className="flex items-center gap-2 sm:gap-3">
-          <div className="w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-br from-cyan-400 to-purple-600 rounded-xl flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(34,211,238,0.4)]">
-            <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 14v-4M8 18V6M12 22V2M16 18V6M20 14v-4"></path></svg>
-          </div>
-          <span className="font-extrabold text-lg sm:text-xl tracking-wide drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]"><span className="grad-text" style={gradStyle('linear-gradient(to right, #cffafe, #ffffff)')}>TeoDoc</span></span>
+    <div className="min-h-screen bg-[#161616] text-[#f4f4f4] font-sans flex flex-col relative">
+      {/* HEADER — IBM Carbon */}
+      <header className="w-full h-12 bg-[#161616] border-b border-[#393939] flex items-center justify-between px-4 sm:px-6 z-10 relative">
+        <div className="flex items-center gap-3 min-w-0">
+          <svg viewBox="0 0 64 64" className="w-6 h-6 shrink-0" aria-hidden="true">
+            <defs>
+              <radialGradient id="tdOrb" cx="50%" cy="36%" r="68%">
+                <stop offset="0%" stopColor="#a6c8ff" />
+                <stop offset="52%" stopColor="#0f62fe" />
+                <stop offset="100%" stopColor="#002d9c" />
+              </radialGradient>
+            </defs>
+            <circle cx="32" cy="32" r="22" fill="url(#tdOrb)" />
+            <path d="M14 34.5c5.4-3.2 10.3-3.2 15.6 0 5.2 3.1 9.7 1.6 13.4-1.2" stroke="#ffffff" strokeOpacity="0.9" strokeWidth="2.4" strokeLinecap="round" fill="none" />
+          </svg>
+          <span className="text-sm font-semibold tracking-wide text-[#f4f4f4] truncate">TeoDoc</span>
         </div>
-        
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3 justify-end">
-          <button onClick={() => setShowFeedbackModal(true)} className="group flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white text-[10px] sm:text-sm font-medium transition-all backdrop-blur-md">
-            <span className="hidden sm:inline">Sugerencias</span>
-            <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+
+        <div className="flex items-center gap-1 sm:gap-2">
+          <button
+            onClick={() => setShowFeedbackModal(true)}
+            className="h-8 px-3 text-sm text-[#f4f4f4] hover:bg-[#353535] transition-colors"
+          >
+            Sugerencias
           </button>
-          
-          <a href="https://collection.cloudinary.com/antbfat3/ee4582aa2bac515291b5d02c058e9c4d" target="_blank" rel="noopener noreferrer" className="group flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:px-4 sm:py-2 rounded-full bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/30 text-cyan-300 hover:text-cyan-200 text-[10px] sm:text-sm font-medium transition-all backdrop-blur-md">
-            <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-            <span className="hidden sm:inline">Manual</span>
+          <a
+            href="https://collection.cloudinary.com/antbfat3/ee4582aa2bac515291b5d02c058e9c4d"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="h-8 px-3 inline-flex items-center text-sm text-[#f4f4f4] hover:bg-[#353535] transition-colors"
+          >
+            Manual
           </a>
-
-          <a href="https://www.paypal.com/ncp/payment/ZTLTVMRR95J2C" target="_blank" rel="noopener noreferrer" className="group flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:px-5 sm:py-2 rounded-full bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-400 hover:to-purple-500 text-white text-[10px] sm:text-sm font-bold shadow-[0_0_15px_rgba(236,72,153,0.4)] transition-all hover:scale-105 border border-white/10">
-            <span className="hidden lg:inline">Apoyar Proyecto</span>
-            <span className="lg:hidden">Apoyar</span>
+          <a
+            href="https://www.paypal.com/ncp/payment/ZTLTVMRR95J2C"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="h-8 px-4 inline-flex items-center text-sm font-medium text-white bg-[#0f62fe] hover:bg-[#0353e9] transition-colors"
+          >
+            Apoyar
           </a>
         </div>
-      </nav>
+      </header>
 
-      <main className="flex-1 flex flex-col items-center justify-start px-4 sm:px-6 lg:px-8 z-10 w-full max-w-5xl mx-auto pt-6 sm:pt-8 relative">
-        
-        {/* TÍTULO PRINCIPAL */}
+      <main className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 z-10 w-full max-w-6xl mx-auto py-10 sm:py-16 relative">
+        {/* HERO — Carbon */}
         {!resultado && (
-          <div className="text-center space-y-1 sm:space-y-2 mb-6 sm:mb-8 animate-fade-in-up">
-            <h1 className="text-5xl sm:text-7xl md:text-8xl font-black tracking-tighter drop-shadow-[0_0_15px_rgba(255,255,255,0.4)] px-2 pb-1">
-              <span className="grad-text" style={gradStyle('linear-gradient(to bottom right, #ffffff, #cffafe, #d1d5db)')}>TeoDoc</span>
-            </h1>
-            <h2 className="text-xl sm:text-3xl md:text-4xl font-extrabold tracking-tight drop-shadow-[0_0_20px_rgba(168,85,247,0.4)] px-2 pb-2">
-              <span className="grad-text" style={gradStyle('linear-gradient(to right, #22d3ee, #c084fc, #f472b6)')}>Analiza tus prédicas.</span>
-            </h2>
-            <p className="text-xs sm:text-sm md:text-base text-cyan-100/70 max-w-lg mx-auto font-medium px-4 mt-2">
+          <div className="text-center mb-10 sm:mb-14">
+            <h1 className="text-4xl sm:text-5xl md:text-6xl font-light tracking-tight text-[#f4f4f4]">TeoDoc</h1>
+            <h2 className="mt-3 text-lg sm:text-xl font-normal text-[#c6c6c6]">Analiza tus prédicas.</h2>
+            <p className="mt-4 text-sm text-[#a8a8a8] max-w-xl mx-auto">
               Transcripción y extracción de estructura teológica impulsada por IA.
             </p>
           </div>
         )}
 
-        {/* ORBE LÍQUIDO: ÚNICO punto de interacción (toque o arrastrar). */}
+        {/* ORBE — único punto de interacción */}
         {!resultado && (
-          <div className="mt-2 sm:mt-4 z-20 relative">
+          <div className="z-20 relative">
             <LiquidOrb
               state={loading ? 'thinking' : 'idle'}
               progress={progress}
@@ -391,38 +380,37 @@ export default function Home() {
           </div>
         )}
 
-        {/* ERROR DE VALIDACIÓN O SUBIDA */}
+        {/* AVISO — Carbon inline notification */}
         {!loading && !resultado && error && (
-          <div className="mt-6 px-5 py-4 bg-[#0D111A]/85 border border-cyan-500/30 rounded-2xl text-cyan-100 text-xs sm:text-sm w-full max-w-md shadow-[0_0_20px_rgba(34,211,238,0.2)] animate-fade-in space-y-2 text-center relative z-20 backdrop-blur-md">
-            <p className="font-bold uppercase tracking-wider text-cyan-300">🕊️ Un momento</p>
-            <p className="bg-black/40 p-3 rounded-xl break-words border border-cyan-500/20">{error}</p>
+          <div className="mt-8 w-full max-w-md border-l-4 border-[#0f62fe] bg-[#262626] px-4 py-3 text-sm text-[#f4f4f4]">
+            <p className="font-semibold mb-1">🕊️ Un momento</p>
+            <p className="text-[#c6c6c6]">{error}</p>
           </div>
         )}
 
         {/* CONTENEDOR DE RESULTADOS */}
         {resultado && (
           <div className="w-full mt-6 md:mt-10 mb-12 sm:mb-16 space-y-10 sm:space-y-16 animate-fade-in z-20 relative">
-            <div className="bg-[#0D111A]/80 backdrop-blur-2xl rounded-3xl border border-white/10 shadow-[0_0_50px_rgba(168,85,247,0.15)] overflow-hidden">
-              <div className="bg-gradient-to-b from-[#1A1F2C]/80 to-transparent p-6 sm:p-8 md:p-12 border-b border-white/5 relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-cyan-500/10 rounded-full blur-[80px] pointer-events-none"></div>
+            <div className="bg-[#262626] border border-[#393939] overflow-hidden">
+              <div className="p-6 sm:p-8 md:p-12 border-b border-[#393939] relative overflow-hidden">
 
                 <div className="flex flex-col md:flex-row justify-between items-center md:items-start mb-8 sm:mb-10 gap-5 relative z-10">
                   <div className="flex flex-col items-center md:items-start text-center md:text-left">
-                    <span className="text-[10px] sm:text-xs font-black text-cyan-400 uppercase tracking-[0.2em] mb-1.5 drop-shadow-[0_0_5px_rgba(34,211,238,0.5)]">Análisis IA Completado</span>
-                    <span className="text-white/50 text-xs sm:text-sm font-light">Estructura teológica extraída.</span>
+                    <span className="text-xs font-semibold text-[#78a9ff] uppercase tracking-wider mb-1.5">Análisis IA completado</span>
+                    <span className="text-[#a8a8a8] text-sm font-normal">Estructura teológica extraída.</span>
                   </div>
                   
-                  <div className="flex flex-col sm:flex-row flex-wrap justify-center md:justify-end gap-3 w-full md:w-auto">
-                    <button onClick={nuevoAnalisis} className="w-full sm:w-auto justify-center bg-white/5 hover:bg-white/10 border border-white/10 text-white px-5 py-2.5 rounded-full text-xs sm:text-sm font-semibold transition-all backdrop-blur-md flex items-center gap-2 hover:shadow-[0_0_15px_rgba(255,255,255,0.1)]">
+                  <div className="flex flex-col sm:flex-row flex-wrap justify-center md:justify-end gap-2 w-full md:w-auto">
+                    <button onClick={nuevoAnalisis} className="h-10 w-full sm:w-auto justify-center px-5 text-sm font-medium text-[#f4f4f4] border border-[#6f6f6f] hover:bg-[#353535] transition-colors flex items-center gap-2">
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>
                       Nuevo
                     </button>
-                    <button onClick={generarPDF} className="w-full sm:w-auto justify-center bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/30 text-purple-200 px-5 py-2.5 rounded-full text-xs sm:text-sm font-semibold transition-all backdrop-blur-md flex items-center gap-2 hover:shadow-[0_0_15px_rgba(168,85,247,0.3)]">
+                    <button onClick={generarPDF} className="h-10 w-full sm:w-auto justify-center px-5 text-sm font-medium text-[#f4f4f4] border border-[#6f6f6f] hover:bg-[#353535] transition-colors flex items-center gap-2">
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4-4m0 0l-4-4m4 4V4"></path></svg>
                       PDF
                     </button>
                     {resultado.infografia && (
-                      <button onClick={descargarInfografia} className="w-full sm:w-auto justify-center bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-400 hover:to-purple-500 text-white px-5 py-2.5 rounded-full text-xs sm:text-sm font-bold transition-all shadow-[0_0_20px_rgba(34,211,238,0.4)] flex items-center gap-2 hover:scale-[1.02]">
+                      <button onClick={descargarInfografia} className="h-10 w-full sm:w-auto justify-center px-5 text-sm font-medium text-white bg-[#0f62fe] hover:bg-[#0353e9] transition-colors flex items-center gap-2">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                         Infografía
                       </button>
@@ -431,34 +419,32 @@ export default function Home() {
                 </div>
 
                 <div className="text-center relative z-10">
-                  <h2 className="text-2xl sm:text-4xl md:text-5xl font-black grad-text mb-5 leading-tight tracking-tight" style={gradStyle('linear-gradient(to right, #ffffff, #9ca3af)')}>{resultado.titulo}</h2>
-                  <p className="text-cyan-200/90 text-sm sm:text-lg md:text-xl italic max-w-3xl mx-auto font-light leading-relaxed drop-shadow-md">"{resultado.idea_principal}"</p>
+                  <h2 className="text-2xl sm:text-4xl md:text-5xl font-light text-[#f4f4f4] mb-5 leading-tight tracking-tight">{resultado.titulo}</h2>
+                  <p className="text-[#c6c6c6] text-base sm:text-lg md:text-xl italic max-w-3xl mx-auto font-light leading-relaxed">"{resultado.idea_principal}"</p>
                 </div>
               </div>
               
               <div className="p-6 sm:p-8 md:p-12 space-y-10 sm:space-y-16">
                 <section>
-                  <h3 className="text-xs sm:text-sm font-black text-purple-400 mb-6 sm:mb-8 uppercase tracking-[0.2em] flex items-center gap-3 sm:gap-4 drop-shadow-[0_0_5px_rgba(168,85,247,0.5)]">
-                    <span className="w-4 sm:w-10 h-[2px] bg-gradient-to-r from-transparent to-purple-500"></span>
+                  <h3 className="text-sm font-semibold text-[#f4f4f4] mb-6 sm:mb-8 uppercase tracking-wider border-l-4 border-[#0f62fe] pl-3">
                     Desarrollo Bíblico
-                    <span className="flex-1 h-[1px] bg-gradient-to-r from-purple-500/50 to-transparent"></span>
                   </h3>
                   
                   <div className="grid gap-5 sm:gap-6">
                     {resultado.desarrollo_progresivo.map((item, idx) => (
-                      <div key={idx} className="bg-white/5 p-5 sm:p-6 md:p-8 rounded-2xl sm:rounded-3xl border border-white/10 hover:border-cyan-500/30 hover:bg-white/[0.07] transition-colors backdrop-blur-sm">
+                      <div key={idx} className="bg-[#262626] p-5 sm:p-6 md:p-8 border border-[#393939] hover:border-[#525252] transition-colors">
                         <div className="flex gap-3 sm:gap-4 items-start mb-4">
-                          <span className="text-cyan-400 bg-cyan-500/10 border border-cyan-400/30 w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shrink-0 text-sm font-bold mt-0.5 shadow-[0_0_10px_rgba(34,211,238,0.2)]">{idx + 1}</span>
-                          <h4 className="text-lg sm:text-xl font-bold text-white pt-1 sm:pt-1.5 leading-tight">{item.punto}</h4>
+                          <span className="text-[#78a9ff] bg-[#0f62fe]/15 border border-[#0f62fe]/40 w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shrink-0 text-sm font-semibold mt-0.5">{idx + 1}</span>
+                          <h4 className="text-lg sm:text-xl font-semibold text-[#f4f4f4] pt-1 sm:pt-1.5 leading-tight">{item.punto}</h4>
                         </div>
                         <div className="pl-11 sm:pl-14">
-                          <p className="text-gray-300 mb-5 leading-relaxed font-light text-sm sm:text-base">{item.explicacion}</p>
+                          <p className="text-[#c6c6c6] mb-5 leading-relaxed font-normal text-sm sm:text-base">{item.explicacion}</p>
                           {item.versiculos.length > 0 && (
                             <div className="grid gap-3">
                               {item.versiculos.map((v, vIdx) => (
-                                <div key={vIdx} className="bg-black/30 p-4 rounded-xl border-l-2 border-purple-500 shadow-inner">
-                                  <p className="text-xs sm:text-sm font-bold text-purple-300 mb-1.5">{v.cita}</p>
-                                  <p className="text-xs sm:text-sm text-gray-400 italic font-light leading-relaxed">"{v.texto}"</p>
+                                <div key={vIdx} className="bg-[#1f1f1f] p-4 border-l-2 border-[#0f62fe]">
+                                  <p className="text-xs sm:text-sm font-semibold text-[#78a9ff] mb-1.5">{v.cita}</p>
+                                  <p className="text-xs sm:text-sm text-[#a8a8a8] italic font-normal leading-relaxed">"{v.texto}"</p>
                                 </div>
                               ))}
                             </div>
@@ -470,27 +456,27 @@ export default function Home() {
                 </section>
 
                 <div className="grid md:grid-cols-2 gap-5 sm:gap-6">
-                  <section className="bg-gradient-to-br from-cyan-900/20 to-blue-900/10 p-6 sm:p-8 rounded-3xl border border-cyan-500/20 shadow-[0_0_20px_rgba(34,211,238,0.05)] backdrop-blur-sm">
-                    <h3 className="text-xs sm:text-sm font-black text-cyan-400 mb-5 sm:mb-6 uppercase tracking-[0.15em] flex items-center gap-3 drop-shadow-[0_0_5px_rgba(34,211,238,0.5)]">
-                      <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+                  <section className="bg-[#262626] p-6 sm:p-8 border border-[#393939]">
+                    <h3 className="text-sm font-semibold text-[#f4f4f4] mb-5 sm:mb-6 uppercase tracking-wider flex items-center gap-2">
+                      <svg className="w-5 h-5 shrink-0 text-[#78a9ff]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
                       Aplicación Práctica
                     </h3>
                     <ul className="space-y-4">
                       {resultado.aplicacion.map((app, idx) => (
-                        <li key={idx} className="flex gap-4 text-cyan-50/80 font-light leading-relaxed text-sm sm:text-base">
-                          <span className="text-cyan-500 mt-1 text-lg leading-none drop-shadow-[0_0_3px_rgba(34,211,238,0.8)]">•</span>
+                        <li key={idx} className="flex gap-3 text-[#c6c6c6] font-normal leading-relaxed text-sm sm:text-base">
+                          <span className="text-[#0f62fe] mt-1 leading-none">—</span>
                           <span>{app}</span>
                         </li>
                       ))}
                     </ul>
                   </section>
 
-                  <section className="bg-gradient-to-br from-pink-900/20 to-purple-900/10 p-6 sm:p-8 rounded-3xl border border-pink-500/20 shadow-[0_0_20px_rgba(236,72,153,0.05)] backdrop-blur-sm">
-                    <h3 className="text-xs sm:text-sm font-black text-pink-400 mb-5 sm:mb-6 uppercase tracking-[0.15em] flex items-center gap-3 drop-shadow-[0_0_5px_rgba(236,72,153,0.5)]">
-                      <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
+                  <section className="bg-[#262626] p-6 sm:p-8 border border-[#393939]">
+                    <h3 className="text-sm font-semibold text-[#f4f4f4] mb-5 sm:mb-6 uppercase tracking-wider flex items-center gap-2">
+                      <svg className="w-5 h-5 shrink-0 text-[#78a9ff]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
                       Oración Ministerial
                     </h3>
-                    <p className="text-pink-50/80 italic leading-relaxed font-light text-sm sm:text-base">"{resultado.oracion}"</p>
+                    <p className="text-[#c6c6c6] italic leading-relaxed font-normal text-sm sm:text-base">"{resultado.oracion}"</p>
                   </section>
                 </div>
               </div>
@@ -500,8 +486,8 @@ export default function Home() {
             {resultado.infografia && (
               <div className="w-full pt-6 sm:pt-10">
                 <div className="text-center mb-6 sm:mb-8 px-4">
-                  <h3 className="text-lg sm:text-xl font-bold text-white tracking-widest uppercase drop-shadow-md">Póster Digital Listo</h3>
-                  <p className="text-xs sm:text-sm text-cyan-200/60 mt-2 max-w-md mx-auto">
+                  <h3 className="text-sm font-semibold text-[#f4f4f4] tracking-wider uppercase">Póster digital listo</h3>
+                  <p className="text-xs sm:text-sm text-[#a8a8a8] mt-2 max-w-md mx-auto">
                     Exportación optimizada en alta resolución.
                   </p>
                 </div>
@@ -557,18 +543,17 @@ export default function Home() {
 
       {/* MODAL DE SUGERENCIAS */}
       {showFeedbackModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-fade-in">
-          <div className="bg-[#0D111A] border border-cyan-500/30 rounded-3xl p-6 sm:p-8 w-full max-w-md shadow-[0_0_40px_rgba(34,211,238,0.15)] relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/20 rounded-full blur-3xl"></div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+          <div className="bg-[#262626] border border-[#393939] p-6 sm:p-8 w-full max-w-md relative">
             <div className="flex justify-between items-center mb-6 relative z-10">
-              <h3 className="text-xl font-black grad-text" style={gradStyle('linear-gradient(to right, #22d3ee, #c084fc)')}>Enviar Sugerencia</h3>
-              <button onClick={() => setShowFeedbackModal(false)} className="text-white/50 hover:text-white transition-colors bg-white/5 p-2 rounded-full">
+              <h3 className="text-lg font-semibold text-[#f4f4f4]">Enviar sugerencia</h3>
+              <button onClick={() => setShowFeedbackModal(false)} className="text-[#c6c6c6] hover:text-[#f4f4f4] hover:bg-[#353535] p-2 transition-colors">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
               </button>
             </div>
-            
+
             {feedbackStatus === 'success' ? (
-              <div className="text-cyan-400 text-center py-10 font-bold text-lg">
+              <div className="text-[#78a9ff] text-center py-10 font-medium text-base">
                 ¡Gracias! Tu mensaje ha sido enviado.
               </div>
             ) : (
@@ -578,15 +563,15 @@ export default function Home() {
                   value={feedbackMsg}
                   onChange={(e) => setFeedbackMsg(e.target.value)}
                   placeholder="Escribe tu sugerencia o reporte aquí..."
-                  className="w-full bg-black/40 border border-white/10 rounded-2xl p-4 text-sm text-white focus:outline-none focus:border-cyan-500/50 focus:ring-1 focus:ring-cyan-500/50 min-h-[120px] resize-none backdrop-blur-sm"
+                  className="w-full bg-[#161616] border border-[#525252] p-4 text-sm text-[#f4f4f4] placeholder:text-[#6f6f6f] focus:outline-none focus:border-[#0f62fe] min-h-[120px] resize-none"
                 ></textarea>
-                {feedbackStatus === 'error' && <p className="text-red-400 text-xs font-medium">Error de conexión. Inténtalo de nuevo.</p>}
+                {feedbackStatus === 'error' && <p className="text-[#fa4d56] text-xs font-normal">No se pudo enviar. Inténtalo de nuevo.</p>}
                 <button
                   type="submit"
                   disabled={feedbackStatus === 'sending'}
-                  className="w-full bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-400 hover:to-purple-500 text-white font-bold py-3.5 rounded-2xl text-sm transition-all shadow-[0_0_20px_rgba(168,85,247,0.3)] disabled:opacity-50 tracking-wider uppercase"
+                  className="w-full bg-[#0f62fe] hover:bg-[#0353e9] text-white font-medium py-3 text-sm transition-colors disabled:opacity-50"
                 >
-                  {feedbackStatus === 'sending' ? 'Enviando...' : 'Enviar Mensaje'}
+                  {feedbackStatus === 'sending' ? 'Enviando…' : 'Enviar mensaje'}
                 </button>
               </form>
             )}
@@ -595,9 +580,9 @@ export default function Home() {
       )}
 
       {/* FOOTER PERFECTAMENTE VISIBLE Y ELEVADO */}
-      <footer className="w-full flex flex-col items-center justify-center py-8 pb-12 sm:pb-10 text-[11px] sm:text-xs text-cyan-50/70 font-medium tracking-widest z-20 mt-auto px-4 space-y-2 uppercase bg-gradient-to-t from-black/80 to-transparent">
-        <p className="drop-shadow-[0_0_8px_rgba(34,211,238,0.5)] font-bold text-cyan-300">Versión 1.1 Beta</p>
-        <p className="text-cyan-50/50">Desarrollado por Mauricio Andrade Luna</p>
+      <footer className="w-full flex flex-col items-center justify-center py-6 text-[11px] text-[#a8a8a8] font-normal tracking-wide z-20 mt-auto px-4 gap-1 border-t border-[#393939] bg-[#161616]">
+        <p className="text-[#c6c6c6]">Versión 1.1 Beta</p>
+        <p>Desarrollado por Mauricio Andrade Luna</p>
       </footer>
     </div>
   );

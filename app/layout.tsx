@@ -1,12 +1,15 @@
 import type { Metadata, Viewport } from 'next';
-import { Inter, Lora } from 'next/font/google';
+import { IBM_Plex_Sans } from 'next/font/google';
 import './globals.css';
 
-const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
-const lora = Lora({ subsets: ['latin'], variable: '--font-serif' });
+const plex = IBM_Plex_Sans({
+  subsets: ['latin'],
+  weight: ['300', '400', '500', '600', '700'],
+  variable: '--font-plex',
+});
 
 export const metadata: Metadata = {
-  title: 'TeoDoc - Analizador Ministerial',
+  title: 'TeoDoc — Analizador Ministerial',
   description: 'Transcripción instantánea y extracción de estructura teológica impulsada por IA.',
 };
 
@@ -22,8 +25,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="es" className={`${inter.variable} ${lora.variable}`}>
-      <body className="font-sans antialiased bg-[#07090E] text-white">
+    <html lang="es" className={plex.variable}>
+      <body className="font-sans antialiased bg-[#161616] text-[#f4f4f4]">
         {children}
       </body>
     </html>

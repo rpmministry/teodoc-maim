@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useRef, useState, type CSSProperties } from 'react'
-import { createLiquidOrb, isWebGPUAvailable, type LiquidOrbHandle } from '@/lib/liquid-orb-engine'
+import { useEffect, useRef, useState } from 'react'
+import FluidOrb from '@/components/fluid-orb'
 import type { LiquidOrbState } from '@/lib/liquid-orb-seeds'
 
 type LiquidOrbProps = {
@@ -11,137 +11,14 @@ type LiquidOrbProps = {
   onFile: (file: File) => void
 }
 
-const gradText = (gradient: string): CSSProperties => ({
-  backgroundImage: gradient,
-  backgroundClip: 'text',
-  WebkitBackgroundClip: 'text',
-  color: 'transparent',
-  WebkitTextFillColor: 'transparent',
-})
-
-// Fallback 100% CSS para navegadores sin WebGPU (Safari iOS 15 / iPhone 7).
-function CssOrb({ state }: { state: LiquidOrbState }) {
-  const thinking = state === 'thinking'
-  return (
-    <div
-      className="relative w-full h-full rounded-full overflow-hidden"
-      style={{ background: 'radial-gradient(circle at 50% 36%, #1c2433 0%, #0b0f18 58%, #05070c 100%)' }}
-    >
-      {/* Halo interior tenue */}
-      <div
-        className="absolute inset-[18%] rounded-full blur-2xl"
-        style={{
-          background: thinking
-            ? 'radial-gradient(circle at 50% 55%, rgba(236,72,153,0.3), rgba(0,0,0,0) 70%)'
-            : 'radial-gradient(circle at 50% 55%, rgba(34,211,238,0.24), rgba(0,0,0,0) 70%)',
-        }}
-      />
-
-      {/* Banda iridiscente difusa (cian arriba, magenta al centro, dorado abajo) */}
-      <div className="absolute inset-0">
-        <div
-          className="orbe-band absolute rounded-full"
-          style={{
-            left: '8%', right: '8%', top: '37%', height: '22%',
-            background: 'linear-gradient(to bottom, rgba(56,189,248,0), rgba(56,189,248,0.7) 45%, rgba(56,189,248,0) 100%)',
-            filter: 'blur(16px)',
-            animationDirection: thinking ? 'reverse' : 'normal',
-            animationDuration: thinking ? '2.6s' : '4s',
-          }}
-        />
-        <div
-          className="orbe-band absolute rounded-full"
-          style={{
-            left: '3%', right: '3%', top: '46%', height: '18%',
-            background: 'linear-gradient(to bottom, rgba(217,70,239,0), rgba(236,72,153,0.95) 45%, rgba(244,114,182,0.85) 70%, rgba(217,70,239,0) 100%)',
-            filter: 'blur(11px)',
-            animationDelay: '0.25s',
-            animationDuration: thinking ? '2.6s' : '4s',
-          }}
-        />
-        <div
-          className="orbe-band absolute rounded-full"
-          style={{
-            left: '7%', right: '7%', top: '51%', height: '7%',
-            background: 'linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,0.85) 30%, rgba(255,190,255,0.95) 62%, rgba(255,255,255,0))',
-            filter: 'blur(6px)',
-            animationDelay: '0.5s',
-            animationDirection: 'reverse',
-            animationDuration: thinking ? '2.6s' : '4s',
-          }}
-        />
-        <div
-          className="orbe-band absolute rounded-full"
-          style={{
-            left: '10%', right: '10%', top: '54%', height: '24%',
-            background: 'linear-gradient(to bottom, rgba(250,204,21,0), rgba(250,204,21,0.65) 45%, rgba(250,204,21,0) 100%)',
-            filter: 'blur(18px)',
-            animationDelay: '0.75s',
-            animationDirection: thinking ? 'reverse' : 'normal',
-            animationDuration: thinking ? '2.6s' : '4s',
-          }}
-        />
-      </div>
-
-      {/* Reflejo de vidrio y sombra del orbe */}
-      <div
-        className="absolute inset-0 rounded-full"
-        style={{ background: 'radial-gradient(120% 78% at 50% 6%, rgba(255,255,255,0.1), rgba(255,255,255,0) 52%)' }}
-      />
-      <div
-        className="absolute inset-0 rounded-full"
-        style={{ boxShadow: 'inset 0 0 60px rgba(0,0,0,0.78), inset 0 -32px 60px rgba(0,0,0,0.55), inset 0 0 0 1px rgba(255,255,255,0.06)' }}
-      />
-    </div>
-  )
-}
-
 export default function LiquidOrb({ state, progress = 0, disabled = false, onFile }: LiquidOrbProps) {
-  const [webgpu, setWebgpu] = useState<boolean | null>(null)
-  const [dragging, setDragging] = useState(false)
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const handleRef = useRef<LiquidOrbHandle | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const onFileRef = useRef(onFile)
   const lastKeyRef = useRef<string | null>(null)
+  const [dragging, setDragging] = useState(false)
+  const thinking = state === 'thinking'
 
   useEffect(() => { onFileRef.current = onFile }, [onFile])
-
-  // Detecta WebGPU y arranca el motor. Si algo falla, cae al orb CSS.
-  useEffect(() => {
-    let cancelled = false
-    if (!isWebGPUAvailable()) {
-      // Sin WebGPU: `webgpu` queda null y el render usa el orb CSS.
-      return () => { cancelled = true }
-    }
-    const canvas = canvasRef.current
-    if (!canvas) {
-      return () => { cancelled = true }
-    }
-    createLiquidOrb(canvas, state)
-      .then((handle) => {
-        if (cancelled) { handle.destroy(); return }
-        handleRef.current = handle
-        setWebgpu(true)
-      })
-      .catch((error) => {
-        console.warn('LiquidOrb: usando fallback CSS —', error)
-        if (!cancelled) setWebgpu(false)
-      })
-    return () => {
-      cancelled = true
-      handleRef.current?.destroy()
-      handleRef.current = null
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  // Sincroniza el estado visual (idle/thinking) con el motor.
-  useEffect(() => {
-    handleRef.current?.setState(state)
-  }, [state])
-
-  // Al terminar un ciclo, permitir volver a subir el mismo archivo.
   useEffect(() => { if (!disabled) lastKeyRef.current = null }, [disabled])
 
   const procesar = (file: File) => {
@@ -186,9 +63,9 @@ export default function LiquidOrb({ state, progress = 0, disabled = false, onFil
   }
 
   return (
-    <div className="flex flex-col items-center gap-3 sm:gap-5 select-none">
+    <div className="flex flex-col items-center gap-6 select-none">
       <div
-        className="relative w-[240px] h-[240px] sm:w-[300px] sm:h-[300px]"
+        className="relative w-[248px] h-[248px] sm:w-[320px] sm:h-[320px]"
         onDragOver={(event) => { event.preventDefault(); if (!disabled) setDragging(true) }}
         onDragEnter={(event) => { event.preventDefault(); if (!disabled) setDragging(true) }}
         onDragLeave={(event) => { event.preventDefault(); setDragging(false) }}
@@ -203,10 +80,23 @@ export default function LiquidOrb({ state, progress = 0, disabled = false, onFil
           }
         }}
       >
-        {webgpu ? (
-          <canvas ref={canvasRef} className="w-full h-full rounded-full" aria-hidden="true" />
-        ) : (
-          <CssOrb state={state} />
+        <FluidOrb
+          className="absolute inset-0 w-full h-full pointer-events-none"
+          color={thinking ? '#8a3ffc' : '#0f62fe'}
+        />
+
+        {/* Contador de progreso centrado (Carbon: peso ligero, cifras tabulares) */}
+        {thinking && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div
+              className="absolute w-[62%] h-[62%] rounded-full"
+              style={{ background: 'radial-gradient(circle, rgba(10,10,10,0.55), rgba(10,10,10,0) 72%)' }}
+            />
+            <span className="relative text-5xl sm:text-6xl font-light tracking-tight text-white tabular-nums leading-none">
+              {progress}
+              <span className="text-2xl sm:text-3xl align-top font-light">%</span>
+            </span>
+          </div>
         )}
 
         <input
@@ -219,19 +109,13 @@ export default function LiquidOrb({ state, progress = 0, disabled = false, onFil
         />
 
         {dragging && (
-          <div className="absolute inset-0 rounded-full pointer-events-none ring-2 ring-cyan-300/80 shadow-[0_0_40px_rgba(34,211,238,0.5)]" />
+          <div className="absolute inset-0 rounded-full pointer-events-none ring-2 ring-[#0f62fe] ring-offset-0" />
         )}
       </div>
 
-      <div className="h-10 flex items-center justify-center">
-        {state === 'thinking' ? (
-          <span className="text-3xl sm:text-4xl font-black drop-shadow-[0_0_10px_rgba(255,255,255,0.35)]">
-            <span className="grad-text" style={gradText('linear-gradient(to bottom right, #67e8f9, #f0abfc)')}>{progress}%</span>
-          </span>
-        ) : (
-          <span className="text-white font-bold text-base sm:text-lg tracking-wide drop-shadow-md">Toca o arrastra aquí</span>
-        )}
-      </div>
+      {!thinking && (
+        <span className="text-[#c6c6c6] text-sm font-normal tracking-wide">Toca o arrastra aquí</span>
+      )}
     </div>
   )
 }

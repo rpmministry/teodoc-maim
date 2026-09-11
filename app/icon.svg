@@ -1,0 +1,12 @@
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="TeoDoc">
+  <rect width="64" height="64" rx="10" fill="#161616"/>
+  <defs>
+    <radialGradient id="teodocOrb" cx="50%" cy="36%" r="68%">
+      <stop offset="0%" stop-color="#a6c8ff"/>
+      <stop offset="52%" stop-color="#0f62fe"/>
+      <stop offset="100%" stop-color="#002d9c"/>
+    </radialGradient>
+  </defs>
+  <circle cx="32" cy="32" r="19" fill="url(#teodocOrb)"/>
+  <path d="M15 34.5c5.4-3.2 10.3-3.2 15.6 0 5.2 3.1 9.7 1.6 13.4-1.2" stroke="#ffffff" stroke-opacity="0.9" stroke-width="2.4" stroke-linecap="round" fill="none"/>
+</svg>
