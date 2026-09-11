@@ -367,25 +367,6 @@ export default function Home() {
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCI+PGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMSIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjA1KSIvPjwvc3ZnPg==')] opacity-40"></div>
       </div>
 
-      {/* Input de archivo PERSISTENTE (raíz): nunca se desmonta ni se oculta.
-          En iOS, sacar el <input type="file"> del DOM tras seleccionar hace que
-          Safari descarte el archivo y recargue la pestaña. Se activa de forma
-          NATIVA con el <label htmlFor> de la esfera (iOS bloquea input.click()
-          programático). Al vivir aquí, el archivo seleccionado se conserva. */}
-      <input
-        ref={fileInputRef}
-        id="teodoc-file-input"
-        type="file"
-        accept="audio/*,video/*,.mp3,.wav,.m4a,.m4b,.aac,.flac,.ogg,.oga,.wma,.opus,.amr,.webm,.mp4,.mov,.aiff,.aif,.caf,.3gp"
-        onChange={(event) => {
-          const file = event.target.files?.[0];
-          if (file) handleFileSelected(file);
-        }}
-        className="sr-only"
-        tabIndex={-1}
-        aria-hidden="true"
-      />
-
       {/* NAVBAR */}
       <nav className="w-full flex flex-wrap gap-4 justify-between items-center px-4 sm:px-8 py-4 sm:py-6 z-10 relative">
         <div className="flex items-center gap-2 sm:gap-3">
@@ -433,17 +414,28 @@ export default function Home() {
         {/* ========================================================================= */}
         {/* FASE A: ESFERA DE CRISTAL REFINADA (Sin artefactos en Android) */}
         {/* ========================================================================= */}
-        {/* FASE A SIEMPRE MONTADA: se oculta con CSS (`hidden`) en lugar de
-            desmontarse. En iOS, sacar el <label> del DOM justo tras seleccionar
-            hace que Safari pierda el archivo y recargue la pestaña. El label
-            permanece montado y activa el input persistente de la raíz por
-            htmlFor (activación nativa, sin input.click()). */}
-        <div className={`w-full max-w-md animate-fade-in ${!selectedFile && !loading && !resultado ? '' : 'hidden'}`}>
+        {/* FASE A SIEMPRE MONTADA (nunca se desmonta ni usa display:none).
+            Cuando no está activa solo se la oculta visualmente, pero el
+            <input type="file"> sigue renderizado. En iOS, sacar el input del
+            DOM tras seleccionar hace que Safari descarte el archivo y recargue
+            la pestaña. El input es el objetivo de toque NATIVO (overlay
+            transparente), sin input.click() ni forward por label. */}
+        <div className={`w-full max-w-md animate-fade-in ${!selectedFile && !loading && !resultado ? '' : 'absolute opacity-0 pointer-events-none -z-10'}`}>
           <label
-            htmlFor="teodoc-file-input"
             className="relative group cursor-pointer block w-full aspect-square max-h-[400px] mx-auto"
             aria-label="Seleccionar archivo de audio"
           >
+            <input
+              ref={fileInputRef}
+              id="teodoc-file-input"
+              type="file"
+              accept=".mp3,.wav,.m4a,.m4b,.aac,.flac,.ogg,.oga,.opus,.wma,.amr,.webm,.mp4,.mov,.aiff,.aif,.caf,.3gp"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) handleFileSelected(file);
+              }}
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-30"
+            />
               <div 
                 className="absolute inset-0 bg-gradient-to-b from-[#131722] to-[#0A0D14] border border-white/10 rounded-full flex flex-col items-center justify-center transition-all duration-500 shadow-[0_0_50px_-10px_rgba(168,85,247,0.3)] group-hover:shadow-[0_0_80px_-10px_rgba(34,211,238,0.4)] group-hover:border-cyan-500/50"
                 style={{ clipPath: 'circle(50% at 50% 50%)' }}
