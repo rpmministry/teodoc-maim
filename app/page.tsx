@@ -90,8 +90,12 @@ export default function Home() {
     const mimeType = (file.type || '').toLowerCase();
     const validExtension = allowedExtensions.some(extension => fileName.endsWith(extension));
     const validMime = mimeType.startsWith('audio/') || mimeType.startsWith('video/');
+    // En iOS el navegador a veces no informa el MIME. Si el tipo es vacío o
+    // genérico no rechazamos: preferimos que el pipeline lo intente antes que
+    // devolver al usuario a la pantalla principal.
+    const unknownType = mimeType.length === 0 || mimeType === 'application/octet-stream';
 
-    if (!validExtension && !validMime) {
+    if (!validExtension && !validMime && !unknownType) {
       setError('Formato no compatible. Utiliza archivos de audio como MP3, M4A, WAV, MP4, AAC, OGG, OPUS, etc.');
       return;
     }
@@ -363,14 +367,11 @@ export default function Home() {
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCI+PGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMSIgZmlsbD0icmdiYSgyNTUsMjU1LDI1NSwwLjA1KSIvPjwvc3ZnPg==')] opacity-40"></div>
       </div>
 
-      {/* Input de archivo PERSISTENTE: nunca se desmonta.
-          En iOS, quitar el <input type="file"> del DOM justo después de
-          seleccionar hace que Safari descarte el archivo y recargue la
-          pestaña (el usuario vuelve a la pantalla principal). Por eso vive
-          aquí, fuera de los bloques condicionales, y se activa de forma
-          NATIVA desde el <label htmlFor> de la esfera (iOS bloquea
-          input.click() programático, pero la activación por label sí
-          funciona). */}
+      {/* Input de archivo PERSISTENTE (raíz): nunca se desmonta ni se oculta.
+          En iOS, sacar el <input type="file"> del DOM tras seleccionar hace que
+          Safari descarte el archivo y recargue la pestaña. Se activa de forma
+          NATIVA con el <label htmlFor> de la esfera (iOS bloquea input.click()
+          programático). Al vivir aquí, el archivo seleccionado se conserva. */}
       <input
         ref={fileInputRef}
         id="teodoc-file-input"
@@ -432,17 +433,17 @@ export default function Home() {
         {/* ========================================================================= */}
         {/* FASE A: ESFERA DE CRISTAL REFINADA (Sin artefactos en Android) */}
         {/* ========================================================================= */}
-        {!selectedFile && !loading && !resultado && (
-          <div className="w-full max-w-md animate-fade-in">
-            {/* <label htmlFor> abre el selector de forma NATIVA. iOS Safari
-                bloquea input.click() programático sobre un input oculto, pero
-                la activación por label sí funciona. El input correspondiente
-                es el persistente de arriba (id="teodoc-file-input"). */}
-            <label
-              htmlFor="teodoc-file-input"
-              className="relative group cursor-pointer block w-full aspect-square max-h-[400px] mx-auto"
-              aria-label="Seleccionar archivo de audio"
-            >
+        {/* FASE A SIEMPRE MONTADA: se oculta con CSS (`hidden`) en lugar de
+            desmontarse. En iOS, sacar el <label> del DOM justo tras seleccionar
+            hace que Safari pierda el archivo y recargue la pestaña. El label
+            permanece montado y activa el input persistente de la raíz por
+            htmlFor (activación nativa, sin input.click()). */}
+        <div className={`w-full max-w-md animate-fade-in ${!selectedFile && !loading && !resultado ? '' : 'hidden'}`}>
+          <label
+            htmlFor="teodoc-file-input"
+            className="relative group cursor-pointer block w-full aspect-square max-h-[400px] mx-auto"
+            aria-label="Seleccionar archivo de audio"
+          >
               <div 
                 className="absolute inset-0 bg-gradient-to-b from-[#131722] to-[#0A0D14] border border-white/10 rounded-full flex flex-col items-center justify-center transition-all duration-500 shadow-[0_0_50px_-10px_rgba(168,85,247,0.3)] group-hover:shadow-[0_0_80px_-10px_rgba(34,211,238,0.4)] group-hover:border-cyan-500/50"
                 style={{ clipPath: 'circle(50% at 50% 50%)' }}
@@ -478,9 +479,8 @@ export default function Home() {
                   ))}
                 </div>
               </div>
-            </label>
-          </div>
-        )}
+          </label>
+        </div>
 
         {/* ========================================================================= */}
         {/* FASE B: ARCHIVO SELECCIONADO */}
