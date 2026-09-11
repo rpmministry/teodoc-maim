@@ -410,7 +410,7 @@ export default function Home() {
           <div className="w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-br from-cyan-400 to-purple-600 rounded-xl flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(34,211,238,0.4)]">
             <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 14v-4M8 18V6M12 22V2M16 18V6M20 14v-4"></path></svg>
           </div>
-          <span className="font-extrabold text-lg sm:text-xl tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-cyan-100 to-white drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]">TeoDoc</span>
+          <span className="font-extrabold text-lg sm:text-xl tracking-wide drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]"><span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-100 to-white [-webkit-text-fill-color:transparent]">TeoDoc</span></span>
         </div>
         
         <div className="flex flex-wrap items-center gap-2 sm:gap-3 justify-end">
@@ -436,11 +436,11 @@ export default function Home() {
         {/* TÍTULO PRINCIPAL */}
         {!selectedFile && !loading && !resultado && (
           <div className="text-center space-y-1 sm:space-y-2 mb-8 sm:mb-10 animate-fade-in-up">
-            <h1 className="text-6xl sm:text-7xl md:text-8xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-white via-cyan-100 to-gray-300 drop-shadow-[0_0_15px_rgba(255,255,255,0.4)] px-2 pb-1">
-              TeoDoc
+            <h1 className="text-6xl sm:text-7xl md:text-8xl font-black tracking-tighter drop-shadow-[0_0_15px_rgba(255,255,255,0.4)] px-2 pb-1">
+              <span className="text-transparent bg-clip-text bg-gradient-to-br from-white via-cyan-100 to-gray-300 [-webkit-text-fill-color:transparent]">TeoDoc</span>
             </h1>
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 drop-shadow-[0_0_20px_rgba(168,85,247,0.4)] px-2 pb-2">
-              Analiza tus prédicas.
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight drop-shadow-[0_0_20px_rgba(168,85,247,0.4)] px-2 pb-2">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 [-webkit-text-fill-color:transparent]">Analiza tus prédicas.</span>
             </h2>
             <p className="text-xs sm:text-sm md:text-base text-cyan-100/70 max-w-lg mx-auto font-medium px-4 mt-2">
               Transcripción y extracción de estructura teológica impulsada por IA.
@@ -571,7 +571,7 @@ export default function Home() {
               <div className="absolute inset-0 bg-cyan-500/30 rounded-full blur-xl animate-pulse"></div>
               <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-[#0A0D14]/80 flex items-center justify-center shadow-[0_0_30px_rgba(34,211,238,0.5)] border-2 border-cyan-400/50 z-10 relative overflow-hidden" style={{ clipPath: 'circle(50% at 50% 50%)' }}>
                 <div className="absolute inset-0 border-[4px] border-t-cyan-400 border-r-purple-500 border-b-pink-500 border-l-transparent rounded-full animate-spin"></div>
-                <span className="text-3xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-br from-cyan-300 to-white drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]">{progress}%</span>
+                <span className="text-3xl sm:text-4xl font-black drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]"><span className="text-transparent bg-clip-text bg-gradient-to-br from-cyan-300 to-white [-webkit-text-fill-color:transparent]">{progress}%</span></span>
               </div>
             </div>
             
@@ -624,7 +624,7 @@ export default function Home() {
                 </div>
 
                 <div className="text-center relative z-10">
-                  <h2 className="text-2xl sm:text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400 mb-5 leading-tight tracking-tight">{resultado.titulo}</h2>
+                  <h2 className="text-2xl sm:text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400 [-webkit-text-fill-color:transparent] mb-5 leading-tight tracking-tight">{resultado.titulo}</h2>
                   <p className="text-cyan-200/90 text-sm sm:text-lg md:text-xl italic max-w-3xl mx-auto font-light leading-relaxed drop-shadow-md">"{resultado.idea_principal}"</p>
                 </div>
               </div>
@@ -754,7 +754,7 @@ export default function Home() {
           <div className="bg-[#0D111A] border border-cyan-500/30 rounded-3xl p-6 sm:p-8 w-full max-w-md shadow-[0_0_40px_rgba(34,211,238,0.15)] relative overflow-hidden">
             <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/20 rounded-full blur-3xl"></div>
             <div className="flex justify-between items-center mb-6 relative z-10">
-              <h3 className="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-400">Enviar Sugerencia</h3>
+              <h3 className="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-400 [-webkit-text-fill-color:transparent]">Enviar Sugerencia</h3>
               <button onClick={() => setShowFeedbackModal(false)} className="text-white/50 hover:text-white transition-colors bg-white/5 p-2 rounded-full">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
               </button>
