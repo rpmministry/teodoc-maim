@@ -158,3 +158,38 @@
     -webkit-text-fill-color: transparent;
   }
 }
+
+/* --- Orbe / loader moderno (CSS plano, compatible iOS 15) --- */
+@keyframes orbe-spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes orbe-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+@keyframes orbe-glow {
+  0%, 100% { transform: scale(1); opacity: 0.5; }
+  50% { transform: scale(1.08); opacity: 0.9; }
+}
+@keyframes orbe-sheen {
+  0% { transform: translateX(-140%) rotate(10deg); opacity: 0; }
+  45% { opacity: 0.55; }
+  100% { transform: translateX(140%) rotate(10deg); opacity: 0; }
+}
+
+@layer utilities {
+  .orbe-spin-slow { animation: orbe-spin 4.2s linear infinite; }
+  .orbe-spin-medium { animation: orbe-spin 2.6s linear infinite; }
+  .orbe-float { animation: orbe-float 3.4s ease-in-out infinite; }
+  .orbe-glow { animation: orbe-glow 3s ease-in-out infinite; }
+  .orbe-sheen {
+    position: absolute;
+    top: -25%;
+    bottom: -25%;
+    left: 0;
+    width: 45%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.18), transparent);
+    animation: orbe-sheen 3s ease-in-out infinite;
+    pointer-events: none;
+  }
+}

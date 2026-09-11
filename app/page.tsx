@@ -597,11 +597,63 @@ export default function Home() {
         {/* ========================================================================= */}
         {loading && (
           <div className="flex flex-col items-center text-center mt-4 w-full px-2 animate-fade-in z-20 relative">
-            <div className="relative flex items-center justify-center mb-8">
-              <div className="absolute inset-0 bg-cyan-500/30 rounded-full blur-xl animate-pulse"></div>
-              <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full flex items-center justify-center shadow-[0_0_30px_rgba(34,211,238,0.5)] border-2 border-cyan-400/50 z-10 relative overflow-hidden" style={{ backgroundColor: 'rgba(10, 13, 20, 0.8)', clipPath: 'circle(50% at 50% 50%)' }}>
-                <div className="absolute inset-0 border-[4px] border-t-cyan-400 border-r-purple-500 border-b-pink-500 border-l-transparent rounded-full animate-spin"></div>
-                <span className="text-3xl sm:text-4xl font-black drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]"><span className="grad-text" style={gradStyle('linear-gradient(to bottom right, #67e8f9, #ffffff)')}>{progress}%</span></span>
+            <div className="relative flex items-center justify-center mb-8 w-44 h-44 sm:w-52 sm:h-52">
+              {/* Halo luminoso pulsante */}
+              <div
+                className="absolute inset-0 m-auto w-44 h-44 sm:w-52 sm:h-52 rounded-full blur-3xl orbe-glow"
+                style={{ background: 'radial-gradient(circle, rgba(34,211,238,0.55), rgba(168,85,247,0.28) 55%, rgba(0,0,0,0) 72%)' }}
+              />
+
+              {/* Anillo exterior giratorio */}
+              <div className="absolute inset-0 m-auto w-40 h-40 sm:w-44 sm:h-44 orbe-spin-slow">
+                <svg viewBox="0 0 120 120" className="w-full h-full">
+                  <defs>
+                    <linearGradient id="orbeSpin" x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0%" stopColor="#22d3ee" stopOpacity="0" />
+                      <stop offset="55%" stopColor="#22d3ee" />
+                      <stop offset="100%" stopColor="#ec4899" />
+                    </linearGradient>
+                  </defs>
+                  <circle cx="60" cy="60" r="55" fill="none" stroke="url(#orbeSpin)" strokeWidth="3" strokeLinecap="round" strokeDasharray="70 275" />
+                </svg>
+              </div>
+
+              {/* Anillo de progreso real */}
+              <svg viewBox="0 0 120 120" className="absolute inset-0 m-auto w-36 h-36 sm:w-40 sm:h-40 -rotate-90">
+                <circle cx="60" cy="60" r="54" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="4" />
+                <circle
+                  cx="60" cy="60" r="54" fill="none"
+                  stroke="url(#orbeProgress)" strokeWidth="4" strokeLinecap="round"
+                  strokeDasharray="339.292"
+                  strokeDashoffset={339.292 * (1 - progress / 100)}
+                  style={{ transition: 'stroke-dashoffset 0.6s ease' }}
+                />
+                <defs>
+                  <linearGradient id="orbeProgress" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stopColor="#22d3ee" />
+                    <stop offset="50%" stopColor="#a855f7" />
+                    <stop offset="100%" stopColor="#ec4899" />
+                  </linearGradient>
+                </defs>
+              </svg>
+
+              {/* Núcleo de cristal flotante con el porcentaje */}
+              <div
+                className="w-28 h-28 sm:w-32 sm:h-32 rounded-full relative overflow-hidden flex items-center justify-center orbe-float"
+                style={{
+                  backgroundColor: 'rgba(10, 13, 20, 0.85)',
+                  boxShadow: 'inset 0 0 30px rgba(34,211,238,0.25), inset 0 -12px 30px rgba(168,85,247,0.25), 0 0 40px rgba(168,85,247,0.35)',
+                  border: '1px solid rgba(34,211,238,0.35)',
+                }}
+              >
+                <div
+                  className="absolute inset-0 opacity-60 orbe-spin-medium"
+                  style={{ background: 'conic-gradient(from 200deg, rgba(34,211,238,0.28), rgba(168,85,247,0.18) 90deg, rgba(0,0,0,0) 160deg, rgba(236,72,153,0.22) 260deg, rgba(0,0,0,0) 340deg)' }}
+                />
+                <div className="orbe-sheen" />
+                <span className="relative z-10 text-3xl sm:text-4xl font-black drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]">
+                  <span className="grad-text" style={gradStyle('linear-gradient(to bottom right, #67e8f9, #ffffff)')}>{progress}%</span>
+                </span>
               </div>
             </div>
             
