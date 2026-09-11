@@ -1,7 +1,5 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
-import { jsPDF } from 'jspdf';
-import domtoimage from 'dom-to-image-more';
 
 interface Versiculo { cita: string; texto: string; }
 interface PuntoDesarrollo { punto: string; explicacion: string; versiculos: Versiculo[]; }
@@ -19,6 +17,77 @@ const promesasBiblicas = [
   { cita: "Romanos 8:28", texto: "Y sabemos que a los que aman a Dios, todas las cosas les ayudan a bien..." },
   { cita: "Josué 1:9", texto: "Mira que te mando que te esfuerces y seas valiente..." }
 ];
+
+const ALLOWED_EXTENSIONS = ['.mp3', '.wav', '.m4a', '.m4b', '.aac', '.flac', '.ogg', '.oga', '.opus', '.wma', '.amr', '.webm', '.mp4', '.mov', '.aiff', '.aif', '.caf', '.3gp'];
+const MAX_FILE_SIZE = 500 * 1024 * 1024;
+
+function validarArchivo(file: File): string | null {
+  if (file.size > MAX_FILE_SIZE) return 'El archivo supera el límite permitido de 500 MB.';
+  const fileName = file.name.toLowerCase();
+  const mimeType = (file.type || '').toLowerCase();
+  const validExtension = ALLOWED_EXTENSIONS.some((ext) => fileName.endsWith(ext));
+  const validMime = mimeType.startsWith('audio/') || mimeType.startsWith('video/');
+  const unknownType = mimeType.length === 0 || mimeType === 'application/octet-stream';
+  if (!validExtension && !validMime && !unknownType) {
+    return 'Formato no compatible. Utiliza archivos de audio como MP3, M4A, WAV, MP4, AAC, OGG, OPUS, etc.';
+  }
+  return null;
+}
+
+// Persistencia del archivo elegido. En iPhone/iPad, iOS suele descargar la
+// pestaña mientras el selector de Archivos está abierto y recargarla al volver,
+// perdiendo el estado de React. Guardamos el File en IndexedDB y lo recuperamos
+// al montar, de modo que el usuario entra directo a la FASE B aunque haya recarga.
+const IDB_NAME = 'teodoc-upload';
+const IDB_STORE = 'pending';
+const IDB_KEY = 'file';
+
+function abrirIDB(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(IDB_NAME, 1);
+    req.onupgradeneeded = () => {
+      if (!req.result.objectStoreNames.contains(IDB_STORE)) req.result.createObjectStore(IDB_STORE);
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function guardarArchivoPendiente(file: File): Promise<void> {
+  const db = await abrirIDB();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, 'readwrite');
+    tx.objectStore(IDB_STORE).put(file, IDB_KEY);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+  db.close();
+}
+
+async function leerArchivoPendiente(): Promise<File | null> {
+  const db = await abrirIDB();
+  const file = await new Promise<File | null>((resolve, reject) => {
+    const tx = db.transaction(IDB_STORE, 'readonly');
+    const req = tx.objectStore(IDB_STORE).get(IDB_KEY);
+    req.onsuccess = () => resolve((req.result as File | undefined) ?? null);
+    req.onerror = () => reject(req.error);
+  });
+  db.close();
+  return file;
+}
+
+async function borrarArchivoPendiente(): Promise<void> {
+  try {
+    const db = await abrirIDB();
+    await new Promise<void>((resolve) => {
+      const tx = db.transaction(IDB_STORE, 'readwrite');
+      tx.objectStore(IDB_STORE).delete(IDB_KEY);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => resolve();
+    });
+    db.close();
+  } catch { /* noop */ }
+}
 
 export default function Home() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -72,43 +141,63 @@ export default function Home() {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  const handleFileSelected = (file: File) => {
+  // Procesa el archivo: valida y PERSISTE antes de tocar el estado. Si iOS
+  // recarga la pestaña al re-renderizar (causa del "vuelve a la pantalla
+  // principal"), el archivo ya quedó en IndexedDB y se restaura al montar.
+  const handleFileSelected = async (file: File) => {
     if (!file) return;
 
-    const maxSize = 500 * 1024 * 1024; // 500 MB limit frontend
-    if (file.size > maxSize) {
-      setError('El archivo supera el límite permitido de 500 MB.');
+    const errMsg = validarArchivo(file);
+    if (errMsg) {
+      setError(errMsg);
       return;
     }
 
-    // Validación tolerante para iOS: además de la extensión se acepta por
-    // tipo MIME. Safari a veces entrega file.type vacío o usa contenedores
-    // como .mov/.caf/.aiff (grabadora de iOS), que antes se rechazaban y
-    // devolvían al usuario a la pantalla principal sin explicación.
-    const allowedExtensions = ['.mp3', '.wav', '.m4a', '.m4b', '.aac', '.flac', '.ogg', '.oga', '.mp4', '.wma', '.opus', '.amr', '.webm', '.mov', '.aiff', '.aif', '.caf', '.3gp'];
-    const fileName = file.name.toLowerCase();
-    const mimeType = (file.type || '').toLowerCase();
-    const validExtension = allowedExtensions.some(extension => fileName.endsWith(extension));
-    const validMime = mimeType.startsWith('audio/') || mimeType.startsWith('video/');
-    // En iOS el navegador a veces no informa el MIME. Si el tipo es vacío o
-    // genérico no rechazamos: preferimos que el pipeline lo intente antes que
-    // devolver al usuario a la pantalla principal.
-    const unknownType = mimeType.length === 0 || mimeType === 'application/octet-stream';
-
-    if (!validExtension && !validMime && !unknownType) {
-      setError('Formato no compatible. Utiliza archivos de audio como MP3, M4A, WAV, MP4, AAC, OGG, OPUS, etc.');
-      return;
-    }
+    try {
+      await guardarArchivoPendiente(file);
+    } catch { /* si IndexedDB falla, seguimos con el flujo normal */ }
 
     setError(null);
     setResultado(null);
     setSelectedFile(file);
   };
 
+  // Listener NATIVO de 'change' sobre el input (además de React no lo controla).
+  // Algunas versiones de iOS no disparan el onChange sintético de React para
+  // file inputs; el listener nativo es el más fiable. Se limpia input.value
+  // después de procesar (patrón pdfguru) para permitir reelegir el mismo archivo.
+  useEffect(() => {
+    const input = fileInputRef.current;
+    if (!input) return;
+    const onNativeChange = () => {
+      const file = input.files?.[0];
+      if (file) void handleFileSelected(file);
+      input.value = '';
+    };
+    input.addEventListener('change', onNativeChange);
+    return () => input.removeEventListener('change', onNativeChange);
+  }, []);
+
+  // Restaura el archivo pendiente tras una recarga de iOS: entra directo a FASE B.
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const file = await leerArchivoPendiente();
+        if (active && file && validarArchivo(file) === null) {
+          setError(null);
+          setResultado(null);
+          setSelectedFile(file);
+        }
+      } catch { /* noop */ }
+    })();
+    return () => { active = false; };
+  }, []);
+
   const handleCambiarArchivo = () => {
     setSelectedFile(null);
-    const input = document.getElementById('teodoc-file-input') as HTMLInputElement | null;
-    if (input) input.value = '';
+    void borrarArchivoPendiente();
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const handleAnalizarClick = async () => {
@@ -264,6 +353,7 @@ export default function Home() {
 
       setProgress(100);
       setStatusText('¡Análisis teológico completado!');
+      void borrarArchivoPendiente();
       setTimeout(() => {
         setResultado(dataAnalyze);
         setLoading(false);
@@ -281,13 +371,14 @@ export default function Home() {
     setError(null); 
     setProgress(0);
     setSelectedFile(null);
-    const input = document.getElementById('teodoc-file-input') as HTMLInputElement | null;
-    if (input) input.value = '';
+    void borrarArchivoPendiente();
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const descargarInfografia = async () => {
     if (!infografiaRef.current) return;
     try {
+      const { default: domtoimage } = await import('dom-to-image-more');
       const node = infografiaRef.current;
       const dataUrl = await domtoimage.toJpeg(node, { quality: 0.95, bgcolor: '#F8F5EE' });
       const link = document.createElement('a');
@@ -299,8 +390,9 @@ export default function Home() {
     }
   };
 
-  const generarPDF = () => {
+  const generarPDF = async () => {
     if (!resultado) return;
+    const { jsPDF } = await import('jspdf');
     const doc = new jsPDF();
     const margin = 20; const pageWidth = doc.internal.pageSize.getWidth(); let y = margin;
     const colorPrimario = [44, 62, 80]; const colorSecundario = [127, 140, 141]; const colorAcento = [192, 57, 43]; 
@@ -415,25 +507,20 @@ export default function Home() {
         {/* FASE A: ESFERA DE CRISTAL REFINADA (Sin artefactos en Android) */}
         {/* ========================================================================= */}
         {/* FASE A SIEMPRE MONTADA (nunca se desmonta ni usa display:none).
-            Cuando no está activa solo se la oculta visualmente, pero el
-            <input type="file"> sigue renderizado. En iOS, sacar el input del
-            DOM tras seleccionar hace que Safari descarte el archivo y recargue
-            la pestaña. El input es el objetivo de toque NATIVO (overlay
-            transparente), sin input.click() ni forward por label. */}
+            Cuando no está activa solo se oculta visualmente, pero el
+            <input type="file"> sigue renderizado. Patrón calcado de pdfguru:
+            input NATIVO como overlay (sin input.click() ni <label> de por
+            medio) + listener 'change' nativo, y el archivo se persiste en
+            IndexedDB antes de tocar el estado para sobrevivir a una recarga
+            de iOS. */}
         <div className={`w-full max-w-md animate-fade-in ${!selectedFile && !loading && !resultado ? '' : 'absolute opacity-0 pointer-events-none -z-10'}`}>
-          <label
-            className="relative group cursor-pointer block w-full aspect-square max-h-[400px] mx-auto"
-            aria-label="Seleccionar archivo de audio"
-          >
+          <div className="relative group cursor-pointer block w-full aspect-square max-h-[400px] mx-auto">
             <input
               ref={fileInputRef}
               id="teodoc-file-input"
               type="file"
               accept=".mp3,.wav,.m4a,.m4b,.aac,.flac,.ogg,.oga,.opus,.wma,.amr,.webm,.mp4,.mov,.aiff,.aif,.caf,.3gp"
-              onChange={(event) => {
-                const file = event.target.files?.[0];
-                if (file) handleFileSelected(file);
-              }}
+              aria-label="Seleccionar archivo de audio"
               className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-30"
             />
               <div 
@@ -471,7 +558,7 @@ export default function Home() {
                   ))}
                 </div>
               </div>
-          </label>
+          </div>
         </div>
 
         {/* ========================================================================= */}
