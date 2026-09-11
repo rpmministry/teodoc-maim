@@ -193,7 +193,9 @@ export default function Home() {
 
         const formData = new FormData();
         formData.append('file', chunk);
-        if (start === 0) formData.append('upload_preset', uploadPreset);
+        // Cloudinary exige el preset en CADA fragmento cuando la subida es
+        // unsigned (no basta con enviarlo solo en el primero).
+        formData.append('upload_preset', uploadPreset);
 
         const response = await fetch(uploadUrl, {
           method: 'POST',
@@ -411,7 +413,7 @@ export default function Home() {
                 ref={fileInputRef}
                 id="teodoc-file-input"
                 type="file"
-                accept="audio/*,video/mp4,.mp3,.wav,.m4a,.aac,.flac,.ogg,.wma,.opus,.amr,.mp4,.webm"
+                accept="audio/*,video/*,.mp3,.wav,.m4a,.aac,.flac,.ogg,.wma,.opus,.amr,.mp4,.webm"
                 onChange={(event) => {
                   const file = event.target.files?.[0];
                   if (file) handleFileSelected(file);
