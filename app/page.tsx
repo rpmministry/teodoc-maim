@@ -101,16 +101,6 @@ export default function Home() {
     setSelectedFile(file);
   };
 
-  // Abre el selector desde un gesto real del usuario. En iOS el .click()
-  // debe ejecutarse de forma síncrona dentro del gesto, por eso se hace aquí
-  // y no en un efecto ni después de un await.
-  const abrirSelectorArchivo = () => {
-    const input = fileInputRef.current;
-    if (!input) return;
-    input.value = ''; // permite volver a elegir el mismo archivo
-    input.click();
-  };
-
   const handleCambiarArchivo = () => {
     setSelectedFile(null);
     const input = document.getElementById('teodoc-file-input') as HTMLInputElement | null;
@@ -377,8 +367,10 @@ export default function Home() {
           En iOS, quitar el <input type="file"> del DOM justo después de
           seleccionar hace que Safari descarte el archivo y recargue la
           pestaña (el usuario vuelve a la pantalla principal). Por eso vive
-          aquí, fuera de los bloques condicionales, y se dispara con
-          abrirSelectorArchivo() desde el gesto del usuario. */}
+          aquí, fuera de los bloques condicionales, y se activa de forma
+          NATIVA desde el <label htmlFor> de la esfera (iOS bloquea
+          input.click() programático, pero la activación por label sí
+          funciona). */}
       <input
         ref={fileInputRef}
         id="teodoc-file-input"
@@ -442,17 +434,13 @@ export default function Home() {
         {/* ========================================================================= */}
         {!selectedFile && !loading && !resultado && (
           <div className="w-full max-w-md animate-fade-in">
-            <div
-              className="relative group cursor-pointer w-full aspect-square max-h-[400px] mx-auto"
-              onClick={abrirSelectorArchivo}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter' || event.key === ' ') {
-                  event.preventDefault();
-                  abrirSelectorArchivo();
-                }
-              }}
-              role="button"
-              tabIndex={0}
+            {/* <label htmlFor> abre el selector de forma NATIVA. iOS Safari
+                bloquea input.click() programático sobre un input oculto, pero
+                la activación por label sí funciona. El input correspondiente
+                es el persistente de arriba (id="teodoc-file-input"). */}
+            <label
+              htmlFor="teodoc-file-input"
+              className="relative group cursor-pointer block w-full aspect-square max-h-[400px] mx-auto"
               aria-label="Seleccionar archivo de audio"
             >
               <div 
@@ -490,7 +478,7 @@ export default function Home() {
                   ))}
                 </div>
               </div>
-            </div>
+            </label>
           </div>
         )}
 
