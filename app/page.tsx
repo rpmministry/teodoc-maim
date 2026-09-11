@@ -34,61 +34,6 @@ function validarArchivo(file: File): string | null {
   return null;
 }
 
-// Persistencia del archivo elegido. En iPhone/iPad, iOS suele descargar la
-// pestaña mientras el selector de Archivos está abierto y recargarla al volver,
-// perdiendo el estado de React. Guardamos el File en IndexedDB y lo recuperamos
-// al montar, de modo que el usuario entra directo a la FASE B aunque haya recarga.
-const IDB_NAME = 'teodoc-upload';
-const IDB_STORE = 'pending';
-const IDB_KEY = 'file';
-
-function abrirIDB(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open(IDB_NAME, 1);
-    req.onupgradeneeded = () => {
-      if (!req.result.objectStoreNames.contains(IDB_STORE)) req.result.createObjectStore(IDB_STORE);
-    };
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  });
-}
-
-async function guardarArchivoPendiente(file: File): Promise<void> {
-  const db = await abrirIDB();
-  await new Promise<void>((resolve, reject) => {
-    const tx = db.transaction(IDB_STORE, 'readwrite');
-    tx.objectStore(IDB_STORE).put(file, IDB_KEY);
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-  });
-  db.close();
-}
-
-async function leerArchivoPendiente(): Promise<File | null> {
-  const db = await abrirIDB();
-  const file = await new Promise<File | null>((resolve, reject) => {
-    const tx = db.transaction(IDB_STORE, 'readonly');
-    const req = tx.objectStore(IDB_STORE).get(IDB_KEY);
-    req.onsuccess = () => resolve((req.result as File | undefined) ?? null);
-    req.onerror = () => reject(req.error);
-  });
-  db.close();
-  return file;
-}
-
-async function borrarArchivoPendiente(): Promise<void> {
-  try {
-    const db = await abrirIDB();
-    await new Promise<void>((resolve) => {
-      const tx = db.transaction(IDB_STORE, 'readwrite');
-      tx.objectStore(IDB_STORE).delete(IDB_KEY);
-      tx.oncomplete = () => resolve();
-      tx.onerror = () => resolve();
-    });
-    db.close();
-  } catch { /* noop */ }
-}
-
 export default function Home() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
@@ -101,6 +46,9 @@ export default function Home() {
   
   const infografiaRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Último File procesado: evita procesar dos veces cuando 'change', 'focus' y
+  // 'visibilitychange' disparan por la misma selección.
+  const ultimoArchivoRef = useRef<File | null>(null);
 
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState('');
@@ -141,10 +89,10 @@ export default function Home() {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  // Procesa el archivo: valida y PERSISTE antes de tocar el estado. Si iOS
-  // recarga la pestaña al re-renderizar (causa del "vuelve a la pantalla
-  // principal"), el archivo ya quedó en IndexedDB y se restaura al montar.
-  const handleFileSelected = async (file: File) => {
+  // Procesa el archivo SIN operaciones pesadas (nada de leer el blob ni
+  // IndexedDB): solo valida y actualiza el estado. Leer el archivo entero aquí
+  // es justo lo que colapsa la memoria de Safari en iPhone.
+  const handleFileSelected = (file: File) => {
     if (!file) return;
 
     const errMsg = validarArchivo(file);
@@ -153,50 +101,48 @@ export default function Home() {
       return;
     }
 
-    try {
-      await guardarArchivoPendiente(file);
-    } catch { /* si IndexedDB falla, seguimos con el flujo normal */ }
-
     setError(null);
     setResultado(null);
     setSelectedFile(file);
   };
 
-  // Listener NATIVO de 'change' sobre el input (además de React no lo controla).
-  // Algunas versiones de iOS no disparan el onChange sintético de React para
-  // file inputs; el listener nativo es el más fiable. Se limpia input.value
-  // después de procesar (patrón pdfguru) para permitir reelegir el mismo archivo.
+  // Captura el archivo por TRES vías, porque iOS es inconsistente:
+  //  1) 'change' en el input (lo habitual).
+  //  2) 'focus' de window: iOS lo dispara al cerrarse el selector de Archivos,
+  //     incluso cuando no llega a emitir 'change'.
+  //  3) 'visibilitychange': por si la pestaña se ocultó durante la selección.
+  // El ref evita procesar el mismo File dos veces.
   useEffect(() => {
     const input = fileInputRef.current;
     if (!input) return;
-    const onNativeChange = () => {
-      const file = input.files?.[0];
-      if (file) void handleFileSelected(file);
-      input.value = '';
-    };
-    input.addEventListener('change', onNativeChange);
-    return () => input.removeEventListener('change', onNativeChange);
-  }, []);
 
-  // Restaura el archivo pendiente tras una recarga de iOS: entra directo a FASE B.
-  useEffect(() => {
-    let active = true;
-    (async () => {
-      try {
-        const file = await leerArchivoPendiente();
-        if (active && file && validarArchivo(file) === null) {
-          setError(null);
-          setResultado(null);
-          setSelectedFile(file);
-        }
-      } catch { /* noop */ }
-    })();
-    return () => { active = false; };
+    const procesar = () => {
+      const file = input.files?.[0];
+      if (!file || file === ultimoArchivoRef.current) return;
+      ultimoArchivoRef.current = file;
+      handleFileSelected(file);
+    };
+    // Reintentos diferidos: en iOS 'files' a veces se puebla después del change.
+    const conReintentos = () => {
+      procesar();
+      setTimeout(procesar, 300);
+      setTimeout(procesar, 1000);
+    };
+    const onVisibility = () => { if (document.visibilityState === 'visible') conReintentos(); };
+
+    input.addEventListener('change', conReintentos);
+    window.addEventListener('focus', conReintentos);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      input.removeEventListener('change', conReintentos);
+      window.removeEventListener('focus', conReintentos);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
   }, []);
 
   const handleCambiarArchivo = () => {
     setSelectedFile(null);
-    void borrarArchivoPendiente();
+    ultimoArchivoRef.current = null;
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -353,7 +299,6 @@ export default function Home() {
 
       setProgress(100);
       setStatusText('¡Análisis teológico completado!');
-      void borrarArchivoPendiente();
       setTimeout(() => {
         setResultado(dataAnalyze);
         setLoading(false);
@@ -371,7 +316,7 @@ export default function Home() {
     setError(null); 
     setProgress(0);
     setSelectedFile(null);
-    void borrarArchivoPendiente();
+    ultimoArchivoRef.current = null;
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -506,14 +451,13 @@ export default function Home() {
         {/* ========================================================================= */}
         {/* FASE A: ESFERA DE CRISTAL REFINADA (Sin artefactos en Android) */}
         {/* ========================================================================= */}
-        {/* FASE A SIEMPRE MONTADA (nunca se desmonta ni usa display:none).
-            Cuando no está activa solo se oculta visualmente, pero el
-            <input type="file"> sigue renderizado. Patrón calcado de pdfguru:
-            input NATIVO como overlay (sin input.click() ni <label> de por
-            medio) + listener 'change' nativo, y el archivo se persiste en
-            IndexedDB antes de tocar el estado para sobrevivir a una recarga
-            de iOS. */}
-        <div className={`w-full max-w-md animate-fade-in ${!selectedFile && !loading && !resultado ? '' : 'absolute opacity-0 pointer-events-none -z-10'}`}>
+        {/* FASE A: se mantiene MONTADA y sin cambiar su estilo mientras hay un
+            archivo seleccionado (la FASE B la cubre con un overlay). Dato clave
+            de iOS: ocultar el contenedor del <input type="file"> justo después
+            de seleccionar descarta el archivo y el 'change' no se registra; por
+            eso pdfguru nunca oculta su zona de carga. Solo se oculta cuando el
+            pipeline arranca (loading) o ya hay resultado. */}
+        <div className={`w-full max-w-md animate-fade-in ${loading || resultado ? 'absolute opacity-0 pointer-events-none -z-10' : ''}`}>
           <div className="relative group cursor-pointer block w-full aspect-square max-h-[400px] mx-auto">
             <input
               ref={fileInputRef}
@@ -565,7 +509,8 @@ export default function Home() {
         {/* FASE B: ARCHIVO SELECCIONADO */}
         {/* ========================================================================= */}
         {selectedFile && !loading && !resultado && (
-          <div className="mt-4 sm:mt-8 w-full max-w-lg animate-fade-in pb-6 z-20">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#07090E]/95 backdrop-blur-sm px-4 py-6 overflow-y-auto">
+          <div className="w-full max-w-lg animate-fade-in pb-6">
             <div className="bg-[#0D111A]/80 border border-emerald-500/30 rounded-3xl p-6 sm:p-8 shadow-[0_0_40px_-10px_rgba(16,185,129,0.3)] backdrop-blur-xl relative overflow-hidden">
               <div className="absolute -top-10 -right-10 w-40 h-40 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
 
@@ -605,6 +550,7 @@ export default function Home() {
               </button>
 
             </div>
+          </div>
           </div>
         )}
 
