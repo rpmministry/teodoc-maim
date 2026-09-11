@@ -25,41 +25,72 @@ function CssOrb({ state }: { state: LiquidOrbState }) {
   return (
     <div
       className="relative w-full h-full rounded-full overflow-hidden"
-      style={{ background: 'radial-gradient(circle at 50% 42%, rgba(22,28,42,0.96), rgba(7,9,14,1) 72%)' }}
+      style={{ background: 'radial-gradient(circle at 50% 36%, #1c2433 0%, #0b0f18 58%, #05070c 100%)' }}
     >
+      {/* Halo interior tenue */}
       <div
-        className="absolute inset-[14%] rounded-full blur-2xl orbe-glow"
+        className="absolute inset-[18%] rounded-full blur-2xl"
         style={{
           background: thinking
-            ? 'radial-gradient(circle, rgba(236,72,153,0.45), rgba(0,0,0,0) 70%)'
-            : 'radial-gradient(circle, rgba(34,211,238,0.4), rgba(0,0,0,0) 70%)',
+            ? 'radial-gradient(circle at 50% 55%, rgba(236,72,153,0.3), rgba(0,0,0,0) 70%)'
+            : 'radial-gradient(circle at 50% 55%, rgba(34,211,238,0.24), rgba(0,0,0,0) 70%)',
         }}
       />
-      {/* Ondas (membrana tipo Siri) en lugar de una rueda girando */}
-      <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
-        {[
-          { width: '74%', height: 6, delay: '0s', colorA: thinking ? 'rgba(236,72,153,0.95)' : 'rgba(34,211,238,0.95)' },
-          { width: '58%', height: 5, delay: '0.35s', colorA: thinking ? 'rgba(168,85,247,0.9)' : 'rgba(129,140,248,0.9)' },
-          { width: '44%', height: 4, delay: '0.7s', colorA: thinking ? 'rgba(244,114,182,0.9)' : 'rgba(103,232,249,0.9)' },
-          { width: '30%', height: 3, delay: '1.05s', colorA: thinking ? 'rgba(192,132,252,0.9)' : 'rgba(56,189,248,0.9)' },
-        ].map((wave, index) => (
-          <span
-            key={index}
-            className="orbe-wave block rounded-full"
-            style={{
-              width: wave.width,
-              height: `${wave.height}px`,
-              background: `linear-gradient(90deg, rgba(0,0,0,0), ${wave.colorA}, rgba(0,0,0,0))`,
-              boxShadow: `0 0 16px ${wave.colorA}`,
-              animationDelay: wave.delay,
-            }}
-          />
-        ))}
+
+      {/* Banda iridiscente difusa (cian arriba, magenta al centro, dorado abajo) */}
+      <div className="absolute inset-0">
+        <div
+          className="orbe-band absolute rounded-full"
+          style={{
+            left: '8%', right: '8%', top: '37%', height: '22%',
+            background: 'linear-gradient(to bottom, rgba(56,189,248,0), rgba(56,189,248,0.7) 45%, rgba(56,189,248,0) 100%)',
+            filter: 'blur(16px)',
+            animationDirection: thinking ? 'reverse' : 'normal',
+            animationDuration: thinking ? '2.6s' : '4s',
+          }}
+        />
+        <div
+          className="orbe-band absolute rounded-full"
+          style={{
+            left: '3%', right: '3%', top: '46%', height: '18%',
+            background: 'linear-gradient(to bottom, rgba(217,70,239,0), rgba(236,72,153,0.95) 45%, rgba(244,114,182,0.85) 70%, rgba(217,70,239,0) 100%)',
+            filter: 'blur(11px)',
+            animationDelay: '0.25s',
+            animationDuration: thinking ? '2.6s' : '4s',
+          }}
+        />
+        <div
+          className="orbe-band absolute rounded-full"
+          style={{
+            left: '7%', right: '7%', top: '51%', height: '7%',
+            background: 'linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,0.85) 30%, rgba(255,190,255,0.95) 62%, rgba(255,255,255,0))',
+            filter: 'blur(6px)',
+            animationDelay: '0.5s',
+            animationDirection: 'reverse',
+            animationDuration: thinking ? '2.6s' : '4s',
+          }}
+        />
+        <div
+          className="orbe-band absolute rounded-full"
+          style={{
+            left: '10%', right: '10%', top: '54%', height: '24%',
+            background: 'linear-gradient(to bottom, rgba(250,204,21,0), rgba(250,204,21,0.65) 45%, rgba(250,204,21,0) 100%)',
+            filter: 'blur(18px)',
+            animationDelay: '0.75s',
+            animationDirection: thinking ? 'reverse' : 'normal',
+            animationDuration: thinking ? '2.6s' : '4s',
+          }}
+        />
       </div>
-      <div className="orbe-sheen" />
+
+      {/* Reflejo de vidrio y sombra del orbe */}
       <div
         className="absolute inset-0 rounded-full"
-        style={{ boxShadow: 'inset 0 0 50px rgba(0,0,0,0.6), inset 0 0 20px rgba(255,255,255,0.06)' }}
+        style={{ background: 'radial-gradient(120% 78% at 50% 6%, rgba(255,255,255,0.1), rgba(255,255,255,0) 52%)' }}
+      />
+      <div
+        className="absolute inset-0 rounded-full"
+        style={{ boxShadow: 'inset 0 0 60px rgba(0,0,0,0.78), inset 0 -32px 60px rgba(0,0,0,0.55), inset 0 0 0 1px rgba(255,255,255,0.06)' }}
       />
     </div>
   )
