@@ -130,43 +130,89 @@ export default function Home() {
   const uploadFileToCloudinary = async (file: File): Promise<void> => {
     const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'antbfat3';
     const uploadPreset = 'teodoc_preset';
+    const uploadUrl = `https://api.cloudinary.com/v1_1/${cloudName}/video/upload`;
 
-    const buffer = await file.arrayBuffer();
-    const safeBlob = new Blob([buffer], { type: file.type || 'application/octet-stream' });
-
-    const formData = new FormData();
-    formData.append('file', safeBlob, file.name);
-    formData.append('upload_preset', uploadPreset);
+    // Fragmentos de 20 MB: Cloudinary exige >= 5 MB por fragmento (salvo el
+    // último) y acotar el tamaño mantiene la memoria por petición baja en WebKit.
+    const CHUNK_SIZE = 20 * 1024 * 1024;
 
     setProgress(10);
     setStatusText('Subiendo prédica a Cloudinary...');
 
-    const response = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/video/upload`, {
-      method: 'POST',
-      body: formData,
-    });
-
-    const responseText = await response.text();
-
-    if (!response.ok) {
-      let message = `Cloudinary respondió con error ${response.status}.`;
-      try {
-        const data = JSON.parse(responseText);
-        if (data?.error?.message) { 
-          message = data.error.message;
-          if (message.includes("File size too large")) {
-            message = "El archivo es demasiado pesado para la red (Límite superado). Por favor usa MP3 o M4A comprimido.";
+    const parseResponse = (
+      responseText: string,
+      status: number
+    ): { secure_url?: string } => {
+      if (status < 200 || status >= 300) {
+        let message = `Cloudinary respondió con error ${status}.`;
+        try {
+          const errorData = JSON.parse(responseText);
+          if (errorData?.error?.message) {
+            message = errorData.error.message;
+            if (message.includes("File size too large")) {
+              message = "El archivo es demasiado pesado para la red (Límite superado). Por favor usa MP3 o M4A comprimido.";
+            }
           }
-        }
-      } catch { /* Ignorar */ }
-      throw new Error(message);
-    }
+        } catch { /* Ignorar */ }
+        throw new Error(message);
+      }
+      try {
+        return JSON.parse(responseText);
+      } catch {
+        throw new Error('Cloudinary devolvió una respuesta que no pudo ser interpretada.');
+      }
+    };
 
-    let data: any;
-    try {
-      data = JSON.parse(responseText);
-    } catch {
-      throw new Error('Cloudinary devolvió una respuesta que no pudo ser interpretada.');
+    let data: { secure_url?: string } | undefined;
+
+    if (file.size <= CHUNK_SIZE) {
+      // Ruta original (Android/Windows/escritorio): una sola petición.
+      // Se adjunta el File tal cual; el navegador lo lee del disco y lo
+      // transmite en streaming, sin crear una copia completa en RAM.
+      const formData = new FormData();
+      formData.append('file', file, file.name);
+      formData.append('upload_preset', uploadPreset);
+
+      const response = await fetch(uploadUrl, { method: 'POST', body: formData });
+      data = parseResponse(await response.text(), response.status);
+    } else {
+      // Subida fragmentada para audios pesados en iOS/iPadOS.
+      // file.slice() NO carga el archivo en memoria: cada fragmento se lee
+      // de forma perezosa y se envía en su propia petición.
+      const randomPart =
+        typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+          ? crypto.randomUUID()
+          : `${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}_${file.size}_${file.lastModified}`;
+      const uniqueUploadId = `teodoc_${randomPart}`;
+      const totalBytes = file.size;
+      let start = 0;
+
+      while (start < totalBytes) {
+        const end = Math.min(start + CHUNK_SIZE, totalBytes);
+        const chunk = file.slice(start, end);
+
+        const formData = new FormData();
+        formData.append('file', chunk);
+        if (start === 0) formData.append('upload_preset', uploadPreset);
+
+        const response = await fetch(uploadUrl, {
+          method: 'POST',
+          headers: {
+            'X-Unique-Upload-Id': uniqueUploadId,
+            'Content-Range': `bytes ${start}-${end - 1}/${totalBytes}`,
+          },
+          body: formData,
+        });
+
+        const parsed = parseResponse(await response.text(), response.status);
+        if (end >= totalBytes) data = parsed;
+
+        const pct = 10 + Math.floor((end / totalBytes) * 20); // 10% -> 30%
+        setProgress(pct);
+        setStatusText(`Subiendo prédica... ${Math.round((end / totalBytes) * 100)}%`);
+
+        start = end;
+      }
     }
 
     if (!data?.secure_url) {
