@@ -21,6 +21,19 @@ const promesasBiblicas = [
 const ALLOWED_EXTENSIONS = ['.mp3', '.wav', '.m4a', '.m4b', '.aac', '.flac', '.ogg', '.oga', '.opus', '.wma', '.amr', '.webm', '.mp4', '.mov', '.aiff', '.aif', '.caf', '.3gp'];
 const MAX_FILE_SIZE = 500 * 1024 * 1024;
 
+// Estilo de texto degradado explícito (sRGB + prefijo -webkit-) para que se
+// vea en iOS 15 / Safari 15, donde `background-clip:text` sin prefijo y los
+// degradados con `in oklab` de Tailwind v4 no se aplican.
+function gradStyle(gradient: string): React.CSSProperties {
+  return {
+    backgroundImage: gradient,
+    backgroundClip: 'text',
+    WebkitBackgroundClip: 'text',
+    color: 'transparent',
+    WebkitTextFillColor: 'transparent',
+  };
+}
+
 function validarArchivo(file: File): string | null {
   if (file.size > MAX_FILE_SIZE) return 'El archivo supera el límite permitido de 500 MB.';
   const fileName = file.name.toLowerCase();
@@ -271,30 +284,38 @@ export default function Home() {
   };
 
   const startAnalysisPipeline = async (audioUrl: string) => {
+    let timerTranscribe: ReturnType<typeof setInterval> | undefined;
+    let timerAnalyze: ReturnType<typeof setInterval> | undefined;
     try {
-      const timerTranscribe = setInterval(() => setProgress((prev) => (prev >= 49 ? 49 : prev + 1)), 800);
+      timerTranscribe = setInterval(() => setProgress((prev) => (prev >= 49 ? 49 : prev + 1)), 800);
 
       const resTranscribe = await fetch('/api/transcribe', { 
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ audioUrl }) 
       });
-      clearInterval(timerTranscribe);
+      clearInterval(timerTranscribe); timerTranscribe = undefined;
 
-      if (!resTranscribe.ok) throw new Error('Error procesando la transcripción. El audio podría ser demasiado largo.');
+      if (!resTranscribe.ok) {
+        const errBody = await resTranscribe.json().catch(() => null);
+        throw new Error(errBody?.error || 'Error procesando la transcripción. El audio podría ser demasiado largo.');
+      }
       const dataTranscribe = await resTranscribe.json();
       const textoTranscrito = dataTranscribe.text;
       
       setStatusText('Analizando estructura teológica profunda...');
       setProgress(50);
-      const timerAnalyze = setInterval(() => {
+      timerAnalyze = setInterval(() => {
         setProgress((prev) => prev >= 98 ? 98 : prev + Math.max(1, Math.floor((99 - prev) * 0.05)));
       }, 1000);
 
       const resAnalyze = await fetch('/api/analyze', {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: textoTranscrito })
       });
-      clearInterval(timerAnalyze);
+      clearInterval(timerAnalyze); timerAnalyze = undefined;
 
-      if (!resAnalyze.ok) throw new Error('Error en el análisis teológico de la IA.');
+      if (!resAnalyze.ok) {
+        const errBody = await resAnalyze.json().catch(() => null);
+        throw new Error(errBody?.error || 'Error en el análisis teológico de la IA.');
+      }
       const dataAnalyze = await resAnalyze.json();
 
       setProgress(100);
@@ -308,6 +329,9 @@ export default function Home() {
       setError(`❌ Fallo crítico en el pipeline: ${err.message || 'Ocurrió un error inesperado.'}`);
       setLoading(false);
       setProgress(0);
+    } finally {
+      if (timerTranscribe) clearInterval(timerTranscribe);
+      if (timerAnalyze) clearInterval(timerAnalyze);
     }
   };
 
@@ -410,7 +434,7 @@ export default function Home() {
           <div className="w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-br from-cyan-400 to-purple-600 rounded-xl flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(34,211,238,0.4)]">
             <svg className="w-4 h-4 sm:w-5 sm:h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 14v-4M8 18V6M12 22V2M16 18V6M20 14v-4"></path></svg>
           </div>
-          <span className="font-extrabold text-lg sm:text-xl tracking-wide drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]"><span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-100 to-white [-webkit-text-fill-color:transparent]">TeoDoc</span></span>
+          <span className="font-extrabold text-lg sm:text-xl tracking-wide drop-shadow-[0_0_8px_rgba(255,255,255,0.3)]"><span className="grad-text" style={gradStyle('linear-gradient(to right, #cffafe, #ffffff)')}>TeoDoc</span></span>
         </div>
         
         <div className="flex flex-wrap items-center gap-2 sm:gap-3 justify-end">
@@ -437,10 +461,10 @@ export default function Home() {
         {!selectedFile && !loading && !resultado && (
           <div className="text-center space-y-1 sm:space-y-2 mb-8 sm:mb-10 animate-fade-in-up">
             <h1 className="text-6xl sm:text-7xl md:text-8xl font-black tracking-tighter drop-shadow-[0_0_15px_rgba(255,255,255,0.4)] px-2 pb-1">
-              <span className="text-transparent bg-clip-text bg-gradient-to-br from-white via-cyan-100 to-gray-300 [-webkit-text-fill-color:transparent]">TeoDoc</span>
+              <span className="grad-text" style={gradStyle('linear-gradient(to bottom right, #ffffff, #cffafe, #d1d5db)')}>TeoDoc</span>
             </h1>
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight drop-shadow-[0_0_20px_rgba(168,85,247,0.4)] px-2 pb-2">
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-400 to-pink-400 [-webkit-text-fill-color:transparent]">Analiza tus prédicas.</span>
+              <span className="grad-text" style={gradStyle('linear-gradient(to right, #22d3ee, #c084fc, #f472b6)')}>Analiza tus prédicas.</span>
             </h2>
             <p className="text-xs sm:text-sm md:text-base text-cyan-100/70 max-w-lg mx-auto font-medium px-4 mt-2">
               Transcripción y extracción de estructura teológica impulsada por IA.
@@ -549,6 +573,12 @@ export default function Home() {
                 <svg className="w-4 h-4 sm:w-5 sm:h-5 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
               </button>
 
+              {error && (
+                <div className="mt-4 px-4 py-3 bg-red-950/80 border border-red-500/50 rounded-xl text-red-200 text-xs relative z-10 break-all text-center">
+                  🚨 {error}
+                </div>
+              )}
+
             </div>
           </div>
           </div>
@@ -569,9 +599,9 @@ export default function Home() {
           <div className="flex flex-col items-center text-center mt-4 w-full px-2 animate-fade-in z-20 relative">
             <div className="relative flex items-center justify-center mb-8">
               <div className="absolute inset-0 bg-cyan-500/30 rounded-full blur-xl animate-pulse"></div>
-              <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-[#0A0D14]/80 flex items-center justify-center shadow-[0_0_30px_rgba(34,211,238,0.5)] border-2 border-cyan-400/50 z-10 relative overflow-hidden" style={{ clipPath: 'circle(50% at 50% 50%)' }}>
+              <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full flex items-center justify-center shadow-[0_0_30px_rgba(34,211,238,0.5)] border-2 border-cyan-400/50 z-10 relative overflow-hidden" style={{ backgroundColor: 'rgba(10, 13, 20, 0.8)', clipPath: 'circle(50% at 50% 50%)' }}>
                 <div className="absolute inset-0 border-[4px] border-t-cyan-400 border-r-purple-500 border-b-pink-500 border-l-transparent rounded-full animate-spin"></div>
-                <span className="text-3xl sm:text-4xl font-black drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]"><span className="text-transparent bg-clip-text bg-gradient-to-br from-cyan-300 to-white [-webkit-text-fill-color:transparent]">{progress}%</span></span>
+                <span className="text-3xl sm:text-4xl font-black drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]"><span className="grad-text" style={gradStyle('linear-gradient(to bottom right, #67e8f9, #ffffff)')}>{progress}%</span></span>
               </div>
             </div>
             
@@ -624,7 +654,7 @@ export default function Home() {
                 </div>
 
                 <div className="text-center relative z-10">
-                  <h2 className="text-2xl sm:text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400 [-webkit-text-fill-color:transparent] mb-5 leading-tight tracking-tight">{resultado.titulo}</h2>
+                  <h2 className="text-2xl sm:text-4xl md:text-5xl font-black grad-text mb-5 leading-tight tracking-tight" style={gradStyle('linear-gradient(to right, #ffffff, #9ca3af)')}>{resultado.titulo}</h2>
                   <p className="text-cyan-200/90 text-sm sm:text-lg md:text-xl italic max-w-3xl mx-auto font-light leading-relaxed drop-shadow-md">"{resultado.idea_principal}"</p>
                 </div>
               </div>
@@ -754,7 +784,7 @@ export default function Home() {
           <div className="bg-[#0D111A] border border-cyan-500/30 rounded-3xl p-6 sm:p-8 w-full max-w-md shadow-[0_0_40px_rgba(34,211,238,0.15)] relative overflow-hidden">
             <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/20 rounded-full blur-3xl"></div>
             <div className="flex justify-between items-center mb-6 relative z-10">
-              <h3 className="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-400 [-webkit-text-fill-color:transparent]">Enviar Sugerencia</h3>
+              <h3 className="text-xl font-black grad-text" style={gradStyle('linear-gradient(to right, #22d3ee, #c084fc)')}>Enviar Sugerencia</h3>
               <button onClick={() => setShowFeedbackModal(false)} className="text-white/50 hover:text-white transition-colors bg-white/5 p-2 rounded-full">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
               </button>

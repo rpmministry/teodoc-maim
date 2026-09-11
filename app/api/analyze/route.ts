@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
         const vigentes = dataModels.data
           .filter((m: any) => m.id.endsWith(':free') && m.context_length >= 40000)
           .map((m: any) => m.id);
-        if (vigentes.length > 0) modelosGratuitos = vigentes.slice(0, 3);
+        if (vigentes.length > 0) modelosGratuitos = vigentes.slice(0, 2);
       }
     } catch (e) {
       console.warn('No se pudo obtener la lista dinámica, usando defaults.');
@@ -56,8 +56,8 @@ export async function POST(req: NextRequest) {
 
     for (const modelo of modelosGratuitos) {
       if (exito) break;
-      let intentosOR = 3;
-      let esperaBaseOR = 2000;
+      let intentosOR = 2;
+      let esperaBaseOR = 1500;
 
       for (let i = 0; i < intentosOR; i++) {
         try {
@@ -113,8 +113,11 @@ export async function POST(req: NextRequest) {
     }
 
     if (!exito) {
-      let intentosGemini = 3;
-      let esperaBaseGemini = 3000;
+      // Modelos Gemini vigentes. Se prueban en orden para que, si uno está
+      // saturado, el respaldo use el otro.
+      const modelosGemini = ['gemini-3.7-flash', 'gemini-3.6-flash'];
+      const intentosGemini = 2;
+      const esperaBaseGemini = 3000;
 
       const schemaConfig = {
         type: Type.OBJECT,
@@ -129,29 +132,33 @@ export async function POST(req: NextRequest) {
         required: ['titulo', 'idea_principal', 'infografia', 'desarrollo_progresivo', 'aplicacion', 'oracion']
       };
 
-      for (let i = 0; i < intentosGemini; i++) {
-        try {
-          const response = await ai.models.generateContent({
-            model: 'gemini-3.6-flash', 
-            contents: [{ text: `Analiza esta transcripción de prédica y extrae el desglose teológico completo en JSON:\n\n${text}` }],
-            config: { systemInstruction: 'Eres un analista teológico conservador. Usa Reina-Valera 1960. Devuelve un JSON estrictamente estructurado.', responseMimeType: 'application/json', responseSchema: schemaConfig }
-          });
+      for (const modeloGemini of modelosGemini) {
+        if (exito) break;
+        for (let i = 0; i < intentosGemini; i++) {
+          try {
+            const response = await ai.models.generateContent({
+              model: modeloGemini,
+              contents: [{ text: `Analiza esta transcripción de prédica y extrae el desglose teológico completo en JSON:\n\n${text}` }],
+              config: { systemInstruction: 'Eres un analista teológico conservador. Usa Reina-Valera 1960. Devuelve un JSON estrictamente estructurado.', responseMimeType: 'application/json', responseSchema: schemaConfig }
+            });
 
-          if (response && response.text) {
-            jsonResult = extraerJSON(response.text);
-            exito = true;
-            break;
+            if (response && response.text) {
+              jsonResult = extraerJSON(response.text);
+              exito = true;
+              break;
+            }
+          } catch (err: any) {
+            const errMsg = err?.message || '';
+            console.warn(`[Gemini Falló - ${modeloGemini}]:`, errMsg);
+            if (errMsg.includes('Quota exceeded') && errMsg.includes('generativelanguage.googleapis.com')) throw new Error('Has alcanzado el límite gratuito diario.');
+            if (errMsg.includes('429') || errMsg.includes('503')) {
+              let tiempoEspera = esperaBaseGemini * Math.pow(2, i);
+              const retryMatch = errMsg.match(/retry in (\d+)/i);
+              if (retryMatch && retryMatch[1]) tiempoEspera = parseInt(retryMatch[1], 10) * 1000;
+              if (i < intentosGemini - 1) { await delay(tiempoEspera); continue; }
+            }
+            break; // pasa al siguiente modelo
           }
-        } catch (err: any) {
-          const errMsg = err?.message || '';
-          if (errMsg.includes('Quota exceeded') && errMsg.includes('generativelanguage.googleapis.com')) throw new Error('Has alcanzado el límite gratuito diario.');
-          if (errMsg.includes('429') || errMsg.includes('503')) {
-            let tiempoEspera = esperaBaseGemini * Math.pow(2, i);
-            const retryMatch = errMsg.match(/retry in (\d+)/i);
-            if (retryMatch && retryMatch[1]) tiempoEspera = parseInt(retryMatch[1], 10) * 1000;
-            if (i < intentosGemini - 1) { await delay(tiempoEspera); continue; }
-          }
-          break;
         }
       }
     }

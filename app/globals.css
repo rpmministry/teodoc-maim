@@ -147,4 +147,14 @@
     white-space: nowrap;
     border-width: 0;
   }
+
+  /* Texto con degradado compatible con iOS 15 / Safari 15:
+     usa background-clip con prefijo -webkit- y el degradado se pasa por
+     estilo inline en sRGB (sin `in oklab` ni @property de Tailwind v4). */
+  .grad-text {
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+  }
 }
