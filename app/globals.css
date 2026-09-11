@@ -180,6 +180,10 @@
   0%, 100% { transform: scaleY(0.4); opacity: 0.6; }
   50% { transform: scaleY(1); opacity: 1; }
 }
+@keyframes orbe-wave {
+  0%, 100% { transform: translateY(-7px) scaleX(0.78); opacity: 0.35; }
+  50% { transform: translateY(7px) scaleX(1.06); opacity: 0.95; }
+}
 
 @layer utilities {
   .orbe-spin-slow { animation: orbe-spin 4.2s linear infinite; }
@@ -187,6 +191,7 @@
   .orbe-float { animation: orbe-float 3.4s ease-in-out infinite; }
   .orbe-glow { animation: orbe-glow 3s ease-in-out infinite; }
   .orbe-eq { animation: orbe-eq 1.1s ease-in-out infinite; transform-origin: bottom; }
+  .orbe-wave { animation: orbe-wave 2.8s ease-in-out infinite; }
   .orbe-sheen {
     position: absolute;
     top: -25%;

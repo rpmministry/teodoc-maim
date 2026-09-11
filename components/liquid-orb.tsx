@@ -25,28 +25,41 @@ function CssOrb({ state }: { state: LiquidOrbState }) {
   return (
     <div
       className="relative w-full h-full rounded-full overflow-hidden"
-      style={{ background: 'radial-gradient(circle at 50% 32%, rgba(38,52,74,0.95), rgba(7,9,14,1) 70%)' }}
+      style={{ background: 'radial-gradient(circle at 50% 42%, rgba(22,28,42,0.96), rgba(7,9,14,1) 72%)' }}
     >
       <div
-        className="absolute inset-0 orbe-spin-slow"
+        className="absolute inset-[14%] rounded-full blur-2xl orbe-glow"
         style={{
           background: thinking
-            ? 'conic-gradient(from 0deg, rgba(0,0,0,0), rgba(236,72,153,0.55), rgba(168,85,247,0.5), rgba(0,0,0,0) 70%)'
-            : 'conic-gradient(from 0deg, rgba(0,0,0,0), rgba(34,211,238,0.45), rgba(168,85,247,0.4), rgba(0,0,0,0) 70%)',
+            ? 'radial-gradient(circle, rgba(236,72,153,0.45), rgba(0,0,0,0) 70%)'
+            : 'radial-gradient(circle, rgba(34,211,238,0.4), rgba(0,0,0,0) 70%)',
         }}
       />
-      <div
-        className="absolute inset-[12%] rounded-full blur-2xl orbe-glow"
-        style={{
-          background: thinking
-            ? 'radial-gradient(circle, rgba(236,72,153,0.55), rgba(0,0,0,0) 70%)'
-            : 'radial-gradient(circle, rgba(34,211,238,0.5), rgba(0,0,0,0) 70%)',
-        }}
-      />
+      {/* Ondas (membrana tipo Siri) en lugar de una rueda girando */}
+      <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
+        {[
+          { width: '74%', height: 6, delay: '0s', colorA: thinking ? 'rgba(236,72,153,0.95)' : 'rgba(34,211,238,0.95)' },
+          { width: '58%', height: 5, delay: '0.35s', colorA: thinking ? 'rgba(168,85,247,0.9)' : 'rgba(129,140,248,0.9)' },
+          { width: '44%', height: 4, delay: '0.7s', colorA: thinking ? 'rgba(244,114,182,0.9)' : 'rgba(103,232,249,0.9)' },
+          { width: '30%', height: 3, delay: '1.05s', colorA: thinking ? 'rgba(192,132,252,0.9)' : 'rgba(56,189,248,0.9)' },
+        ].map((wave, index) => (
+          <span
+            key={index}
+            className="orbe-wave block rounded-full"
+            style={{
+              width: wave.width,
+              height: `${wave.height}px`,
+              background: `linear-gradient(90deg, rgba(0,0,0,0), ${wave.colorA}, rgba(0,0,0,0))`,
+              boxShadow: `0 0 16px ${wave.colorA}`,
+              animationDelay: wave.delay,
+            }}
+          />
+        ))}
+      </div>
       <div className="orbe-sheen" />
       <div
         className="absolute inset-0 rounded-full"
-        style={{ boxShadow: 'inset 0 0 40px rgba(255,255,255,0.08), inset 0 -20px 50px rgba(0,0,0,0.55)' }}
+        style={{ boxShadow: 'inset 0 0 50px rgba(0,0,0,0.6), inset 0 0 20px rgba(255,255,255,0.06)' }}
       />
     </div>
   )

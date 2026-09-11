@@ -208,8 +208,7 @@ export default function Home() {
       clearInterval(timerTranscribe); timerTranscribe = undefined;
 
       if (!resTranscribe.ok) {
-        const errBody = await resTranscribe.json().catch(() => null);
-        throw new Error(errBody?.error || 'Error procesando la transcripción. El audio podría ser demasiado largo.');
+        throw new Error('La IA tiene muchas solicitudes en este momento. Vuelve a intentarlo en unos segundos.');
       }
       const dataTranscribe = await resTranscribe.json();
       const textoTranscrito = dataTranscribe.text;
@@ -225,8 +224,7 @@ export default function Home() {
       clearInterval(timerAnalyze); timerAnalyze = undefined;
 
       if (!resAnalyze.ok) {
-        const errBody = await resAnalyze.json().catch(() => null);
-        throw new Error(errBody?.error || 'Error en el análisis teológico de la IA.');
+        throw new Error('La IA tiene muchas solicitudes en este momento. Vuelve a intentarlo en unos segundos.');
       }
       const dataAnalyze = await resAnalyze.json();
 
@@ -237,7 +235,7 @@ export default function Home() {
       }, 500);
 
     } catch (err: any) {
-      setError(`❌ Fallo crítico en el pipeline: ${err.message || 'Ocurrió un error inesperado.'}`);
+      setError(err?.message || 'La IA tiene muchas solicitudes en este momento. Vuelve a intentarlo en unos segundos.');
       setLoading(false);
       setProgress(0);
     } finally {
@@ -395,9 +393,9 @@ export default function Home() {
 
         {/* ERROR DE VALIDACIÓN O SUBIDA */}
         {!loading && !resultado && error && (
-          <div className="mt-6 px-5 py-4 bg-red-950/80 border border-red-500/50 rounded-2xl text-red-200 text-xs sm:text-sm w-full max-w-md shadow-[0_0_20px_rgba(239,68,68,0.3)] animate-fade-in space-y-2 text-center relative z-20 backdrop-blur-md">
-            <p className="font-bold uppercase tracking-wider text-red-400">🚨 Error detectado:</p>
-            <p className="font-mono bg-black/40 p-3 rounded-xl break-all border border-red-500/20">{error}</p>
+          <div className="mt-6 px-5 py-4 bg-[#0D111A]/85 border border-cyan-500/30 rounded-2xl text-cyan-100 text-xs sm:text-sm w-full max-w-md shadow-[0_0_20px_rgba(34,211,238,0.2)] animate-fade-in space-y-2 text-center relative z-20 backdrop-blur-md">
+            <p className="font-bold uppercase tracking-wider text-cyan-300">🕊️ Un momento</p>
+            <p className="bg-black/40 p-3 rounded-xl break-words border border-cyan-500/20">{error}</p>
           </div>
         )}
 
