@@ -1,6 +1,6 @@
 'use client';
-import { useState, useRef, useEffect } from 'react';
-import FluidOrb from '@/components/fluid-orb';
+import { useState, useRef } from 'react';
+import LiquidOrb from '@/components/liquid-orb';
 
 interface Versiculo { cita: string; texto: string; }
 interface PuntoDesarrollo { punto: string; explicacion: string; versiculos: Versiculo[]; }
@@ -11,13 +11,6 @@ interface PredicaAnalisis {
   desarrollo_progresivo: PuntoDesarrollo[];
   aplicacion: string[]; oracion: string;
 }
-
-const promesasBiblicas = [
-  { cita: "Isaías 41:10", texto: "No temas, porque yo estoy contigo; no desmayes..." },
-  { cita: "Jeremías 29:11", texto: "Porque yo sé los pensamientos que tengo acerca de vosotros..." },
-  { cita: "Romanos 8:28", texto: "Y sabemos que a los que aman a Dios, todas las cosas les ayudan a bien..." },
-  { cita: "Josué 1:9", texto: "Mira que te mando que te esfuerces y seas valiente..." }
-];
 
 const ALLOWED_EXTENSIONS = ['.mp3', '.wav', '.m4a', '.m4b', '.aac', '.flac', '.ogg', '.oga', '.opus', '.wma', '.amr', '.webm', '.mp4', '.mov', '.aiff', '.aif', '.caf', '.3gp'];
 const MAX_FILE_SIZE = 500 * 1024 * 1024;
@@ -49,32 +42,17 @@ function validarArchivo(file: File): string | null {
 }
 
 export default function Home() {
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [statusText, setStatusText] = useState<string>('');
-  
+
   const [resultado, setResultado] = useState<PredicaAnalisis | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [versoIndex, setVersoIndex] = useState(0);
-  
+
   const infografiaRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  // Último File procesado: evita procesar dos veces cuando 'change', 'focus' y
-  // 'visibilitychange' disparan por la misma selección.
-  const ultimoArchivoRef = useRef<File | null>(null);
 
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState('');
   const [feedbackStatus, setFeedbackStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
-
-  useEffect(() => {
-    let intervaloVerso: NodeJS.Timeout;
-    if (loading) {
-      intervaloVerso = setInterval(() => setVersoIndex((prev) => (prev + 1) % promesasBiblicas.length), 7000);
-    }
-    return () => clearInterval(intervaloVerso);
-  }, [loading]);
 
   const enviarSugerencia = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -95,89 +73,26 @@ export default function Home() {
     }
   };
 
-  const formatearTamaño = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
-
-  // Procesa el archivo SIN operaciones pesadas (nada de leer el blob ni
-  // IndexedDB): solo valida y actualiza el estado. Leer el archivo entero aquí
-  // es justo lo que colapsa la memoria de Safari en iPhone.
-  const handleFileSelected = (file: File) => {
-    if (!file) return;
-
+  // Flujo "zero-friction": en cuanto se recibe el archivo (clic o drag&drop)
+  // se valida y arranca el pipeline de inmediato. No hay confirmación ni tarjeta.
+  const procesarArchivo = async (file: File) => {
     const errMsg = validarArchivo(file);
     if (errMsg) {
       setError(errMsg);
       return;
     }
 
-    setError(null);
-    setResultado(null);
-    setSelectedFile(file);
-  };
-
-  // Captura el archivo por TRES vías, porque iOS es inconsistente:
-  //  1) 'change' en el input (lo habitual).
-  //  2) 'focus' de window: iOS lo dispara al cerrarse el selector de Archivos,
-  //     incluso cuando no llega a emitir 'change'.
-  //  3) 'visibilitychange': por si la pestaña se ocultó durante la selección.
-  // El ref evita procesar el mismo File dos veces.
-  useEffect(() => {
-    const input = fileInputRef.current;
-    if (!input) return;
-
-    const procesar = () => {
-      const file = input.files?.[0];
-      if (!file || file === ultimoArchivoRef.current) return;
-      ultimoArchivoRef.current = file;
-      handleFileSelected(file);
-    };
-    // Reintentos diferidos: en iOS 'files' a veces se puebla después del change.
-    const conReintentos = () => {
-      procesar();
-      setTimeout(procesar, 300);
-      setTimeout(procesar, 1000);
-    };
-    const onVisibility = () => { if (document.visibilityState === 'visible') conReintentos(); };
-
-    input.addEventListener('change', conReintentos);
-    window.addEventListener('focus', conReintentos);
-    document.addEventListener('visibilitychange', onVisibility);
-    return () => {
-      input.removeEventListener('change', conReintentos);
-      window.removeEventListener('focus', conReintentos);
-      document.removeEventListener('visibilitychange', onVisibility);
-    };
-  }, []);
-
-  const handleCambiarArchivo = () => {
-    setSelectedFile(null);
-    ultimoArchivoRef.current = null;
-    if (fileInputRef.current) fileInputRef.current.value = '';
-  };
-
-  const handleAnalizarClick = async () => {
-    if (!selectedFile) {
-      setError('Primero selecciona un archivo.');
-      return;
-    }
-
-    // Advertencia sutil para WAV gigantescos
-    if (selectedFile.name.toLowerCase().endsWith('.wav') && selectedFile.size > 100 * 1024 * 1024) {
+    if (file.name.toLowerCase().endsWith('.wav') && file.size > 100 * 1024 * 1024) {
       alert("⚠️ Tu archivo WAV pesa más de 100 MB. Si experimentas un error durante el análisis, te recomendamos convertirlo a MP3 o M4A para asegurar que el servidor lo procese correctamente.");
     }
 
     setError(null);
+    setResultado(null);
     setLoading(true);
     setProgress(5);
-    setStatusText('Preparando archivo...');
 
     try {
-      await uploadFileToCloudinary(selectedFile);
+      await uploadFileToCloudinary(file);
     } catch (err: any) {
       setLoading(false);
       setProgress(0);
@@ -195,7 +110,6 @@ export default function Home() {
     const CHUNK_SIZE = 20 * 1024 * 1024;
 
     setProgress(10);
-    setStatusText('Subiendo prédica a Cloudinary...');
 
     const parseResponse = (
       responseText: string,
@@ -269,7 +183,6 @@ export default function Home() {
 
         const pct = 10 + Math.floor((end / totalBytes) * 20); // 10% -> 30%
         setProgress(pct);
-        setStatusText(`Subiendo prédica... ${Math.round((end / totalBytes) * 100)}%`);
 
         start = end;
       }
@@ -280,7 +193,6 @@ export default function Home() {
     }
 
     setProgress(30);
-    setStatusText('Archivo recibido. Extrayendo transcripción...');
     await startAnalysisPipeline(data.secure_url);
   };
 
@@ -302,7 +214,6 @@ export default function Home() {
       const dataTranscribe = await resTranscribe.json();
       const textoTranscrito = dataTranscribe.text;
       
-      setStatusText('Analizando estructura teológica profunda...');
       setProgress(50);
       timerAnalyze = setInterval(() => {
         setProgress((prev) => prev >= 98 ? 98 : prev + Math.max(1, Math.floor((99 - prev) * 0.05)));
@@ -320,7 +231,6 @@ export default function Home() {
       const dataAnalyze = await resAnalyze.json();
 
       setProgress(100);
-      setStatusText('¡Análisis teológico completado!');
       setTimeout(() => {
         setResultado(dataAnalyze);
         setLoading(false);
@@ -337,12 +247,10 @@ export default function Home() {
   };
 
   const nuevoAnalisis = () => {
-    setResultado(null); 
-    setError(null); 
+    setResultado(null);
+    setError(null);
     setProgress(0);
-    setSelectedFile(null);
-    ultimoArchivoRef.current = null;
-    if (fileInputRef.current) fileInputRef.current.value = '';
+    setLoading(false);
   };
 
   const descargarInfografia = async () => {
@@ -459,12 +367,12 @@ export default function Home() {
       <main className="flex-1 flex flex-col items-center justify-start px-4 sm:px-6 lg:px-8 z-10 w-full max-w-5xl mx-auto pt-6 sm:pt-8 relative">
         
         {/* TÍTULO PRINCIPAL */}
-        {!selectedFile && !loading && !resultado && (
-          <div className="text-center space-y-1 sm:space-y-2 mb-8 sm:mb-10 animate-fade-in-up">
-            <h1 className="text-6xl sm:text-7xl md:text-8xl font-black tracking-tighter drop-shadow-[0_0_15px_rgba(255,255,255,0.4)] px-2 pb-1">
+        {!resultado && (
+          <div className="text-center space-y-1 sm:space-y-2 mb-6 sm:mb-8 animate-fade-in-up">
+            <h1 className="text-5xl sm:text-7xl md:text-8xl font-black tracking-tighter drop-shadow-[0_0_15px_rgba(255,255,255,0.4)] px-2 pb-1">
               <span className="grad-text" style={gradStyle('linear-gradient(to bottom right, #ffffff, #cffafe, #d1d5db)')}>TeoDoc</span>
             </h1>
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight drop-shadow-[0_0_20px_rgba(168,85,247,0.4)] px-2 pb-2">
+            <h2 className="text-xl sm:text-3xl md:text-4xl font-extrabold tracking-tight drop-shadow-[0_0_20px_rgba(168,85,247,0.4)] px-2 pb-2">
               <span className="grad-text" style={gradStyle('linear-gradient(to right, #22d3ee, #c084fc, #f472b6)')}>Analiza tus prédicas.</span>
             </h2>
             <p className="text-xs sm:text-sm md:text-base text-cyan-100/70 max-w-lg mx-auto font-medium px-4 mt-2">
@@ -473,162 +381,15 @@ export default function Home() {
           </div>
         )}
 
-        {/* ========================================================================= */}
-        {/* FASE A: ESFERA DE CRISTAL REFINADA (Sin artefactos en Android) */}
-        {/* ========================================================================= */}
-        {/* FASE A: se mantiene MONTADA y sin cambiar su estilo mientras hay un
-            archivo seleccionado (la FASE B la cubre con un overlay). Dato clave
-            de iOS: ocultar el contenedor del <input type="file"> justo después
-            de seleccionar descarta el archivo y el 'change' no se registra; por
-            eso pdfguru nunca oculta su zona de carga. Solo se oculta cuando el
-            pipeline arranca (loading) o ya hay resultado. */}
-        <div className={`w-full max-w-md animate-fade-in ${loading || resultado ? 'absolute opacity-0 pointer-events-none -z-10' : ''}`}>
-          <div className="relative group cursor-pointer block w-full aspect-square max-h-[400px] mx-auto">
-            <input
-              ref={fileInputRef}
-              id="teodoc-file-input"
-              type="file"
-              accept=".mp3,.wav,.m4a,.m4b,.aac,.flac,.ogg,.oga,.opus,.wma,.amr,.webm,.mp4,.mov,.aiff,.aif,.caf,.3gp"
-              aria-label="Seleccionar archivo de audio"
-              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-30"
+        {/* ORBE LÍQUIDO: ÚNICO punto de interacción (toque o arrastrar). */}
+        {!resultado && (
+          <div className="mt-2 sm:mt-4 z-20 relative">
+            <LiquidOrb
+              state={loading ? 'thinking' : 'idle'}
+              progress={progress}
+              disabled={loading}
+              onFile={procesarArchivo}
             />
-              <div 
-                className="absolute inset-0 rounded-full flex flex-col items-center justify-center transition-all duration-500 overflow-hidden"
-                style={{
-                  background: 'radial-gradient(circle at 50% 32%, rgba(38,52,74,0.92), rgba(13,17,26,0.97) 58%, rgba(7,9,14,1) 100%)',
-                  border: '1px solid rgba(255,255,255,0.10)',
-                  boxShadow: '0 0 60px -10px rgba(168,85,247,0.35), inset 0 0 60px rgba(34,211,238,0.08)',
-                  clipPath: 'circle(50% at 50% 50%)',
-                }}
-              >
-                {/* Anillos concéntricos animados */}
-                <div className="absolute inset-0 pointer-events-none">
-                  <div className="absolute inset-0 m-auto w-full h-full orbe-spin-slow">
-                    <svg viewBox="0 0 200 200" className="w-full h-full">
-                      <defs>
-                        <linearGradient id="orbARing1" x1="0" y1="0" x2="1" y2="1">
-                          <stop offset="0%" stopColor="#22d3ee" />
-                          <stop offset="50%" stopColor="#a855f7" />
-                          <stop offset="100%" stopColor="#ec4899" />
-                        </linearGradient>
-                      </defs>
-                      <circle cx="100" cy="100" r="96" fill="none" stroke="url(#orbARing1)" strokeWidth="1.4" strokeDasharray="4 12" strokeLinecap="round" opacity="0.5" />
-                    </svg>
-                  </div>
-                  <div className="absolute inset-0 m-auto w-[84%] h-[84%] orbe-spin-medium" style={{ animationDirection: 'reverse' }}>
-                    <svg viewBox="0 0 200 200" className="w-full h-full">
-                      <defs>
-                        <linearGradient id="orbARing2" x1="0" y1="0" x2="1" y2="1">
-                          <stop offset="0%" stopColor="#a855f7" />
-                          <stop offset="100%" stopColor="#22d3ee" />
-                        </linearGradient>
-                      </defs>
-                      <circle cx="100" cy="100" r="94" fill="none" stroke="url(#orbARing2)" strokeWidth="2.4" strokeLinecap="round" strokeDasharray="60 330" opacity="0.7" />
-                      <circle cx="100" cy="100" r="94" fill="none" stroke="url(#orbARing2)" strokeWidth="2.4" strokeLinecap="round" strokeDasharray="24 366" strokeDashoffset="180" opacity="0.4" />
-                    </svg>
-                  </div>
-                </div>
-
-                {/* Partículas orbitando */}
-                {([
-                  { s: 'w-3 h-3', a: 'orbe-spin-slow', d: '0s', c: '#22d3ee', r: 'normal' as const },
-                  { s: 'w-2 h-2', a: 'orbe-spin-medium', d: '-0.9s', c: '#a855f7', r: 'reverse' as const },
-                  { s: 'w-2.5 h-2.5', a: 'orbe-spin-slow', d: '-2.2s', c: '#ec4899', r: 'normal' as const },
-                ]).map((p, i) => (
-                  <div key={i} className={`absolute inset-0 m-auto w-[72%] h-[72%] pointer-events-none ${p.a}`} style={{ animationDelay: p.d, animationDirection: p.r }}>
-                    <span className={`absolute left-1/2 top-0 -translate-x-1/2 ${p.s} rounded-full`} style={{ backgroundColor: p.c, boxShadow: `0 0 10px ${p.c}, 0 0 22px ${p.c}` }} />
-                  </div>
-                ))}
-
-                <div 
-                  className="relative w-28 h-28 sm:w-36 sm:h-36 rounded-full overflow-hidden flex items-center justify-center z-10 group-hover:scale-110 transition-transform duration-500"
-                  style={{
-                    border: '1px solid rgba(34,211,238,0.35)',
-                    boxShadow: 'inset 0 0 30px rgba(34,211,238,0.18), inset 0 -14px 40px rgba(168,85,247,0.22), 0 0 40px rgba(168,85,247,0.4)',
-                    clipPath: 'circle(50% at 50% 50%)',
-                  }}
-                >
-                  {!loading && !resultado && (
-                    <FluidOrb className="absolute inset-0 w-full h-full pointer-events-none" color="#22d3ee" />
-                  )}
-                  <div
-                    className="absolute inset-0 pointer-events-none"
-                    style={{ background: 'radial-gradient(circle, rgba(7,9,14,0.5), rgba(7,9,14,0.08) 60%, rgba(0,0,0,0) 78%)' }}
-                  />
-                  
-                  <svg className="relative z-20 w-14 h-14 sm:w-16 sm:h-16 text-cyan-300 drop-shadow-[0_0_15px_rgba(34,211,238,1)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 16V4m0 0L7 9m5-5 5 5M5 20h14" />
-                  </svg>
-                </div>
-
-                <div className="mt-8 z-10 flex flex-col items-center">
-                  <span className="text-white font-bold text-base sm:text-lg tracking-wide drop-shadow-md">Toca o arrastra aquí</span>
-                  <span className="text-cyan-200/60 text-[10px] sm:text-xs mt-2 font-light text-center px-4 leading-relaxed">
-                    Soporta: MP3, M4A, WAV, MP4, AAC, OGG, WEBM, OPUS, etc.
-                  </span>
-                </div>
-                
-                <div className="absolute bottom-6 flex items-end justify-center gap-1 opacity-70 z-10" style={{ height: '24px' }}>
-                  {[2, 4, 3, 5, 2, 6, 3, 4, 2].map((h, i) => (
-                    <span key={i} className="orbe-eq w-1 rounded-full" style={{ height: `${h * 3}px`, background: 'linear-gradient(to top, #22d3ee, #a855f7)', animationDelay: `${i * 0.12}s` }} />
-                  ))}
-                </div>
-              </div>
-          </div>
-        </div>
-
-        {/* ========================================================================= */}
-        {/* FASE B: ARCHIVO SELECCIONADO */}
-        {/* ========================================================================= */}
-        {selectedFile && !loading && !resultado && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#07090E]/95 backdrop-blur-sm px-4 py-6 overflow-y-auto">
-          <div className="w-full max-w-lg animate-fade-in pb-6">
-            <div className="bg-[#0D111A]/80 border border-emerald-500/30 rounded-3xl p-6 sm:p-8 shadow-[0_0_40px_-10px_rgba(16,185,129,0.3)] backdrop-blur-xl relative overflow-hidden">
-              <div className="absolute -top-10 -right-10 w-40 h-40 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
-
-              <div className="flex items-center gap-4 relative z-10">
-                <div className="relative w-14 h-14 rounded-full bg-[#0A0D14] border border-emerald-400/50 shadow-[0_0_20px_rgba(16,185,129,0.4)] flex items-center justify-center shrink-0 group" style={{ clipPath: 'circle(50% at 50% 50%)' }}>
-                  <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/20 to-cyan-500/20"></div>
-                  <svg className="w-7 h-7 text-emerald-400 relative z-10 drop-shadow-[0_0_8px_rgba(52,211,153,0.8)] animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 14v-4M8 18V6M12 22V2M16 18V6M20 14v-4" />
-                  </svg>
-                </div>
-
-                <div className="min-w-0 flex-1">
-                  <p className="text-white font-bold text-base sm:text-lg truncate">
-                    {selectedFile.name}
-                  </p>
-                  <p className="text-emerald-200/60 text-xs sm:text-sm mt-0.5">
-                    {selectedFile.type || 'Audio'} · {formatearTamaño(selectedFile.size)}
-                  </p>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={handleCambiarArchivo}
-                className="mt-5 text-gray-400 hover:text-white text-xs sm:text-sm transition-colors relative z-10 border-b border-transparent hover:border-white/30 pb-0.5"
-              >
-                Elegir otro archivo
-              </button>
-
-              <button
-                type="button"
-                onClick={handleAnalizarClick}
-                className="mt-6 w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white font-black py-4 rounded-2xl shadow-[0_0_25px_rgba(16,185,129,0.5)] transition-all uppercase tracking-[0.2em] text-xs sm:text-sm flex items-center justify-center gap-2 border border-emerald-300/50 hover:scale-[1.02] relative z-10"
-              >
-                <span>Analizar Prédica</span>
-                <svg className="w-4 h-4 sm:w-5 sm:h-5 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-              </button>
-
-              {error && (
-                <div className="mt-4 px-4 py-3 bg-red-950/80 border border-red-500/50 rounded-xl text-red-200 text-xs relative z-10 break-all text-center">
-                  🚨 {error}
-                </div>
-              )}
-
-            </div>
-          </div>
           </div>
         )}
 
@@ -637,87 +398,6 @@ export default function Home() {
           <div className="mt-6 px-5 py-4 bg-red-950/80 border border-red-500/50 rounded-2xl text-red-200 text-xs sm:text-sm w-full max-w-md shadow-[0_0_20px_rgba(239,68,68,0.3)] animate-fade-in space-y-2 text-center relative z-20 backdrop-blur-md">
             <p className="font-bold uppercase tracking-wider text-red-400">🚨 Error detectado:</p>
             <p className="font-mono bg-black/40 p-3 rounded-xl break-all border border-red-500/20">{error}</p>
-          </div>
-        )}
-
-        {/* ========================================================================= */}
-        {/* FASE C: ESTADO DE CARGA Y DIAGNÓSTICO */}
-        {/* ========================================================================= */}
-        {loading && (
-          <div className="flex flex-col items-center text-center mt-4 w-full px-2 animate-fade-in z-20 relative">
-            <div className="relative flex items-center justify-center mb-8 w-44 h-44 sm:w-52 sm:h-52">
-              {/* Halo luminoso pulsante */}
-              <div
-                className="absolute inset-0 m-auto w-44 h-44 sm:w-52 sm:h-52 rounded-full blur-3xl orbe-glow"
-                style={{ background: 'radial-gradient(circle, rgba(34,211,238,0.55), rgba(168,85,247,0.28) 55%, rgba(0,0,0,0) 72%)' }}
-              />
-
-              {/* Anillo exterior giratorio */}
-              <div className="absolute inset-0 m-auto w-40 h-40 sm:w-44 sm:h-44 orbe-spin-slow">
-                <svg viewBox="0 0 120 120" className="w-full h-full">
-                  <defs>
-                    <linearGradient id="orbeSpin" x1="0" y1="0" x2="1" y2="1">
-                      <stop offset="0%" stopColor="#22d3ee" stopOpacity="0" />
-                      <stop offset="55%" stopColor="#22d3ee" />
-                      <stop offset="100%" stopColor="#ec4899" />
-                    </linearGradient>
-                  </defs>
-                  <circle cx="60" cy="60" r="55" fill="none" stroke="url(#orbeSpin)" strokeWidth="3" strokeLinecap="round" strokeDasharray="70 275" />
-                </svg>
-              </div>
-
-              {/* Anillo de progreso real */}
-              <svg viewBox="0 0 120 120" className="absolute inset-0 m-auto w-36 h-36 sm:w-40 sm:h-40 -rotate-90">
-                <circle cx="60" cy="60" r="54" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="4" />
-                <circle
-                  cx="60" cy="60" r="54" fill="none"
-                  stroke="url(#orbeProgress)" strokeWidth="4" strokeLinecap="round"
-                  strokeDasharray="339.292"
-                  strokeDashoffset={339.292 * (1 - progress / 100)}
-                  style={{ transition: 'stroke-dashoffset 0.6s ease' }}
-                />
-                <defs>
-                  <linearGradient id="orbeProgress" x1="0" y1="0" x2="1" y2="1">
-                    <stop offset="0%" stopColor="#22d3ee" />
-                    <stop offset="50%" stopColor="#a855f7" />
-                    <stop offset="100%" stopColor="#ec4899" />
-                  </linearGradient>
-                </defs>
-              </svg>
-
-              {/* Núcleo de cristal flotante con el porcentaje */}
-              <div
-                className="w-28 h-28 sm:w-32 sm:h-32 rounded-full relative overflow-hidden flex items-center justify-center orbe-float"
-                style={{
-                  boxShadow: 'inset 0 0 30px rgba(34,211,238,0.25), inset 0 -12px 30px rgba(168,85,247,0.25), 0 0 40px rgba(168,85,247,0.35)',
-                  border: '1px solid rgba(34,211,238,0.35)',
-                }}
-              >
-                <FluidOrb className="absolute inset-0 w-full h-full pointer-events-none" color="#22d3ee" />
-                <div
-                  className="absolute inset-0 pointer-events-none"
-                  style={{ background: 'radial-gradient(circle, rgba(7,9,14,0.5), rgba(7,9,14,0.08) 60%, rgba(0,0,0,0) 78%)' }}
-                />
-                <span className="relative z-10 text-3xl sm:text-4xl font-black drop-shadow-[0_0_8px_rgba(255,255,255,0.5)]">
-                  <span className="grad-text" style={gradStyle('linear-gradient(to bottom right, #67e8f9, #ffffff)')}>{progress}%</span>
-                </span>
-              </div>
-            </div>
-            
-            <div className="text-cyan-300 font-bold mb-6 text-center">
-              <span className="text-sm sm:text-base uppercase tracking-widest block mb-1 drop-shadow-[0_0_5px_rgba(34,211,238,0.8)]">
-                {statusText}
-              </span>
-              <span className="text-[10px] sm:text-xs text-cyan-100/50 font-medium tracking-wide">
-                Servidor de IA en marcha...
-              </span>
-            </div>
-
-            <div className="bg-[#0D111A]/80 border border-purple-500/20 rounded-2xl p-6 sm:p-8 shadow-[0_0_30px_rgba(168,85,247,0.15)] w-full max-w-md backdrop-blur-xl relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-cyan-500 via-purple-500 to-pink-500"></div>
-              <p className="text-white/90 text-sm sm:text-base font-medium italic mb-3 leading-relaxed drop-shadow-sm">"{promesasBiblicas[versoIndex].texto}"</p>
-              <p className="text-cyan-400 font-bold text-xs sm:text-sm tracking-wide">— {promesasBiblicas[versoIndex].cita}</p>
-            </div>
           </div>
         )}
 
