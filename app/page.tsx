@@ -492,24 +492,72 @@ export default function Home() {
               className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-30"
             />
               <div 
-                className="absolute inset-0 bg-gradient-to-b from-[#131722] to-[#0A0D14] border border-white/10 rounded-full flex flex-col items-center justify-center transition-all duration-500 shadow-[0_0_50px_-10px_rgba(168,85,247,0.3)] group-hover:shadow-[0_0_80px_-10px_rgba(34,211,238,0.4)] group-hover:border-cyan-500/50"
-                style={{ clipPath: 'circle(50% at 50% 50%)' }}
+                className="absolute inset-0 rounded-full flex flex-col items-center justify-center transition-all duration-500 overflow-hidden"
+                style={{
+                  background: 'radial-gradient(circle at 50% 32%, rgba(38,52,74,0.92), rgba(13,17,26,0.97) 58%, rgba(7,9,14,1) 100%)',
+                  border: '1px solid rgba(255,255,255,0.10)',
+                  boxShadow: '0 0 60px -10px rgba(168,85,247,0.35), inset 0 0 60px rgba(34,211,238,0.08)',
+                  clipPath: 'circle(50% at 50% 50%)',
+                }}
               >
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-30 group-hover:opacity-60 transition-opacity">
-                  <div className="w-[110%] h-[110%] rounded-full border-[1.5px] border-purple-500/20"></div>
-                  <div className="absolute w-[85%] h-[85%] rounded-full border-[1.5px] border-cyan-500/20"></div>
-                  <div className="absolute w-[60%] h-[60%] rounded-full border-[1.5px] border-pink-500/20"></div>
+                {/* Anillos concéntricos animados */}
+                <div className="absolute inset-0 pointer-events-none">
+                  <div className="absolute inset-0 m-auto w-full h-full orbe-spin-slow">
+                    <svg viewBox="0 0 200 200" className="w-full h-full">
+                      <defs>
+                        <linearGradient id="orbARing1" x1="0" y1="0" x2="1" y2="1">
+                          <stop offset="0%" stopColor="#22d3ee" />
+                          <stop offset="50%" stopColor="#a855f7" />
+                          <stop offset="100%" stopColor="#ec4899" />
+                        </linearGradient>
+                      </defs>
+                      <circle cx="100" cy="100" r="96" fill="none" stroke="url(#orbARing1)" strokeWidth="1.4" strokeDasharray="4 12" strokeLinecap="round" opacity="0.5" />
+                    </svg>
+                  </div>
+                  <div className="absolute inset-0 m-auto w-[84%] h-[84%] orbe-spin-medium" style={{ animationDirection: 'reverse' }}>
+                    <svg viewBox="0 0 200 200" className="w-full h-full">
+                      <defs>
+                        <linearGradient id="orbARing2" x1="0" y1="0" x2="1" y2="1">
+                          <stop offset="0%" stopColor="#a855f7" />
+                          <stop offset="100%" stopColor="#22d3ee" />
+                        </linearGradient>
+                      </defs>
+                      <circle cx="100" cy="100" r="94" fill="none" stroke="url(#orbARing2)" strokeWidth="2.4" strokeLinecap="round" strokeDasharray="60 330" opacity="0.7" />
+                      <circle cx="100" cy="100" r="94" fill="none" stroke="url(#orbARing2)" strokeWidth="2.4" strokeLinecap="round" strokeDasharray="24 366" strokeDashoffset="180" opacity="0.4" />
+                    </svg>
+                  </div>
                 </div>
 
+                {/* Partículas orbitando */}
+                {([
+                  { s: 'w-3 h-3', a: 'orbe-spin-slow', d: '0s', c: '#22d3ee', r: 'normal' as const },
+                  { s: 'w-2 h-2', a: 'orbe-spin-medium', d: '-0.9s', c: '#a855f7', r: 'reverse' as const },
+                  { s: 'w-2.5 h-2.5', a: 'orbe-spin-slow', d: '-2.2s', c: '#ec4899', r: 'normal' as const },
+                ]).map((p, i) => (
+                  <div key={i} className={`absolute inset-0 m-auto w-[72%] h-[72%] pointer-events-none ${p.a}`} style={{ animationDelay: p.d, animationDirection: p.r }}>
+                    <span className={`absolute left-1/2 top-0 -translate-x-1/2 ${p.s} rounded-full`} style={{ backgroundColor: p.c, boxShadow: `0 0 10px ${p.c}, 0 0 22px ${p.c}` }} />
+                  </div>
+                ))}
+
                 <div 
-                  className="relative w-28 h-28 sm:w-36 sm:h-36 rounded-full bg-[#1A2030] border border-cyan-400/30 shadow-[inset_0_0_30px_rgba(34,211,238,0.2),0_0_30px_rgba(168,85,247,0.5)] flex items-center justify-center z-10 group-hover:scale-110 transition-transform duration-500"
-                  style={{ clipPath: 'circle(50% at 50% 50%)' }}
+                  className="relative w-28 h-28 sm:w-36 sm:h-36 rounded-full overflow-hidden flex items-center justify-center z-10 group-hover:scale-110 transition-transform duration-500"
+                  style={{
+                    backgroundColor: 'rgba(10, 13, 20, 0.66)',
+                    border: '1px solid rgba(34,211,238,0.35)',
+                    boxShadow: 'inset 0 0 30px rgba(34,211,238,0.18), inset 0 -14px 40px rgba(168,85,247,0.22), 0 0 40px rgba(168,85,247,0.4)',
+                    WebkitBackdropFilter: 'blur(8px)',
+                    backdropFilter: 'blur(8px)',
+                    clipPath: 'circle(50% at 50% 50%)',
+                  }}
                 >
-                  <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/20 via-purple-500/10 to-transparent"></div>
-                  <div className="absolute left-0 top-0 w-1/2 h-full bg-gradient-to-r from-white/10 to-transparent z-10 pointer-events-none"></div>
+                  <div
+                    className="absolute inset-0 opacity-50 orbe-spin-slow"
+                    style={{ background: 'conic-gradient(from 120deg, rgba(34,211,238,0.22), rgba(168,85,247,0.16) 120deg, rgba(0,0,0,0) 200deg, rgba(236,72,153,0.18) 300deg, rgba(0,0,0,0) 360deg)' }}
+                  />
+                  <div className="orbe-sheen" />
                   
-                  <svg className="w-14 h-14 sm:w-16 sm:h-16 text-cyan-400 drop-shadow-[0_0_15px_rgba(34,211,238,1)] z-20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 14v-4M8 18V6M12 22V2M16 18V6M20 14v-4" />
+                  <svg className="relative z-20 w-14 h-14 sm:w-16 sm:h-16 text-cyan-300 drop-shadow-[0_0_15px_rgba(34,211,238,1)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 16V4m0 0L7 9m5-5 5 5M5 20h14" />
                   </svg>
                 </div>
 
@@ -520,9 +568,9 @@ export default function Home() {
                   </span>
                 </div>
                 
-                <div className="absolute bottom-6 flex items-center justify-center gap-1 opacity-50 z-10">
+                <div className="absolute bottom-6 flex items-end justify-center gap-1 opacity-70 z-10" style={{ height: '24px' }}>
                   {[2, 4, 3, 5, 2, 6, 3, 4, 2].map((h, i) => (
-                    <div key={i} className={`w-1 bg-gradient-to-t from-cyan-400 to-purple-500 rounded-full h-${h} animate-pulse`} style={{ animationDelay: `${i * 0.1}s` }}></div>
+                    <span key={i} className="orbe-eq w-1 rounded-full" style={{ height: `${h * 3}px`, background: 'linear-gradient(to top, #22d3ee, #a855f7)', animationDelay: `${i * 0.12}s` }} />
                   ))}
                 </div>
               </div>
