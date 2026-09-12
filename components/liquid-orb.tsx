@@ -63,10 +63,10 @@ export default function LiquidOrb({ state, progress = 0, disabled = false, onFil
   }
 
   return (
-    <div className="flex flex-col items-center gap-6 select-none">
+    <div className="flex flex-col items-center gap-3 sm:gap-5 select-none">
       <div
         className="relative"
-        style={{ width: 'clamp(220px, 42vw, 340px)', height: 'clamp(220px, 42vw, 340px)' }}
+        style={{ width: 'clamp(190px, min(58vw, 40vh), 300px)', height: 'clamp(190px, min(58vw, 40vh), 300px)' }}
         onDragOver={(event) => { event.preventDefault(); if (!disabled) setDragging(true) }}
         onDragEnter={(event) => { event.preventDefault(); if (!disabled) setDragging(true) }}
         onDragLeave={(event) => { event.preventDefault(); setDragging(false) }}

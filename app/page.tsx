@@ -1,5 +1,5 @@
 'use client';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import LiquidOrb from '@/components/liquid-orb';
 
 interface Versiculo { cita: string; texto: string; }
@@ -14,6 +14,15 @@ interface PredicaAnalisis {
 
 const ALLOWED_EXTENSIONS = ['.mp3', '.wav', '.m4a', '.m4b', '.aac', '.flac', '.ogg', '.oga', '.opus', '.wma', '.amr', '.webm', '.mp4', '.mov', '.aiff', '.aif', '.caf', '.3gp'];
 const MAX_FILE_SIZE = 500 * 1024 * 1024;
+
+const promesasBiblicas = [
+  { cita: 'Isaías 41:10', texto: 'No temas, porque yo estoy contigo; no desmayes, porque yo soy tu Dios que te esfuerzo; siempre te ayudaré, siempre te sustentaré con la diestra de mi justicia.' },
+  { cita: 'Jeremías 29:11', texto: 'Porque yo sé los pensamientos que tengo acerca de vosotros, dice Jehová, pensamientos de paz, y no de mal, para daros el fin que esperáis.' },
+  { cita: 'Romanos 8:28', texto: 'Y sabemos que a los que aman a Dios, todas las cosas les ayudan a bien, esto es, a los que conforme a su propósito son llamados.' },
+  { cita: 'Josué 1:9', texto: 'Mira que te mando que te esfuerces y seas valiente; no temas ni desmayes, porque Jehová tu Dios estará contigo en dondequiera que vayas.' },
+  { cita: 'Filipenses 4:13', texto: 'Todo lo puedo en Cristo que me fortalece.' },
+  { cita: 'Salmos 23:1', texto: 'Jehová es mi pastor; nada me faltará.' },
+];
 
 function validarArchivo(file: File): string | null {
   if (file.size > MAX_FILE_SIZE) return 'El archivo supera el límite permitido de 500 MB.';
@@ -34,8 +43,16 @@ export default function Home() {
 
   const [resultado, setResultado] = useState<PredicaAnalisis | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [versoIndex, setVersoIndex] = useState(0);
 
   const infografiaRef = useRef<HTMLDivElement>(null);
+
+  // Carrusel de versículos: rota mientras se procesa el análisis.
+  useEffect(() => {
+    if (!loading) return;
+    const id = setInterval(() => setVersoIndex((prev) => (prev + 1) % promesasBiblicas.length), 6000);
+    return () => clearInterval(id);
+  }, [loading]);
 
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState('');
@@ -334,7 +351,7 @@ export default function Home() {
         <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           <button
             onClick={() => setShowFeedbackModal(true)}
-            className="h-8 px-3 inline-flex items-center text-sm text-[#f4f4f4] hover:bg-[#353535] transition-colors whitespace-nowrap"
+            className="h-8 px-2 sm:px-3 inline-flex items-center text-sm text-[#f4f4f4] hover:bg-[#353535] transition-colors whitespace-nowrap"
           >
             Sugerencias
           </button>
@@ -342,7 +359,7 @@ export default function Home() {
             href="https://www.paypal.com/ncp/payment/ZTLTVMRR95J2C"
             target="_blank"
             rel="noopener noreferrer"
-            className="h-8 px-4 inline-flex items-center text-sm font-medium text-white bg-[#0f62fe] hover:bg-[#0353e9] transition-colors whitespace-nowrap"
+            className="h-8 px-3 sm:px-4 inline-flex items-center text-sm font-medium text-white bg-[#0f62fe] hover:bg-[#0353e9] transition-colors whitespace-nowrap"
           >
             Apoyar
           </a>
@@ -351,10 +368,10 @@ export default function Home() {
       </header>
 
       <main className="app-content w-full z-10">
-        <div className="shell-container flex flex-col items-center justify-start py-8 sm:py-12">
+        <div className="shell-container flex flex-col items-center justify-start py-6 sm:py-10">
         {/* HERO — Carbon */}
         {!resultado && (
-          <div className="text-center mb-8 sm:mb-12">
+          <div className="text-center mb-5 sm:mb-8">
             <h1 className="text-fluid-hero font-light text-[#f4f4f4]">TeoDoc</h1>
             <h2 className="text-fluid-sub mt-3 font-normal text-[#c6c6c6]">Analiza tus prédicas.</h2>
             <p className="text-fluid-body mt-4 text-[#a8a8a8] max-w-xl mx-auto">
@@ -391,6 +408,16 @@ export default function Home() {
               aria-label="Progreso del análisis"
             >
               <div className="cds-progressbar__bar" style={{ width: `${progress}%` }} />
+            </div>
+          </div>
+        )}
+
+        {/* CARRUSEL DE VERSÍCULOS — promesas bíblicas */}
+        {loading && (
+          <div className="mt-7 sm:mt-9 w-full max-w-xl">
+            <div key={versoIndex} className="verse-fade border-l-2 border-[#0f62fe] pl-4">
+              <p className="text-fluid-quote italic text-[#e0e0e0] leading-relaxed">“{promesasBiblicas[versoIndex].texto}”</p>
+              <p className="mt-2 text-xs font-semibold uppercase tracking-wider text-[#78a9ff]">{promesasBiblicas[versoIndex].cita}</p>
             </div>
           </div>
         )}
