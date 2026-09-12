@@ -1,0 +1,27 @@
+# Render Blueprint: despliega el servicio open source de transcripción (yt-dlp)
+# en la nube, sin hardware propio.
+#
+# Uso:
+#   1. Sube este repo a GitHub (ya está).
+#   2. En https://dashboard.render.com -> New -> Blueprint -> conecta el repo.
+#   3. Render detecta este archivo y crea el servicio Docker.
+#   4. Copia la URL pública en Vercel como TRANSCRIPT_SERVICE_URL.
+services:
+  - type: web
+    name: teodoc-ytdlp-transcripts
+    runtime: docker
+    plan: free
+    dockerfilePath: ./services/youtube-ytdlp/Dockerfile
+    dockerContext: ./services/youtube-ytdlp
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: TRANSCRIPT_SERVICE_TOKEN
+        generateValue: true
+      - key: YTDLP_TIMEOUT
+        value: "150"
+      # Descomenta y completa si YouTube bloquea la IP del servicio:
+      # - key: YTDLP_PROXY
+      #   sync: false
+      # - key: YTDLP_COOKIES_BASE64
+      #   sync: false

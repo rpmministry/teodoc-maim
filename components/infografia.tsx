@@ -264,12 +264,13 @@ export default function Infografia({ data, variant = 'wide' }: { data: Infografi
             <span style={{ fontSize: cfg.title, fontWeight: 800, color: C.white }}>DE LA PRÉDICA</span>
           </h1>
 
-          <div style={{ marginTop: 12, fontSize: cfg.sermon, fontWeight: 600, color: C.amberBright, lineHeight: 1.2 }}>
-            {resumir(data.titulo || 'Prédica', 110)}
+          {/* Título completo: nunca se recorta (envuelve si es largo). */}
+          <div style={{ marginTop: 12, fontSize: cfg.sermon, fontWeight: 600, color: C.amberBright, lineHeight: 1.2, overflowWrap: 'anywhere' }}>
+            {data.titulo || 'Prédica'}
           </div>
 
           {fraseCorta ? (
-            <div className="font-hand" style={{ fontSize: cfg.sermon + 6, color: C.white, marginTop: 6, lineHeight: 1.1 }}>{resumir(fraseCorta, 70)}</div>
+            <div className="font-hand" style={{ fontSize: cfg.sermon + 6, color: C.white, marginTop: 6, lineHeight: 1.15, overflowWrap: 'anywhere' }}>{fraseCorta}</div>
           ) : null}
 
           {data.idea_principal ? (
@@ -347,7 +348,8 @@ export default function Infografia({ data, variant = 'wide' }: { data: Infografi
                     {String(i + 1).padStart(2, '0')}
                   </span>
                 </div>
-                <div className="font-hand" style={{ fontSize: pointCols === 1 ? 23 : 21, lineHeight: 1.1, textAlign: 'center' }}>{resumir(p.punto || '', 50)}</div>
+                {/* Título del punto completo, sin recortar. */}
+                <div className="font-hand" style={{ fontSize: pointCols === 1 ? 23 : 21, lineHeight: 1.1, textAlign: 'center', overflowWrap: 'anywhere' }}>{p.punto}</div>
                 <div style={{ fontSize: cfg.body, color: C.sub, lineHeight: 1.45, marginTop: 8, textAlign: 'center' }}>{resumir(p.explicacion, 150)}</div>
                 {v?.cita ? (
                   <div style={{ marginTop: 10, paddingTop: 8, borderTop: `1px dashed ${C.rule}`, textAlign: 'center' }}>

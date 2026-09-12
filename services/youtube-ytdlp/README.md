@@ -22,6 +22,8 @@ GET /health -> { "ok": true, "ytdlp": "2026.08.19" }
 | `YTDLP_BIN` | Ruta del binario yt-dlp | `yt-dlp` |
 | `YTDLP_TIMEOUT` | Segundos máximos por extracción | `150` |
 | `YTDLP_EXTRA_ARGS` | Argumentos extra de yt-dlp | vacío |
+| `YTDLP_PROXY` | Proxy (`http://user:pass@host:port`) si YouTube bloquea la IP | vacío |
+| `YTDLP_COOKIES_BASE64` | `cookies.txt` en base64 (ayuda con videos restringidos) | vacío |
 | `TRANSCRIPT_SERVICE_TOKEN` | Token Bearer opcional | vacío |
 
 ## Ejecutar en local
@@ -40,15 +42,27 @@ Prueba:
 curl "http://localhost:8010/?videoId=dQw4w9WgXcQ&lang=es"
 ```
 
-## Desplegar
+## Despliegue en la nube (sin hardware propio)
 
-- **Docker**: `docker build -t teodoc-ytdlp . && docker run -p 8000:8000 teodoc-ytdlp`
-- **Railway / Render / Fly.io**: crea un servicio desde esta carpeta (Dockerfile incluido).
-- **VPS / equipo propio**: recomendado, porque YouTube no bloquea IPs residenciales.
+No necesitas tener un computador encendido. Opciones gratuitas y open source:
 
-> yt-dlp es mucho más resistente que una simple obtención de subtítulos, pero si
-> el host usa IP de datacenter YouTube puede limitar (HTTP 429). Si ocurre,
-> TeoDoc cae automáticamente a Supadata y luego a la librería npm.
+- **Render (recomendado, 1 clic)**: este repo incluye `render.yaml` en la raíz.
+  En https://dashboard.render.com → **New → Blueprint** → conecta el repo →
+  Render crea el servicio Docker. Copia la URL y úsala como `TRANSCRIPT_SERVICE_URL`.
+- **Hugging Face Spaces (gratis, sin tarjeta)**: sigue
+  [`HUGGINGFACE.md`](./HUGGINGFACE.md).
+- **Docker / Railway / Fly.io / VPS**: `docker build -t teodoc-ytdlp . && docker run -p 8000:8000 teodoc-ytdlp`.
+
+> Si el host usa IP de datacenter, YouTube puede limitar (HTTP 429). Configura
+> `YTDLP_PROXY` (un proxy) o `YTDLP_COOKIES_BASE64`, o aloja en una IP
+> residencial. Mientras tanto, TeoDoc cae automáticamente a Supadata y luego a
+> la librería npm, así que el análisis nunca se detiene.
+
+## Alternativa sin despliegue
+
+Si no quieres desplegar nada, **Supadata ya es un servicio en la nube** (solo
+requiere `SUPADATA_API_KEY`) y funciona como proveedor principal. El servicio
+yt-dlp es para cuando quieras eliminar la dependencia de créditos de terceros.
 
 ## Conectar con TeoDoc (proveedor principal)
 

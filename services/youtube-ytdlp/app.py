@@ -9,6 +9,7 @@ Contrato:
   Errores: 404 video no disponible | 422 sin subtítulos | 504 timeout
 """
 
+import base64
 import glob
 import json
 import os
@@ -25,6 +26,9 @@ TOKEN = os.environ.get("TRANSCRIPT_SERVICE_TOKEN")
 YTDLP = os.environ.get("YTDLP_BIN", "yt-dlp")
 TIMEOUT = int(os.environ.get("YTDLP_TIMEOUT", "150"))
 EXTRA_ARGS = [a for a in os.environ.get("YTDLP_EXTRA_ARGS", "").split() if a]
+# Opcionales para entornos cloud con IP bloqueada por YouTube.
+PROXY = os.environ.get("YTDLP_PROXY", "")
+COOKIES_B64 = os.environ.get("YTDLP_COOKIES_BASE64", "")
 
 LANG_ORDER = ["es", "es-419", "es-ES", "es-MX", "es-US", "en"]
 VTT_TS = re.compile(
@@ -106,6 +110,15 @@ def transcript(request: Request, videoId: str = Query(...), lang: str = Query("e
         raise HTTPException(status_code=401, detail="unauthorized")
 
     with tempfile.TemporaryDirectory() as workdir:
+        extra = list(EXTRA_ARGS)
+        if PROXY:
+            extra += ["--proxy", PROXY]
+        if COOKIES_B64:
+            cookies_path = os.path.join(workdir, "cookies.txt")
+            with open(cookies_path, "wb") as handle:
+                handle.write(base64.b64decode(COOKIES_B64))
+            extra += ["--cookies", cookies_path]
+
         command = [
             YTDLP,
             "--skip-download",
@@ -117,7 +130,7 @@ def transcript(request: Request, videoId: str = Query(...), lang: str = Query("e
             "--no-warnings",
             "-o", os.path.join(workdir, "%(id)s.%(ext)s"),
             f"https://www.youtube.com/watch?v={videoId}",
-            *EXTRA_ARGS,
+            *extra,
         ]
         try:
             proc = subprocess.run(command, capture_output=True, text=True, timeout=TIMEOUT)
