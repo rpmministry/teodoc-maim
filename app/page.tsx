@@ -2,6 +2,7 @@
 import { useState, useRef, useEffect } from 'react';
 import LiquidOrb, { type LiquidOrbHandle } from '@/components/liquid-orb';
 import Infografia, { ResponsiveInfografia, resumir, exportarInfografiaPng } from '@/components/infografia';
+import { extractYouTubeVideoId } from '@/lib/youtube/extract-video-id';
 
 interface Versiculo { cita: string; texto: string; }
 interface PuntoDesarrollo { punto: string; explicacion: string; versiculos: Versiculo[]; }
@@ -48,9 +49,15 @@ export default function Home() {
   const [versoIndex, setVersoIndex] = useState(0);
   const [descargando, setDescargando] = useState(false);
   const [avisoAudio, setAvisoAudio] = useState<AvisoAudio | null>(null);
+  // Fuente de entrada: audio local o YouTube. Mismo pipeline después.
+  const [modo, setModo] = useState<'audio' | 'youtube'>('audio');
+  const [youtubeUrl, setYoutubeUrl] = useState('');
+  const [avisoYoutube, setAvisoYoutube] = useState<string | null>(null);
 
   const infografiaRef = useRef<HTMLDivElement>(null);
   const orbRef = useRef<LiquidOrbHandle>(null);
+  // Metadatos y timestamps de la última fuente (YouTube), para futuras funciones.
+  const ultimaFuenteRef = useRef<{ meta: unknown; segments: unknown[] } | null>(null);
 
   // Mensajes breves que acompañan el procesamiento (uno a la vez).
   const mensajesAnalisis = [
@@ -141,6 +148,8 @@ export default function Home() {
   const procesarArchivo = async (file: File) => {
     // Se limpia siempre, incluso si el archivo no pasa la validación de formato.
     setAvisoAudio(null);
+    setAvisoYoutube(null);
+    setModo('audio');
     const errMsg = validarArchivo(file);
     if (errMsg) {
       setError(errMsg);
@@ -261,28 +270,16 @@ export default function Home() {
     await startAnalysisPipeline(data.secure_url);
   };
 
-  const startAnalysisPipeline = async (audioUrl: string) => {
-    let timerTranscribe: ReturnType<typeof setInterval> | undefined;
+  // Pipeline POSTERIOR a la transcripción (validación + análisis + resultados).
+  // Lo comparten el audio local y YouTube: no se duplica lógica.
+  const continuarConTranscripcion = async (textoTranscrito: string) => {
     let timerAnalyze: ReturnType<typeof setInterval> | undefined;
     try {
-      timerTranscribe = setInterval(() => setProgress((prev) => (prev >= 49 ? 49 : prev + 1)), 800);
-
-      const resTranscribe = await fetch('/api/transcribe', { 
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ audioUrl }) 
-      });
-      clearInterval(timerTranscribe); timerTranscribe = undefined;
-
-      if (!resTranscribe.ok) {
-        throw new Error('La IA tiene muchas solicitudes en este momento. Vuelve a intentarlo en unos segundos.');
-      }
-      const dataTranscribe = await resTranscribe.json();
-      const textoTranscrito = dataTranscribe.text;
-
       setProgress(48);
 
       // Validación previa: ¿hay contenido suficiente y afín al propósito de
       // TeoDoc? Filtro leniente; si la validación falla, NO bloqueamos.
-      let audioValido = true;
+      let contenidoValido = true;
       let motivo: AvisoAudio = 'corto';
       try {
         const resValida = await fetch('/api/validate', {
@@ -291,7 +288,7 @@ export default function Home() {
         if (resValida.ok) {
           const dataValida = await resValida.json();
           if (dataValida && dataValida.valido === false) {
-            audioValido = false;
+            contenidoValido = false;
             motivo = dataValida.motivo === 'no_relacionado' ? 'no_relacionado' : 'corto';
           }
         }
@@ -299,7 +296,7 @@ export default function Home() {
         // Sin validación disponible: continuamos con el análisis normal.
       }
 
-      if (!audioValido) {
+      if (!contenidoValido) {
         setAvisoAudio(motivo);
         setLoading(false);
         setProgress(0);
@@ -326,14 +323,78 @@ export default function Home() {
         setResultado(dataAnalyze);
         setLoading(false);
       }, 500);
-
     } catch (err: any) {
+      if (timerAnalyze) clearInterval(timerAnalyze);
       setError(err?.message || 'La IA tiene muchas solicitudes en este momento. Vuelve a intentarlo en unos segundos.');
       setLoading(false);
       setProgress(0);
-    } finally {
+    }
+  };
+
+  const startAnalysisPipeline = async (audioUrl: string) => {
+    let timerTranscribe: ReturnType<typeof setInterval> | undefined;
+    try {
+      timerTranscribe = setInterval(() => setProgress((prev) => (prev >= 49 ? 49 : prev + 1)), 800);
+
+      const resTranscribe = await fetch('/api/transcribe', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ audioUrl })
+      });
+      clearInterval(timerTranscribe); timerTranscribe = undefined;
+
+      if (!resTranscribe.ok) {
+        throw new Error('La IA tiene muchas solicitudes en este momento. Vuelve a intentarlo en unos segundos.');
+      }
+      const dataTranscribe = await resTranscribe.json();
+      await continuarConTranscripcion(dataTranscribe.text);
+    } catch (err: any) {
       if (timerTranscribe) clearInterval(timerTranscribe);
-      if (timerAnalyze) clearInterval(timerAnalyze);
+      setError(err?.message || 'La IA tiene muchas solicitudes en este momento. Vuelve a intentarlo en unos segundos.');
+      setLoading(false);
+      setProgress(0);
+    }
+  };
+
+  // Entrada YouTube: obtiene la transcripción y entra al MISMO pipeline.
+  const analizarDesdeYouTube = async () => {
+    const url = youtubeUrl.trim();
+    const videoId = extractYouTubeVideoId(url);
+    if (!videoId) {
+      setAvisoYoutube('El enlace no parece ser de YouTube. Revisa que sea un enlace válido del video.');
+      return;
+    }
+
+    setAvisoYoutube(null);
+    setError(null);
+    setAvisoAudio(null);
+    setResultado(null);
+    setLoading(true);
+    setProgress(8);
+
+    try {
+      const res = await fetch('/api/youtube', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url }),
+      });
+      const data = await res.json().catch(() => null);
+      if (!res.ok || !data?.ok || !data?.text) {
+        setAvisoYoutube(
+          data?.message ||
+            'No pudimos obtener la transcripción de este video en este momento. Puedes probar con otro video o subir directamente el audio.',
+        );
+        setLoading(false);
+        setProgress(0);
+        return;
+      }
+
+      // Se conservan metadatos y timestamps internamente (sin afectar el flujo).
+      ultimaFuenteRef.current = { meta: data.meta, segments: data.segments || [] };
+      setProgress(38);
+      await continuarConTranscripcion(data.text);
+    } catch {
+      setAvisoYoutube(
+        'No pudimos obtener la transcripción de este video en este momento. Puedes probar con otro video o subir directamente el audio.',
+      );
+      setLoading(false);
+      setProgress(0);
     }
   };
 
@@ -341,17 +402,20 @@ export default function Home() {
     setResultado(null);
     setError(null);
     setAvisoAudio(null);
+    setAvisoYoutube(null);
     setProgress(0);
     setLoading(false);
   };
 
-  // El aviso de audio no válido se limpia y se abre el selector de inmediato.
+  // El aviso se limpia, se vuelve al modo audio y se abre el selector.
   const reintentarAudio = () => {
     setAvisoAudio(null);
+    setAvisoYoutube(null);
     setError(null);
     setProgress(0);
     setLoading(false);
-    orbRef.current?.abrirSelector();
+    setModo('audio');
+    setTimeout(() => orbRef.current?.abrirSelector(), 50);
   };
 
   // C. Export PNG: parte del artboard FIJO de 900px (independiente del
@@ -715,8 +779,34 @@ export default function Home() {
           </div>
         )}
 
-        {/* ORBE — único punto de interacción */}
-        {!resultado && (
+        {/* SELECTOR DE FUENTE — dos puertas de entrada, un solo pipeline */}
+        {!loading && !resultado && (
+          <div
+            className="mb-5 inline-flex border border-[#393939] bg-[#262626] p-1 z-20 relative"
+            role="tablist"
+            aria-label="Fuente del análisis"
+          >
+            <button
+              role="tab"
+              aria-selected={modo === 'audio'}
+              onClick={() => { setModo('audio'); setAvisoYoutube(null); }}
+              className={`px-4 h-9 text-sm font-medium transition-colors ${modo === 'audio' ? 'bg-[#0f62fe] text-white' : 'text-[#c6c6c6] hover:bg-[#353535]'}`}
+            >
+              Subir audio
+            </button>
+            <button
+              role="tab"
+              aria-selected={modo === 'youtube'}
+              onClick={() => { setModo('youtube'); setError(null); setAvisoAudio(null); }}
+              className={`px-4 h-9 text-sm font-medium transition-colors ${modo === 'youtube' ? 'bg-[#0f62fe] text-white' : 'text-[#c6c6c6] hover:bg-[#353535]'}`}
+            >
+              Analizar desde YouTube
+            </button>
+          </div>
+        )}
+
+        {/* ORBE — audio local, o procesamiento en curso (cualquier fuente) */}
+        {!resultado && (modo === 'audio' || loading) && (
           <div className="z-20 relative">
             <LiquidOrb
               ref={orbRef}
@@ -726,6 +816,35 @@ export default function Home() {
               onFile={procesarArchivo}
             />
           </div>
+        )}
+
+        {/* ENTRADA YOUTUBE — sólo el origen cambia; el resto del flujo es igual */}
+        {!resultado && !loading && modo === 'youtube' && (
+          <form
+            onSubmit={(e) => { e.preventDefault(); analizarDesdeYouTube(); }}
+            className="z-20 relative w-full max-w-lg flex flex-col items-center gap-3 animate-fade-in"
+          >
+            <label htmlFor="yt-url" className="text-sm text-[#c6c6c6] text-center">
+              Pega el enlace de la prédica o enseñanza de YouTube
+            </label>
+            <input
+              id="yt-url"
+              type="url"
+              inputMode="url"
+              autoComplete="off"
+              value={youtubeUrl}
+              onChange={(e) => { setYoutubeUrl(e.target.value); if (avisoYoutube) setAvisoYoutube(null); }}
+              placeholder="https://www.youtube.com/watch?v=..."
+              className="w-full h-11 px-4 bg-[#262626] border border-[#393939] focus:border-[#0f62fe] outline-none text-[#f4f4f4] text-sm placeholder:text-[#6f6f6f]"
+            />
+            <button
+              type="submit"
+              disabled={!youtubeUrl.trim()}
+              className="h-10 px-6 text-sm font-medium text-white bg-[#0f62fe] hover:bg-[#0353e9] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Analizar video
+            </button>
+          </form>
         )}
 
         {/* BARRA DE PROGRESO — IBM Carbon */}
@@ -784,6 +903,28 @@ export default function Home() {
             >
               Subir otro audio
             </button>
+          </div>
+        )}
+
+        {/* YOUTUBE NO DISPONIBLE — mensaje amigable + salida al flujo de audio */}
+        {!loading && !resultado && avisoYoutube && (
+          <div className="mt-8 w-full max-w-lg border-l-4 border-[#f1c21b] bg-[#262626] px-5 py-5 text-sm text-[#f4f4f4] animate-fade-in">
+            <p className="font-semibold mb-2">🕊️ No pudimos usar ese enlace</p>
+            <p className="text-[#c6c6c6] leading-relaxed">{avisoYoutube}</p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button
+                onClick={() => { setAvisoYoutube(null); setModo('audio'); }}
+                className="h-10 px-5 text-sm font-medium text-white bg-[#0f62fe] hover:bg-[#0353e9] transition-colors"
+              >
+                Subir audio
+              </button>
+              <button
+                onClick={() => setAvisoYoutube(null)}
+                className="h-10 px-5 text-sm font-medium text-[#f4f4f4] border border-[#6f6f6f] hover:bg-[#353535] transition-colors"
+              >
+                Intentar con otro enlace
+              </button>
+            </div>
           </div>
         )}
 
