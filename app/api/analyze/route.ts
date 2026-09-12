@@ -3,7 +3,8 @@ import { Type } from '@google/genai';
 import { NextRequest, NextResponse } from 'next/server';
 import { delay, extraerJSON, generarJsonConGemini } from '@/lib/ai-gemini';
 
-export const maxDuration = 60;
+// Margen amplio para encadenar todos los respaldos (gratuitos y de pago).
+export const maxDuration = 300;
 export const dynamic = 'force-dynamic';
 
 const REGLA_PUNTOS = `REGLA DE LOS PUNTOS PRINCIPALES (campo "desarrollo_progresivo"):
@@ -97,6 +98,59 @@ async function analizarConOpenRouter(text: string): Promise<any | null> {
   return null;
 }
 
+const DEEPSEEK_URL = 'https://api.deepseek.com/chat/completions';
+const DEEPSEEK_MODEL = 'deepseek-chat';
+const DEEPSEEK_TIMEOUT_MS = 60_000;
+
+// Último recurso: DeepSeek (de pago). Solo se usa cuando TODOS los modelos
+// gratuitos fallaron, para que el análisis nunca se quede sin respuesta.
+async function analizarConDeepSeek(text: string): Promise<any | null> {
+  const apiKey = process.env.DEEPSEEK_API_KEY;
+  if (!apiKey) {
+    console.warn('[DeepSeek] Sin DEEPSEEK_API_KEY: se omite el respaldo de pago.');
+    return null;
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), DEEPSEEK_TIMEOUT_MS);
+  try {
+    const response = await fetch(DEEPSEEK_URL, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: DEEPSEEK_MODEL,
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'user', content: `Transcripción:\n\n${text}` },
+        ],
+        temperature: 0.3,
+        response_format: { type: 'json_object' },
+        stream: false,
+      }),
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      console.warn(`[DeepSeek Falló]: HTTP ${response.status}`);
+      return null;
+    }
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content;
+    if (content) {
+      console.log('[DeepSeek] Análisis completado con el respaldo de pago.');
+      return extraerJSON(content);
+    }
+  } catch (dsErr: any) {
+    console.warn('[DeepSeek Falló]:', dsErr?.name === 'AbortError' ? 'timeout' : dsErr?.message || dsErr);
+  } finally {
+    clearTimeout(timeout);
+  }
+  return null;
+}
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -108,8 +162,12 @@ export async function POST(req: NextRequest) {
 
     console.log(`[Análisis] Texto recibido (${text.length} caracteres)`);
 
+    // 1) Gemini (gratuito, motor principal). 2) OpenRouter (gratuito).
+    // 3) DeepSeek (de pago, solo si todo lo gratuito falla).
     let jsonResult = await analizarConGemini(text);
     if (!jsonResult) jsonResult = await analizarConOpenRouter(text);
+    if (!jsonResult) jsonResult = await analizarConDeepSeek(text);
+
     if (!jsonResult) {
       // 503 = transitorio: la app lo traduce a un mensaje amigable.
       return NextResponse.json({ error: 'busy' }, { status: 503 });

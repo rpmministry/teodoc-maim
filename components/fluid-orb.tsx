@@ -111,9 +111,18 @@ function compile(gl: WebGLRenderingContext, type: number, src: string) {
 const FluidOrb = ({ color = '#1A73F2', active = true, className, style, ...props }: FluidOrbProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
+  const activeRef = useRef(active)
+  const startLoopRef = useRef<(() => void) | null>(null)
   // Si WebGL no está disponible (o se pierde el contexto) el orbe NO debe
   // desaparecer: se recurre a una esfera CSS con el mismo lenguaje visual.
   const [webglOk, setWebglOk] = useState(true)
+
+  // Pausa/reanuda el bucle sin recrear el contexto WebGL (la animación continúa
+  // donde iba y el contexto no se destruye al cambiar de estado).
+  useEffect(() => {
+    activeRef.current = active
+    if (active) startLoopRef.current?.()
+  }, [active])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -210,11 +219,16 @@ const FluidOrb = ({ color = '#1A73F2', active = true, className, style, ...props
     const render = (now: number) => {
       drawFrame(now)
       // Solo anima la capa activa (la otra se congela mientras se desvanece).
-      if (!reduce && active) raf = requestAnimationFrame(render)
+      if (!reduce && activeRef.current) raf = requestAnimationFrame(render)
+    }
+    startLoopRef.current = () => {
+      cancelAnimationFrame(raf)
+      raf = requestAnimationFrame(render)
     }
     render(start)
 
     return () => {
+      startLoopRef.current = null
       cancelAnimationFrame(raf)
       canvas.removeEventListener('webglcontextlost', onContextLost)
       if (ro) ro.disconnect()
@@ -225,7 +239,8 @@ const FluidOrb = ({ color = '#1A73F2', active = true, className, style, ...props
       gl.deleteBuffer(buffer)
       if (loseContext) loseContext.loseContext()
     }
-  }, [color, active])
+    // `active` se lee por ref para no recrear el contexto WebGL al cambiar de estado.
+  }, [color])
 
   return (
     <div

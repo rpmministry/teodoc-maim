@@ -130,6 +130,8 @@ const MatrixOrb = ({
   const stateRef = useRef(state)
   const levelRef = useRef(level)
   const colorsRef = useRef(colors)
+  const activeRef = useRef(active)
+  const startLoopRef = useRef<(() => void) | null>(null)
   const redrawRef = useRef<(() => void) | null>(null)
   const dpr = useDevicePixelRatio()
 
@@ -138,6 +140,12 @@ const MatrixOrb = ({
     levelRef.current = level
     colorsRef.current = colors
   }, [state, level, colors])
+
+  // Pausa/reanuda el bucle sin reiniciar el canvas (la animación continúa donde iba).
+  useEffect(() => {
+    activeRef.current = active
+    if (active) startLoopRef.current?.()
+  }, [active])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -226,7 +234,7 @@ const MatrixOrb = ({
       typeof window.matchMedia === 'function' &&
       window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
-    if (reduce || !active) {
+    if (reduce) {
       redrawRef.current = () => {
         const current = stateRef.current
         for (const s of STATES) weights[s] = s === current ? 1 : 0
@@ -264,14 +272,23 @@ const MatrixOrb = ({
       scale += velocity * dt
 
       draw(t, amplitude, scale)
+      if (activeRef.current) raf = requestAnimationFrame(frame)
+    }
+    startLoopRef.current = () => {
+      cancelAnimationFrame(raf)
+      last = performance.now()
       raf = requestAnimationFrame(frame)
     }
-    raf = requestAnimationFrame(frame)
+    frame(last)
 
-    return () => cancelAnimationFrame(raf)
-    // `state`/`color` fuera de las deps: el bucle re-apunta, no se reinicia.
+    return () => {
+      startLoopRef.current = null
+      cancelAnimationFrame(raf)
+    }
+    // `state`/`color`/`active` fuera de las deps: el bucle se reanuda con refs,
+    // no se reinicia al cambiar de estado.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [size, dots, dpr, active])
+  }, [size, dots, dpr])
 
   useEffect(() => {
     redrawRef.current?.()
