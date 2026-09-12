@@ -773,7 +773,7 @@ export default function Home() {
             {/* Infografía — resumen ejecutivo A4 (estilo boceto a mano) */}
             <div className="w-full pt-6 sm:pt-10">
               <div className="text-center mb-6 sm:mb-8 px-4">
-                <h3 className="text-sm font-semibold text-[#f4f4f4] tracking-wider uppercase">Infografía lista</h3>
+                <h3 className="text-sm font-semibold text-[#f4f4f4] tracking-wider uppercase">Infografía lista · v2</h3>
                 <p className="text-xs sm:text-sm text-[#a8a8a8] mt-2 max-w-md mx-auto">
                   Resumen ejecutivo en A4 vertical. Descárgala en PNG para verla, leerla o imprimirla.
                 </p>
