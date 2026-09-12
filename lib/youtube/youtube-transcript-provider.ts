@@ -9,10 +9,12 @@ import {
 import {
   normalizeSegments,
   TranscriptError,
+  withTimeout,
   type TranscriptProvider,
   type TranscriptResult,
   type TranscriptSegment,
 } from './transcript-provider';
+import { fetchYouTubeOembed } from './oembed';
 
 // Prioridad de idioma: español y sus variantes; luego el primer track disponible
 // (si la prédica está en otro idioma, el análisis actual igual puede procesarla).
@@ -30,22 +32,6 @@ const ytFetch: typeof fetch = (input, init) =>
     ...init,
     headers: { ...(init?.headers as Record<string, string> | undefined), ...YT_HEADERS },
   });
-
-function timeoutSignal(ms: number): AbortSignal | undefined {
-  const anyAbort = AbortSignal as unknown as { timeout?: (n: number) => AbortSignal };
-  return typeof anyAbort?.timeout === 'function' ? anyAbort.timeout(ms) : undefined;
-}
-
-/** Limita una promesa en el tiempo para que la petición nunca quede colgada. */
-function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
-  return new Promise<T>((resolve, reject) => {
-    const id = setTimeout(() => reject(new TranscriptError('bloqueado', 'Tiempo de espera agotado.')), ms);
-    promise.then(
-      (value) => { clearTimeout(id); resolve(value); },
-      (err) => { clearTimeout(id); reject(err); },
-    );
-  });
-}
 
 function mapError(err: unknown): TranscriptError {
   const msg = String((err as { message?: string })?.message || '');
@@ -69,21 +55,6 @@ function mapError(err: unknown): TranscriptError {
     return new TranscriptError('sin_transcripcion', msg);
   }
   return new TranscriptError('desconocido', msg || 'No se pudo obtener la transcripción.');
-}
-
-/** Metadatos best-effort (título autor). Si falla, se continúa sin ellos. */
-async function fetchOembed(videoId: string): Promise<{ title?: string; author?: string }> {
-  try {
-    const res = await fetch(
-      `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`,
-      { signal: timeoutSignal(4000) },
-    );
-    if (!res.ok) return {};
-    const data = await res.json();
-    return { title: data?.title, author: data?.author_name };
-  } catch {
-    return {};
-  }
 }
 
 async function fetchFromLibrary(
@@ -128,7 +99,7 @@ export const youtubeTranscriptProvider: TranscriptProvider = {
     const text = normalizeSegments(segments);
     if (!text) throw new TranscriptError('sin_transcripcion', 'La transcripción está vacía.');
 
-    const { title, author } = await fetchOembed(videoId);
+    const { title, author } = await fetchYouTubeOembed(videoId);
     return {
       text,
       segments,

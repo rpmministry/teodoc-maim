@@ -56,3 +56,48 @@ export function normalizeSegments(segments: TranscriptSegment[]): string {
     .replace(/\s+/g, ' ')
     .trim();
 }
+
+/** Limita una promesa en el tiempo para que una petición nunca quede colgada. */
+export function withTimeout<T>(promise: Promise<T>, ms: number, message = 'Tiempo de espera agotado.'): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const id = setTimeout(() => reject(new TranscriptError('bloqueado', message)), ms);
+    promise.then(
+      (value) => { clearTimeout(id); resolve(value); },
+      (err) => { clearTimeout(id); reject(err); },
+    );
+  });
+}
+
+// Errores "definitivos": no tiene sentido probar otro proveedor.
+const DEFINITIVE: TranscriptErrorCode[] = ['sin_transcripcion', 'video_no_disponible', 'url_invalida'];
+
+/**
+ * Encadena varios proveedores. Si el primero falla por un motivo transitorio
+ * (bloqueo, red, desconocido) se intenta el siguiente; ante un error definitivo
+ * (sin transcripción / video no disponible) se detiene.
+ */
+export class FallbackTranscriptProvider implements TranscriptProvider {
+  readonly name: string;
+  private readonly providers: TranscriptProvider[];
+
+  constructor(providers: TranscriptProvider[]) {
+    this.providers = providers.filter(Boolean);
+    this.name = this.providers.map((p) => p.name).join('->') || 'none';
+  }
+
+  async fetchTranscript(videoId: string, opts?: { languages?: string[] }): Promise<TranscriptResult> {
+    let lastError: unknown = null;
+    for (const provider of this.providers) {
+      try {
+        return await provider.fetchTranscript(videoId, opts);
+      } catch (err) {
+        lastError = err;
+        const code: TranscriptErrorCode = err instanceof TranscriptError ? err.code : 'desconocido';
+        if (DEFINITIVE.includes(code)) throw err;
+      }
+    }
+    throw lastError instanceof TranscriptError
+      ? lastError
+      : new TranscriptError('desconocido', String((lastError as Error)?.message || lastError));
+  }
+}

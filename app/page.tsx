@@ -374,7 +374,8 @@ export default function Home() {
     // Timeout del lado del cliente: si el servidor no responde, se libera la
     // interfaz con un mensaje amigable en vez de dejar el orbe girando.
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 45000);
+    // Amplio: si el video no tiene subtítulos, el proveedor puede generarlos con IA.
+    const timeout = setTimeout(() => controller.abort(), 120000);
     try {
       const res = await fetch('/api/youtube', {
         method: 'POST',

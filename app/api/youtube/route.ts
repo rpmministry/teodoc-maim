@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { extractYouTubeVideoId } from '@/lib/youtube/extract-video-id';
-import { youtubeTranscriptProvider } from '@/lib/youtube/youtube-transcript-provider';
+import { resolveTranscriptProvider } from '@/lib/youtube';
 import { TranscriptError, type TranscriptErrorCode } from '@/lib/youtube/transcript-provider';
 
-export const maxDuration = 60;
+// Margen para la generación por IA de videos sin subtítulos (jobs).
+export const maxDuration = 180;
 export const dynamic = 'force-dynamic';
 
 // Mensajes siempre amigables: nunca se expone el detalle técnico al usuario.
@@ -32,7 +33,7 @@ export async function POST(req: NextRequest) {
     }
 
     try {
-      const result = await youtubeTranscriptProvider.fetchTranscript(videoId);
+      const result = await resolveTranscriptProvider().fetchTranscript(videoId);
       return NextResponse.json({
         ok: true,
         text: result.text,
