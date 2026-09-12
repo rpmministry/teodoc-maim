@@ -54,10 +54,17 @@ No necesitas tener un computador encendido. Opciones gratuitas y open source:
   [`HUGGINGFACE.md`](./HUGGINGFACE.md).
 - **Docker / Railway / Fly.io / VPS**: `docker build -t teodoc-ytdlp . && docker run -p 8000:8000 teodoc-ytdlp`.
 
-> Si el host usa IP de datacenter, YouTube puede limitar (HTTP 429). Configura
-> `YTDLP_PROXY` (un proxy) o `YTDLP_COOKIES_BASE64`, o aloja en una IP
-> residencial. Mientras tanto, TeoDoc cae automáticamente a Supadata y luego a
-> la librería npm, así que el análisis nunca se detiene.
+> **Importante (IPs de datacenter):** YouTube bloquea la descarga de subtítulos
+> desde IPs de nube (Render, Fly, HF, etc.) y el servicio responde
+> `503 blocked-by-youtube`. Es un bloqueo por IP, no un fallo del código.
+> Tres formas de que yt-dlp funcione en la nube:
+> 1. **Cookies** (gratis): exporta `cookies.txt` de tu navegador logueado en
+>    YouTube y ponlo en base64 en `YTDLP_COOKIES_BASE64`. Suele saltar el bloqueo.
+> 2. **Proxy** (`YTDLP_PROXY`): con IP residencial.
+> 3. **IP residencial** (VPS/tu PC vía túnel).
+>
+> Mientras no se configure nada de eso, TeoDoc cae automáticamente a Supadata y
+> luego a la librería npm, así que el análisis **nunca se detiene**.
 
 ## Alternativa sin despliegue
 

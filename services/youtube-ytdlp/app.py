@@ -38,8 +38,10 @@ VTT_TS = re.compile(
 )
 FILE_LANG = re.compile(r"\.([a-zA-Z0-9-]+)\.(json3|vtt|srt)$")
 
-# Si YouTube bloquea un cliente, se reintenta con otros (útil en IPs cloud).
-CLIENT_ATTEMPTS = [None, "android,web_safari", "ios", "tv_embedded,web_embedded", "mweb"]
+# Si YouTube bloquea un cliente, se reintenta con otro. En IPs cloud el bloqueo
+# suele ser por IP (todos fallan), así que se limita a 2 intentos para no añadir
+# latencia. Con cookies o proxy configurados, gana robustez.
+CLIENT_ATTEMPTS = [None, "android,web_safari"]
 BLOCK_HINTS = (
     "sign in to confirm",
     "not a bot",
