@@ -203,6 +203,21 @@ def transcript(request: Request, videoId: str = Query(...), lang: str = Query("e
     return JSONResponse({"text": text, "segments": segments, "lang": detected})
 
 
+@app.get("/probe")
+def probe(videoId: str = Query("dQw4w9WgXcQ"), lang: str = Query("es")):
+    """Diagnóstico temporal: detalle de por qué no se encuentran subtítulos."""
+    info = {"cookies_cargadas": bool(COOKIES_B64), "proxy": bool(PROXY)}
+    with tempfile.TemporaryDirectory() as workdir:
+        files, stderr = _attempt(workdir, videoId, lang, None)
+        info["default_files"] = [os.path.basename(f) for f in files]
+        info["default_stderr"] = (stderr or "").strip().splitlines()[-6:]
+        if not files:
+            files2, stderr2 = _attempt(workdir, videoId, lang, "android,web_safari")
+            info["alt_files"] = [os.path.basename(f) for f in files2]
+            info["alt_stderr"] = (stderr2 or "").strip().splitlines()[-6:]
+    return info
+
+
 @app.get("/health")
 def health():
     try:
