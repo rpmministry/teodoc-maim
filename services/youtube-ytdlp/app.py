@@ -157,7 +157,11 @@ def _attempt(workdir, video_id, lang, client):
     except FileNotFoundError:
         raise HTTPException(status_code=500, detail="yt-dlp no está instalado")
 
-    files = [f for f in glob.glob(os.path.join(attempt_dir, "*")) if os.path.isfile(f)]
+    files = [
+        f
+        for f in glob.glob(os.path.join(attempt_dir, "*"))
+        if os.path.isfile(f) and os.path.basename(f) != "cookies.txt"
+    ]
     return files, (proc.stderr or "")
 
 
@@ -207,6 +211,14 @@ def transcript(request: Request, videoId: str = Query(...), lang: str = Query("e
 def probe(videoId: str = Query("dQw4w9WgXcQ"), lang: str = Query("es")):
     """Diagnóstico temporal: detalle de por qué no se encuentran subtítulos."""
     info = {"cookies_cargadas": bool(COOKIES_B64), "proxy": bool(PROXY)}
+    if COOKIES_B64:
+        try:
+            raw = base64.b64decode(COOKIES_B64)
+            lines = raw.decode("utf-8", "ignore").splitlines()
+            info["cookies_first_line"] = lines[0][:60] if lines else ""
+            info["cookies_lineas"] = len(lines)
+        except Exception as error:  # noqa: BLE001
+            info["cookies_error"] = str(error)
     with tempfile.TemporaryDirectory() as workdir:
         files, stderr = _attempt(workdir, videoId, lang, None)
         info["default_files"] = [os.path.basename(f) for f in files]
