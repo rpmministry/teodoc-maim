@@ -221,11 +221,22 @@ def probe(videoId: str = Query("dQw4w9WgXcQ"), lang: str = Query("es")):
             lines = raw.decode("utf-8", "ignore").splitlines()
             info["cookies_first_line"] = lines[0][:60] if lines else ""
             info["cookies_lineas"] = len(lines)
+            names = []
+            for line in lines:
+                if line.startswith("#") or not line.strip():
+                    continue
+                parts = line.split("\t")
+                if len(parts) >= 6:
+                    names.append(parts[5])
+            info["cookie_names"] = sorted(set(names))
+            auth_keys = {"SID", "HSID", "SSID", "APISID", "SAPISID", "LOGIN_INFO",
+                         "__Secure-1PSID", "__Secure-3PSID", "__Secure-1PAPISID", "__Secure-3PAPISID"}
+            info["tiene_cookies_de_sesion"] = sorted(auth_keys & set(names))
         except Exception as error:  # noqa: BLE001
             info["cookies_error"] = str(error)
     results = []
     with tempfile.TemporaryDirectory() as workdir:
-        for client in PROBE_CLIENTS:
+        for client in [None, "web_safari"]:
             files, stderr = _attempt(workdir, videoId, lang, client)
             tail = (stderr or "").strip().splitlines()[-1:] 
             results.append({
