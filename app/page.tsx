@@ -411,9 +411,9 @@ export default function Home() {
       </header>
 
       <main className="app-content w-full z-10">
-        <div className="shell-container flex flex-col items-center justify-start py-6 sm:py-10">
-        {/* HERO — Carbon */}
-        {!resultado && (
+        <div className="shell-container flex flex-col items-center justify-start py-4 sm:py-6">
+        {/* HERO — Carbon (se oculta durante el análisis para dar espacio) */}
+        {!loading && !resultado && (
           <div className="text-center mb-5 sm:mb-8">
             <h1 className="text-fluid-hero font-light text-[#f4f4f4]">TeoDoc</h1>
             <h2 className="text-fluid-sub mt-3 font-normal text-[#c6c6c6]">Analiza tus prédicas.</h2>
@@ -437,7 +437,7 @@ export default function Home() {
 
         {/* BARRA DE PROGRESO — IBM Carbon */}
         {loading && (
-          <div className="mt-8 sm:mt-10 w-full max-w-md">
+          <div className="mt-5 sm:mt-6 w-full max-w-md">
             <div className="mb-2">
               <span className="text-xs text-[#c6c6c6]">Procesando prédica</span>
             </div>
@@ -456,10 +456,10 @@ export default function Home() {
 
         {/* CARRUSEL DE VERSÍCULOS — promesas bíblicas */}
         {loading && (
-          <div className="mt-7 sm:mt-9 w-full max-w-xl">
+          <div className="mt-5 sm:mt-6 w-full max-w-lg">
             <div key={versoIndex} className="verse-fade border-l-2 border-[#0f62fe] pl-4">
-              <p className="text-fluid-quote italic text-[#e0e0e0] leading-relaxed">“{promesasBiblicas[versoIndex].texto}”</p>
-              <p className="mt-2 text-xs font-semibold uppercase tracking-wider text-[#78a9ff]">{promesasBiblicas[versoIndex].cita}</p>
+              <p className="text-sm sm:text-base italic text-[#e0e0e0] leading-snug">“{promesasBiblicas[versoIndex].texto}”</p>
+              <p className="mt-1.5 text-[11px] font-semibold uppercase tracking-wider text-[#78a9ff]">{promesasBiblicas[versoIndex].cita}</p>
             </div>
           </div>
         )}

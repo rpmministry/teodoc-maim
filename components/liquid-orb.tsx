@@ -29,7 +29,11 @@ export default function LiquidOrb({ state, progress = 0, disabled = false, onFil
     const compute = () => {
       const vw = window.innerWidth
       const vh = window.innerHeight
-      const s = Math.round(Math.max(180, Math.min(vw * 0.56, vh * 0.34, 300)))
+      // Durante el análisis el orbe se reduce para que quepan la barra y los
+      // versículos sin necesidad de hacer scroll.
+      const maxVh = thinking ? 0.24 : 0.34
+      const maxPx = thinking ? 210 : 300
+      const s = Math.round(Math.max(140, Math.min(vw * 0.56, vh * maxVh, maxPx)))
       setOrbSize(s)
     }
     compute()
@@ -39,7 +43,7 @@ export default function LiquidOrb({ state, progress = 0, disabled = false, onFil
       window.removeEventListener('resize', compute)
       window.removeEventListener('orientationchange', compute)
     }
-  }, [])
+  }, [thinking])
 
   const procesar = (file: File) => {
     const key = `${file.name}:${file.size}:${file.lastModified}`
@@ -83,7 +87,7 @@ export default function LiquidOrb({ state, progress = 0, disabled = false, onFil
   }
 
   return (
-    <div className="flex flex-col items-center gap-3 sm:gap-4 select-none">
+    <div className="flex flex-col items-center gap-2 sm:gap-3 select-none">
       <div
         className="relative"
         style={{ width: orbSize, height: orbSize }}
@@ -132,7 +136,7 @@ export default function LiquidOrb({ state, progress = 0, disabled = false, onFil
       </div>
 
       {/* Texto o porcentaje DEBAJO del orbe — número estilo Carbon */}
-      <div className="h-12 flex items-center justify-center">
+      <div className="h-10 flex items-center justify-center">
         {thinking ? (
           <div className="flex items-baseline gap-1 text-[#f4f4f4] tabular-nums">
             <span className="text-fluid-counter font-light leading-none">{progress}</span>
