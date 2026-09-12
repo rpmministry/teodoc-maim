@@ -395,9 +395,8 @@ export default function Home() {
         {/* BARRA DE PROGRESO — IBM Carbon */}
         {loading && (
           <div className="mt-8 sm:mt-10 w-full max-w-md">
-            <div className="flex items-end justify-between mb-2">
+            <div className="mb-2">
               <span className="text-xs text-[#c6c6c6]">Procesando prédica</span>
-              <span className="text-xs text-[#c6c6c6] tabular-nums">{progress}%</span>
             </div>
             <div
               className="cds-progressbar__track"
