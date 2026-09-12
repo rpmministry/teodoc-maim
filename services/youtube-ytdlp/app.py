@@ -139,6 +139,7 @@ def _attempt(workdir, video_id, lang, client):
 
     command = [
         YTDLP,
+        "--force-ipv4",
         "--skip-download",
         "--no-playlist",
         "--write-subs",
@@ -207,10 +208,13 @@ def transcript(request: Request, videoId: str = Query(...), lang: str = Query("e
     return JSONResponse({"text": text, "segments": segments, "lang": detected})
 
 
+PROBE_CLIENTS = [None, "web_safari", "tv", "mweb", "android", "ios", "web_embedded", "tv_simply", "android_vr"]
+
+
 @app.get("/probe")
 def probe(videoId: str = Query("dQw4w9WgXcQ"), lang: str = Query("es")):
-    """Diagnóstico temporal: detalle de por qué no se encuentran subtítulos."""
-    info = {"cookies_cargadas": bool(COOKIES_B64), "proxy": bool(PROXY)}
+    """Diagnóstico temporal: prueba todos los player_client y reporta el resultado."""
+    info = {"cookies_cargadas": bool(COOKIES_B64)}
     if COOKIES_B64:
         try:
             raw = base64.b64decode(COOKIES_B64)
@@ -219,14 +223,19 @@ def probe(videoId: str = Query("dQw4w9WgXcQ"), lang: str = Query("es")):
             info["cookies_lineas"] = len(lines)
         except Exception as error:  # noqa: BLE001
             info["cookies_error"] = str(error)
+    results = []
     with tempfile.TemporaryDirectory() as workdir:
-        files, stderr = _attempt(workdir, videoId, lang, None)
-        info["default_files"] = [os.path.basename(f) for f in files]
-        info["default_stderr"] = (stderr or "").strip().splitlines()[-6:]
-        if not files:
-            files2, stderr2 = _attempt(workdir, videoId, lang, "android,web_safari")
-            info["alt_files"] = [os.path.basename(f) for f in files2]
-            info["alt_stderr"] = (stderr2 or "").strip().splitlines()[-6:]
+        for client in PROBE_CLIENTS:
+            files, stderr = _attempt(workdir, videoId, lang, client)
+            tail = (stderr or "").strip().splitlines()[-1:] 
+            results.append({
+                "client": client or "default",
+                "files": len(files),
+                "err": (tail[0][:100] if tail else ""),
+            })
+            if files:
+                break
+    info["resultados"] = results
     return info
 
 
