@@ -312,9 +312,10 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-[#161616] text-[#f4f4f4] font-sans flex flex-col relative">
+    <div className="app-shell bg-[#161616] text-[#f4f4f4] font-sans flex flex-col relative">
       {/* HEADER — IBM Carbon */}
-      <header className="w-full h-12 bg-[#161616] border-b border-[#393939] flex items-center justify-between px-4 sm:px-6 z-10 relative">
+      <header className="w-full h-12 bg-[#161616] border-b border-[#393939] z-10 relative">
+        <div className="shell-container h-full flex items-center justify-between">
         <div className="flex items-center gap-3 min-w-0">
           <svg viewBox="0 0 64 64" className="w-6 h-6 shrink-0" aria-hidden="true">
             <defs>
@@ -354,15 +355,16 @@ export default function Home() {
             Apoyar
           </a>
         </div>
+        </div>
       </header>
 
-      <main className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 z-10 w-full max-w-6xl mx-auto py-10 sm:py-16 relative">
+      <main className="shell-container flex-1 flex flex-col items-center justify-center z-10 py-8 sm:py-12 relative">
         {/* HERO — Carbon */}
         {!resultado && (
-          <div className="text-center mb-10 sm:mb-14">
-            <h1 className="text-4xl sm:text-5xl md:text-6xl font-light tracking-tight text-[#f4f4f4]">TeoDoc</h1>
-            <h2 className="mt-3 text-lg sm:text-xl font-normal text-[#c6c6c6]">Analiza tus prédicas.</h2>
-            <p className="mt-4 text-sm text-[#a8a8a8] max-w-xl mx-auto">
+          <div className="text-center mb-8 sm:mb-12">
+            <h1 className="text-fluid-hero font-light text-[#f4f4f4]">TeoDoc</h1>
+            <h2 className="text-fluid-sub mt-3 font-normal text-[#c6c6c6]">Analiza tus prédicas.</h2>
+            <p className="text-fluid-body mt-4 text-[#a8a8a8] max-w-xl mx-auto">
               Transcripción y extracción de estructura teológica impulsada por IA.
             </p>
           </div>
@@ -580,9 +582,11 @@ export default function Home() {
       )}
 
       {/* FOOTER PERFECTAMENTE VISIBLE Y ELEVADO */}
-      <footer className="w-full flex flex-col items-center justify-center py-6 text-[11px] text-[#a8a8a8] font-normal tracking-wide z-20 mt-auto px-4 gap-1 border-t border-[#393939] bg-[#161616]">
-        <p className="text-[#c6c6c6]">Versión 1.1 Beta</p>
-        <p>Desarrollado por Mauricio Andrade Luna</p>
+      <footer className="w-full border-t border-[#393939] bg-[#161616] z-20 mt-auto">
+        <div className="shell-container shell-safe-bottom flex flex-col items-center justify-center pt-6 text-[11px] text-[#a8a8a8] font-normal tracking-wide gap-1">
+          <p className="text-[#c6c6c6]">Versión 1.1 Beta</p>
+          <p>Desarrollado por Mauricio Andrade Luna</p>
+        </div>
       </footer>
     </div>
   );

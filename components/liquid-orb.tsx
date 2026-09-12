@@ -65,7 +65,8 @@ export default function LiquidOrb({ state, progress = 0, disabled = false, onFil
   return (
     <div className="flex flex-col items-center gap-6 select-none">
       <div
-        className="relative w-[248px] h-[248px] sm:w-[320px] sm:h-[320px]"
+        className="relative"
+        style={{ width: 'clamp(220px, 42vw, 340px)', height: 'clamp(220px, 42vw, 340px)' }}
         onDragOver={(event) => { event.preventDefault(); if (!disabled) setDragging(true) }}
         onDragEnter={(event) => { event.preventDefault(); if (!disabled) setDragging(true) }}
         onDragLeave={(event) => { event.preventDefault(); setDragging(false) }}
@@ -92,9 +93,9 @@ export default function LiquidOrb({ state, progress = 0, disabled = false, onFil
               className="absolute w-[62%] h-[62%] rounded-full"
               style={{ background: 'radial-gradient(circle, rgba(10,10,10,0.55), rgba(10,10,10,0) 72%)' }}
             />
-            <span className="relative text-5xl sm:text-6xl font-light tracking-tight text-white tabular-nums leading-none">
+            <span className="text-fluid-counter relative font-light tracking-tight text-white tabular-nums">
               {progress}
-              <span className="text-2xl sm:text-3xl align-top font-light">%</span>
+              <span className="text-[0.45em] align-top font-light">%</span>
             </span>
           </div>
         )}
