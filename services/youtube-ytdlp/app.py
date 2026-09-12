@@ -203,6 +203,39 @@ def transcript(request: Request, videoId: str = Query(...), lang: str = Query("e
     return JSONResponse({"text": text, "segments": segments, "lang": detected})
 
 
+@app.get("/probe")
+def probe(videoId: str = Query(...)):
+    """Diagnóstico temporal: ¿YouTube permite metadatos y descarga de audio?"""
+    result = {}
+    with tempfile.TemporaryDirectory() as workdir:
+        try:
+            p1 = subprocess.run(
+                [YTDLP, "--no-warnings", "-J", f"https://www.youtube.com/watch?v={videoId}"],
+                capture_output=True, text=True, timeout=90,
+            )
+            result["player_ok"] = p1.returncode == 0 and bool((p1.stdout or "").strip())
+            if p1.returncode != 0:
+                result["player_err"] = (p1.stderr or "").strip().splitlines()[-3:]
+        except Exception as error:  # noqa: BLE001
+            result["player_ok"] = False
+            result["player_err"] = str(error)
+        try:
+            p2 = subprocess.run(
+                [YTDLP, "--no-warnings", "-f", "bestaudio/best", "-o", os.path.join(workdir, "a.%(ext)s"),
+                 f"https://www.youtube.com/watch?v={videoId}"],
+                capture_output=True, text=True, timeout=150,
+            )
+            files = [f for f in glob.glob(os.path.join(workdir, "*")) if os.path.isfile(f)]
+            result["audio_ok"] = bool(files)
+            result["audio_bytes"] = sum(os.path.getsize(f) for f in files)
+            if p2.returncode != 0:
+                result["audio_err"] = (p2.stderr or "").strip().splitlines()[-3:]
+        except Exception as error:  # noqa: BLE001
+            result["audio_ok"] = False
+            result["audio_err"] = str(error)
+    return result
+
+
 @app.get("/health")
 def health():
     try:
