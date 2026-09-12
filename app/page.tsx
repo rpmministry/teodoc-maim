@@ -411,154 +411,289 @@ export default function Home() {
   const generarPDF = async () => {
     if (!resultado) return;
     const { jsPDF } = await import('jspdf');
-
-    // A4 (595.28 x 841.89 pt) con márgenes rígidos de ~2 cm (54 pt).
     const doc = new jsPDF({ unit: 'pt', format: 'a4' });
     const pageW = doc.internal.pageSize.getWidth();
     const pageH = doc.internal.pageSize.getHeight();
-    const margin = 54;
+    const margin = 54; // ~19 mm
     const contentW = pageW - margin * 2;
-    const bottom = pageH - margin - 26;
+    const bottomY = pageH - margin - 26;
 
     type RGB = readonly [number, number, number];
-    const CARBON = {
-      text: [22, 22, 22] as RGB,        // #161616
-      secondary: [82, 82, 82] as RGB,   // #525252
-      accent: [15, 98, 254] as RGB,     // #0F62FE
-      rule: [224, 224, 224] as RGB,     // #E0E0E0
-      surface: [244, 244, 244] as RGB,  // #F4F4F4
+    const C = {
+      ink: [22, 22, 22] as RGB,
+      sub: [82, 82, 82] as RGB,
+      accent: [15, 98, 254] as RGB,
+      rule: [224, 224, 224] as RGB,
+      surface: [244, 244, 244] as RGB,
+      ivory: [250, 249, 246] as RGB,
     };
-    const text = (c: RGB) => doc.setTextColor(c[0], c[1], c[2]);
-    const fill = (c: RGB) => doc.setFillColor(c[0], c[1], c[2]);
-    const stroke = (c: RGB) => doc.setDrawColor(c[0], c[1], c[2]);
+    const setText = (c: RGB) => doc.setTextColor(c[0], c[1], c[2]);
+    const setFill = (c: RGB) => doc.setFillColor(c[0], c[1], c[2]);
+    const setStroke = (c: RGB) => doc.setDrawColor(c[0], c[1], c[2]);
 
-    let y = margin + 10;
-    const ensure = (needed: number) => { if (y + needed > bottom) { doc.addPage(); y = margin + 10; } };
+    const listaPuntos = Array.isArray(resultado.desarrollo_progresivo) ? resultado.desarrollo_progresivo : [];
+    const listaAplicaciones = Array.isArray(resultado.aplicacion) ? resultado.aplicacion : [];
+    const pv = (() => {
+      for (const p of listaPuntos) {
+        const v = (p.versiculos || [])[0];
+        if (v?.cita) return v;
+      }
+      return null;
+    })();
+    const pdfPasaje = pv?.cita || '';
+    const pdfTextoPasaje = pv?.texto || resultado.infografia?.texto_clave || '';
+    const pdfContexto = resultado.infografia?.contexto_breve || '';
+    const fechaTxt = new Date().toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' });
 
-    // Bloque de versículo: fondo gris claro, barra azul y word wrap.
-    const verseBlock = (label: string, body: string) => {
-      const size = 9.5;
-      const lead = 13;
-      doc.setFont('helvetica', 'italic');
-      doc.setFontSize(size);
-      const bodyLines = doc.splitTextToSize(body, contentW - 24);
-      const blockH = 12 + 13 + 2 + bodyLines.length * lead + 12;
-      ensure(blockH + 8);
-      fill(CARBON.surface);
-      doc.rect(margin, y - 11, contentW, blockH, 'F');
-      fill(CARBON.accent);
-      doc.rect(margin, y - 11, 3, blockH, 'F');
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(size);
-      text(CARBON.accent);
-      doc.text(label, margin + 12, y);
-      y += 15;
-      doc.setFont('helvetica', 'italic');
-      doc.setFontSize(size);
-      text(CARBON.secondary);
-      doc.text(bodyLines, margin + 12, y);
-      y += bodyLines.length * lead + 12;
+    let y = 0;
+    const ensure = (needed: number) => {
+      if (y + needed > bottomY) { doc.addPage(); y = margin + 6; }
     };
 
-    const section = (label: string) => {
-      ensure(48);
-      fill(CARBON.accent);
-      doc.rect(margin, y - 11, 4, 16, 'F');
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(13);
-      text(CARBON.text);
-      doc.text(label.toUpperCase(), margin + 13, y);
-      y += 26;
+    // ------------------------------- PORTADA -------------------------------
+    setFill(C.ivory); doc.rect(0, 0, pageW, pageH, 'F');
+    setFill(C.accent); doc.rect(0, 0, pageW, 7, 'F');
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(10); setText(C.sub);
+    doc.text('ANÁLISIS DE PRÉDICA', margin, margin + 4);
+
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(30); setText(C.ink);
+    const coverTitle = doc.splitTextToSize(resultado.titulo || 'Prédica', contentW);
+    doc.text(coverTitle, margin, margin + 48);
+    let cy = margin + 48 + coverTitle.length * 34;
+
+    setStroke(C.accent); doc.setLineWidth(4); doc.line(margin, cy + 2, margin + 90, cy + 2);
+    cy += 30;
+
+    if (resultado.idea_principal) {
+      doc.setFont('helvetica', 'italic'); doc.setFontSize(14); setText(C.sub);
+      const coverIdea = doc.splitTextToSize(`“${resumir(resultado.idea_principal, 220)}”`, contentW);
+      doc.text(coverIdea, margin, cy);
+      cy += coverIdea.length * 20 + 26;
+    }
+
+    if (pdfPasaje || pdfTextoPasaje) {
+      doc.setFont('helvetica', 'italic'); doc.setFontSize(10.5);
+      const body = pdfTextoPasaje ? doc.splitTextToSize(`“${resumir(pdfTextoPasaje, 220)}”`, contentW - 34) : [];
+      const ph = 16 + (pdfPasaje ? 16 : 0) + body.length * 14 + 12;
+      setFill(C.surface); doc.rect(margin, cy, contentW, ph, 'F');
+      setFill(C.accent); doc.rect(margin, cy, 3, ph, 'F');
+      let py = cy + 19;
+      if (pdfPasaje) {
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(11); setText(C.accent);
+        doc.text(pdfPasaje, margin + 16, py); py += 16;
+      }
+      if (body.length) {
+        doc.setFont('helvetica', 'italic'); doc.setFontSize(10.5); setText(C.sub);
+        doc.text(body, margin + 16, py);
+      }
+    }
+
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); setText(C.sub);
+    doc.text(`Generado el ${fechaTxt}`, margin, pageH - margin + 8);
+    doc.text('TeoDoc · RPM Ministry', pageW - margin, pageH - margin + 8, { align: 'right' });
+
+    // --------------------------- PÁGINAS DE CONTENIDO ---------------------------
+    doc.addPage();
+    y = margin + 6;
+
+    const heading = (label: string) => {
+      ensure(38);
+      setFill(C.accent); doc.rect(margin, y - 10, 3.5, 14, 'F');
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(12.5); setText(C.ink);
+      doc.text(label.toUpperCase(), margin + 11, y + 1);
+      y += 20;
+      setStroke(C.rule); doc.setLineWidth(0.6); doc.line(margin, y, pageW - margin, y);
+      y += 12;
     };
 
-    // ---- Título e idea principal ----
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(21);
-    text(CARBON.text);
-    const titulo = doc.splitTextToSize(resultado.titulo || 'Análisis de prédica', contentW);
-    doc.text(titulo, margin, y);
-    y += titulo.length * 25 + 6;
+    const paragraph = (txt: string, opts?: { size?: number; lead?: number; color?: RGB; italic?: boolean; bold?: boolean; max?: number }) => {
+      const size = opts?.size ?? 10.5;
+      const lead = opts?.lead ?? 15;
+      const font = opts?.italic ? 'italic' : opts?.bold ? 'bold' : 'normal';
+      doc.setFont('helvetica', font); doc.setFontSize(size); setText(opts?.color ?? C.sub);
+      const lines = doc.splitTextToSize(resumir(txt, opts?.max ?? 900), contentW);
+      ensure(lines.length * lead + 5);
+      doc.text(lines, margin, y);
+      y += lines.length * lead + 5;
+    };
 
-    doc.setFont('helvetica', 'italic');
-    doc.setFontSize(12);
-    text(CARBON.secondary);
-    const idea = doc.splitTextToSize(`"${resultado.idea_principal || ''}"`, contentW);
-    doc.text(idea, margin, y);
-    y += idea.length * 16 + 16;
+    const quoteBlock = (cita: string, texto: string) => {
+      doc.setFont('helvetica', 'italic'); doc.setFontSize(9.8);
+      const body = doc.splitTextToSize(`“${resumir(texto, 240)}”`, contentW - 30);
+      const h = 12 + 15 + body.length * 13 + 10;
+      ensure(h + 6);
+      setFill(C.surface); doc.rect(margin, y - 11, contentW, h, 'F');
+      setFill(C.accent); doc.rect(margin, y - 11, 3, h, 'F');
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); setText(C.accent);
+      doc.text(cita || '', margin + 15, y); y += 16;
+      doc.setFont('helvetica', 'italic'); doc.setFontSize(9.8); setText(C.sub);
+      doc.text(body, margin + 15, y); y += body.length * 13 + 10;
+    };
 
-    stroke(CARBON.rule);
-    doc.setLineWidth(0.75);
-    doc.line(margin, y, pageW - margin, y);
-    y += 22;
+    const bullet = (txt: string) => {
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(10.5);
+      const lines = doc.splitTextToSize(txt, contentW - 16);
+      ensure(lines.length * 15 + 5);
+      setFill(C.accent); doc.circle(margin + 3, y - 3, 1.7, 'F');
+      setText(C.sub); doc.text(lines, margin + 14, y);
+      y += lines.length * 15 + 6;
+    };
 
-    // ---- Desarrollo bíblico ----
-    section('Desarrollo Bíblico');
-    const desarrollo = Array.isArray(resultado.desarrollo_progresivo) ? resultado.desarrollo_progresivo : [];
-    desarrollo.forEach((item, index) => {
-      ensure(56);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(11.5);
-      text(CARBON.text);
-      const punto = doc.splitTextToSize(`${index + 1}. ${item.punto || ''}`, contentW);
-      doc.text(punto, margin, y);
-      y += punto.length * 15 + 3;
-
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(10);
-      text(CARBON.secondary);
-      const expl = doc.splitTextToSize(item.explicacion || '', contentW);
-      doc.text(expl, margin, y);
-      y += expl.length * 14 + 8;
-
-      const versiculos = Array.isArray(item.versiculos) ? item.versiculos : [];
-      versiculos.forEach((v) => {
-        verseBlock(v?.cita || '', `"${v?.texto || ''}"`);
-      });
-      y += 8;
-    });
-
-    // ---- Aplicación práctica ----
-    section('Aplicación Práctica');
-    const aplicacion = Array.isArray(resultado.aplicacion) ? resultado.aplicacion : [];
-    aplicacion.forEach((app) => {
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(10);
-      const lines = doc.splitTextToSize(app || '', contentW - 14);
-      ensure(lines.length * 14 + 6);
-      fill(CARBON.accent);
-      doc.circle(margin + 3, y - 3, 1.6, 'F');
-      text(CARBON.secondary);
-      doc.text(lines, margin + 14, y);
+    const metaRow = (label: string, value: string) => {
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(10.5);
+      const lines = doc.splitTextToSize(value, contentW - 110);
+      ensure(lines.length * 14 + 7);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(9); setText(C.sub);
+      doc.text(label.toUpperCase(), margin, y);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(10.5); setText(C.ink);
+      doc.text(lines, margin + 100, y);
       y += lines.length * 14 + 7;
+    };
+
+    const chips = (items: string[]) => {
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
+      const h = 20; const padX = 10; const gap = 8; let x = margin;
+      ensure(h + 6);
+      items.forEach((label) => {
+        const txt = label.toUpperCase();
+        const w = doc.getTextWidth(txt) + padX * 2;
+        if (x + w > pageW - margin) { x = margin; y += h + 6; ensure(h + 6); }
+        setStroke(C.accent); doc.setLineWidth(1); doc.roundedRect(x, y - 13, w, h, 10, 10, 'S');
+        setText(C.accent); doc.text(txt, x + padX, y + 1);
+        x += w + gap;
+      });
+      y += h + 12;
+    };
+
+    // 1. Información de la prédica
+    heading('Información de la prédica');
+    metaRow('Título', resultado.titulo || '—');
+    if (pdfPasaje) metaRow('Texto bíblico', pdfPasaje);
+    if (resultado.idea_principal) metaRow('Idea central', resumir(resultado.idea_principal, 200));
+    metaRow('Fecha de análisis', fechaTxt);
+
+    // 2. Resumen
+    heading('Resumen de la prédica');
+    paragraph(resumir(resultado.idea_principal, 420), { size: 11, lead: 16, color: C.ink });
+
+    // 3. Desarrollo bíblico
+    heading('Desarrollo bíblico');
+    if (pdfTextoPasaje) quoteBlock(pdfPasaje, pdfTextoPasaje);
+    if (pdfContexto) paragraph(pdfContexto, { max: 320 });
+    if (resultado.idea_principal) paragraph(resumir(resultado.idea_principal, 280), { italic: true, color: C.ink });
+    const referencias = Array.from(new Set(
+      listaPuntos.flatMap((p) => (p.versiculos || []).map((v) => v.cita)).filter(Boolean),
+    )).slice(0, 12);
+    if (referencias.length) {
+      paragraph('Referencias bíblicas', { size: 9, color: C.sub });
+      chips(referencias);
+    }
+
+    // 4. Puntos principales (cantidad dinámica)
+    const nPuntos = listaPuntos.length;
+    heading(`${nPuntos} ${nPuntos === 1 ? 'punto principal' : 'puntos principales'}`);
+    listaPuntos.forEach((p, idx) => {
+      const num = String(idx + 1).padStart(2, '0');
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(14);
+      const titleLines = doc.splitTextToSize(resumir(p.punto || '', 90), contentW - 48);
+      const headerH = Math.max(28, titleLines.length * 17);
+      ensure(headerH + 40);
+      setFill(C.accent); doc.rect(margin, y - 16, 28, 28, 'F');
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.setTextColor(255, 255, 255);
+      doc.text(num, margin + 14, y + 2, { align: 'center' });
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(14); setText(C.ink);
+      doc.text(titleLines, margin + 44, y - 2);
+      y += headerH + 6;
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(10.5);
+      const expl = doc.splitTextToSize(resumir(p.explicacion || '', 320), contentW);
+      ensure(expl.length * 14 + 8);
+      setText(C.sub); doc.text(expl, margin, y); y += expl.length * 14 + 8;
+      (p.versiculos || []).slice(0, 3).forEach((v) => quoteBlock(v.cita || '', v.texto || ''));
+      y += 6;
+      setStroke(C.rule); doc.setLineWidth(0.5); doc.line(margin, y, pageW - margin, y); y += 14;
     });
-    y += 6;
 
-    // ---- Oración ministerial ----
-    section('Oración Ministerial');
-    doc.setFont('helvetica', 'italic');
-    doc.setFontSize(11);
-    text(CARBON.secondary);
-    const oracion = doc.splitTextToSize(`"${resultado.oracion || ''}"`, contentW);
-    ensure(oracion.length * 15 + 6);
-    doc.text(oracion, margin, y);
-    y += oracion.length * 15;
+    // 5. Conceptos clave
+    const conceptos = Array.from(new Set(
+      listaPuntos
+        .map((p) => (p.punto || '').split(/\s+/).slice(0, 2).join(' ').replace(/[.,;:]+$/, '').trim())
+        .filter((k) => k.length > 2),
+    )).slice(0, 8);
+    if (conceptos.length) {
+      heading('Conceptos clave');
+      chips(conceptos);
+    }
 
-    // ---- Encabezado y pie (estilo Carbon) en todas las páginas ----
+    // 6. Aplicación práctica
+    if (listaAplicaciones.length) {
+      heading('Aplicación práctica');
+      listaAplicaciones.forEach((a) => bullet(resumir(a, 200)));
+      y += 4;
+    }
+
+    // 7. Para reflexionar (derivado del análisis, sin inventar teología)
+    const preguntas: string[] = [];
+    listaPuntos.slice(0, 3).forEach((p) => {
+      const tema = resumir(p.punto || '', 60);
+      if (tema) preguntas.push(`¿De qué manera se refleja “${tema}” en mi caminar con Dios?`);
+    });
+    listaAplicaciones.slice(0, 3).forEach((a) => {
+      preguntas.push(`¿Qué me impide hoy llevar a la práctica “${resumir(a, 80)}”?`);
+    });
+    if (preguntas.length) {
+      heading('Para reflexionar');
+      preguntas.slice(0, 6).forEach((q, i) => {
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(10.5);
+        const lines = doc.splitTextToSize(q, contentW - 34);
+        ensure(lines.length * 15 + 6);
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(11); setText(C.accent);
+        doc.text(String(i + 1).padStart(2, '0'), margin, y);
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(10.5); setText(C.ink);
+        doc.text(lines, margin + 28, y);
+        y += lines.length * 15 + 8;
+      });
+    }
+
+    // 8. Oración ministerial
+    heading('Oración ministerial');
+    if (listaPuntos.length) {
+      paragraph('Motivos de oración', { size: 9, color: C.sub });
+      listaPuntos.slice(0, 5).forEach((p, i) => {
+        const lines = doc.splitTextToSize(resumir(p.punto || '', 90), contentW - 34);
+        ensure(lines.length * 15 + 6);
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(11); setText(C.accent);
+        doc.text(String(i + 1).padStart(2, '0'), margin, y);
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(10.5); setText(C.ink);
+        doc.text(lines, margin + 28, y);
+        y += lines.length * 15 + 8;
+      });
+    }
+    if (resultado.oracion) {
+      const body = doc.splitTextToSize(`“${resumir(resultado.oracion, 420)}”`, contentW - 30);
+      const h = body.length * 14 + 26;
+      ensure(h + 8);
+      setFill(C.surface); doc.rect(margin, y - 10, contentW, h, 'F');
+      setFill(C.accent); doc.rect(margin, y - 10, 3, h, 'F');
+      doc.setFont('helvetica', 'italic'); doc.setFontSize(10.5); setText(C.ink);
+      doc.text(body, margin + 15, y + 8);
+      y += h + 6;
+    }
+
+    // -------------------- ENCABEZADO Y PIE (dos pasadas) --------------------
     const total = doc.getNumberOfPages();
-    const fecha = new Date().toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' });
     for (let i = 1; i <= total; i++) {
       doc.setPage(i);
-      stroke(CARBON.rule);
-      doc.setLineWidth(0.75);
-      doc.line(margin, margin - 20, pageW - margin, margin - 20);
+      setStroke(C.rule); doc.setLineWidth(0.7);
+      if (i > 1) {
+        doc.line(margin, margin - 20, pageW - margin, margin - 20);
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(8); setText(C.sub);
+        doc.text(resumir(resultado.titulo || 'Análisis de prédica', 64), margin, margin - 28);
+        doc.text('TeoDoc', pageW - margin, margin - 28, { align: 'right' });
+      }
       doc.line(margin, pageH - margin + 14, pageW - margin, pageH - margin + 14);
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8);
-      text(CARBON.secondary);
-      doc.text('TeoDoc · Análisis Ministerial', margin, margin - 28);
-      doc.text(`Página ${i} de ${total}`, pageW - margin, margin - 28, { align: 'right' });
-      doc.text(fecha, margin, pageH - margin + 25);
-      doc.text('Generado con IA', pageW - margin, pageH - margin + 25, { align: 'right' });
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(8); setText(C.sub);
+      doc.text('TeoDoc · Análisis Ministerial', margin, pageH - margin + 25);
+      doc.text(`Página ${i} de ${total}`, pageW - margin, pageH - margin + 25, { align: 'right' });
     }
 
     const safe = (resultado.titulo || 'analisis').replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 60);
