@@ -450,54 +450,36 @@ export default function Home() {
       if (y + needed > bottomY) { doc.addPage(); y = margin + 6; }
     };
 
-    // ------------------------------- PORTADA -------------------------------
-    setFill(C.ivory); doc.rect(0, 0, pageW, pageH, 'F');
-    setFill(C.accent); doc.rect(0, 0, pageW, 7, 'F');
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(10); setText(C.sub);
-    doc.text('ANÁLISIS DE PRÉDICA', margin, margin + 4);
+    // ------------------ ENCABEZADO COMPACTO (masthead, mismo flujo) ------------------
+    setFill(C.accent); doc.rect(0, 0, pageW, 6, 'F');
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); setText(C.sub);
+    doc.text('ANÁLISIS DE PRÉDICA', margin, margin + 2);
 
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(30); setText(C.ink);
-    const coverTitle = doc.splitTextToSize(resultado.titulo || 'Prédica', contentW);
-    doc.text(coverTitle, margin, margin + 48);
-    let cy = margin + 48 + coverTitle.length * 34;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(26); setText(C.ink);
+    const mastTitle = doc.splitTextToSize(resultado.titulo || 'Prédica', contentW);
+    doc.text(mastTitle, margin, margin + 34);
+    y = margin + 34 + mastTitle.length * 30;
 
-    setStroke(C.accent); doc.setLineWidth(4); doc.line(margin, cy + 2, margin + 90, cy + 2);
-    cy += 30;
+    setStroke(C.accent); doc.setLineWidth(4); doc.line(margin, y, margin + 80, y);
+    y += 20;
 
     if (resultado.idea_principal) {
-      doc.setFont('helvetica', 'italic'); doc.setFontSize(14); setText(C.sub);
-      const coverIdea = doc.splitTextToSize(`“${resumir(resultado.idea_principal, 220)}”`, contentW);
-      doc.text(coverIdea, margin, cy);
-      cy += coverIdea.length * 20 + 26;
+      doc.setFont('helvetica', 'italic'); doc.setFontSize(12.5); setText(C.sub);
+      const ideaLines = doc.splitTextToSize(`“${resumir(resultado.idea_principal, 260)}”`, contentW);
+      doc.text(ideaLines, margin, y);
+      y += ideaLines.length * 17 + 10;
     }
 
-    if (pdfPasaje || pdfTextoPasaje) {
-      doc.setFont('helvetica', 'italic'); doc.setFontSize(10.5);
-      const body = pdfTextoPasaje ? doc.splitTextToSize(`“${resumir(pdfTextoPasaje, 220)}”`, contentW - 34) : [];
-      const ph = 16 + (pdfPasaje ? 16 : 0) + body.length * 14 + 12;
-      setFill(C.surface); doc.rect(margin, cy, contentW, ph, 'F');
-      setFill(C.accent); doc.rect(margin, cy, 3, ph, 'F');
-      let py = cy + 19;
-      if (pdfPasaje) {
-        doc.setFont('helvetica', 'bold'); doc.setFontSize(11); setText(C.accent);
-        doc.text(pdfPasaje, margin + 16, py); py += 16;
-      }
-      if (body.length) {
-        doc.setFont('helvetica', 'italic'); doc.setFontSize(10.5); setText(C.sub);
-        doc.text(body, margin + 16, py);
-      }
+    if (pdfPasaje) {
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(10); setText(C.accent);
+      doc.text(`Texto bíblico principal: ${pdfPasaje}`, margin, y);
+      y += 16;
     }
+    y += 8;
 
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(9); setText(C.sub);
-    doc.text(`Generado el ${fechaTxt}`, margin, pageH - margin + 8);
-    doc.text('TeoDoc · RPM Ministry', pageW - margin, pageH - margin + 8, { align: 'right' });
-
-    // --------------------------- PÁGINAS DE CONTENIDO ---------------------------
-    doc.addPage();
-    y = margin + 6;
-
-    const heading = (label: string) => {
-      ensure(38);
+    // Título de sección que se mantiene junto al inicio de su contenido (sin huérfanos).
+    const heading = (label: string, keep = 64) => {
+      ensure(keep);
       setFill(C.accent); doc.rect(margin, y - 10, 3.5, 14, 'F');
       doc.setFont('helvetica', 'bold'); doc.setFontSize(12.5); setText(C.ink);
       doc.text(label.toUpperCase(), margin + 11, y + 1);
@@ -506,15 +488,21 @@ export default function Home() {
       y += 12;
     };
 
-    const paragraph = (txt: string, opts?: { size?: number; lead?: number; color?: RGB; italic?: boolean; bold?: boolean; max?: number }) => {
+    // Párrafos que FLUYEN entre páginas: llenan el espacio disponible y evitan
+    // fragmentos aislados en una página nueva.
+    const paragraph = (txt: string, opts?: { size?: number; lead?: number; color?: RGB; italic?: boolean; bold?: boolean; max?: number; indent?: number }) => {
       const size = opts?.size ?? 10.5;
       const lead = opts?.lead ?? 15;
       const font = opts?.italic ? 'italic' : opts?.bold ? 'bold' : 'normal';
+      const indent = opts?.indent ?? 0;
       doc.setFont('helvetica', font); doc.setFontSize(size); setText(opts?.color ?? C.sub);
-      const lines = doc.splitTextToSize(resumir(txt, opts?.max ?? 900), contentW);
-      ensure(lines.length * lead + 5);
-      doc.text(lines, margin, y);
-      y += lines.length * lead + 5;
+      const lines = doc.splitTextToSize(resumir(txt, opts?.max ?? 900), contentW - indent);
+      for (const line of lines) {
+        if (y + lead > bottomY) { doc.addPage(); y = margin + 6; }
+        doc.text(line, margin + indent, y);
+        y += lead;
+      }
+      y += 5;
     };
 
     const quoteBlock = (cita: string, texto: string) => {
@@ -577,7 +565,7 @@ export default function Home() {
     paragraph(resumir(resultado.idea_principal, 420), { size: 11, lead: 16, color: C.ink });
 
     // 3. Desarrollo bíblico
-    heading('Desarrollo bíblico');
+    heading('Desarrollo bíblico', 130);
     if (pdfTextoPasaje) quoteBlock(pdfPasaje, pdfTextoPasaje);
     if (pdfContexto) paragraph(pdfContexto, { max: 320 });
     if (resultado.idea_principal) paragraph(resumir(resultado.idea_principal, 280), { italic: true, color: C.ink });
@@ -591,7 +579,7 @@ export default function Home() {
 
     // 4. Puntos principales (cantidad dinámica)
     const nPuntos = listaPuntos.length;
-    heading(`${nPuntos} ${nPuntos === 1 ? 'punto principal' : 'puntos principales'}`);
+    heading(`${nPuntos} ${nPuntos === 1 ? 'punto principal' : 'puntos principales'}`, 96);
     listaPuntos.forEach((p, idx) => {
       const num = String(idx + 1).padStart(2, '0');
       doc.setFont('helvetica', 'bold'); doc.setFontSize(14);
@@ -626,7 +614,7 @@ export default function Home() {
 
     // 6. Aplicación práctica
     if (listaAplicaciones.length) {
-      heading('Aplicación práctica');
+      heading('Aplicación práctica', 84);
       listaAplicaciones.forEach((a) => bullet(resumir(a, 200)));
       y += 4;
     }
@@ -641,7 +629,7 @@ export default function Home() {
       preguntas.push(`¿Qué me impide hoy llevar a la práctica “${resumir(a, 80)}”?`);
     });
     if (preguntas.length) {
-      heading('Para reflexionar');
+      heading('Para reflexionar', 84);
       preguntas.slice(0, 6).forEach((q, i) => {
         doc.setFont('helvetica', 'normal'); doc.setFontSize(10.5);
         const lines = doc.splitTextToSize(q, contentW - 34);
