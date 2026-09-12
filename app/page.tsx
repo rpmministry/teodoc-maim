@@ -1,7 +1,7 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
 import LiquidOrb from '@/components/liquid-orb';
-import Infografia, { resumir } from '@/components/infografia';
+import Infografia, { ResponsiveInfografia, resumir, exportarInfografiaPng } from '@/components/infografia';
 
 interface Versiculo { cita: string; texto: string; }
 interface PuntoDesarrollo { punto: string; explicacion: string; versiculos: Versiculo[]; }
@@ -45,6 +45,7 @@ export default function Home() {
   const [resultado, setResultado] = useState<PredicaAnalisis | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [versoIndex, setVersoIndex] = useState(0);
+  const [descargando, setDescargando] = useState(false);
 
   const infografiaRef = useRef<HTMLDivElement>(null);
 
@@ -294,58 +295,25 @@ export default function Home() {
     setLoading(false);
   };
 
-  // C. Export PNG: exporta SOLO la infografía desde el artboard oculto de tamaño
-  // fijo (900px), independiente del contenedor visible y del viewport.
-  const capturarInfografia = async (escala = 3) => {
-    const { default: domtoimage } = await import('dom-to-image-more');
-    const node = infografiaRef.current;
-    if (!node) throw new Error('Sin artboard');
-    return domtoimage.toPng(node, {
-      quality: 1,
-      bgcolor: '#FFFFFF',
-      width: node.offsetWidth * escala,
-      height: node.offsetHeight * escala,
-    });
-  };
-
+  // C. Export PNG: parte del artboard FIJO de 900px (independiente del
+  // contenedor visible y del viewport). El resultado es EXACTAMENTE la
+  // infografía completa: sin hoja A4, sin recortes y sin fondo blanco extra.
   const descargarInfografia = async () => {
+    if (descargando) return;
+    setDescargando(true);
     try {
-      const dataUrl = await capturarInfografia(3);
+      const node = infografiaRef.current;
+      if (!node) throw new Error('Sin artboard');
+      const dataUrl = await exportarInfografiaPng(node);
+      const safe = (resultado?.titulo || 'predica').replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 60);
       const link = document.createElement('a');
-      link.download = `Infografia_${(resultado?.titulo || 'predica').replace(/\s+/g, '_')}.png`;
+      link.download = `Infografia_${safe || 'predica'}.png`;
       link.href = dataUrl;
       link.click();
     } catch {
-      alert('No se pudo generar la imagen.');
-    }
-  };
-
-  // D. Export A4 (salida independiente): centra la infografía en una hoja A4
-  // con márgenes, sin mezclarla con el PNG normal.
-  const exportarA4 = async () => {
-    try {
-      const dataUrl = await capturarInfografia(2);
-      const { jsPDF } = await import('jspdf');
-      const doc = new jsPDF({ unit: 'mm', format: 'a4' });
-      const pw = doc.internal.pageSize.getWidth();
-      const ph = doc.internal.pageSize.getHeight();
-      const margin = 18;
-      const maxW = pw - margin * 2;
-      const maxH = ph - margin * 2;
-      const img = await new Promise<HTMLImageElement>((resolve, reject) => {
-        const image = new Image();
-        image.onload = () => resolve(image);
-        image.onerror = reject;
-        image.src = dataUrl;
-      });
-      const ratio = Math.min(maxW / img.width, maxH / img.height);
-      const w = img.width * ratio;
-      const h = img.height * ratio;
-      doc.addImage(dataUrl, 'PNG', margin + (maxW - w) / 2, margin + (maxH - h) / 2, w, h);
-      const safe = (resultado?.titulo || 'predica').replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 60);
-      doc.save(`Infografia_A4_${safe || 'predica'}.pdf`);
-    } catch {
-      alert('No se pudo preparar el archivo A4.');
+      alert('No se pudo generar la imagen. Inténtalo de nuevo.');
+    } finally {
+      setDescargando(false);
     }
   };
 
@@ -629,15 +597,6 @@ export default function Home() {
     doc.save(`TeoDoc_${safe || 'analisis'}.pdf`);
   };
 
-  // Breakpoint para la variante responsive de la infografía (no depende del PDF).
-  const [isNarrow, setIsNarrow] = useState(false);
-  useEffect(() => {
-    const onResize = () => setIsNarrow(window.innerWidth < 640);
-    onResize();
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, []);
-
   return (
     <div className="app-shell bg-[#161616] text-[#f4f4f4] font-sans flex flex-col relative">
       {/* HEADER — IBM Carbon */}
@@ -766,11 +725,7 @@ export default function Home() {
                     </button>
                     <button onClick={generarPDF} className="h-10 w-full sm:w-auto justify-center px-5 text-sm font-medium text-[#f4f4f4] border border-[#6f6f6f] hover:bg-[#353535] transition-colors flex items-center gap-2">
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4-4m0 0l-4-4m4 4V4"></path></svg>
-                      PDF
-                    </button>
-                    <button onClick={descargarInfografia} className="h-10 w-full sm:w-auto justify-center px-5 text-sm font-medium text-white bg-[#0f62fe] hover:bg-[#0353e9] transition-colors flex items-center gap-2">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                      Infografía
+                      Bosquejo PDF
                     </button>
                   </div>
                 </div>
@@ -839,33 +794,35 @@ export default function Home() {
               </div>
             </div>
 
-            {/* A. Composición · B. Visualización responsive · C. Export PNG · D. Export A4 */}
+            {/* Composición narrativa · Visualización responsive · Export PNG único */}
             <div className="w-full pt-6 sm:pt-10">
               <div className="text-center mb-5 sm:mb-7 px-4">
-                <h3 className="text-sm font-semibold text-[#f4f4f4] tracking-wider uppercase">Infografía del análisis · v4</h3>
+                <h3 className="text-sm font-semibold text-[#f4f4f4] tracking-wider uppercase">Infografía del análisis</h3>
                 <p className="text-xs sm:text-sm text-[#a8a8a8] mt-2 max-w-md mx-auto">
-                  Se adapta a tu pantalla. Descarga el PNG completo o prepárala para imprimir en A4.
+                  El mapa visual de la prédica. Se adapta a tu pantalla y se descarga como una sola imagen PNG con la composición completa.
                 </p>
-                <div className="flex flex-wrap gap-2 justify-center mt-4">
-                  <button onClick={descargarInfografia} className="h-10 px-5 text-sm font-medium text-white bg-[#0f62fe] hover:bg-[#0353e9] transition-colors">
-                    Descargar PNG
-                  </button>
-                  <button onClick={exportarA4} className="h-10 px-5 text-sm font-medium text-[#f4f4f4] border border-[#6f6f6f] hover:bg-[#353535] transition-colors">
-                    Preparar para A4
+                <div className="flex justify-center mt-4">
+                  <button
+                    onClick={descargarInfografia}
+                    disabled={descargando}
+                    className="h-10 px-6 text-sm font-medium text-white bg-[#0f62fe] hover:bg-[#0353e9] transition-colors disabled:opacity-60 disabled:cursor-wait"
+                  >
+                    {descargando ? 'Generando PNG…' : 'Descargar infografía PNG'}
                   </button>
                 </div>
               </div>
 
-              {/* B. Visualización responsive: fluida, sin scroll horizontal, con
-                  variante vertical en móvil (reordena, no solo reduce). */}
+              {/* Visualización responsive real: escritorio y tablet escalan el
+                  artboard de diseño conservando proporciones; móvil reorganiza a
+                  un recorrido vertical de una sola columna. */}
               <div className="w-full flex justify-center">
-                <div className="w-full max-w-[860px]">
-                  <Infografia data={resultado} variant={isNarrow ? 'compact' : 'wide'} />
+                <div className="w-full max-w-[900px]">
+                  <ResponsiveInfografia data={resultado} />
                 </div>
               </div>
 
-              {/* A/C. Artboard OCULTO de tamaño fijo: el PNG se exporta desde aquí,
-                  de modo que no depende del contenedor visible ni del viewport. */}
+              {/* Artboard OCULTO de tamaño fijo (900px): el PNG se exporta SOLO
+                  desde aquí, así no depende del contenedor visible ni del viewport. */}
               <div aria-hidden="true" style={{ position: 'fixed', left: -100000, top: 0, width: 0, height: 0, overflow: 'hidden', pointerEvents: 'none' }}>
                 <div ref={infografiaRef} style={{ width: 900 }}>
                   <Infografia data={resultado} variant="wide" />
