@@ -316,5 +316,5 @@
 .text-fluid-counter { font-size: clamp(2.5rem, 1.9rem + 2.6vw, 3.75rem); line-height: 1; }
 .text-fluid-quote { font-size: clamp(1rem, 0.92rem + 0.5vw, 1.375rem); line-height: 1.55; }
 
-/* Lettering manuscrito para la infografía (Caveat por CDN) */
-.font-hand { font-family: 'Caveat', 'Segoe Print', 'Comic Sans MS', cursive; }
+/* Lettering manuscrito para la infografía (Caveat autoalojada vía next/font) */
+.font-hand { font-family: var(--font-hand), 'Segoe Print', 'Comic Sans MS', cursive; }

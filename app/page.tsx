@@ -1,6 +1,7 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
 import LiquidOrb from '@/components/liquid-orb';
+import Infografia, { resumir } from '@/components/infografia';
 
 interface Versiculo { cita: string; texto: string; }
 interface PuntoDesarrollo { punto: string; explicacion: string; versiculos: Versiculo[]; }
@@ -23,100 +24,6 @@ const promesasBiblicas = [
   { cita: 'Filipenses 4:13', texto: 'Todo lo puedo en Cristo que me fortalece.' },
   { cita: 'Salmos 23:1', texto: 'Jehová es mi pastor; nada me faltará.' },
 ];
-
-// --- Infografía: iconografía dibujada a mano (trazo de tinta + acento azul) ---
-const ICON = { fill: 'none', stroke: '#161616', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' } as const;
-
-const IcoCross = (
-  <svg width="22" height="22" viewBox="0 0 24 24" {...ICON}><path d="M12 3.5v17M6.5 9h11" /></svg>
-);
-const IcoBible = (
-  <svg width="24" height="24" viewBox="0 0 24 24" {...ICON}>
-    <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H19v15H6.5A2.5 2.5 0 0 0 4 20.5z" />
-    <path d="M4 5.5v15" stroke="#0F62FE" />
-    <path d="M11.5 7v5M9 9.5h5" />
-  </svg>
-);
-const IcoScroll = (
-  <svg width="24" height="24" viewBox="0 0 24 24" {...ICON}>
-    <path d="M6 4h11a2 2 0 0 1 2 2v12H8a2 2 0 0 0-2 2z" />
-    <path d="M6 4a2 2 0 0 0-2 2v1h2" stroke="#0F62FE" />
-    <path d="M9 9h7M9 12h7" />
-  </svg>
-);
-const IcoLamp = (
-  <svg width="24" height="24" viewBox="0 0 24 24" {...ICON}>
-    <path d="M9 18h6M10 21h4" />
-    <path d="M12 3a6 6 0 0 0-3.5 10.9c.7.5 1 1.2 1 2.1h5c0-.9.3-1.6 1-2.1A6 6 0 0 0 12 3z" />
-    <path d="M12 11v1.5" stroke="#0F62FE" />
-  </svg>
-);
-const IcoPath = (
-  <svg width="24" height="24" viewBox="0 0 24 24" {...ICON}>
-    <path d="M5 19c6 0 4-7 9-7s5-5 5-9" />
-    <circle cx="5" cy="19" r="1.6" stroke="#0F62FE" />
-    <path d="M19 3l-2.2 3h4.4z" fill="#0F62FE" stroke="none" />
-  </svg>
-);
-const IcoSeed = (
-  <svg width="24" height="24" viewBox="0 0 24 24" {...ICON}>
-    <path d="M12 21c0-6 3-10 8-11-1 6-4 10-8 11z" stroke="#0F62FE" />
-    <path d="M12 21c0-6-3-10-8-11 1 6 4 10 8 11z" />
-    <path d="M12 21v-6" />
-  </svg>
-);
-const IcoHeart = (
-  <svg width="24" height="24" viewBox="0 0 24 24" {...ICON}>
-    <path d="M12 21c-1.6-1.3-7-5.1-7-9.3A3.9 3.9 0 0 1 12 9a3.9 3.9 0 0 1 7-2.3c0 4.2-5.4 8-7 14.3z" stroke="#0F62FE" />
-  </svg>
-);
-const IcoPray = (
-  <svg width="26" height="26" viewBox="0 0 24 24" {...ICON}>
-    <path d="M12 3c1.6 2.2 2.4 4.6 2.4 8.2V19a2.4 2.4 0 0 1-4.8 0v-7.8C9.6 7.6 10.4 5.2 12 3z" />
-    <path d="M12 10.5v6" stroke="#0F62FE" />
-  </svg>
-);
-const IcoSteps = (
-  <svg width="24" height="24" viewBox="0 0 24 24" {...ICON}>
-    <path d="M5 19h4v-4h4v-4h4V7" />
-    <path d="M14 7l2.5-2.5L19 7" stroke="#0F62FE" />
-  </svg>
-);
-const IcoCheck = (
-  <svg width="18" height="18" viewBox="0 0 24 24" style={{ flexShrink: 0, marginTop: 1 }}>
-    <rect x="2.5" y="2.5" width="19" height="19" rx="4" fill="#FFFFFF" stroke="#161616" strokeWidth="2" />
-    <path d="M6.5 12.5 L10.5 16.5 L17.5 7.5" fill="none" stroke="#0F62FE" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-  </svg>
-);
-
-const POINT_ICONS = [IcoLamp, IcoSeed, IcoPath, IcoHeart, IcoCross];
-
-function resumir(texto: string, max: number): string {
-  const t = (texto || '').replace(/\s+/g, ' ').trim();
-  return t.length > max ? `${t.slice(0, max).trimEnd()}…` : t;
-}
-
-const PANEL: React.CSSProperties = { border: '2px solid #161616', borderRadius: 10, padding: '8px 10px', background: '#FFFFFF' };
-const PANEL_LABEL: React.CSSProperties = { fontSize: 9.5, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#525252', marginBottom: 3 };
-
-function SectionTitle({ label, icon }: { label: string; icon: React.ReactNode }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 7 }}>
-      <span style={{ display: 'inline-flex', alignItems: 'center' }}>{icon}</span>
-      <span className="font-hand" style={{ fontSize: 25, fontWeight: 700, lineHeight: 1 }}>{label}</span>
-      <span style={{ flex: 1, height: 2, background: '#0F62FE', opacity: 0.35, borderRadius: 2 }} />
-    </div>
-  );
-}
-
-function HandArrow() {
-  return (
-    <svg width="40" height="24" viewBox="0 0 40 24" style={{ display: 'block', margin: '3px auto' }}>
-      <path d="M9 2 C 27 6, 27 13, 21 19" fill="none" stroke="#0F62FE" strokeWidth="3.4" strokeLinecap="round" />
-      <path d="M14 15 L21 22 L28 14" fill="none" stroke="#0F62FE" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
 
 function validarArchivo(file: File): string | null {
   if (file.size > MAX_FILE_SIZE) return 'El archivo supera el límite permitido de 500 MB.';
@@ -387,24 +294,58 @@ export default function Home() {
     setLoading(false);
   };
 
+  // C. Export PNG: exporta SOLO la infografía desde el artboard oculto de tamaño
+  // fijo (900px), independiente del contenedor visible y del viewport.
+  const capturarInfografia = async (escala = 3) => {
+    const { default: domtoimage } = await import('dom-to-image-more');
+    const node = infografiaRef.current;
+    if (!node) throw new Error('Sin artboard');
+    return domtoimage.toPng(node, {
+      quality: 1,
+      bgcolor: '#FFFFFF',
+      width: node.offsetWidth * escala,
+      height: node.offsetHeight * escala,
+    });
+  };
+
   const descargarInfografia = async () => {
-    if (!infografiaRef.current) return;
     try {
-      const { default: domtoimage } = await import('dom-to-image-more');
-      const node = infografiaRef.current;
-      // PNG a 2x para impresión en A4 vertical.
-      const dataUrl = await domtoimage.toPng(node, {
-        quality: 1,
-        bgcolor: '#FFFFFF',
-        width: node.offsetWidth * 2,
-        height: node.offsetHeight * 2,
-      });
+      const dataUrl = await capturarInfografia(3);
       const link = document.createElement('a');
       link.download = `Infografia_${(resultado?.titulo || 'predica').replace(/\s+/g, '_')}.png`;
       link.href = dataUrl;
       link.click();
     } catch {
       alert('No se pudo generar la imagen.');
+    }
+  };
+
+  // D. Export A4 (salida independiente): centra la infografía en una hoja A4
+  // con márgenes, sin mezclarla con el PNG normal.
+  const exportarA4 = async () => {
+    try {
+      const dataUrl = await capturarInfografia(2);
+      const { jsPDF } = await import('jspdf');
+      const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+      const pw = doc.internal.pageSize.getWidth();
+      const ph = doc.internal.pageSize.getHeight();
+      const margin = 18;
+      const maxW = pw - margin * 2;
+      const maxH = ph - margin * 2;
+      const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const image = new Image();
+        image.onload = () => resolve(image);
+        image.onerror = reject;
+        image.src = dataUrl;
+      });
+      const ratio = Math.min(maxW / img.width, maxH / img.height);
+      const w = img.width * ratio;
+      const h = img.height * ratio;
+      doc.addImage(dataUrl, 'PNG', margin + (maxW - w) / 2, margin + (maxH - h) / 2, w, h);
+      const safe = (resultado?.titulo || 'predica').replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 60);
+      doc.save(`Infografia_A4_${safe || 'predica'}.pdf`);
+    } catch {
+      alert('No se pudo preparar el archivo A4.');
     }
   };
 
@@ -688,25 +629,14 @@ export default function Home() {
     doc.save(`TeoDoc_${safe || 'analisis'}.pdf`);
   };
 
-  // --- Datos derivados para la infografía (solo lo que existe en el análisis) ---
-  const primerVersiculo = (() => {
-    for (const punto of resultado?.desarrollo_progresivo || []) {
-      const v = (punto.versiculos || [])[0];
-      if (v?.cita) return v;
-    }
-    return null;
-  })();
-  const pasajePrincipal = primerVersiculo?.cita || '';
-  const textoPasaje = primerVersiculo?.texto || resultado?.infografia?.texto_clave || '';
-  const contexto = resultado?.infografia?.contexto_breve || '';
-  const puntos = (resultado?.desarrollo_progresivo || []).slice(0, 5);
-  const aplicaciones = (resultado?.aplicacion || []).slice(0, 6);
-  const palabrasClave = Array.from(new Set(
-    (resultado?.desarrollo_progresivo || [])
-      .map((p) => (p.punto || '').split(/\s+/).slice(0, 2).join(' ').replace(/[.,;:]+$/, '').trim())
-      .filter((k) => k.length > 2),
-  )).slice(0, 6);
-  const fechaHoy = new Date().toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' });
+  // Breakpoint para la variante responsive de la infografía (no depende del PDF).
+  const [isNarrow, setIsNarrow] = useState(false);
+  useEffect(() => {
+    const onResize = () => setIsNarrow(window.innerWidth < 640);
+    onResize();
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   return (
     <div className="app-shell bg-[#161616] text-[#f4f4f4] font-sans flex flex-col relative">
@@ -838,10 +768,6 @@ export default function Home() {
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4-4m0 0l-4-4m4 4V4"></path></svg>
                       PDF
                     </button>
-                    <button onClick={descargarInfografia} className="h-10 w-full sm:w-auto justify-center px-5 text-sm font-medium text-white bg-[#0f62fe] hover:bg-[#0353e9] transition-colors flex items-center gap-2">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                      Infografía
-                    </button>
                   </div>
                 </div>
 
@@ -909,113 +835,36 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Infografía — mapa de estudio bíblico (A4, lettering a mano) */}
+            {/* A. Composición · B. Visualización responsive · C. Export PNG · D. Export A4 */}
             <div className="w-full pt-6 sm:pt-10">
-              <div className="text-center mb-6 sm:mb-8 px-4">
-                <h3 className="text-sm font-semibold text-[#f4f4f4] tracking-wider uppercase">Infografía lista · v3</h3>
+              <div className="text-center mb-5 sm:mb-7 px-4">
+                <h3 className="text-sm font-semibold text-[#f4f4f4] tracking-wider uppercase">Infografía del análisis</h3>
                 <p className="text-xs sm:text-sm text-[#a8a8a8] mt-2 max-w-md mx-auto">
-                  Mapa de estudio bíblico en A4 vertical. Descárgala en PNG para verla, leerla o imprimirla.
+                  Se adapta a tu pantalla. Descarga el PNG completo o prepárala para imprimir en A4.
                 </p>
+                <div className="flex flex-wrap gap-2 justify-center mt-4">
+                  <button onClick={descargarInfografia} className="h-10 px-5 text-sm font-medium text-white bg-[#0f62fe] hover:bg-[#0353e9] transition-colors">
+                    Descargar PNG
+                  </button>
+                  <button onClick={exportarA4} className="h-10 px-5 text-sm font-medium text-[#f4f4f4] border border-[#6f6f6f] hover:bg-[#353535] transition-colors">
+                    Preparar para A4
+                  </button>
+                </div>
               </div>
-              <div className="w-full overflow-x-auto">
-                <div
-                  ref={infografiaRef}
-                  className="mx-auto"
-                  style={{ width: 794, height: 1123, backgroundColor: '#FFFFFF', color: '#161616', padding: '46px 48px', fontFamily: 'var(--font-plex), system-ui, sans-serif', display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}
-                >
-                  <div style={{ position: 'absolute', inset: 0, opacity: 0.5, backgroundImage: 'radial-gradient(#E0E0E0 0.9px, transparent 0.9px)', backgroundSize: '20px 20px', pointerEvents: 'none' }} />
 
-                  {/* Encabezado */}
-                  <div style={{ position: 'relative', textAlign: 'center', marginBottom: 12 }}>
-                    <div style={{ fontSize: 10, letterSpacing: '0.3em', color: '#525252', textTransform: 'uppercase' }}>Estudio bíblico visual</div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginTop: 2 }}>
-                      <span style={{ display: 'inline-flex' }}>{IcoCross}</span>
-                      <span className="font-hand" style={{ fontSize: 42, fontWeight: 700, lineHeight: 1 }}>Análisis de la Prédica</span>
-                    </div>
-                    <svg width="300" height="12" viewBox="0 0 300 12" style={{ display: 'block', margin: '0 auto' }}>
-                      <path d="M4 7 C 60 1, 120 12, 180 6 S 270 1, 296 7" fill="none" stroke="#0F62FE" strokeWidth="3.4" strokeLinecap="round" />
-                    </svg>
-                    <div style={{ fontSize: 18, fontWeight: 700, marginTop: 8, lineHeight: 1.2 }}>{resumir(resultado.titulo || 'Prédica', 80)}</div>
-                    <div style={{ fontSize: 12, fontStyle: 'italic', color: '#525252', marginTop: 3, maxWidth: 600, marginLeft: 'auto', marginRight: 'auto' }}>“{resumir(resultado.idea_principal, 160)}”</div>
-                    <div style={{ display: 'flex', gap: 16, justifyContent: 'center', marginTop: 7, fontSize: 10.5, color: '#525252' }}>
-                      {pasajePrincipal ? <span style={{ color: '#0F62FE', fontWeight: 700 }}>{pasajePrincipal}</span> : null}
-                      <span>Generado el {fechaHoy}</span>
-                    </div>
-                  </div>
+              {/* B. Visualización responsive: fluida, sin scroll horizontal, con
+                  variante vertical en móvil (reordena, no solo reduce). */}
+              <div className="w-full flex justify-center">
+                <div className="w-full max-w-[860px]">
+                  <Infografia data={resultado} variant={isNarrow ? 'compact' : 'wide'} />
+                </div>
+              </div>
 
-                  {/* 1. DESARROLLO BÍBLICO */}
-                  <SectionTitle label="Desarrollo bíblico" icon={IcoBible} />
-                  <div style={{ position: 'relative', display: 'grid', gridTemplateColumns: contexto ? '1fr 1fr' : '1fr', gap: 10, marginBottom: 8 }}>
-                    <div style={PANEL}>
-                      <div style={PANEL_LABEL}>Pasaje principal</div>
-                      <div className="font-hand" style={{ fontSize: 21, color: '#0F62FE', lineHeight: 1.05 }}>{pasajePrincipal || '—'}</div>
-                      {textoPasaje ? <div style={{ fontSize: 11, color: '#525252', fontStyle: 'italic', marginTop: 3, lineHeight: 1.35 }}>“{resumir(textoPasaje, 120)}”</div> : null}
-                    </div>
-                    {contexto ? (
-                      <div style={PANEL}>
-                        <div style={PANEL_LABEL}>Contexto</div>
-                        <div style={{ fontSize: 11, color: '#525252', lineHeight: 1.4 }}>{resumir(contexto, 190)}</div>
-                      </div>
-                    ) : null}
-                  </div>
-                  <div style={{ position: 'relative', borderLeft: '3px solid #0F62FE', paddingLeft: 10, marginBottom: 8 }}>
-                    <div style={PANEL_LABEL}>Idea central</div>
-                    <div style={{ fontSize: 12.5, fontWeight: 600, lineHeight: 1.35 }}>{resumir(resultado.idea_principal, 180)}</div>
-                  </div>
-                  {palabrasClave.length > 0 && (
-                    <div style={{ position: 'relative', display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                      {palabrasClave.map((k, i) => (
-                        <span key={i} className="font-hand" style={{ fontSize: 16, lineHeight: 1, color: '#0F62FE', border: '1.5px solid #0F62FE', borderRadius: 999, padding: '3px 10px' }}>{k}</span>
-                      ))}
-                    </div>
-                  )}
-
-                  <HandArrow />
-
-                  {/* 2. PUNTOS CLAVE */}
-                  <SectionTitle label={`${puntos.length} puntos clave`} icon={IcoScroll} />
-                  <div style={{ position: 'relative', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9 }}>
-                    {puntos.map((p, i) => (
-                      <div key={i} style={{ border: '2px solid #161616', borderRadius: 10, padding: '8px 10px', boxShadow: '3px 3px 0 #E0E0E0', background: '#FFFFFF' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                          <span className="font-hand" style={{ fontSize: 28, color: '#0F62FE', lineHeight: 1 }}>{i + 1}</span>
-                          <span className="font-hand" style={{ fontSize: 19, lineHeight: 1.05 }}>{resumir(p.punto, 40)}</span>
-                        </div>
-                        <div style={{ fontSize: 11, color: '#525252', lineHeight: 1.35, marginTop: 3 }}>{resumir(p.explicacion, 120)}</div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4, color: '#0F62FE' }}>
-                          <span style={{ display: 'inline-flex', transform: 'scale(0.8)', transformOrigin: 'left center' }}>{POINT_ICONS[i % POINT_ICONS.length]}</span>
-                          <span style={{ fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase' }}>Clave {i + 1}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  <HandArrow />
-
-                  {/* 3. APLICACIÓN PRÁCTICA */}
-                  <SectionTitle label="Aplicación práctica" icon={IcoSteps} />
-                  <div style={{ position: 'relative', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '7px 16px' }}>
-                    {aplicaciones.map((a, i) => (
-                      <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-                        {IcoCheck}
-                        <span style={{ fontSize: 11, lineHeight: 1.35 }}>{resumir(a, 100)}</span>
-                      </div>
-                    ))}
-                  </div>
-
-                  <HandArrow />
-
-                  {/* 4. ORACIÓN MINISTERIAL */}
-                  <SectionTitle label="Oración ministerial" icon={IcoPray} />
-                  <div style={{ position: 'relative', border: '2px solid #0F62FE', borderRadius: 12, background: '#F4F4F4', padding: '11px 14px' }}>
-                    <div style={{ fontSize: 11.5, fontStyle: 'italic', lineHeight: 1.5, color: '#161616' }}>{resumir(resultado.oracion, 340)}</div>
-                  </div>
-
-                  {/* Pie */}
-                  <div style={{ position: 'relative', marginTop: 'auto', borderTop: '2px solid #E0E0E0', paddingTop: 6, display: 'flex', justifyContent: 'space-between', fontSize: 9, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#525252' }}>
-                    <span>TeoDoc · Análisis Ministerial</span>
-                    <span>RPM Ministry</span>
-                  </div>
+              {/* A/C. Artboard OCULTO de tamaño fijo: el PNG se exporta desde aquí,
+                  de modo que no depende del contenedor visible ni del viewport. */}
+              <div aria-hidden="true" style={{ position: 'fixed', left: -100000, top: 0, width: 0, height: 0, overflow: 'hidden', pointerEvents: 'none' }}>
+                <div ref={infografiaRef} style={{ width: 900 }}>
+                  <Infografia data={resultado} variant="wide" />
                 </div>
               </div>
             </div>
