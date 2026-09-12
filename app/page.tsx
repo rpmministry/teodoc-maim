@@ -48,6 +48,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [versoIndex, setVersoIndex] = useState(0);
   const [descargando, setDescargando] = useState(false);
+  const [generandoPDF, setGenerandoPDF] = useState(false);
   const [avisoAudio, setAvisoAudio] = useState<AvisoAudio | null>(null);
   // Fuente de entrada: audio local o YouTube. Mismo pipeline después.
   const [modo, setModo] = useState<'audio' | 'youtube'>('audio');
@@ -370,9 +371,16 @@ export default function Home() {
     setLoading(true);
     setProgress(8);
 
+    // Timeout del lado del cliente: si el servidor no responde, se libera la
+    // interfaz con un mensaje amigable en vez de dejar el orbe girando.
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 45000);
     try {
       const res = await fetch('/api/youtube', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url }),
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+        signal: controller.signal,
       });
       const data = await res.json().catch(() => null);
       if (!res.ok || !data?.ok || !data?.text) {
@@ -395,6 +403,8 @@ export default function Home() {
       );
       setLoading(false);
       setProgress(0);
+    } finally {
+      clearTimeout(timeout);
     }
   };
 
@@ -441,8 +451,24 @@ export default function Home() {
   };
 
   const generarPDF = async () => {
-    if (!resultado) return;
-    const { jsPDF } = await import('jspdf');
+    if (!resultado || generandoPDF) return;
+    setGenerandoPDF(true);
+    try {
+      // Cede un frame para que el botón pinte "Generando PDF…" antes del
+      // trabajo pesado (jsPDF dibuja de forma síncrona y bloquea el hilo).
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      const { jsPDF } = await import('jspdf');
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      await construirYDescargarPDF(jsPDF, resultado);
+    } catch {
+      alert('No se pudo generar el PDF. Inténtalo de nuevo.');
+    } finally {
+      setGenerandoPDF(false);
+    }
+  };
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const construirYDescargarPDF = async (jsPDF: any, resultado: PredicaAnalisis) => {
     const doc = new jsPDF({ unit: 'pt', format: 'a4' });
     const pageW = doc.internal.pageSize.getWidth();
     const pageH = doc.internal.pageSize.getHeight();
@@ -829,9 +855,10 @@ export default function Home() {
             </label>
             <input
               id="yt-url"
-              type="url"
+              type="text"
               inputMode="url"
               autoComplete="off"
+              spellCheck={false}
               value={youtubeUrl}
               onChange={(e) => { setYoutubeUrl(e.target.value); if (avisoYoutube) setAvisoYoutube(null); }}
               placeholder="https://www.youtube.com/watch?v=..."
@@ -888,11 +915,11 @@ export default function Home() {
         {/* AUDIO NO VÁLIDO — mensaje humano y acción para reintentar */}
         {!loading && !resultado && avisoAudio && (
           <div className="mt-8 w-full max-w-lg border-l-4 border-[#f1c21b] bg-[#262626] px-5 py-5 text-sm text-[#f4f4f4] animate-fade-in">
-            <p className="font-semibold mb-2">🕊️ Aún no podemos analizar este audio</p>
+            <p className="font-semibold mb-2">🕊️ Aún no podemos analizar este contenido</p>
             <p className="text-[#c6c6c6] leading-relaxed">
               {avisoAudio === 'no_relacionado'
-                ? 'Parece que el audio trata un tema diferente al propósito de TeoDoc.'
-                : 'Parece que este audio no contiene suficiente contenido para realizar un análisis significativo. Puede ser muy corto, silencio o un audio accidental.'}
+                ? 'Parece que el contenido trata un tema diferente al propósito de TeoDoc.'
+                : 'Parece que este contenido no tiene suficiente información para realizar un análisis significativo. Puede ser muy corto, silencio o audio accidental.'}
             </p>
             <p className="text-[#c6c6c6] leading-relaxed mt-2">
               Te invitamos a subir una prédica, enseñanza, conferencia o contenido relacionado con la fe cristiana evangélica para poder ayudarte con el análisis.
@@ -936,9 +963,9 @@ export default function Home() {
 
                 <div className="flex flex-col md:flex-row justify-between items-center md:items-start mb-8 sm:mb-10 gap-5 relative z-10">
                   <div className="flex flex-col items-center md:items-start text-center md:text-left">
-                    <span className="inline-flex items-center gap-2 text-sm font-semibold text-[#a6c8ff] uppercase tracking-wider mb-1.5">
-                      <span className="w-2 h-2 rounded-full bg-[#0f62fe]" aria-hidden="true" />
-                      Análisis IA completado
+                    <span className="inline-flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-white bg-[#002d9c] px-3 py-1.5 mb-1.5">
+                      <span className="w-2 h-2 rounded-full bg-[#a6c8ff]" aria-hidden="true" />
+                      Análisis completado
                     </span>
                     <span className="text-[#a8a8a8] text-sm font-normal">Estructura teológica extraída.</span>
                   </div>
@@ -948,9 +975,21 @@ export default function Home() {
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>
                       Nuevo
                     </button>
-                    <button onClick={generarPDF} className="h-10 w-full sm:w-auto justify-center px-5 text-sm font-medium text-[#f4f4f4] border border-[#6f6f6f] hover:bg-[#353535] transition-colors flex items-center gap-2">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4-4m0 0l-4-4m4 4V4"></path></svg>
-                      Bosquejo PDF
+                    <button
+                      onClick={generarPDF}
+                      disabled={generandoPDF}
+                      aria-busy={generandoPDF}
+                      className="h-10 w-full sm:w-auto justify-center px-5 text-sm font-medium text-[#f4f4f4] border border-[#6f6f6f] hover:bg-[#353535] transition-colors flex items-center gap-2 disabled:opacity-60 disabled:cursor-wait"
+                    >
+                      {generandoPDF ? (
+                        <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-90" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                        </svg>
+                      ) : (
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4-4m0 0l-4-4m4 4V4"></path></svg>
+                      )}
+                      {generandoPDF ? 'Generando PDF…' : 'Descargar PDF'}
                     </button>
                   </div>
                 </div>

@@ -36,6 +36,17 @@ function timeoutSignal(ms: number): AbortSignal | undefined {
   return typeof anyAbort?.timeout === 'function' ? anyAbort.timeout(ms) : undefined;
 }
 
+/** Limita una promesa en el tiempo para que la petición nunca quede colgada. */
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const id = setTimeout(() => reject(new TranscriptError('bloqueado', 'Tiempo de espera agotado.')), ms);
+    promise.then(
+      (value) => { clearTimeout(id); resolve(value); },
+      (err) => { clearTimeout(id); reject(err); },
+    );
+  });
+}
+
 function mapError(err: unknown): TranscriptError {
   const msg = String((err as { message?: string })?.message || '');
 
@@ -110,7 +121,10 @@ async function fetchFromLibrary(
 export const youtubeTranscriptProvider: TranscriptProvider = {
   name: 'youtube-transcript',
   async fetchTranscript(videoId: string, opts?: { languages?: string[] }): Promise<TranscriptResult> {
-    const { segments, language } = await fetchFromLibrary(videoId, opts?.languages ?? LANGUAGES);
+    const { segments, language } = await withTimeout(
+      fetchFromLibrary(videoId, opts?.languages ?? LANGUAGES),
+      25_000,
+    );
     const text = normalizeSegments(segments);
     if (!text) throw new TranscriptError('sin_transcripcion', 'La transcripción está vacía.');
 
