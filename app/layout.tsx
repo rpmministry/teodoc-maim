@@ -1,11 +1,17 @@
 import type { Metadata, Viewport } from 'next';
-import { IBM_Plex_Sans } from 'next/font/google';
+import { IBM_Plex_Sans, Caveat } from 'next/font/google';
 import './globals.css';
 
 const plex = IBM_Plex_Sans({
   subsets: ['latin'],
   weight: ['300', '400', '500', '600', '700'],
   variable: '--font-plex',
+});
+
+const hand = Caveat({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-hand',
 });
 
 export const metadata: Metadata = {
@@ -25,7 +31,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="es" className={plex.variable}>
+    <html lang="es" className={`${plex.variable} ${hand.variable}`}>
       <body className="font-sans antialiased bg-[#161616] text-[#f4f4f4]">
         {children}
       </body>
