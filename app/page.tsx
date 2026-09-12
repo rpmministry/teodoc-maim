@@ -311,59 +311,158 @@ export default function Home() {
   const generarPDF = async () => {
     if (!resultado) return;
     const { jsPDF } = await import('jspdf');
-    const doc = new jsPDF();
-    const margin = 20; const pageWidth = doc.internal.pageSize.getWidth(); let y = margin;
-    const colorPrimario = [44, 62, 80]; const colorSecundario = [127, 140, 141]; const colorAcento = [192, 57, 43]; 
 
-    doc.setFont("helvetica", "bold"); doc.setFontSize(22); doc.setTextColor(colorPrimario[0], colorPrimario[1], colorPrimario[2]);
-    const tituloLineas = doc.splitTextToSize(resultado.titulo.toUpperCase(), pageWidth - margin * 2);
-    doc.text(tituloLineas, pageWidth / 2, y, { align: "center" }); y += tituloLineas.length * 10 + 5;
+    // A4 (595.28 x 841.89 pt) con márgenes rígidos de ~2 cm (54 pt).
+    const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+    const margin = 54;
+    const contentW = pageW - margin * 2;
+    const bottom = pageH - margin - 26;
 
-    doc.setFontSize(14); doc.setFont("helvetica", "italic"); doc.setTextColor(colorSecundario[0], colorSecundario[1], colorSecundario[2]);
-    const ideaLineas = doc.splitTextToSize(`"${resultado.idea_principal}"`, pageWidth - margin * 2);
-    doc.text(ideaLineas, pageWidth / 2, y, { align: "center" }); y += ideaLineas.length * 8 + 15;
+    type RGB = readonly [number, number, number];
+    const CARBON = {
+      text: [22, 22, 22] as RGB,        // #161616
+      secondary: [82, 82, 82] as RGB,   // #525252
+      accent: [15, 98, 254] as RGB,     // #0F62FE
+      rule: [224, 224, 224] as RGB,     // #E0E0E0
+      surface: [244, 244, 244] as RGB,  // #F4F4F4
+    };
+    const text = (c: RGB) => doc.setTextColor(c[0], c[1], c[2]);
+    const fill = (c: RGB) => doc.setFillColor(c[0], c[1], c[2]);
+    const stroke = (c: RGB) => doc.setDrawColor(c[0], c[1], c[2]);
 
-    doc.setDrawColor(200); doc.setLineWidth(0.5); doc.line(margin, y, pageWidth - margin, y); y += 10;
-    doc.setFont("helvetica", "bold"); doc.setFontSize(16); doc.setTextColor(colorPrimario[0], colorPrimario[1], colorPrimario[2]);
-    doc.text("DESARROLLO BÍBLICO", margin, y); y += 10;
+    let y = margin + 10;
+    const ensure = (needed: number) => { if (y + needed > bottom) { doc.addPage(); y = margin + 10; } };
 
-    resultado.desarrollo_progresivo.forEach((item, index) => {
-      if (y > 260) { doc.addPage(); y = margin; }
-      doc.setFont("helvetica", "bold"); doc.setFontSize(14); doc.setTextColor(colorPrimario[0], colorPrimario[1], colorPrimario[2]);
-      const puntoLineas = doc.splitTextToSize(`${index + 1}. ${item.punto}`, pageWidth - margin * 2);
-      doc.text(puntoLineas, margin, y); y += puntoLineas.length * 7 + 2;
+    // Bloque de versículo: fondo gris claro, barra azul y word wrap.
+    const verseBlock = (label: string, body: string) => {
+      const size = 9.5;
+      const lead = 13;
+      doc.setFont('helvetica', 'italic');
+      doc.setFontSize(size);
+      const bodyLines = doc.splitTextToSize(body, contentW - 24);
+      const blockH = 12 + 13 + 2 + bodyLines.length * lead + 12;
+      ensure(blockH + 8);
+      fill(CARBON.surface);
+      doc.rect(margin, y - 11, contentW, blockH, 'F');
+      fill(CARBON.accent);
+      doc.rect(margin, y - 11, 3, blockH, 'F');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(size);
+      text(CARBON.accent);
+      doc.text(label, margin + 12, y);
+      y += 15;
+      doc.setFont('helvetica', 'italic');
+      doc.setFontSize(size);
+      text(CARBON.secondary);
+      doc.text(bodyLines, margin + 12, y);
+      y += bodyLines.length * lead + 12;
+    };
 
-      doc.setFont("helvetica", "normal"); doc.setFontSize(11); doc.setTextColor(0, 0, 0);
-      const explLineas = doc.splitTextToSize(item.explicacion, pageWidth - margin * 2);
-      doc.text(explLineas, margin, y); y += explLineas.length * 5 + 5;
+    const section = (label: string) => {
+      ensure(48);
+      fill(CARBON.accent);
+      doc.rect(margin, y - 11, 4, 16, 'F');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(13);
+      text(CARBON.text);
+      doc.text(label.toUpperCase(), margin + 13, y);
+      y += 26;
+    };
 
-      item.versiculos.forEach(v => {
-        if (y > 270) { doc.addPage(); y = margin; }
-        doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.setTextColor(colorAcento[0], colorAcento[1], colorAcento[2]);
-        doc.text(v.cita, margin + 5, y); y += 5;
-        doc.setFont("helvetica", "italic"); doc.setTextColor(80, 80, 80);
-        const vTextoLineas = doc.splitTextToSize(`"${v.texto}"`, pageWidth - margin * 2 - 10);
-        doc.text(vTextoLineas, margin + 5, y); y += vTextoLineas.length * 5 + 5;
+    // ---- Título e idea principal ----
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(21);
+    text(CARBON.text);
+    const titulo = doc.splitTextToSize(resultado.titulo || 'Análisis de prédica', contentW);
+    doc.text(titulo, margin, y);
+    y += titulo.length * 25 + 6;
+
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(12);
+    text(CARBON.secondary);
+    const idea = doc.splitTextToSize(`"${resultado.idea_principal || ''}"`, contentW);
+    doc.text(idea, margin, y);
+    y += idea.length * 16 + 16;
+
+    stroke(CARBON.rule);
+    doc.setLineWidth(0.75);
+    doc.line(margin, y, pageW - margin, y);
+    y += 22;
+
+    // ---- Desarrollo bíblico ----
+    section('Desarrollo Bíblico');
+    const desarrollo = Array.isArray(resultado.desarrollo_progresivo) ? resultado.desarrollo_progresivo : [];
+    desarrollo.forEach((item, index) => {
+      ensure(56);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11.5);
+      text(CARBON.text);
+      const punto = doc.splitTextToSize(`${index + 1}. ${item.punto || ''}`, contentW);
+      doc.text(punto, margin, y);
+      y += punto.length * 15 + 3;
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      text(CARBON.secondary);
+      const expl = doc.splitTextToSize(item.explicacion || '', contentW);
+      doc.text(expl, margin, y);
+      y += expl.length * 14 + 8;
+
+      const versiculos = Array.isArray(item.versiculos) ? item.versiculos : [];
+      versiculos.forEach((v) => {
+        verseBlock(v?.cita || '', `"${v?.texto || ''}"`);
       });
-      y += 5;
+      y += 8;
     });
 
-    doc.addPage(); y = margin;
-    doc.setFont("helvetica", "bold"); doc.setFontSize(16); doc.setTextColor(colorPrimario[0], colorPrimario[1], colorPrimario[2]);
-    doc.text("APLICACIÓN PRÁCTICA", margin, y); y += 10;
-    doc.setFont("helvetica", "normal"); doc.setFontSize(12); doc.setTextColor(0, 0, 0);
-    resultado.aplicacion.forEach(app => {
-      const appLineas = doc.splitTextToSize(`• ${app}`, pageWidth - margin * 2);
-      doc.text(appLineas, margin + 5, y); y += appLineas.length * 6 + 3;
-    }); y += 15;
+    // ---- Aplicación práctica ----
+    section('Aplicación Práctica');
+    const aplicacion = Array.isArray(resultado.aplicacion) ? resultado.aplicacion : [];
+    aplicacion.forEach((app) => {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      const lines = doc.splitTextToSize(app || '', contentW - 14);
+      ensure(lines.length * 14 + 6);
+      fill(CARBON.accent);
+      doc.circle(margin + 3, y - 3, 1.6, 'F');
+      text(CARBON.secondary);
+      doc.text(lines, margin + 14, y);
+      y += lines.length * 14 + 7;
+    });
+    y += 6;
 
-    doc.setFont("helvetica", "bold"); doc.setFontSize(16); doc.setTextColor(colorPrimario[0], colorPrimario[1], colorPrimario[2]);
-    doc.text("ORACIÓN MINISTERIAL", margin, y); y += 10;
-    doc.setFont("helvetica", "italic"); doc.setFontSize(12); doc.setTextColor(80, 80, 80);
-    const oracionLineas = doc.splitTextToSize(`"${resultado.oracion}"`, pageWidth - margin * 2);
-    doc.text(oracionLineas, margin, y);
+    // ---- Oración ministerial ----
+    section('Oración Ministerial');
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(11);
+    text(CARBON.secondary);
+    const oracion = doc.splitTextToSize(`"${resultado.oracion || ''}"`, contentW);
+    ensure(oracion.length * 15 + 6);
+    doc.text(oracion, margin, y);
+    y += oracion.length * 15;
 
-    doc.save("Bosquejo_TeoDoc.pdf");
+    // ---- Encabezado y pie (estilo Carbon) en todas las páginas ----
+    const total = doc.getNumberOfPages();
+    const fecha = new Date().toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' });
+    for (let i = 1; i <= total; i++) {
+      doc.setPage(i);
+      stroke(CARBON.rule);
+      doc.setLineWidth(0.75);
+      doc.line(margin, margin - 20, pageW - margin, margin - 20);
+      doc.line(margin, pageH - margin + 14, pageW - margin, pageH - margin + 14);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      text(CARBON.secondary);
+      doc.text('TeoDoc · Análisis Ministerial', margin, margin - 28);
+      doc.text(`Página ${i} de ${total}`, pageW - margin, margin - 28, { align: 'right' });
+      doc.text(fecha, margin, pageH - margin + 25);
+      doc.text('Generado con IA', pageW - margin, pageH - margin + 25, { align: 'right' });
+    }
+
+    const safe = (resultado.titulo || 'analisis').replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 60);
+    doc.save(`TeoDoc_${safe || 'analisis'}.pdf`);
   };
 
   return (
