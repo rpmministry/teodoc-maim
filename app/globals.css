@@ -301,6 +301,14 @@
   }
 }
 
+/* Escritorio: doblar el margen lateral (2rem -> 4rem) para que los botones
+   del header queden alineados y no pegados al borde de la ventana. */
+@media (min-width: 1024px) {
+  .shell-container {
+    padding-inline: 4rem;
+  }
+}
+
 /* Escala tipográfica fluida (legible en iPhone 7 y contenida en 4K) */
 .text-fluid-hero { font-size: clamp(2rem, 1.25rem + 3vw, 3.5rem); line-height: 1.12; letter-spacing: -0.01em; }
 .text-fluid-sub { font-size: clamp(1.125rem, 1rem + 0.8vw, 1.625rem); line-height: 1.3; }

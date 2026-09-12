@@ -54,6 +54,44 @@ export default function Home() {
     return () => clearInterval(id);
   }, [loading]);
 
+  // Móvil: deslizar desde el borde izquierdo hacia la derecha vuelve al inicio.
+  useEffect(() => {
+    let startX = 0;
+    let startY = 0;
+    let tracking = false;
+    const onStart = (event: TouchEvent) => {
+      const t = event.touches[0];
+      if (!t) return;
+      if (t.clientX <= 24) {
+        tracking = true;
+        startX = t.clientX;
+        startY = t.clientY;
+      } else {
+        tracking = false;
+      }
+    };
+    const onEnd = (event: TouchEvent) => {
+      if (!tracking) return;
+      tracking = false;
+      const t = event.changedTouches[0];
+      if (!t) return;
+      const dx = t.clientX - startX;
+      const dy = Math.abs(t.clientY - startY);
+      if (dx > 70 && dy < 70) {
+        setResultado(null);
+        setError(null);
+        setProgress(0);
+        setLoading(false);
+      }
+    };
+    window.addEventListener('touchstart', onStart, { passive: true });
+    window.addEventListener('touchend', onEnd, { passive: true });
+    return () => {
+      window.removeEventListener('touchstart', onStart);
+      window.removeEventListener('touchend', onEnd);
+    };
+  }, []);
+
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState('');
   const [feedbackStatus, setFeedbackStatus] = useState<'idle' | 'sending' | 'success' | 'error'>('idle');
@@ -333,7 +371,12 @@ export default function Home() {
       {/* HEADER — IBM Carbon */}
       <header className="shrink-0 w-full bg-[#161616] border-b border-[#393939] z-20 relative" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
         <div className="shell-container h-12 flex items-center justify-between">
-        <div className="flex items-center gap-3 min-w-0">
+        <button
+          type="button"
+          onClick={nuevoAnalisis}
+          className="flex items-center gap-3 min-w-0 hover:opacity-80 transition-opacity"
+          aria-label="Volver al inicio"
+        >
           <svg viewBox="0 0 64 64" className="w-6 h-6 shrink-0" aria-hidden="true">
             <defs>
               <radialGradient id="tdOrb" cx="50%" cy="36%" r="68%">
@@ -346,7 +389,7 @@ export default function Home() {
             <path d="M14 34.5c5.4-3.2 10.3-3.2 15.6 0 5.2 3.1 9.7 1.6 13.4-1.2" stroke="#ffffff" strokeOpacity="0.9" strokeWidth="2.4" strokeLinecap="round" fill="none" />
           </svg>
           <span className="text-sm font-semibold tracking-wide text-[#f4f4f4] truncate">TeoDoc</span>
-        </div>
+        </button>
 
         <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           <button
@@ -437,7 +480,10 @@ export default function Home() {
 
                 <div className="flex flex-col md:flex-row justify-between items-center md:items-start mb-8 sm:mb-10 gap-5 relative z-10">
                   <div className="flex flex-col items-center md:items-start text-center md:text-left">
-                    <span className="text-xs font-semibold text-[#78a9ff] uppercase tracking-wider mb-1.5">Análisis IA completado</span>
+                    <span className="inline-flex items-center gap-2 text-sm font-semibold text-[#a6c8ff] uppercase tracking-wider mb-1.5">
+                      <span className="w-2 h-2 rounded-full bg-[#0f62fe]" aria-hidden="true" />
+                      Análisis IA completado
+                    </span>
                     <span className="text-[#a8a8a8] text-sm font-normal">Estructura teológica extraída.</span>
                   </div>
                   

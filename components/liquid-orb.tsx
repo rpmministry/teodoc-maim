@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import FluidOrb from '@/components/fluid-orb'
 import MatrixOrb from '@/components/matrix-orb'
 import type { LiquidOrbState } from '@/lib/liquid-orb-seeds'
 
@@ -100,13 +101,21 @@ export default function LiquidOrb({ state, progress = 0, disabled = false, onFil
           }
         }}
       >
-        <MatrixOrb
-          state={thinking ? 'thinking' : 'idle'}
-          color={thinking ? '#a56eff' : '#0f62fe'}
-          size={orbSize}
-          labels={{ idle: '', listening: '', thinking: '' }}
-          className="pointer-events-none"
-        />
+        {/* Pantalla principal: orbe anterior (FluidOrb). Análisis: MatrixOrb. */}
+        {thinking ? (
+          <MatrixOrb
+            state="thinking"
+            color="#a56eff"
+            size={orbSize}
+            labels={{ idle: '', listening: '', thinking: '' }}
+            className="pointer-events-none"
+          />
+        ) : (
+          <FluidOrb
+            className="absolute inset-0 w-full h-full pointer-events-none"
+            color="#0f62fe"
+          />
+        )}
 
         <input
           ref={inputRef}
