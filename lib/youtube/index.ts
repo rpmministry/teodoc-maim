@@ -9,6 +9,7 @@
 import { FallbackTranscriptProvider, type TranscriptProvider } from './transcript-provider';
 import { youtubeTranscriptProvider } from './youtube-transcript-provider';
 import { supadataTranscriptProvider } from './supadata-transcript-provider';
+import { remoteTranscriptProvider } from './remote-transcript-provider';
 
 let cached: TranscriptProvider | null = null;
 
@@ -16,7 +17,11 @@ export function resolveTranscriptProvider(): TranscriptProvider {
   if (cached) return cached;
 
   const providers: TranscriptProvider[] = [];
+  // 1. Supadata (si hay clave): sin bloqueos de IP y con generación por IA.
   if (process.env.SUPADATA_API_KEY) providers.push(supadataTranscriptProvider);
+  // 2. Servicio open source auto-hospedado (indefinido, sin créditos de terceros).
+  if (process.env.TRANSCRIPT_SERVICE_URL) providers.push(remoteTranscriptProvider);
+  // 3. Librería npm gratuita (respaldo local).
   providers.push(youtubeTranscriptProvider);
 
   cached = providers.length === 1 ? providers[0] : new FallbackTranscriptProvider(providers);

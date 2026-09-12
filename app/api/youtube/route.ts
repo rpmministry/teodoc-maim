@@ -33,9 +33,14 @@ export async function POST(req: NextRequest) {
     }
 
     try {
-      const result = await resolveTranscriptProvider().fetchTranscript(videoId);
+      const provider = resolveTranscriptProvider();
+      const result = await provider.fetchTranscript(videoId);
+      console.log(
+        `[YouTube] Transcripción vía ${provider.name} (${videoId}): ${result.segments.length} segmentos, ${result.text.length} caracteres.`,
+      );
       return NextResponse.json({
         ok: true,
+        provider: provider.name,
         text: result.text,
         meta: result.meta,
         segments: result.segments,
