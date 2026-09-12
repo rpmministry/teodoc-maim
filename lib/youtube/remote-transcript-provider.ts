@@ -43,9 +43,12 @@ function fromJson(data: JsonTranscript): TranscriptSegment[] {
 }
 
 function mapStatus(status: number): TranscriptError {
-  if (status === 404 || status === 422) return new TranscriptError('sin_transcripcion', `HTTP ${status}`);
-  if (status === 401 || status === 403) return new TranscriptError('bloqueado', `HTTP ${status}`);
-  if (status === 429) return new TranscriptError('bloqueado', `HTTP ${status}`);
+  if (status === 404) return new TranscriptError('video_no_disponible', `HTTP ${status}`);
+  // Sin subtítulos: error "blando" para que otro proveedor pueda generarlos.
+  if (status === 422) return new TranscriptError('sin_subtitulos', `HTTP ${status}`);
+  if (status === 401 || status === 403 || status === 429 || status === 503 || status === 504) {
+    return new TranscriptError('bloqueado', `HTTP ${status}`);
+  }
   return new TranscriptError('desconocido', `HTTP ${status}`);
 }
 
@@ -85,7 +88,8 @@ export const remoteTranscriptProvider: TranscriptProvider = {
     }
 
     const text = normalizeSegments(segments);
-    if (!text) throw new TranscriptError('sin_transcripcion', 'La transcripción está vacía.');
+    // Vacío = sin subtítulos: deja que otro proveedor (Supadata) lo intente.
+    if (!text) throw new TranscriptError('sin_subtitulos', 'Sin subtítulos disponibles.');
 
     const { title, author } = await fetchYouTubeOembed(videoId);
     return {

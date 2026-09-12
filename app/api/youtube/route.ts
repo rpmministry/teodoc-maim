@@ -10,6 +10,8 @@ export const dynamic = 'force-dynamic';
 // Mensajes siempre amigables: nunca se expone el detalle técnico al usuario.
 const MENSAJES: Record<TranscriptErrorCode, string> = {
   url_invalida: 'El enlace no parece ser de YouTube. Revisa que sea un enlace válido del video.',
+  sin_subtitulos:
+    'No encontramos una transcripción disponible para este video. Puedes intentar con otra prédica o subir directamente el audio a TeoDoc.',
   sin_transcripcion:
     'No encontramos una transcripción disponible para este video. Puedes intentar con otra prédica o subir directamente el audio a TeoDoc.',
   bloqueado:
@@ -49,7 +51,14 @@ export async function POST(req: NextRequest) {
       const code: TranscriptErrorCode = err instanceof TranscriptError ? err.code : 'desconocido';
       // Detalle técnico solo para debugging en servidor.
       console.warn(`[YouTube] ${code}:`, (err as Error)?.message);
-      const status = code === 'sin_transcripcion' ? 422 : code === 'url_invalida' ? 400 : 502;
+      const status =
+        code === 'sin_transcripcion' || code === 'sin_subtitulos'
+          ? 422
+          : code === 'url_invalida'
+            ? 400
+            : code === 'video_no_disponible'
+              ? 404
+              : 502;
       return NextResponse.json({ ok: false, code, message: MENSAJES[code] }, { status });
     }
   } catch (error) {

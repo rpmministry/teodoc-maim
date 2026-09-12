@@ -50,6 +50,6 @@ TRANSCRIPT_SERVICE_TOKEN = una_clave_larga_opcional
 
 Con eso, la cadena de transcripción queda:
 
-1. **Supadata** (si hay `SUPADATA_API_KEY`).
-2. **Servicio open source** (si hay `TRANSCRIPT_SERVICE_URL`).
-3. **Librería npm** `youtube-transcript` (respaldo local).
+1. **Servicio propio** (si hay `TRANSCRIPT_SERVICE_URL`) — recomendado usar el de **yt-dlp** (`services/youtube-ytdlp`) como principal.
+2. **Supadata** (si hay `SUPADATA_API_KEY`) — auxiliar; genera con IA si no hay subtítulos.
+3. **Librería npm** `youtube-transcript` (último respaldo local).

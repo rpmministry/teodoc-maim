@@ -28,6 +28,7 @@ export type TranscriptResult = {
 
 export type TranscriptErrorCode =
   | 'url_invalida'
+  | 'sin_subtitulos'
   | 'sin_transcripcion'
   | 'bloqueado'
   | 'video_no_disponible'
@@ -69,6 +70,8 @@ export function withTimeout<T>(promise: Promise<T>, ms: number, message = 'Tiemp
 }
 
 // Errores "definitivos": no tiene sentido probar otro proveedor.
+// `sin_subtitulos` NO es definitivo: otro proveedor (p. ej. Supadata) puede
+// generar la transcripción con IA aunque este no encuentre subtítulos.
 const DEFINITIVE: TranscriptErrorCode[] = ['sin_transcripcion', 'video_no_disponible', 'url_invalida'];
 
 /**
