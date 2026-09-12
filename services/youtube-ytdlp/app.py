@@ -6,7 +6,7 @@ del video (--skip-download): NO descarga audio ni video.
 Contrato:
   GET /?videoId=ID&lang=es  ->  {"text": "...", "segments": [...], "lang": "es"}
   Auth: solo si REQUIRE_AUTH=1 -> cabecera Authorization: Bearer <TRANSCRIPT_SERVICE_TOKEN>
-  Errores: 404 video no disponible | 422 sin subtítulos | 504 timeout
+  Errores: 404 video no disponible | 422 sin subtítulos | 503 bloqueado por YouTube | 504 timeout
 """
 
 import base64
@@ -20,10 +20,9 @@ import tempfile
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 
-app = FastAPI(title="TeoDoc yt-dlp Transcript Service", version="1.0.0")
+app = FastAPI(title="TeoDoc yt-dlp Transcript Service", version="1.1.0")
 
 # La autenticación es OPT-IN: solo se exige si REQUIRE_AUTH=1 y hay token.
-# Así, un TRANSCRIPT_SERVICE_TOKEN heredado no bloquea el servicio.
 REQUIRE_AUTH = os.environ.get("REQUIRE_AUTH", "").lower() in ("1", "true", "yes", "on")
 TOKEN = os.environ.get("TRANSCRIPT_SERVICE_TOKEN")
 YTDLP = os.environ.get("YTDLP_BIN", "yt-dlp")
@@ -38,6 +37,21 @@ VTT_TS = re.compile(
     r"(\d{1,2}):(\d{2}):(\d{2})[.,](\d{1,3})\s*-->\s*(\d{1,2}):(\d{2}):(\d{2})[.,](\d{1,3})"
 )
 FILE_LANG = re.compile(r"\.([a-zA-Z0-9-]+)\.(json3|vtt|srt)$")
+
+# Si YouTube bloquea un cliente, se reintenta con otros (útil en IPs cloud).
+CLIENT_ATTEMPTS = [None, "android,web_safari", "ios", "tv_embedded,web_embedded", "mweb"]
+BLOCK_HINTS = (
+    "sign in to confirm",
+    "not a bot",
+    "429",
+    "too many requests",
+    "unable to download video subtitles",
+    "po token",
+    "failed to extract any player response",
+    "no video formats",
+    "requested format is not available",
+)
+UNAVAILABLE_HINTS = ("private", "unavailable", "does not exist", "removed")
 
 
 def _seconds(h, m, s, ms):
@@ -107,46 +121,67 @@ def subtitle_languages(preferred):
     return ",".join(tokens)
 
 
+def _attempt(workdir, video_id, lang, client):
+    attempt_dir = os.path.join(workdir, f"try_{client or 'default'}")
+    os.makedirs(attempt_dir, exist_ok=True)
+    extra = list(EXTRA_ARGS)
+    if PROXY:
+        extra += ["--proxy", PROXY]
+    if COOKIES_B64:
+        cookies_path = os.path.join(attempt_dir, "cookies.txt")
+        with open(cookies_path, "wb") as handle:
+            handle.write(base64.b64decode(COOKIES_B64))
+        extra += ["--cookies", cookies_path]
+    if client:
+        extra += ["--extractor-args", f"youtube:player_client={client}"]
+
+    command = [
+        YTDLP,
+        "--skip-download",
+        "--no-playlist",
+        "--write-subs",
+        "--write-auto-subs",
+        "--sub-langs", subtitle_languages(lang),
+        "--sub-format", "json3/vtt/srt/best",
+        "--no-warnings",
+        "-o", os.path.join(attempt_dir, "%(id)s.%(ext)s"),
+        f"https://www.youtube.com/watch?v={video_id}",
+        *extra,
+    ]
+    try:
+        proc = subprocess.run(command, capture_output=True, text=True, timeout=TIMEOUT)
+    except subprocess.TimeoutExpired:
+        raise HTTPException(status_code=504, detail="timeout")
+    except FileNotFoundError:
+        raise HTTPException(status_code=500, detail="yt-dlp no está instalado")
+
+    files = [f for f in glob.glob(os.path.join(attempt_dir, "*")) if os.path.isfile(f)]
+    return files, (proc.stderr or "")
+
+
 @app.get("/")
 def transcript(request: Request, videoId: str = Query(...), lang: str = Query("es")):
     if REQUIRE_AUTH and TOKEN and request.headers.get("authorization", "") != f"Bearer {TOKEN}":
         raise HTTPException(status_code=401, detail="unauthorized")
 
+    files = []
+    last_stderr = ""
     with tempfile.TemporaryDirectory() as workdir:
-        extra = list(EXTRA_ARGS)
-        if PROXY:
-            extra += ["--proxy", PROXY]
-        if COOKIES_B64:
-            cookies_path = os.path.join(workdir, "cookies.txt")
-            with open(cookies_path, "wb") as handle:
-                handle.write(base64.b64decode(COOKIES_B64))
-            extra += ["--cookies", cookies_path]
-
-        command = [
-            YTDLP,
-            "--skip-download",
-            "--no-playlist",
-            "--write-subs",
-            "--write-auto-subs",
-            "--sub-langs", subtitle_languages(lang),
-            "--sub-format", "json3/vtt/srt/best",
-            "--no-warnings",
-            "-o", os.path.join(workdir, "%(id)s.%(ext)s"),
-            f"https://www.youtube.com/watch?v={videoId}",
-            *extra,
-        ]
-        try:
-            proc = subprocess.run(command, capture_output=True, text=True, timeout=TIMEOUT)
-        except subprocess.TimeoutExpired:
-            raise HTTPException(status_code=504, detail="timeout")
-        except FileNotFoundError:
-            raise HTTPException(status_code=500, detail="yt-dlp no está instalado")
-
-        files = [f for f in glob.glob(os.path.join(workdir, "*")) if os.path.isfile(f)]
-        if not files:
-            stderr = (proc.stderr or "").lower()
-            if any(word in stderr for word in ("private", "unavailable", "does not exist", "removed")):
+        for client in CLIENT_ATTEMPTS:
+            files, last_stderr = _attempt(workdir, videoId, lang, client)
+            if files:
+                break
+            lowered = last_stderr.lower()
+            if any(word in lowered for word in UNAVAILABLE_HINTS):
                 raise HTTPException(status_code=404, detail="video-unavailable")
+            # Solo reintenta con otro cliente si parece un bloqueo.
+            if not any(hint in lowered for hint in BLOCK_HINTS):
+                break
+
+        if not files:
+            lowered = last_stderr.lower()
+            if any(hint in lowered for hint in BLOCK_HINTS):
+                raise HTTPException(status_code=503, detail="blocked-by-youtube")
             raise HTTPException(status_code=422, detail="no-subtitles")
 
         def rank(path):
