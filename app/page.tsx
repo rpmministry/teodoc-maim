@@ -768,6 +768,10 @@ export default function Home() {
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4-4m0 0l-4-4m4 4V4"></path></svg>
                       PDF
                     </button>
+                    <button onClick={descargarInfografia} className="h-10 w-full sm:w-auto justify-center px-5 text-sm font-medium text-white bg-[#0f62fe] hover:bg-[#0353e9] transition-colors flex items-center gap-2">
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                      Infografía
+                    </button>
                   </div>
                 </div>
 
@@ -838,7 +842,7 @@ export default function Home() {
             {/* A. Composición · B. Visualización responsive · C. Export PNG · D. Export A4 */}
             <div className="w-full pt-6 sm:pt-10">
               <div className="text-center mb-5 sm:mb-7 px-4">
-                <h3 className="text-sm font-semibold text-[#f4f4f4] tracking-wider uppercase">Infografía del análisis</h3>
+                <h3 className="text-sm font-semibold text-[#f4f4f4] tracking-wider uppercase">Infografía del análisis · v4</h3>
                 <p className="text-xs sm:text-sm text-[#a8a8a8] mt-2 max-w-md mx-auto">
                   Se adapta a tu pantalla. Descarga el PNG completo o prepárala para imprimir en A4.
                 </p>

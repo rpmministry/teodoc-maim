@@ -182,8 +182,18 @@ export default function Infografia({ data, variant = 'wide' }: { data: Infografi
         </div>
       </div>
 
+      {/* RECORRIDO NARRATIVO (índice visual de la historia de la prédica) */}
+      <div style={{ position: 'relative', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: 6, marginBottom: wide ? 16 : 14 }}>
+        {['Tema', 'Texto bíblico', 'Enseñanza', 'Puntos clave', 'Aplicación', 'Oración'].map((step, i, arr) => (
+          <React.Fragment key={step}>
+            <span className="font-hand" style={{ fontSize: wide ? 15 : 14, lineHeight: 1, color: '#0F62FE', border: '1.5px solid #0F62FE', borderRadius: 999, padding: '2px 9px' }}>{step}</span>
+            {i < arr.length - 1 && <span style={{ color: '#0F62FE', fontSize: wide ? 13 : 12, lineHeight: 1 }}>→</span>}
+          </React.Fragment>
+        ))}
+      </div>
+
       {/* 1. DESARROLLO BÍBLICO */}
-      <SectionTitle label="Desarrollo bíblico" icon={IcoBible} size={h2Size} />
+      <SectionTitle label="01 · Desarrollo bíblico" icon={IcoBible} size={h2Size} />
       <div style={{ position: 'relative', display: 'grid', gridTemplateColumns: contexto ? cols2 : '1fr', gap, marginBottom: 8 }}>
         <div style={panel}>
           <div style={panelLabel}>Pasaje principal</div>
@@ -212,7 +222,7 @@ export default function Infografia({ data, variant = 'wide' }: { data: Infografi
       <HandArrow size={wide ? 40 : 34} />
 
       {/* 2. PUNTOS CLAVE (cantidad dinámica) */}
-      <SectionTitle label={`${puntos.length} puntos clave`} icon={IcoScroll} size={h2Size} />
+      <SectionTitle label={`02 · ${puntos.length} puntos clave`} icon={IcoScroll} size={h2Size} />
       <div style={{ position: 'relative', display: 'grid', gridTemplateColumns: cols2, gap: wide ? 9 : 10 }}>
         {puntos.map((p, i) => (
           <div key={i} style={{ border: '2px solid #161616', borderRadius: 10, padding: wide ? '8px 10px' : '10px 12px', boxShadow: '3px 3px 0 #E0E0E0', background: '#FFFFFF' }}>
@@ -232,7 +242,7 @@ export default function Infografia({ data, variant = 'wide' }: { data: Infografi
       <HandArrow size={wide ? 40 : 34} />
 
       {/* 3. APLICACIÓN PRÁCTICA */}
-      <SectionTitle label="Aplicación práctica" icon={IcoSteps} size={h2Size} />
+      <SectionTitle label="03 · Aplicación práctica" icon={IcoSteps} size={h2Size} />
       <div style={{ position: 'relative', display: 'grid', gridTemplateColumns: cols2, gap: wide ? '7px 16px' : '8px 12px' }}>
         {aplicaciones.map((a, i) => (
           <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
@@ -245,7 +255,7 @@ export default function Infografia({ data, variant = 'wide' }: { data: Infografi
       <HandArrow size={wide ? 40 : 34} />
 
       {/* 4. ORACIÓN MINISTERIAL */}
-      <SectionTitle label="Oración ministerial" icon={IcoPray} size={h2Size} />
+      <SectionTitle label="04 · Oración ministerial" icon={IcoPray} size={h2Size} />
       <div style={{ position: 'relative', border: '2px solid #0F62FE', borderRadius: 12, background: '#F4F4F4', padding: wide ? '11px 14px' : '12px 14px' }}>
         <div style={{ fontSize: bodySize, fontStyle: 'italic', lineHeight: 1.5, color: '#161616' }}>{resumir(data.oracion || '', 420)}</div>
       </div>
