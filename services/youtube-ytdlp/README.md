@@ -24,7 +24,8 @@ GET /health -> { "ok": true, "ytdlp": "2026.08.19" }
 | `YTDLP_EXTRA_ARGS` | Argumentos extra de yt-dlp | vacío |
 | `YTDLP_PROXY` | Proxy (`http://user:pass@host:port`) si YouTube bloquea la IP | vacío |
 | `YTDLP_COOKIES_BASE64` | `cookies.txt` en base64 (ayuda con videos restringidos) | vacío |
-| `TRANSCRIPT_SERVICE_TOKEN` | Token Bearer opcional | vacío |
+| `REQUIRE_AUTH` | `1`/`true` para exigir token (opt-in) | desactivado |
+| `TRANSCRIPT_SERVICE_TOKEN` | Token Bearer (solo si `REQUIRE_AUTH`) | vacío |
 
 ## Ejecutar en local
 

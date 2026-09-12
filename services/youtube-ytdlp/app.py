@@ -5,7 +5,7 @@ del video (--skip-download): NO descarga audio ni video.
 
 Contrato:
   GET /?videoId=ID&lang=es  ->  {"text": "...", "segments": [...], "lang": "es"}
-  Auth opcional: cabecera  Authorization: Bearer <TRANSCRIPT_SERVICE_TOKEN>
+  Auth: solo si REQUIRE_AUTH=1 -> cabecera Authorization: Bearer <TRANSCRIPT_SERVICE_TOKEN>
   Errores: 404 video no disponible | 422 sin subtítulos | 504 timeout
 """
 
@@ -22,6 +22,9 @@ from fastapi.responses import JSONResponse
 
 app = FastAPI(title="TeoDoc yt-dlp Transcript Service", version="1.0.0")
 
+# La autenticación es OPT-IN: solo se exige si REQUIRE_AUTH=1 y hay token.
+# Así, un TRANSCRIPT_SERVICE_TOKEN heredado no bloquea el servicio.
+REQUIRE_AUTH = os.environ.get("REQUIRE_AUTH", "").lower() in ("1", "true", "yes", "on")
 TOKEN = os.environ.get("TRANSCRIPT_SERVICE_TOKEN")
 YTDLP = os.environ.get("YTDLP_BIN", "yt-dlp")
 TIMEOUT = int(os.environ.get("YTDLP_TIMEOUT", "150"))
@@ -106,7 +109,7 @@ def subtitle_languages(preferred):
 
 @app.get("/")
 def transcript(request: Request, videoId: str = Query(...), lang: str = Query("es")):
-    if TOKEN and request.headers.get("authorization", "") != f"Bearer {TOKEN}":
+    if REQUIRE_AUTH and TOKEN and request.headers.get("authorization", "") != f"Bearer {TOKEN}":
         raise HTTPException(status_code=401, detail="unauthorized")
 
     with tempfile.TemporaryDirectory() as workdir:
