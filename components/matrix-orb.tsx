@@ -10,8 +10,28 @@ export type MatrixOrbProps = React.ComponentProps<'div'> & {
   level?: number
   size?: number
   color?: string
+  /** Paleta multicolor opcional (p. ej. procesando). Fluye lentamente por los puntos. */
+  colors?: string[]
+  /** Cuando es false, dibuja un cuadro estático y detiene el bucle (ahorra CPU). */
+  active?: boolean
   dots?: number
   labels?: Partial<Record<MatrixOrbState, string>>
+}
+
+function hexToTriple(hex: string): [number, number, number] {
+  let h = (hex || '').replace('#', '').trim()
+  if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2]
+  const n = parseInt(h, 16)
+  if (h.length !== 6 || Number.isNaN(n)) return [15, 98, 254]
+  return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
+}
+
+function mixHex(a: string, b: string, t: number): string {
+  const A = hexToTriple(a)
+  const B = hexToTriple(b)
+  return `rgb(${Math.round(A[0] + (B[0] - A[0]) * t)}, ${Math.round(
+    A[1] + (B[1] - A[1]) * t,
+  )}, ${Math.round(A[2] + (B[2] - A[2]) * t)})`
 }
 
 const TAU = Math.PI * 2
@@ -99,6 +119,8 @@ const MatrixOrb = ({
   level,
   size = 240,
   color,
+  colors,
+  active = true,
   dots = 11,
   labels,
   className,
@@ -107,13 +129,15 @@ const MatrixOrb = ({
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const stateRef = useRef(state)
   const levelRef = useRef(level)
+  const colorsRef = useRef(colors)
   const redrawRef = useRef<(() => void) | null>(null)
   const dpr = useDevicePixelRatio()
 
   useEffect(() => {
     stateRef.current = state
     levelRef.current = level
-  }, [state, level])
+    colorsRef.current = colors
+  }, [state, level, colors])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -133,6 +157,19 @@ const MatrixOrb = ({
     const weights: Record<MatrixOrbState, number> = { idle: 0, listening: 0, thinking: 0 }
     weights[stateRef.current] = 1
 
+    // LUT de color precalculada: evita mezclar/crear strings por punto y frame.
+    const LUT_STEPS = 64
+    const palette = Array.isArray(colorsRef.current) ? colorsRef.current : []
+    const colorLut: string[] = []
+    if (palette.length > 1) {
+      for (let s = 0; s < LUT_STEPS; s++) {
+        const f = (s / LUT_STEPS) * palette.length
+        const i0 = Math.floor(f) % palette.length
+        const i1 = (i0 + 1) % palette.length
+        colorLut.push(mixHex(palette[i0], palette[i1], f - Math.floor(f)))
+      }
+    }
+
     const levelAt = (t: number) => {
       const v = levelRef.current
       return v === undefined || !Number.isFinite(v)
@@ -141,8 +178,9 @@ const MatrixOrb = ({
     }
 
     const draw = (t: number, amplitude: number, scale: number) => {
-      // El color sigue al estado sin reiniciar el bucle (Carbon: blue/purple).
-      ctx.fillStyle = color ?? STATE_COLOR[stateRef.current]
+      // El color sigue al estado sin reiniciar el bucle. En "thinking" una
+      // paleta fluye lentamente por los puntos (azul/cian/púrpura).
+      const usePalette = stateRef.current === 'thinking' && colorLut.length > 0
       ctx.clearRect(0, 0, size, size)
 
       for (let iy = 0; iy < grid; iy++) {
@@ -151,6 +189,15 @@ const MatrixOrb = ({
           const ny = (iy - half) / half
           const d = Math.hypot(nx, ny)
           if (d > 1.12) continue
+
+          if (usePalette) {
+            const phase =
+              ((t * 0.12 + (nx + ny + 2) * 0.16) % palette.length + palette.length) % palette.length
+            const idx = Math.min(colorLut.length - 1, Math.floor((phase / palette.length) * colorLut.length))
+            ctx.fillStyle = colorLut[idx]
+          } else {
+            ctx.fillStyle = color ?? STATE_COLOR[stateRef.current]
+          }
 
           let blended = 0
           for (const s of STATES) {
@@ -179,7 +226,7 @@ const MatrixOrb = ({
       typeof window.matchMedia === 'function' &&
       window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
-    if (reduce) {
+    if (reduce || !active) {
       redrawRef.current = () => {
         const current = stateRef.current
         for (const s of STATES) weights[s] = s === current ? 1 : 0
@@ -224,7 +271,7 @@ const MatrixOrb = ({
     return () => cancelAnimationFrame(raf)
     // `state`/`color` fuera de las deps: el bucle re-apunta, no se reinicia.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [size, dots, dpr])
+  }, [size, dots, dpr, active])
 
   useEffect(() => {
     redrawRef.current?.()

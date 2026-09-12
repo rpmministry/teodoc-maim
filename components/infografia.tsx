@@ -213,7 +213,8 @@ export default function Infografia({ data, variant = 'wide' }: { data: Infografi
   const textoPasaje = primerVersiculo?.texto || data.infografia?.texto_clave || ''
   const contexto = data.infografia?.contexto_breve || ''
   const fraseCorta = data.infografia?.frase_corta || ''
-  const puntos = (data.desarrollo_progresivo || []).slice(0, 9)
+  // Sin límite de diseño: el tope es solo una salvaguarda ante datos anómalos.
+  const puntos = (data.desarrollo_progresivo || []).slice(0, 12)
   const aplicaciones = (data.aplicacion || []).slice(0, 8)
   const palabrasClave = Array.from(new Set(
     (data.desarrollo_progresivo || [])
@@ -224,7 +225,12 @@ export default function Infografia({ data, variant = 'wide' }: { data: Infografi
   const fecha = new Date().toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' })
 
   // Columnas de los puntos según la cantidad real (evita filas huérfanas).
-  const pointCols: 1 | 2 | 3 = variant === 'compact' ? 1 : (puntos.length > 0 && puntos.length % 3 === 0 ? 3 : 2)
+  const pointCols: 1 | 2 | 3 =
+    variant === 'compact' || puntos.length <= 1
+      ? 1
+      : puntos.length % 3 === 0
+        ? 3
+        : 2
   const band: React.CSSProperties = { position: 'relative', padding: `${cfg.bandY}px ${cfg.pad}px` }
   const gridCols = pointCols === 3 ? '1fr 1fr 1fr' : pointCols === 2 ? '1fr 1fr' : '1fr'
   const rutaAplicacion: Array<[string, (s: number, c: string) => React.ReactNode]> = [

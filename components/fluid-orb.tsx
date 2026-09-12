@@ -1,10 +1,12 @@
 'use client'
 
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { cn } from '@/lib/utils'
 
 export type FluidOrbProps = React.ComponentProps<'div'> & {
   color?: string
+  /** Cuando es false, dibuja un cuadro estático y detiene el bucle (ahorra GPU). */
+  active?: boolean
 }
 
 const VERT = `
@@ -106,9 +108,12 @@ function compile(gl: WebGLRenderingContext, type: number, src: string) {
   return shader
 }
 
-const FluidOrb = ({ color = '#1A73F2', className, style, ...props }: FluidOrbProps) => {
+const FluidOrb = ({ color = '#1A73F2', active = true, className, style, ...props }: FluidOrbProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const wrapRef = useRef<HTMLDivElement>(null)
+  // Si WebGL no está disponible (o se pierde el contexto) el orbe NO debe
+  // desaparecer: se recurre a una esfera CSS con el mismo lenguaje visual.
+  const [webglOk, setWebglOk] = useState(true)
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -116,23 +121,40 @@ const FluidOrb = ({ color = '#1A73F2', className, style, ...props }: FluidOrbPro
     if (!canvas || !wrap) return
 
     const gl = canvas.getContext('webgl', { antialias: true, alpha: true })
-    if (!gl) return
+    if (!gl) {
+      setWebglOk(false)
+      return
+    }
+
+    const onContextLost = (event: Event) => {
+      event.preventDefault()
+      setWebglOk(false)
+    }
+    canvas.addEventListener('webglcontextlost', onContextLost)
 
     const program = gl.createProgram()
     const vert = compile(gl, gl.VERTEX_SHADER, VERT)
     const frag = compile(gl, gl.FRAGMENT_SHADER, FRAG)
-    if (!program || !vert || !frag) return
+    if (!program || !vert || !frag) {
+      setWebglOk(false)
+      return
+    }
 
     gl.attachShader(program, vert)
     gl.attachShader(program, frag)
     gl.linkProgram(program)
     if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
       console.error(gl.getProgramInfoLog(program))
+      setWebglOk(false)
       return
     }
     gl.useProgram(program)
 
     const buffer = gl.createBuffer()
+    if (!buffer) {
+      setWebglOk(false)
+      return
+    }
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer)
     gl.bufferData(
       gl.ARRAY_BUFFER,
@@ -147,7 +169,21 @@ const FluidOrb = ({ color = '#1A73F2', className, style, ...props }: FluidOrbPro
     const uTime = gl.getUniformLocation(program, 'u_time')
     gl.uniform3f(gl.getUniformLocation(program, 'u_color'), ...hexToRgb(color))
 
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const loseContext = gl.getExtension('WEBGL_lose_context')
+    const start = performance.now()
+    let raf = 0
+    let lastNow = start
+
+    const drawFrame = (now: number) => {
+      lastNow = now
+      gl.uniform1f(uTime, reduce ? 0 : (now - start) / 1000)
+      gl.drawArrays(gl.TRIANGLES, 0, 6)
+    }
+
     // Resolución según el tamaño real del contenedor (responsive) con DPR acotado.
+    // Al cambiar el tamaño el canvas se limpia: redibujamos de inmediato para que
+    // el orbe no quede en blanco cuando no hay bucle (reduced-motion o inactivo).
     const resize = () => {
       const dpr = Math.min(window.devicePixelRatio || 1, 2)
       const rect = wrap.getBoundingClientRect()
@@ -158,6 +194,7 @@ const FluidOrb = ({ color = '#1A73F2', className, style, ...props }: FluidOrbPro
         canvas.height = px
         gl.viewport(0, 0, px, px)
         gl.uniform2f(uResolution, px, px)
+        drawFrame(lastNow)
       }
     }
     resize()
@@ -170,20 +207,16 @@ const FluidOrb = ({ color = '#1A73F2', className, style, ...props }: FluidOrbPro
       window.addEventListener('resize', resize)
     }
 
-    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    const loseContext = gl.getExtension('WEBGL_lose_context')
-    const start = performance.now()
-    let raf = 0
-
     const render = (now: number) => {
-      gl.uniform1f(uTime, reduce ? 0 : (now - start) / 1000)
-      gl.drawArrays(gl.TRIANGLES, 0, 6)
-      if (!reduce) raf = requestAnimationFrame(render)
+      drawFrame(now)
+      // Solo anima la capa activa (la otra se congela mientras se desvanece).
+      if (!reduce && active) raf = requestAnimationFrame(render)
     }
     render(start)
 
     return () => {
       cancelAnimationFrame(raf)
+      canvas.removeEventListener('webglcontextlost', onContextLost)
       if (ro) ro.disconnect()
       else window.removeEventListener('resize', resize)
       gl.deleteProgram(program)
@@ -192,7 +225,7 @@ const FluidOrb = ({ color = '#1A73F2', className, style, ...props }: FluidOrbPro
       gl.deleteBuffer(buffer)
       if (loseContext) loseContext.loseContext()
     }
-  }, [color])
+  }, [color, active])
 
   return (
     <div
@@ -203,6 +236,18 @@ const FluidOrb = ({ color = '#1A73F2', className, style, ...props }: FluidOrbPro
       {...props}
     >
       <canvas ref={canvasRef} className="h-full w-full" />
+      {!webglOk ? (
+        <div
+          aria-hidden
+          className="absolute inset-0 rounded-full"
+          style={{
+            background:
+              'radial-gradient(circle at 50% 36%, #ffffff 0%, #e8f1ff 18%, #a6c8ff 42%, #3c82ff 68%, #0f62fe 86%, #0043ce 100%)',
+            boxShadow: 'inset -12px -20px 44px rgba(0, 45, 156, 0.35), 0 0 60px rgba(15, 98, 254, 0.35)',
+            animation: 'orbe-glow 4s ease-in-out infinite',
+          }}
+        />
+      ) : null}
     </div>
   )
 }

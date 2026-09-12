@@ -1,24 +1,43 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
 import FluidOrb from '@/components/fluid-orb'
 import MatrixOrb from '@/components/matrix-orb'
-import type { LiquidOrbState } from '@/lib/liquid-orb-seeds'
+
+export type OrbState = 'idle' | 'thinking' | 'error'
+
+export type LiquidOrbHandle = {
+  /** Abre el selector de archivos (usado por el botón "Subir otro audio"). */
+  abrirSelector: () => void
+}
 
 type LiquidOrbProps = {
-  state: LiquidOrbState
+  state: OrbState
   progress?: number
   disabled?: boolean
   onFile: (file: File) => void
 }
 
-export default function LiquidOrb({ state, progress = 0, disabled = false, onFile }: LiquidOrbProps) {
+// Paleta de procesamiento: azul dominante con cian y púrpura (transición fluida).
+const THINKING_COLORS = ['#0f62fe', '#08bdba', '#a56eff', '#0043ce']
+
+const LiquidOrb = forwardRef<LiquidOrbHandle, LiquidOrbProps>(function LiquidOrb(
+  { state, progress = 0, disabled = false, onFile },
+  ref,
+) {
   const inputRef = useRef<HTMLInputElement>(null)
   const onFileRef = useRef(onFile)
   const lastKeyRef = useRef<string | null>(null)
   const [dragging, setDragging] = useState(false)
   const [orbSize, setOrbSize] = useState(240)
   const thinking = state === 'thinking'
+  const errorState = state === 'error'
+
+  useImperativeHandle(ref, () => ({
+    abrirSelector: () => {
+      if (!disabled) inputRef.current?.click()
+    },
+  }), [disabled])
 
   useEffect(() => { onFileRef.current = onFile }, [onFile])
   useEffect(() => { if (!disabled) lastKeyRef.current = null }, [disabled])
@@ -90,7 +109,7 @@ export default function LiquidOrb({ state, progress = 0, disabled = false, onFil
     <div className="flex flex-col items-center gap-2 sm:gap-3 select-none">
       <div
         className="relative"
-        style={{ width: orbSize, height: orbSize }}
+        style={{ width: orbSize, height: orbSize, transition: 'width .5s ease, height .5s ease' }}
         onDragOver={(event) => { event.preventDefault(); if (!disabled) setDragging(true) }}
         onDragEnter={(event) => { event.preventDefault(); if (!disabled) setDragging(true) }}
         onDragLeave={(event) => { event.preventDefault(); setDragging(false) }}
@@ -105,21 +124,39 @@ export default function LiquidOrb({ state, progress = 0, disabled = false, onFil
           }
         }}
       >
-        {/* Pantalla principal: orbe anterior (FluidOrb). Análisis: MatrixOrb. */}
-        {thinking ? (
+        {/* Estado en reposo: orbe líquido (FluidOrb). */}
+        <div
+          className="absolute inset-0 transition-opacity duration-700 ease-out"
+          style={{ opacity: thinking ? 0 : 1 }}
+        >
+          <FluidOrb className="w-full h-full pointer-events-none" color="#0f62fe" active={!thinking} />
+        </div>
+
+        {/* Estado procesando: orbe multicolor (MatrixOrb). */}
+        <div
+          className="absolute inset-0 flex items-center justify-center transition-opacity duration-700 ease-out"
+          style={{ opacity: thinking ? 1 : 0 }}
+        >
           <MatrixOrb
-            state="thinking"
-            color="#a56eff"
+            state={thinking ? 'thinking' : 'idle'}
+            colors={THINKING_COLORS}
+            active={thinking}
             size={orbSize}
             labels={{ idle: '', listening: '', thinking: '' }}
             className="pointer-events-none"
           />
-        ) : (
-          <FluidOrb
-            className="absolute inset-0 w-full h-full pointer-events-none"
-            color="#0f62fe"
-          />
-        )}
+        </div>
+
+        {/* Estado error: tratamiento sobrio (atenuado + anillo ámbar, sin pulso). */}
+        <div
+          aria-hidden
+          className="absolute inset-0 rounded-full pointer-events-none transition-opacity duration-500"
+          style={{
+            opacity: errorState ? 1 : 0,
+            background: 'radial-gradient(circle at 50% 50%, rgba(22,22,22,0.55), rgba(22,22,22,0.8))',
+            boxShadow: 'inset 0 0 0 2px rgba(241,194,27,0.55)',
+          }}
+        />
 
         <input
           ref={inputRef}
@@ -148,4 +185,6 @@ export default function LiquidOrb({ state, progress = 0, disabled = false, onFil
       </div>
     </div>
   )
-}
+})
+
+export default LiquidOrb

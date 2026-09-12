@@ -1,11 +1,12 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
-import LiquidOrb from '@/components/liquid-orb';
+import LiquidOrb, { type LiquidOrbHandle } from '@/components/liquid-orb';
 import Infografia, { ResponsiveInfografia, resumir, exportarInfografiaPng } from '@/components/infografia';
 
 interface Versiculo { cita: string; texto: string; }
 interface PuntoDesarrollo { punto: string; explicacion: string; versiculos: Versiculo[]; }
 interface DatosInfografia { frase_corta: string; texto_clave: string; contexto_breve: string; }
+type AvisoAudio = 'corto' | 'no_relacionado';
 interface PredicaAnalisis {
   titulo: string; idea_principal: string;
   infografia?: DatosInfografia;
@@ -46,8 +47,25 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [versoIndex, setVersoIndex] = useState(0);
   const [descargando, setDescargando] = useState(false);
+  const [avisoAudio, setAvisoAudio] = useState<AvisoAudio | null>(null);
 
   const infografiaRef = useRef<HTMLDivElement>(null);
+  const orbRef = useRef<LiquidOrbHandle>(null);
+
+  // Mensajes breves que acompañan el procesamiento (uno a la vez).
+  const mensajesAnalisis = [
+    'Preparando el contenido...',
+    'Analizando la enseñanza...',
+    'Identificando las ideas principales...',
+    'Organizando el estudio bíblico...',
+    'Preparando la aplicación práctica...',
+  ];
+  const mensajeAnalisis =
+    progress < 35 ? mensajesAnalisis[0]
+    : progress < 55 ? mensajesAnalisis[1]
+    : progress < 75 ? mensajesAnalisis[2]
+    : progress < 92 ? mensajesAnalisis[3]
+    : mensajesAnalisis[4];
 
   // Carrusel de versículos: rota mientras se procesa el análisis.
   useEffect(() => {
@@ -82,6 +100,7 @@ export default function Home() {
       if (dx > 70 && dy < 70) {
         setResultado(null);
         setError(null);
+        setAvisoAudio(null);
         setProgress(0);
         setLoading(false);
       }
@@ -120,6 +139,8 @@ export default function Home() {
   // Flujo "zero-friction": en cuanto se recibe el archivo (clic o drag&drop)
   // se valida y arranca el pipeline de inmediato. No hay confirmación ni tarjeta.
   const procesarArchivo = async (file: File) => {
+    // Se limpia siempre, incluso si el archivo no pasa la validación de formato.
+    setAvisoAudio(null);
     const errMsg = validarArchivo(file);
     if (errMsg) {
       setError(errMsg);
@@ -256,8 +277,36 @@ export default function Home() {
       }
       const dataTranscribe = await resTranscribe.json();
       const textoTranscrito = dataTranscribe.text;
-      
-      setProgress(50);
+
+      setProgress(48);
+
+      // Validación previa: ¿hay contenido suficiente y afín al propósito de
+      // TeoDoc? Filtro leniente; si la validación falla, NO bloqueamos.
+      let audioValido = true;
+      let motivo: AvisoAudio = 'corto';
+      try {
+        const resValida = await fetch('/api/validate', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: textoTranscrito }),
+        });
+        if (resValida.ok) {
+          const dataValida = await resValida.json();
+          if (dataValida && dataValida.valido === false) {
+            audioValido = false;
+            motivo = dataValida.motivo === 'no_relacionado' ? 'no_relacionado' : 'corto';
+          }
+        }
+      } catch {
+        // Sin validación disponible: continuamos con el análisis normal.
+      }
+
+      if (!audioValido) {
+        setAvisoAudio(motivo);
+        setLoading(false);
+        setProgress(0);
+        return;
+      }
+
+      setProgress(52);
       timerAnalyze = setInterval(() => {
         setProgress((prev) => prev >= 98 ? 98 : prev + Math.max(1, Math.floor((99 - prev) * 0.05)));
       }, 1000);
@@ -291,8 +340,18 @@ export default function Home() {
   const nuevoAnalisis = () => {
     setResultado(null);
     setError(null);
+    setAvisoAudio(null);
     setProgress(0);
     setLoading(false);
+  };
+
+  // El aviso de audio no válido se limpia y se abre el selector de inmediato.
+  const reintentarAudio = () => {
+    setAvisoAudio(null);
+    setError(null);
+    setProgress(0);
+    setLoading(false);
+    orbRef.current?.abrirSelector();
   };
 
   // C. Export PNG: parte del artboard FIJO de 900px (independiente del
@@ -601,14 +660,14 @@ export default function Home() {
     <div className="app-shell bg-[#161616] text-[#f4f4f4] font-sans flex flex-col relative">
       {/* HEADER — IBM Carbon */}
       <header className="shrink-0 w-full bg-[#161616] border-b border-[#393939] z-20 relative" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
-        <div className="shell-container h-12 flex items-center justify-between">
+        <div className="shell-container h-14 sm:h-16 flex items-center justify-between">
         <button
           type="button"
           onClick={nuevoAnalisis}
-          className="flex items-center gap-3 min-w-0 hover:opacity-80 transition-opacity"
+          className="flex items-center gap-3 min-w-0 hover:opacity-90 transition-opacity"
           aria-label="Volver al inicio"
         >
-          <svg viewBox="0 0 64 64" className="w-6 h-6 shrink-0" aria-hidden="true">
+          <svg viewBox="0 0 64 64" className="w-8 h-8 sm:w-10 sm:h-10 shrink-0 drop-shadow-[0_0_10px_rgba(15,98,254,0.45)]" aria-hidden="true">
             <defs>
               <radialGradient id="tdOrb" cx="50%" cy="36%" r="68%">
                 <stop offset="0%" stopColor="#a6c8ff" />
@@ -619,7 +678,9 @@ export default function Home() {
             <circle cx="32" cy="32" r="22" fill="url(#tdOrb)" />
             <path d="M14 34.5c5.4-3.2 10.3-3.2 15.6 0 5.2 3.1 9.7 1.6 13.4-1.2" stroke="#ffffff" strokeOpacity="0.9" strokeWidth="2.4" strokeLinecap="round" fill="none" />
           </svg>
-          <span className="text-sm font-semibold tracking-wide text-[#f4f4f4] truncate">TeoDoc</span>
+          <span className="text-lg sm:text-xl font-bold tracking-tight text-[#f4f4f4] truncate">
+            Teo<span className="text-[#78a9ff]">Doc</span>
+          </span>
         </button>
 
         <div className="flex items-center gap-1 sm:gap-2 shrink-0">
@@ -658,7 +719,8 @@ export default function Home() {
         {!resultado && (
           <div className="z-20 relative">
             <LiquidOrb
-              state={loading ? 'thinking' : 'idle'}
+              ref={orbRef}
+              state={loading ? 'thinking' : (error || avisoAudio) ? 'error' : 'idle'}
               progress={progress}
               disabled={loading}
               onFile={procesarArchivo}
@@ -669,8 +731,9 @@ export default function Home() {
         {/* BARRA DE PROGRESO — IBM Carbon */}
         {loading && (
           <div className="mt-5 sm:mt-6 w-full max-w-md">
-            <div className="mb-2">
-              <span className="text-xs text-[#c6c6c6]">Procesando prédica</span>
+            <div className="mb-2 flex items-center gap-2" aria-live="polite">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#0f62fe] animate-pulse" aria-hidden="true" />
+              <span className="text-xs text-[#c6c6c6]">{mensajeAnalisis}</span>
             </div>
             <div
               className="cds-progressbar__track"
@@ -700,6 +763,27 @@ export default function Home() {
           <div className="mt-8 w-full max-w-md border-l-4 border-[#0f62fe] bg-[#262626] px-4 py-3 text-sm text-[#f4f4f4]">
             <p className="font-semibold mb-1">🕊️ Un momento</p>
             <p className="text-[#c6c6c6]">{error}</p>
+          </div>
+        )}
+
+        {/* AUDIO NO VÁLIDO — mensaje humano y acción para reintentar */}
+        {!loading && !resultado && avisoAudio && (
+          <div className="mt-8 w-full max-w-lg border-l-4 border-[#f1c21b] bg-[#262626] px-5 py-5 text-sm text-[#f4f4f4] animate-fade-in">
+            <p className="font-semibold mb-2">🕊️ Aún no podemos analizar este audio</p>
+            <p className="text-[#c6c6c6] leading-relaxed">
+              {avisoAudio === 'no_relacionado'
+                ? 'Parece que el audio trata un tema diferente al propósito de TeoDoc.'
+                : 'Parece que este audio no contiene suficiente contenido para realizar un análisis significativo. Puede ser muy corto, silencio o un audio accidental.'}
+            </p>
+            <p className="text-[#c6c6c6] leading-relaxed mt-2">
+              Te invitamos a subir una prédica, enseñanza, conferencia o contenido relacionado con la fe cristiana evangélica para poder ayudarte con el análisis.
+            </p>
+            <button
+              onClick={reintentarAudio}
+              className="mt-4 h-10 px-5 text-sm font-medium text-white bg-[#0f62fe] hover:bg-[#0353e9] transition-colors"
+            >
+              Subir otro audio
+            </button>
           </div>
         )}
 

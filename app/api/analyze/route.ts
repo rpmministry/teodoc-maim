@@ -1,19 +1,17 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { GoogleGenAI, Type } from '@google/genai';
+import { Type } from '@google/genai';
 import { NextRequest, NextResponse } from 'next/server';
+import { delay, extraerJSON, generarJsonConGemini } from '@/lib/ai-gemini';
 
 export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
-function extraerJSON(texto: string) {
-  let limpio = texto.trim();
-  if (limpio.startsWith('```json')) limpio = limpio.replace(/^```json/, '').replace(/```$/, '').trim();
-  else if (limpio.startsWith('```')) limpio = limpio.replace(/^```/, '').replace(/```$/, '').trim();
-  return JSON.parse(limpio);
-}
+const REGLA_PUNTOS = `REGLA DE LOS PUNTOS PRINCIPALES (campo "desarrollo_progresivo"):
+- La cantidad de puntos debe surgir del CONTENIDO REAL: identifica cuántas ideas o movimientos principales enseña verdaderamente la prédica.
+- Puede haber 2, 3, 4, 5, 6, 7 o más puntos según el contenido. NO asumas 3 y NO fuerces una cantidad fija.
+- NO agregues puntos para completar un número. NO dividas una misma idea para tener más. NO fusiones ideas distintas para tener menos.
+- La duración del audio NO determina el número de puntos; lo determina la cantidad de ideas principales.
+- Cada punto debe ser una idea sustantiva, distinta y fiel a la enseñanza.`;
 
 const SYSTEM_PROMPT = `Eres un analista teológico conservador. Analiza la transcripción de la prédica y devuelve ÚNICAMENTE un objeto JSON válido (sin markdown fuera del JSON) con esta estructura exacta:
     {
@@ -24,9 +22,9 @@ const SYSTEM_PROMPT = `Eres un analista teológico conservador. Analiza la trans
       "aplicacion": ["...", "..."],
       "oracion": "..."
     }
-    Usa Reina-Valera 1960 para todos los versículos bíblicos.`;
+    Usa Reina-Valera 1960 para todos los versículos bíblicos.
+    ${REGLA_PUNTOS}`;
 
-const MODELOS_GEMINI = ['gemini-3.7-flash', 'gemini-3.6-flash'];
 const MODELOS_OPENROUTER_DEFAULT = ['google/gemini-2.0-flash-exp:free', 'qwen/qwen-2.5-72b-instruct:free'];
 
 const SCHEMA_CONFIG = {
@@ -44,31 +42,13 @@ const SCHEMA_CONFIG = {
 
 // Motor principal: Gemini (contexto amplio y respuesta rápida con salida JSON).
 async function analizarConGemini(text: string): Promise<any | null> {
-  for (const modelo of MODELOS_GEMINI) {
-    for (let i = 0; i < 2; i++) {
-      try {
-        const response = await ai.models.generateContent({
-          model: modelo,
-          contents: [{ text: `Analiza esta transcripción de prédica y extrae el desglose teológico completo en JSON:\n\n${text}` }],
-          config: {
-            systemInstruction: 'Eres un analista teológico conservador. Usa Reina-Valera 1960. Devuelve un JSON estrictamente estructurado.',
-            responseMimeType: 'application/json',
-            responseSchema: SCHEMA_CONFIG,
-          },
-        });
-        if (response && response.text) return extraerJSON(response.text);
-      } catch (err: any) {
-        const msg = err?.message || '';
-        console.warn(`[Gemini Falló - ${modelo}]:`, msg);
-        if ((msg.includes('429') || msg.includes('503')) && i === 0) {
-          await delay(1200);
-          continue;
-        }
-        break; // pasa al siguiente modelo
-      }
-    }
-  }
-  return null;
+  return generarJsonConGemini({
+    contents: `Analiza esta transcripción de prédica y extrae el desglose teológico completo en JSON:\n\n${text}`,
+    systemInstruction: `Eres un analista teológico conservador. Usa Reina-Valera 1960. Devuelve un JSON estrictamente estructurado. ${REGLA_PUNTOS}`,
+    responseSchema: SCHEMA_CONFIG,
+    retryDelayMs: 1200,
+    onError: (modelo, msg) => console.warn(`[Gemini Falló - ${modelo}]:`, msg),
+  });
 }
 
 // Respaldo: OpenRouter con modelos gratuitos.
