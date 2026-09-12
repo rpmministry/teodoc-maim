@@ -314,8 +314,8 @@ export default function Home() {
   return (
     <div className="app-shell bg-[#161616] text-[#f4f4f4] font-sans flex flex-col relative">
       {/* HEADER — IBM Carbon */}
-      <header className="w-full h-12 bg-[#161616] border-b border-[#393939] z-10 relative">
-        <div className="shell-container h-full flex items-center justify-between">
+      <header className="shrink-0 w-full bg-[#161616] border-b border-[#393939] z-20 relative" style={{ paddingTop: 'env(safe-area-inset-top)' }}>
+        <div className="shell-container h-12 flex items-center justify-between">
         <div className="flex items-center gap-3 min-w-0">
           <svg viewBox="0 0 64 64" className="w-6 h-6 shrink-0" aria-hidden="true">
             <defs>
@@ -331,26 +331,18 @@ export default function Home() {
           <span className="text-sm font-semibold tracking-wide text-[#f4f4f4] truncate">TeoDoc</span>
         </div>
 
-        <div className="flex items-center gap-1 sm:gap-2">
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           <button
             onClick={() => setShowFeedbackModal(true)}
-            className="h-8 px-3 text-sm text-[#f4f4f4] hover:bg-[#353535] transition-colors"
+            className="h-8 px-3 inline-flex items-center text-sm text-[#f4f4f4] hover:bg-[#353535] transition-colors whitespace-nowrap"
           >
             Sugerencias
           </button>
           <a
-            href="https://collection.cloudinary.com/antbfat3/ee4582aa2bac515291b5d02c058e9c4d"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="h-8 px-3 inline-flex items-center text-sm text-[#f4f4f4] hover:bg-[#353535] transition-colors"
-          >
-            Manual
-          </a>
-          <a
             href="https://www.paypal.com/ncp/payment/ZTLTVMRR95J2C"
             target="_blank"
             rel="noopener noreferrer"
-            className="h-8 px-4 inline-flex items-center text-sm font-medium text-white bg-[#0f62fe] hover:bg-[#0353e9] transition-colors"
+            className="h-8 px-4 inline-flex items-center text-sm font-medium text-white bg-[#0f62fe] hover:bg-[#0353e9] transition-colors whitespace-nowrap"
           >
             Apoyar
           </a>
@@ -358,7 +350,8 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="shell-container flex-1 flex flex-col items-center justify-center z-10 py-8 sm:py-12 relative">
+      <main className="app-content w-full z-10">
+        <div className="shell-container flex flex-col items-center justify-start py-8 sm:py-12">
         {/* HERO — Carbon */}
         {!resultado && (
           <div className="text-center mb-8 sm:mb-12">
@@ -379,6 +372,26 @@ export default function Home() {
               disabled={loading}
               onFile={procesarArchivo}
             />
+          </div>
+        )}
+
+        {/* BARRA DE PROGRESO — IBM Carbon */}
+        {loading && (
+          <div className="mt-8 sm:mt-10 w-full max-w-md">
+            <div className="flex items-end justify-between mb-2">
+              <span className="text-xs text-[#c6c6c6]">Procesando prédica</span>
+              <span className="text-xs text-[#c6c6c6] tabular-nums">{progress}%</span>
+            </div>
+            <div
+              className="cds-progressbar__track"
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={progress}
+              aria-label="Progreso del análisis"
+            >
+              <div className="cds-progressbar__bar" style={{ width: `${progress}%` }} />
+            </div>
           </div>
         )}
 
@@ -541,12 +554,13 @@ export default function Home() {
             )}
           </div>
         )}
+        </div>
       </main>
 
       {/* MODAL DE SUGERENCIAS */}
       {showFeedbackModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
-          <div className="bg-[#262626] border border-[#393939] p-6 sm:p-8 w-full max-w-md relative">
+          <div className="bg-[#262626] border border-[#393939] p-6 sm:p-8 w-full max-w-md relative max-h-[90dvh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6 relative z-10">
               <h3 className="text-lg font-semibold text-[#f4f4f4]">Enviar sugerencia</h3>
               <button onClick={() => setShowFeedbackModal(false)} className="text-[#c6c6c6] hover:text-[#f4f4f4] hover:bg-[#353535] p-2 transition-colors">
@@ -582,7 +596,7 @@ export default function Home() {
       )}
 
       {/* FOOTER PERFECTAMENTE VISIBLE Y ELEVADO */}
-      <footer className="w-full border-t border-[#393939] bg-[#161616] z-20 mt-auto">
+      <footer className="shrink-0 w-full border-t border-[#393939] bg-[#161616] z-20">
         <div className="shell-container shell-safe-bottom flex flex-col items-center justify-center pt-6 text-[11px] text-[#a8a8a8] font-normal tracking-wide gap-1">
           <p className="text-[#c6c6c6]">Versión 1.1 Beta</p>
           <p>Desarrollado por Mauricio Andrade Luna</p>
