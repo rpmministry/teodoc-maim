@@ -24,84 +24,96 @@ const promesasBiblicas = [
   { cita: 'Salmos 23:1', texto: 'Jehová es mi pastor; nada me faltará.' },
 ];
 
-// --- Infografía: íconos dibujados a mano (trazo de tinta + acento azul) ---
-const ICON = { fill: 'none', stroke: '#161616', strokeWidth: 2.2, strokeLinecap: 'round', strokeLinejoin: 'round' } as const;
+// --- Infografía: iconografía dibujada a mano (trazo de tinta + acento azul) ---
+const ICON = { fill: 'none', stroke: '#161616', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' } as const;
 
-const THEME_ICONS = [
-  (
-    <svg key="t0" width="38" height="38" viewBox="0 0 24 24" {...ICON}>
-      <circle cx="12" cy="12" r="8" />
-      <circle cx="12" cy="12" r="3.2" stroke="#0F62FE" />
-      <path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22" />
-    </svg>
-  ),
-  (
-    <svg key="t1" width="38" height="38" viewBox="0 0 24 24" {...ICON}>
-      <path d="M9 18h6M10 21h4" />
-      <path d="M12 3a6 6 0 0 0-3.5 10.9c.7.5 1 1.2 1 2.1h5c0-.9.3-1.6 1-2.1A6 6 0 0 0 12 3z" />
-      <path d="M12 11v1" stroke="#0F62FE" />
-    </svg>
-  ),
-  (
-    <svg key="t2" width="38" height="38" viewBox="0 0 24 24" {...ICON}>
-      <path d="M12 21c-1.6-1.3-7-5.1-7-9.3A3.9 3.9 0 0 1 12 9a3.9 3.9 0 0 1 7-2.3c0 4.2-5.4 8-7 14.3z" stroke="#0F62FE" />
-    </svg>
-  ),
-];
-
-const BOOK_ICON = (
-  <svg width="26" height="26" viewBox="0 0 24 24" {...ICON} style={{ flexShrink: 0 }}>
+const IcoCross = (
+  <svg width="22" height="22" viewBox="0 0 24 24" {...ICON}><path d="M12 3.5v17M6.5 9h11" /></svg>
+);
+const IcoBible = (
+  <svg width="24" height="24" viewBox="0 0 24 24" {...ICON}>
     <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H19v15H6.5A2.5 2.5 0 0 0 4 20.5z" />
     <path d="M4 5.5v15" stroke="#0F62FE" />
-    <path d="M8 7.5h7M8 10.5h7" />
+    <path d="M11.5 7v5M9 9.5h5" />
+  </svg>
+);
+const IcoScroll = (
+  <svg width="24" height="24" viewBox="0 0 24 24" {...ICON}>
+    <path d="M6 4h11a2 2 0 0 1 2 2v12H8a2 2 0 0 0-2 2z" />
+    <path d="M6 4a2 2 0 0 0-2 2v1h2" stroke="#0F62FE" />
+    <path d="M9 9h7M9 12h7" />
+  </svg>
+);
+const IcoLamp = (
+  <svg width="24" height="24" viewBox="0 0 24 24" {...ICON}>
+    <path d="M9 18h6M10 21h4" />
+    <path d="M12 3a6 6 0 0 0-3.5 10.9c.7.5 1 1.2 1 2.1h5c0-.9.3-1.6 1-2.1A6 6 0 0 0 12 3z" />
+    <path d="M12 11v1.5" stroke="#0F62FE" />
+  </svg>
+);
+const IcoPath = (
+  <svg width="24" height="24" viewBox="0 0 24 24" {...ICON}>
+    <path d="M5 19c6 0 4-7 9-7s5-5 5-9" />
+    <circle cx="5" cy="19" r="1.6" stroke="#0F62FE" />
+    <path d="M19 3l-2.2 3h4.4z" fill="#0F62FE" stroke="none" />
+  </svg>
+);
+const IcoSeed = (
+  <svg width="24" height="24" viewBox="0 0 24 24" {...ICON}>
+    <path d="M12 21c0-6 3-10 8-11-1 6-4 10-8 11z" stroke="#0F62FE" />
+    <path d="M12 21c0-6-3-10-8-11 1 6 4 10 8 11z" />
+    <path d="M12 21v-6" />
+  </svg>
+);
+const IcoHeart = (
+  <svg width="24" height="24" viewBox="0 0 24 24" {...ICON}>
+    <path d="M12 21c-1.6-1.3-7-5.1-7-9.3A3.9 3.9 0 0 1 12 9a3.9 3.9 0 0 1 7-2.3c0 4.2-5.4 8-7 14.3z" stroke="#0F62FE" />
+  </svg>
+);
+const IcoPray = (
+  <svg width="26" height="26" viewBox="0 0 24 24" {...ICON}>
+    <path d="M12 3c1.6 2.2 2.4 4.6 2.4 8.2V19a2.4 2.4 0 0 1-4.8 0v-7.8C9.6 7.6 10.4 5.2 12 3z" />
+    <path d="M12 10.5v6" stroke="#0F62FE" />
+  </svg>
+);
+const IcoSteps = (
+  <svg width="24" height="24" viewBox="0 0 24 24" {...ICON}>
+    <path d="M5 19h4v-4h4v-4h4V7" />
+    <path d="M14 7l2.5-2.5L19 7" stroke="#0F62FE" />
+  </svg>
+);
+const IcoCheck = (
+  <svg width="18" height="18" viewBox="0 0 24 24" style={{ flexShrink: 0, marginTop: 1 }}>
+    <rect x="2.5" y="2.5" width="19" height="19" rx="4" fill="#FFFFFF" stroke="#161616" strokeWidth="2" />
+    <path d="M6.5 12.5 L10.5 16.5 L17.5 7.5" fill="none" stroke="#0F62FE" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );
 
-const FACE_HAPPY = (
-  <svg width="28" height="28" viewBox="0 0 24 24" {...ICON}>
-    <circle cx="12" cy="12" r="8.5" stroke="#0F62FE" />
-    <path d="M8.5 14.5c1 1.2 2.1 1.8 3.5 1.8s2.5-.6 3.5-1.8" stroke="#0F62FE" />
-    <circle cx="9" cy="10" r="1" fill="#161616" stroke="none" />
-    <circle cx="15" cy="10" r="1" fill="#161616" stroke="none" />
-  </svg>
-);
+const POINT_ICONS = [IcoLamp, IcoSeed, IcoPath, IcoHeart, IcoCross];
 
-const FACE_NEUTRAL = (
-  <svg width="28" height="28" viewBox="0 0 24 24" {...ICON}>
-    <circle cx="12" cy="12" r="8.5" />
-    <path d="M8.5 15h7" stroke="#0F62FE" />
-    <circle cx="9" cy="10" r="1" fill="#161616" stroke="none" />
-    <circle cx="15" cy="10" r="1" fill="#161616" stroke="none" />
-  </svg>
-);
+function resumir(texto: string, max: number): string {
+  const t = (texto || '').replace(/\s+/g, ' ').trim();
+  return t.length > max ? `${t.slice(0, max).trimEnd()}…` : t;
+}
 
-const FACE_SAD = (
-  <svg width="28" height="28" viewBox="0 0 24 24" {...ICON}>
-    <circle cx="12" cy="12" r="8.5" />
-    <path d="M8.5 16c1-1.2 2.1-1.8 3.5-1.8s2.5.6 3.5 1.8" stroke="#0F62FE" />
-    <circle cx="9" cy="10" r="1" fill="#161616" stroke="none" />
-    <circle cx="15" cy="10" r="1" fill="#161616" stroke="none" />
-  </svg>
-);
+const PANEL: React.CSSProperties = { border: '2px solid #161616', borderRadius: 10, padding: '8px 10px', background: '#FFFFFF' };
+const PANEL_LABEL: React.CSSProperties = { fontSize: 9.5, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#525252', marginBottom: 3 };
 
-function Banner({ n, label, blue = false }: { n: number; label: string; blue?: boolean }) {
+function SectionTitle({ label, icon }: { label: string; icon: React.ReactNode }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-      <div style={{ width: 30, height: 30, borderRadius: 999, background: '#0F62FE', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 15, border: '2px solid #161616', flexShrink: 0 }}>
-        {n}
-      </div>
-      <div style={{ background: blue ? '#0F62FE' : '#161616', color: '#ffffff', padding: '6px 22px', fontWeight: 700, fontSize: 16, letterSpacing: '0.06em', textTransform: 'uppercase', clipPath: 'polygon(0 0, 100% 0, 96% 50%, 100% 100%, 0 100%, 4% 50%)' }}>
-        {label}
-      </div>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 9, marginBottom: 7 }}>
+      <span style={{ display: 'inline-flex', alignItems: 'center' }}>{icon}</span>
+      <span className="font-hand" style={{ fontSize: 25, fontWeight: 700, lineHeight: 1 }}>{label}</span>
+      <span style={{ flex: 1, height: 2, background: '#0F62FE', opacity: 0.35, borderRadius: 2 }} />
     </div>
   );
 }
 
-function FlowArrow() {
+function HandArrow() {
   return (
-    <svg width="46" height="34" viewBox="0 0 46 34" style={{ display: 'block', margin: '2px auto 6px' }}>
-      <path d="M10 3 C 30 8, 30 20, 23 28" fill="none" stroke="#0F62FE" strokeWidth="4" strokeLinecap="round" />
-      <path d="M15 23 L23 31 L31 22" fill="none" stroke="#0F62FE" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+    <svg width="40" height="24" viewBox="0 0 40 24" style={{ display: 'block', margin: '3px auto' }}>
+      <path d="M9 2 C 27 6, 27 13, 21 19" fill="none" stroke="#0F62FE" strokeWidth="3.4" strokeLinecap="round" />
+      <path d="M14 15 L21 22 L28 14" fill="none" stroke="#0F62FE" strokeWidth="3.4" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -553,21 +565,25 @@ export default function Home() {
     doc.save(`TeoDoc_${safe || 'analisis'}.pdf`);
   };
 
-  // Versículos únicos para la sección "Versículos clave" de la infografía.
-  const versiculosClave = (() => {
-    const vistos = new Set<string>();
-    const lista: { cita: string; texto: string }[] = [];
+  // --- Datos derivados para la infografía (solo lo que existe en el análisis) ---
+  const primerVersiculo = (() => {
     for (const punto of resultado?.desarrollo_progresivo || []) {
-      for (const v of punto.versiculos || []) {
-        if (v?.cita && !vistos.has(v.cita)) {
-          vistos.add(v.cita);
-          lista.push({ cita: v.cita, texto: v.texto || '' });
-        }
-      }
-      if (lista.length >= 3) break;
+      const v = (punto.versiculos || [])[0];
+      if (v?.cita) return v;
     }
-    return lista.slice(0, 3);
+    return null;
   })();
+  const pasajePrincipal = primerVersiculo?.cita || '';
+  const textoPasaje = primerVersiculo?.texto || resultado?.infografia?.texto_clave || '';
+  const contexto = resultado?.infografia?.contexto_breve || '';
+  const puntos = (resultado?.desarrollo_progresivo || []).slice(0, 5);
+  const aplicaciones = (resultado?.aplicacion || []).slice(0, 6);
+  const palabrasClave = Array.from(new Set(
+    (resultado?.desarrollo_progresivo || [])
+      .map((p) => (p.punto || '').split(/\s+/).slice(0, 2).join(' ').replace(/[.,;:]+$/, '').trim())
+      .filter((k) => k.length > 2),
+  )).slice(0, 6);
+  const fechaHoy = new Date().toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' });
 
   return (
     <div className="app-shell bg-[#161616] text-[#f4f4f4] font-sans flex flex-col relative">
@@ -770,100 +786,110 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Infografía — resumen ejecutivo A4 (estilo boceto a mano) */}
+            {/* Infografía — mapa de estudio bíblico (A4, lettering a mano) */}
             <div className="w-full pt-6 sm:pt-10">
               <div className="text-center mb-6 sm:mb-8 px-4">
-                <h3 className="text-sm font-semibold text-[#f4f4f4] tracking-wider uppercase">Infografía lista · v2</h3>
+                <h3 className="text-sm font-semibold text-[#f4f4f4] tracking-wider uppercase">Infografía lista · v3</h3>
                 <p className="text-xs sm:text-sm text-[#a8a8a8] mt-2 max-w-md mx-auto">
-                  Resumen ejecutivo en A4 vertical. Descárgala en PNG para verla, leerla o imprimirla.
+                  Mapa de estudio bíblico en A4 vertical. Descárgala en PNG para verla, leerla o imprimirla.
                 </p>
               </div>
               <div className="w-full overflow-x-auto">
                 <div
                   ref={infografiaRef}
                   className="mx-auto"
-                  style={{ width: 794, height: 1123, backgroundColor: '#FFFFFF', color: '#161616', padding: 42, fontFamily: 'var(--font-plex), system-ui, sans-serif' }}
+                  style={{ width: 794, height: 1123, backgroundColor: '#FFFFFF', color: '#161616', padding: '46px 48px', fontFamily: 'var(--font-plex), system-ui, sans-serif', display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}
                 >
+                  <div style={{ position: 'absolute', inset: 0, opacity: 0.5, backgroundImage: 'radial-gradient(#E0E0E0 0.9px, transparent 0.9px)', backgroundSize: '20px 20px', pointerEvents: 'none' }} />
+
                   {/* Encabezado */}
-                  <div style={{ textAlign: 'center', marginBottom: 16 }}>
-                    <div style={{ fontSize: 10.5, letterSpacing: '0.24em', color: '#525252', textTransform: 'uppercase' }}>Análisis de transcripción</div>
-                    <div className="font-hand" style={{ fontSize: 46, lineHeight: 1, fontWeight: 700 }}>Resumen Ejecutivo</div>
-                    <svg width="250" height="12" viewBox="0 0 250 12" style={{ display: 'block', margin: '0 auto' }}>
-                      <path d="M3 7 C 40 1, 78 12, 125 6 S 210 1, 246 7" fill="none" stroke="#0F62FE" strokeWidth="3.4" strokeLinecap="round" />
+                  <div style={{ position: 'relative', textAlign: 'center', marginBottom: 12 }}>
+                    <div style={{ fontSize: 10, letterSpacing: '0.3em', color: '#525252', textTransform: 'uppercase' }}>Estudio bíblico visual</div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginTop: 2 }}>
+                      <span style={{ display: 'inline-flex' }}>{IcoCross}</span>
+                      <span className="font-hand" style={{ fontSize: 42, fontWeight: 700, lineHeight: 1 }}>Análisis de la Prédica</span>
+                    </div>
+                    <svg width="300" height="12" viewBox="0 0 300 12" style={{ display: 'block', margin: '0 auto' }}>
+                      <path d="M4 7 C 60 1, 120 12, 180 6 S 270 1, 296 7" fill="none" stroke="#0F62FE" strokeWidth="3.4" strokeLinecap="round" />
                     </svg>
-                    <h1 style={{ fontSize: 21, fontWeight: 700, marginTop: 10, lineHeight: 1.2 }}>{resultado.titulo}</h1>
-                    <p style={{ fontSize: 12.5, fontStyle: 'italic', color: '#525252', marginTop: 4, maxWidth: 620, marginLeft: 'auto', marginRight: 'auto' }}>“{resultado.idea_principal}”</p>
+                    <div style={{ fontSize: 18, fontWeight: 700, marginTop: 8, lineHeight: 1.2 }}>{resumir(resultado.titulo || 'Prédica', 80)}</div>
+                    <div style={{ fontSize: 12, fontStyle: 'italic', color: '#525252', marginTop: 3, maxWidth: 600, marginLeft: 'auto', marginRight: 'auto' }}>“{resumir(resultado.idea_principal, 160)}”</div>
+                    <div style={{ display: 'flex', gap: 16, justifyContent: 'center', marginTop: 7, fontSize: 10.5, color: '#525252' }}>
+                      {pasajePrincipal ? <span style={{ color: '#0F62FE', fontWeight: 700 }}>{pasajePrincipal}</span> : null}
+                      <span>Generado el {fechaHoy}</span>
+                    </div>
                   </div>
 
-                  {/* 1. TEMAS CLAVE */}
-                  <Banner n={1} label="Temas clave" blue />
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 4 }}>
-                    {(resultado.desarrollo_progresivo || []).slice(0, 3).map((punto, i) => (
-                      <div key={i} style={{ border: '2px solid #161616', borderRadius: 10, padding: '10px 8px', boxShadow: '3px 3px 0 #E0E0E0' }}>
-                        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 4 }}>{THEME_ICONS[i % THEME_ICONS.length]}</div>
-                        <div className="font-hand" style={{ fontSize: 19, lineHeight: 1.05, textAlign: 'center' }}>{punto.punto}</div>
+                  {/* 1. DESARROLLO BÍBLICO */}
+                  <SectionTitle label="Desarrollo bíblico" icon={IcoBible} />
+                  <div style={{ position: 'relative', display: 'grid', gridTemplateColumns: contexto ? '1fr 1fr' : '1fr', gap: 10, marginBottom: 8 }}>
+                    <div style={PANEL}>
+                      <div style={PANEL_LABEL}>Pasaje principal</div>
+                      <div className="font-hand" style={{ fontSize: 21, color: '#0F62FE', lineHeight: 1.05 }}>{pasajePrincipal || '—'}</div>
+                      {textoPasaje ? <div style={{ fontSize: 11, color: '#525252', fontStyle: 'italic', marginTop: 3, lineHeight: 1.35 }}>“{resumir(textoPasaje, 120)}”</div> : null}
+                    </div>
+                    {contexto ? (
+                      <div style={PANEL}>
+                        <div style={PANEL_LABEL}>Contexto</div>
+                        <div style={{ fontSize: 11, color: '#525252', lineHeight: 1.4 }}>{resumir(contexto, 190)}</div>
                       </div>
-                    ))}
+                    ) : null}
                   </div>
+                  <div style={{ position: 'relative', borderLeft: '3px solid #0F62FE', paddingLeft: 10, marginBottom: 8 }}>
+                    <div style={PANEL_LABEL}>Idea central</div>
+                    <div style={{ fontSize: 12.5, fontWeight: 600, lineHeight: 1.35 }}>{resumir(resultado.idea_principal, 180)}</div>
+                  </div>
+                  {palabrasClave.length > 0 && (
+                    <div style={{ position: 'relative', display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                      {palabrasClave.map((k, i) => (
+                        <span key={i} className="font-hand" style={{ fontSize: 16, lineHeight: 1, color: '#0F62FE', border: '1.5px solid #0F62FE', borderRadius: 999, padding: '3px 10px' }}>{k}</span>
+                      ))}
+                    </div>
+                  )}
 
-                  <FlowArrow />
+                  <HandArrow />
 
-                  {/* 2. VERSÍCULOS CLAVE */}
-                  <Banner n={2} label="Versículos clave" />
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 4 }}>
-                    {versiculosClave.map((v, i) => (
-                      <div key={i} style={{ display: 'flex', gap: 8, border: '2px solid #161616', borderRadius: 10, padding: 10 }}>
-                        {BOOK_ICON}
-                        <div style={{ minWidth: 0 }}>
-                          <div style={{ fontWeight: 700, color: '#0F62FE', fontSize: 12.5 }}>{v.cita}</div>
-                          <div style={{ fontSize: 10.5, color: '#525252', fontStyle: 'italic', lineHeight: 1.3 }}>“{v.texto.length > 70 ? `${v.texto.slice(0, 70)}…` : v.texto}”</div>
+                  {/* 2. PUNTOS CLAVE */}
+                  <SectionTitle label={`${puntos.length} puntos clave`} icon={IcoScroll} />
+                  <div style={{ position: 'relative', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9 }}>
+                    {puntos.map((p, i) => (
+                      <div key={i} style={{ border: '2px solid #161616', borderRadius: 10, padding: '8px 10px', boxShadow: '3px 3px 0 #E0E0E0', background: '#FFFFFF' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span className="font-hand" style={{ fontSize: 28, color: '#0F62FE', lineHeight: 1 }}>{i + 1}</span>
+                          <span className="font-hand" style={{ fontSize: 19, lineHeight: 1.05 }}>{resumir(p.punto, 40)}</span>
+                        </div>
+                        <div style={{ fontSize: 11, color: '#525252', lineHeight: 1.35, marginTop: 3 }}>{resumir(p.explicacion, 120)}</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4, color: '#0F62FE' }}>
+                          <span style={{ display: 'inline-flex', transform: 'scale(0.8)', transformOrigin: 'left center' }}>{POINT_ICONS[i % POINT_ICONS.length]}</span>
+                          <span style={{ fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase' }}>Clave {i + 1}</span>
                         </div>
                       </div>
                     ))}
                   </div>
 
-                  <FlowArrow />
+                  <HandArrow />
 
-                  {/* 3. SENTIMIENTO GENERAL */}
-                  <Banner n={3} label="Sentimiento general" />
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 16, border: '2px solid #161616', borderRadius: 10, padding: 12, marginBottom: 4 }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                      {FACE_HAPPY}
-                      {FACE_NEUTRAL}
-                      {FACE_SAD}
-                    </div>
-                    <svg viewBox="0 0 380 130" style={{ flex: 1, minWidth: 0 }}>
-                      <rect x="0.5" y="0.5" width="379" height="129" fill="#FFFFFF" stroke="#E0E0E0" />
-                      <path d="M0 32H380M0 65H380M0 98H380" stroke="#E0E0E0" strokeWidth="1" />
-                      <path d="M0 65V130M95 0V130M190 0V130M285 0V130" stroke="#E0E0E0" strokeWidth="1" />
-                      <polyline points="12,98 78,86 150,90 220,52 292,38 368,20" fill="none" stroke="#0F62FE" strokeWidth="3.6" strokeLinecap="round" strokeLinejoin="round" />
-                      <polyline points="12,104 78,100 150,74 220,80 292,62 368,56" fill="none" stroke="#525252" strokeWidth="2.4" strokeDasharray="7 6" />
-                    </svg>
-                  </div>
-
-                  <FlowArrow />
-
-                  {/* 4. ACCIONES FUTURAS */}
-                  <Banner n={4} label="Acciones futuras" />
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
-                    {(resultado.aplicacion || []).slice(0, 5).map((app, i) => (
-                      <div key={i} style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-                        <svg width="24" height="24" viewBox="0 0 24 24" style={{ flexShrink: 0, marginTop: 1 }}>
-                          <rect x="2.5" y="2.5" width="19" height="19" rx="4" fill="#FFFFFF" stroke="#161616" strokeWidth="2.2" />
-                          <path d="M6.5 12.5 L10.5 16.5 L17.5 7.5" fill="none" stroke="#0F62FE" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                        <span style={{ fontSize: 14, lineHeight: 1.35 }}>{app}</span>
+                  {/* 3. APLICACIÓN PRÁCTICA */}
+                  <SectionTitle label="Aplicación práctica" icon={IcoSteps} />
+                  <div style={{ position: 'relative', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '7px 16px' }}>
+                    {aplicaciones.map((a, i) => (
+                      <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                        {IcoCheck}
+                        <span style={{ fontSize: 11, lineHeight: 1.35 }}>{resumir(a, 100)}</span>
                       </div>
                     ))}
                   </div>
 
-                  {/* Cierre */}
-                  <div style={{ marginTop: 14, borderLeft: '4px solid #0F62FE', paddingLeft: 10, fontSize: 11.5, fontStyle: 'italic', color: '#525252', lineHeight: 1.4 }}>
-                    “{resultado.oracion}”
+                  <HandArrow />
+
+                  {/* 4. ORACIÓN MINISTERIAL */}
+                  <SectionTitle label="Oración ministerial" icon={IcoPray} />
+                  <div style={{ position: 'relative', border: '2px solid #0F62FE', borderRadius: 12, background: '#F4F4F4', padding: '11px 14px' }}>
+                    <div style={{ fontSize: 11.5, fontStyle: 'italic', lineHeight: 1.5, color: '#161616' }}>{resumir(resultado.oracion, 340)}</div>
                   </div>
 
                   {/* Pie */}
-                  <div style={{ marginTop: 14, borderTop: '2px solid #E0E0E0', paddingTop: 8, display: 'flex', justifyContent: 'space-between', fontSize: 9.5, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#525252' }}>
+                  <div style={{ position: 'relative', marginTop: 'auto', borderTop: '2px solid #E0E0E0', paddingTop: 6, display: 'flex', justifyContent: 'space-between', fontSize: 9, letterSpacing: '0.16em', textTransform: 'uppercase', color: '#525252' }}>
                     <span>TeoDoc · Análisis Ministerial</span>
                     <span>RPM Ministry</span>
                   </div>
