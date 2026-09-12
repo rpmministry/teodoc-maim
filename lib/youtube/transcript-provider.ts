@@ -18,6 +18,8 @@ export type TranscriptMeta = {
   title?: string;
   author?: string;
   durationMs?: number;
+  /** Proveedor que realmente sirvió la transcripción (diagnóstico). */
+  providerName?: string;
 };
 
 export type TranscriptResult = {
@@ -92,10 +94,14 @@ export class FallbackTranscriptProvider implements TranscriptProvider {
     let lastError: unknown = null;
     for (const provider of this.providers) {
       try {
-        return await provider.fetchTranscript(videoId, opts);
+        const result = await provider.fetchTranscript(videoId, opts);
+        // Deja rastro de qué proveedor respondió (diagnóstico en la respuesta).
+        result.meta.providerName = provider.name;
+        return result;
       } catch (err) {
         lastError = err;
         const code: TranscriptErrorCode = err instanceof TranscriptError ? err.code : 'desconocido';
+        console.warn(`[Transcript] ${provider.name} falló (${code}):`, (err as Error)?.message);
         if (DEFINITIVE.includes(code)) throw err;
       }
     }
