@@ -16,8 +16,11 @@ services:
     healthCheckPath: /health
     autoDeploy: true
     envVars:
-      - key: TRANSCRIPT_SERVICE_TOKEN
-        generateValue: true
+      # Autenticación opcional. Si se descomenta, hay que poner el MISMO valor
+      # en Vercel como TRANSCRIPT_SERVICE_TOKEN; si queda comentado, el servicio
+      # no exige token (más simple, pero cualquiera con la URL podría usarlo).
+      # - key: TRANSCRIPT_SERVICE_TOKEN
+      #   generateValue: true
       - key: YTDLP_TIMEOUT
         value: "150"
       # Descomenta y completa si YouTube bloquea la IP del servicio:
