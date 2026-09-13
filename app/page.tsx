@@ -5,18 +5,72 @@ import Infografia, { ResponsiveInfografia, resumir, exportarInfografiaBlob } fro
 import { extractYouTubeVideoId } from '@/lib/youtube/extract-video-id';
 
 interface Versiculo { cita: string; texto: string; }
-interface PuntoDesarrollo { punto: string; explicacion: string; versiculos: Versiculo[]; }
-interface DatosInfografia { frase_corta: string; texto_clave: string; contexto_breve: string; }
+interface Subtema { titulo: string; desarrollo: string; }
+interface PuntoDesarrollo { punto: string; explicacion: string; subtemas?: Subtema[]; versiculos: Versiculo[]; }
+interface TextoBiblico { cita: string; texto: string; }
+interface Ensenanza { sobre: string; ensenanza: string; }
+interface ConceptoTeologico { concepto: string; significado: string; }
+interface GranEnsenanza { titulo: string; descripcion: string; }
+interface DatosInfografia {
+  frase_corta: string; texto_clave: string; contexto_breve: string;
+  mensaje_central: string; verdad_principal: string;
+  grandes_ensenanzas: GranEnsenanza[];
+  palabras_clave: string[];
+  frase_recordar: string;
+}
 type AvisoAudio = 'corto' | 'no_relacionado';
+
+function limpiarConceptoCliente(valor: unknown): string | null {
+  const base = String(valor ?? '').replace(/\s+/g, ' ').replace(/^[\-*\u2022\d.)\s]+/, '').replace(/[.,;:]+$/, '').trim();
+  if (!base || !/[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]/.test(base)) return null;
+  const palabras = base.split(' ').filter(Boolean);
+  if (palabras.length === 0 || palabras.length > 3 || base.length > 32) return null;
+  return base;
+}
+
+function normalizarConceptosCliente(valor: unknown, max: number): string[] {
+  if (!Array.isArray(valor)) return [];
+  const salida: string[] = [];
+  for (const item of valor) {
+    const c = limpiarConceptoCliente(item);
+    if (c && !salida.some((s) => s.toLowerCase() === c.toLowerCase())) salida.push(c);
+    if (salida.length >= max) break;
+  }
+  return salida;
+}
+
+function primeraFraseCliente(entrada: string, max: number): string {
+  const limpio = String(entrada || '').replace(/\s+/g, ' ').trim();
+  if (limpio.length <= max) return limpio;
+  const corte = limpio.slice(0, max);
+  const ultimoPunto = corte.lastIndexOf('.');
+  return `${(ultimoPunto > max * 0.5 ? corte.slice(0, ultimoPunto + 1) : corte).trimEnd()}…`;
+}
+
+function derivarGrandesEnsenanzasCliente(puntos: PuntoDesarrollo[]): GranEnsenanza[] {
+  return puntos
+    .filter((p) => p.punto || p.explicacion)
+    .slice(0, 6)
+    .map((p) => ({
+      titulo: primeraFraseCliente(p.punto.split(/[.:;—–-]/)[0].trim() || p.punto, 60),
+      descripcion: primeraFraseCliente(p.explicacion, 170),
+    }))
+    .filter((g) => g.titulo || g.descripcion);
+}
 
 // Normaliza lo que devuelve el backend: garantiza una estructura segura para el
 // PDF y la infografía aunque falte algún campo (nunca rompe el render).
 function normalizarAnalisisCliente(d: any): PredicaAnalisis {
-  const puntos = Array.isArray(d?.desarrollo_progresivo)
+  const puntos: PuntoDesarrollo[] = Array.isArray(d?.desarrollo_progresivo)
     ? d.desarrollo_progresivo
         .map((p: any) => ({
           punto: String(p?.punto || '').trim(),
           explicacion: String(p?.explicacion || '').trim(),
+          subtemas: Array.isArray(p?.subtemas)
+            ? p.subtemas
+                .map((s: any) => ({ titulo: String(s?.titulo || '').trim(), desarrollo: String(s?.desarrollo || '').trim() }))
+                .filter((s: any) => s.titulo || s.desarrollo)
+            : [],
           versiculos: Array.isArray(p?.versiculos)
             ? p.versiculos
                 .map((v: any) => ({ cita: String(v?.cita || '').trim(), texto: String(v?.texto || '').trim() }))
@@ -28,32 +82,74 @@ function normalizarAnalisisCliente(d: any): PredicaAnalisis {
   const aplicacion = Array.isArray(d?.aplicacion)
     ? d.aplicacion.map((a: any) => String(a || '').trim()).filter(Boolean)
     : [];
-  const conceptos = Array.isArray(d?.conceptos_clave)
-    ? d.conceptos_clave
-        .map((c: any) => String(c || '').replace(/\s+/g, ' ').trim())
-        .filter((c: string) => c.length > 0 && c.length <= 32)
+  const conceptos = normalizarConceptosCliente(d?.conceptos_clave, 8);
+  const conceptosTeologicos: ConceptoTeologico[] = Array.isArray(d?.conceptos_teologicos)
+    ? d.conceptos_teologicos
+        .map((c: any) => ({ concepto: limpiarConceptoCliente(c?.concepto) || '', significado: String(c?.significado || '').trim() }))
+        .filter((c: any) => c.concepto)
         .slice(0, 8)
     : [];
+  const ensenanzas: Ensenanza[] = Array.isArray(d?.ensenanzas)
+    ? d.ensenanzas
+        .map((e: any) => ({ sobre: String(e?.sobre || '').trim(), ensenanza: String(e?.ensenanza || '').trim() }))
+        .filter((e: any) => e.ensenanza)
+    : [];
+
+  const textoBiblicoRaw = d?.texto_biblico_principal;
+  const pasajeFallback = puntos.flatMap((p) => p.versiculos).find((v) => v.cita) || { cita: '', texto: '' };
+  const textoBiblico: TextoBiblico =
+    textoBiblicoRaw && (textoBiblicoRaw.cita || textoBiblicoRaw.texto)
+      ? { cita: String(textoBiblicoRaw.cita || '').trim(), texto: String(textoBiblicoRaw.texto || '').trim() }
+      : pasajeFallback;
+
+  const info = d?.infografia || {};
+  const fraseCorta = String(info?.frase_corta || '').trim();
+  const grandesBase = Array.isArray(info?.grandes_ensenanzas)
+    ? info.grandes_ensenanzas
+        .map((g: any) => ({ titulo: String(g?.titulo || '').trim(), descripcion: String(g?.descripcion || '').trim() }))
+        .filter((g: any) => g.titulo || g.descripcion)
+        .slice(0, 6)
+    : [];
+  const grandes = grandesBase.length ? grandesBase : derivarGrandesEnsenanzasCliente(puntos);
+  const palabrasClave = normalizarConceptosCliente(info?.palabras_clave, 6);
+
   return {
     titulo: String(d?.titulo || 'Análisis de la prédica').trim(),
     idea_principal: String(d?.idea_principal || '').trim(),
+    tema_principal: String(d?.tema_principal || '').trim(),
+    texto_biblico_principal: textoBiblico,
+    contexto_biblico: String(d?.contexto_biblico || '').trim(),
     infografia: {
-      frase_corta: String(d?.infografia?.frase_corta || '').trim(),
-      texto_clave: String(d?.infografia?.texto_clave || '').trim(),
-      contexto_breve: String(d?.infografia?.contexto_breve || '').trim(),
+      frase_corta: fraseCorta,
+      texto_clave: String(info?.texto_clave || '').trim() || textoBiblico.texto,
+      contexto_breve: String(info?.contexto_breve || '').trim() || String(d?.contexto_biblico || '').trim(),
+      mensaje_central: String(info?.mensaje_central || '').trim() || String(d?.idea_principal || '').trim(),
+      verdad_principal: String(info?.verdad_principal || '').trim() || String(d?.tema_principal || '').trim() || String(d?.idea_principal || '').trim(),
+      grandes_ensenanzas: grandes,
+      palabras_clave: palabrasClave.length ? palabrasClave : conceptos.slice(0, 6),
+      frase_recordar: String(info?.frase_recordar || '').trim() || fraseCorta || String(d?.conclusion || '').trim(),
     },
     desarrollo_progresivo: puntos,
+    ensenanzas,
     aplicacion,
     conceptos_clave: conceptos,
+    conceptos_teologicos: conceptosTeologicos,
     oracion: String(d?.oracion || '').trim(),
+    conclusion: String(d?.conclusion || '').trim(),
   };
 }
 interface PredicaAnalisis {
   titulo: string; idea_principal: string;
+  tema_principal?: string;
+  texto_biblico_principal?: TextoBiblico;
+  contexto_biblico?: string;
   infografia?: DatosInfografia;
   desarrollo_progresivo: PuntoDesarrollo[];
+  ensenanzas?: Ensenanza[];
   aplicacion: string[]; oracion: string;
   conceptos_clave?: string[];
+  conceptos_teologicos?: ConceptoTeologico[];
+  conclusion?: string;
 }
 
 const ALLOWED_EXTENSIONS = ['.mp3', '.wav', '.m4a', '.m4b', '.aac', '.flac', '.ogg', '.oga', '.opus', '.wma', '.amr', '.webm', '.mp4', '.mov', '.aiff', '.aif', '.caf', '.3gp'];
@@ -709,16 +805,19 @@ export default function Home() {
 
     const listaPuntos = Array.isArray(resultado.desarrollo_progresivo) ? resultado.desarrollo_progresivo : [];
     const listaAplicaciones = Array.isArray(resultado.aplicacion) ? resultado.aplicacion : [];
-    const pv = (() => {
-      for (const p of listaPuntos) {
-        const v = (p.versiculos || [])[0];
-        if (v?.cita) return v;
-      }
-      return null;
-    })();
+    const principal = resultado.texto_biblico_principal;
+    const pv = principal?.cita || principal?.texto
+      ? principal
+      : (() => {
+          for (const p of listaPuntos) {
+            const v = (p.versiculos || [])[0];
+            if (v?.cita) return v;
+          }
+          return null;
+        })();
     const pdfPasaje = pv?.cita || '';
     const pdfTextoPasaje = pv?.texto || resultado.infografia?.texto_clave || '';
-    const pdfContexto = resultado.infografia?.contexto_breve || '';
+    const pdfContexto = resultado.contexto_biblico || resultado.infografia?.contexto_breve || '';
     const fechaTxt = new Date().toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' });
 
     let y = 0;
@@ -834,6 +933,7 @@ export default function Home() {
     heading('Información de la prédica');
     metaRow('Título', resultado.titulo || '—');
     if (pdfPasaje) metaRow('Texto bíblico', pdfPasaje);
+    if (resultado.tema_principal) metaRow('Tema principal', resumir(resultado.tema_principal, 160));
     if (resultado.idea_principal) metaRow('Idea central', resumir(resultado.idea_principal, 200));
     metaRow('Fecha de análisis', fechaTxt);
 
@@ -870,13 +970,51 @@ export default function Home() {
       doc.text(titleLines, margin + 44, y - 2);
       y += headerH + 6;
       doc.setFont('helvetica', 'normal'); doc.setFontSize(10.5);
-      const expl = doc.splitTextToSize(resumir(p.explicacion || '', 320), contentW);
+      const expl = doc.splitTextToSize(resumir(p.explicacion || '', 700), contentW);
       ensure(expl.length * 14 + 8);
       setText(C.sub); doc.text(expl, margin, y); y += expl.length * 14 + 8;
+
+      // Subtemas reales dentro del tema (solo si el contenido los contiene).
+      (p.subtemas || []).forEach((s) => {
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(10.5); setText(C.ink);
+        const subTitle = doc.splitTextToSize(resumir(s.titulo || '', 120), contentW - 20);
+        ensure(subTitle.length * 14 + 6);
+        doc.text(subTitle, margin + 14, y); y += subTitle.length * 14 + 3;
+        if (s.desarrollo) {
+          doc.setFont('helvetica', 'normal'); doc.setFontSize(10); setText(C.sub);
+          const subBody = doc.splitTextToSize(resumir(s.desarrollo, 420), contentW - 14);
+          for (const line of subBody) {
+            if (y + 14 > bottomY) { doc.addPage(); y = margin + 6; }
+            doc.text(line, margin + 14, y); y += 14;
+          }
+        }
+        y += 5;
+      });
+
       (p.versiculos || []).slice(0, 3).forEach((v) => quoteBlock(v.cita || '', v.texto || ''));
       y += 6;
       setStroke(C.rule); doc.setLineWidth(0.5); doc.line(margin, y, pageW - margin, y); y += 14;
     });
+
+    // 4b. Enseñanzas principales (solo las categorías realmente presentes)
+    const ensenanzas = (Array.isArray(resultado.ensenanzas) ? resultado.ensenanzas : []).filter((e) => e.ensenanza);
+    if (ensenanzas.length) {
+      heading('Enseñanzas principales', 84);
+      ensenanzas.forEach((e) => {
+        const etiqueta = e.sobre ? `SOBRE ${e.sobre.toUpperCase()}` : 'ENSEÑANZA';
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(9); setText(C.sub);
+        const labelLines = doc.splitTextToSize(etiqueta, contentW - 120);
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(10.5); setText(C.ink);
+        const body = doc.splitTextToSize(resumir(e.ensenanza, 300), contentW - 116);
+        ensure(Math.max(labelLines.length, body.length) * 14 + 8);
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(9); setText(C.sub);
+        doc.text(labelLines, margin, y);
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(10.5); setText(C.ink);
+        doc.text(body, margin + 104, y);
+        y += Math.max(labelLines.length, body.length) * 14 + 8;
+      });
+      y += 4;
+    }
 
     // 5. Conceptos clave (reales, normalizados desde la IA; nunca fragmentos)
     const conceptos = (Array.isArray(resultado.conceptos_clave) ? resultado.conceptos_clave : [])
@@ -887,6 +1025,24 @@ export default function Home() {
     if (conceptos.length) {
       heading('Conceptos clave');
       chips(conceptos);
+    }
+
+    // 5b. Conceptos teológicos (solo si el contenido los sustenta)
+    const teologicos = (Array.isArray(resultado.conceptos_teologicos) ? resultado.conceptos_teologicos : []).filter((c) => c.concepto);
+    if (teologicos.length) {
+      heading('Conceptos teológicos', 72);
+      teologicos.forEach((c) => {
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(10.5); setText(C.accent);
+        const etiqueta = `${c.concepto}:`;
+        const labelW = doc.getTextWidth(`${etiqueta} `);
+        const lines = doc.splitTextToSize(resumir(c.significado, 260), contentW - labelW - 4);
+        ensure(Math.max(1, lines.length) * 14 + 7);
+        doc.text(etiqueta, margin, y);
+        doc.setFont('helvetica', 'normal'); setText(C.sub);
+        doc.text(lines, margin + labelW + 4, y);
+        y += Math.max(1, lines.length) * 14 + 7;
+      });
+      y += 4;
     }
 
     // 6. Aplicación práctica
@@ -917,6 +1073,12 @@ export default function Home() {
         doc.text(lines, margin + 28, y);
         y += lines.length * 15 + 8;
       });
+    }
+
+    // 7b. Conclusión del estudio (síntesis final sustentada)
+    if (resultado.conclusion) {
+      heading('Conclusión del estudio', 84);
+      paragraph(resumir(resultado.conclusion, 520), { size: 11, lead: 16, color: C.ink });
     }
 
     // 8. Oración
@@ -1246,6 +1408,16 @@ export default function Home() {
                         </div>
                         <div className="pl-11 sm:pl-14">
                           <p className="text-[#c6c6c6] mb-5 leading-relaxed font-normal text-sm sm:text-base">{item.explicacion}</p>
+                          {item.subtemas && item.subtemas.length > 0 && (
+                            <div className="grid gap-3 mb-5">
+                              {item.subtemas.map((s, sIdx) => (
+                                <div key={sIdx} className="border-l-2 border-[#525252] pl-4">
+                                  <p className="text-sm font-semibold text-[#f4f4f4] mb-1">{s.titulo}</p>
+                                  {s.desarrollo ? <p className="text-xs sm:text-sm text-[#a8a8a8] leading-relaxed font-normal">{s.desarrollo}</p> : null}
+                                </div>
+                              ))}
+                            </div>
+                          )}
                           {item.versiculos.length > 0 && (
                             <div className="grid gap-3">
                               {item.versiculos.map((v, vIdx) => (
@@ -1286,6 +1458,13 @@ export default function Home() {
                     <p className="text-[#c6c6c6] italic leading-relaxed font-normal text-sm sm:text-base">"{resultado.oracion}"</p>
                   </section>
                 </div>
+
+                {resultado.conclusion ? (
+                  <section className="bg-[#262626] p-6 sm:p-8 border border-[#393939]">
+                    <h3 className="text-sm font-semibold text-[#f4f4f4] mb-5 sm:mb-6 uppercase tracking-wider border-l-4 border-[#0f62fe] pl-3">Conclusión del estudio</h3>
+                    <p className="text-[#c6c6c6] leading-relaxed font-normal text-sm sm:text-base">{resultado.conclusion}</p>
+                  </section>
+                ) : null}
               </div>
             </div>
 
