@@ -1,7 +1,7 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
 import LiquidOrb, { type LiquidOrbHandle } from '@/components/liquid-orb';
-import Infografia, { ResponsiveInfografia, resumir, exportarInfografiaPng } from '@/components/infografia';
+import Infografia, { ResponsiveInfografia, resumir, exportarInfografiaBlob } from '@/components/infografia';
 import { extractYouTubeVideoId } from '@/lib/youtube/extract-video-id';
 
 interface Versiculo { cita: string; texto: string; }
@@ -104,6 +104,25 @@ export default function Home() {
   // Último archivo descargado (para el enlace "Abrir" del aviso).
   const [ultimoArchivo, setUltimoArchivo] = useState<{ url: string; nombre: string; tipo: 'pdf' | 'png' } | null>(null);
   const ultimoUrlRef = useRef<string | null>(null);
+  const touchXRef = useRef<number | null>(null);
+  // Botón "volver arriba" (aparece solo al hacer scroll hacia abajo).
+  const [mostrarArriba, setMostrarArriba] = useState(false);
+  useEffect(() => {
+    const contenedor = document.querySelector('.app-content') as HTMLElement | null;
+    const onScroll = () => {
+      const y = contenedor ? contenedor.scrollTop : window.scrollY;
+      setMostrarArriba(y > 420);
+    };
+    onScroll();
+    const objetivo: HTMLElement | Window = contenedor || window;
+    objetivo.addEventListener('scroll', onScroll, { passive: true });
+    return () => objetivo.removeEventListener('scroll', onScroll);
+  }, []);
+  const volverArriba = () => {
+    const contenedor = document.querySelector('.app-content') as HTMLElement | null;
+    if (contenedor) contenedor.scrollTo({ top: 0, behavior: 'smooth' });
+    else window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const [avisoAudio, setAvisoAudio] = useState<AvisoAudio | null>(null);
   // Fuente de entrada: audio local o YouTube. Mismo pipeline después.
@@ -526,15 +545,6 @@ export default function Home() {
     setTimeout(() => orbRef.current?.abrirSelector(), 50);
   };
 
-  const dataUrlABlob = (dataUrl: string): Blob => {
-    const [meta, b64] = dataUrl.split(',');
-    const mime = /:(.*?);/.exec(meta)?.[1] || 'application/octet-stream';
-    const bin = atob(b64 || '');
-    const bytes = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-    return new Blob([bytes], { type: mime });
-  };
-
   // Descarga estándar del navegador: Blob -> enlace temporal -> clic. Sin
   // ventanas ni pantallas intermedias; el navegador muestra su propio aviso.
   // Descarga y DEVUELVE la URL del Blob para poder ofrecer "Abrir" en el aviso.
@@ -575,9 +585,8 @@ export default function Home() {
       descargaTimerRef.current = null;
     }
     if (ok) {
+      // Notificación DEScartable (X, "Cerrar" o swipe): ya no se auto-cierra.
       setAvisoDescarga((d) => (d ? { ...d, progreso: 100, estado: 'listo' } : d));
-      // Se deja visible para que el usuario pueda "Abrir" el archivo.
-      setTimeout(() => setAvisoDescarga(null), 12000);
     } else {
       setAvisoDescarga({ tipo: 'png', progreso: 0, estado: 'error', mensaje: mensaje || 'No se pudo generar el archivo.' });
     }
@@ -586,6 +595,24 @@ export default function Home() {
   const nombreArchivoPDF = () => {
     const safe = (resultado?.titulo || 'analisis').replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 60);
     return `TeoDoc_${safe || 'analisis'}.pdf`;
+  };
+
+  // Respaldo móvil: guardar/compartir con el panel nativo (iOS/Android). Es una
+  // acción manual del usuario, así que el navegador la permite sin problema.
+  const puedeCompartir = typeof navigator !== 'undefined' && typeof (navigator as Navigator & { share?: unknown }).share === 'function';
+  const compartirArchivo = async () => {
+    const u = ultimoArchivo;
+    const nav = navigator as Navigator & { canShare?: (d: ShareData) => boolean; share?: (d: ShareData) => Promise<void> };
+    if (!u || !nav.share) return;
+    try {
+      const res = await fetch(u.url);
+      const blob = await res.blob();
+      const file = new File([blob], u.nombre, { type: blob.type || 'application/octet-stream' });
+      if (nav.canShare && nav.canShare({ files: [file] })) await nav.share({ files: [file], title: u.nombre });
+      else await nav.share({ title: u.nombre, url: u.url });
+    } catch {
+      /* el usuario canceló el panel */
+    }
   };
 
   // C. Export PNG: parte del artboard FIJO de 900px (independiente del
@@ -600,8 +627,8 @@ export default function Home() {
     try {
       const node = infografiaRef.current;
       if (!node) throw new Error('Sin artboard');
-      const dataUrl = await exportarInfografiaPng(node);
-      const url = descargarBlob(dataUrlABlob(dataUrl), nombre);
+      const blob = await exportarInfografiaBlob(node);
+      const url = descargarBlob(blob, nombre);
       if (ultimoUrlRef.current) URL.revokeObjectURL(ultimoUrlRef.current);
       ultimoUrlRef.current = url;
       setUltimoArchivo({ url, nombre, tipo: 'png' });
@@ -1342,13 +1369,32 @@ export default function Home() {
         </div>
       )}
 
-      {/* AVISO DE DESCARGA — porcentaje y confirmación, visible con resultados */}
+      {/* AVISO DE DESCARGA — notificación descartable (X, "Cerrar" o swipe) */}
       {avisoDescarga && (
         <div className="fixed inset-x-0 bottom-4 z-[70] flex justify-center px-4 pointer-events-none">
-          <div className="w-full max-w-xs rounded-xl bg-white border border-[#e0e0e0] shadow-[0_16px_40px_rgba(0,0,0,0.6)] px-4 py-3">
+          <div
+            className="pointer-events-auto relative w-full max-w-xs rounded-xl bg-white border border-[#e0e0e0] shadow-[0_16px_40px_rgba(0,0,0,0.6)] px-4 py-3"
+            onTouchStart={(e) => { touchXRef.current = e.touches[0]?.clientX ?? null; }}
+            onTouchMove={(e) => {
+              if (touchXRef.current == null) return;
+              const dx = (e.touches[0]?.clientX ?? touchXRef.current) - touchXRef.current;
+              if (Math.abs(dx) > 60) { touchXRef.current = null; setAvisoDescarga(null); }
+            }}
+            onTouchEnd={() => { touchXRef.current = null; }}
+          >
+            {/* Cerrar con X (siempre disponible) */}
+            <button
+              type="button"
+              onClick={() => setAvisoDescarga(null)}
+              aria-label="Cerrar aviso"
+              className="absolute right-1.5 top-1.5 inline-flex h-7 w-7 items-center justify-center rounded text-[#525252] transition-colors hover:bg-[#f4f4f4] hover:text-[#161616]"
+            >
+              <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="currentColor" aria-hidden="true"><path d="M8 6.6 11.3 3.3l1.4 1.4L9.4 8l3.3 3.3-1.4 1.4L8 9.4l-3.3 3.3-1.4-1.4L6.6 8 3.3 4.7l1.4-1.4z" /></svg>
+            </button>
+
             {avisoDescarga.estado === 'generando' && (
               <>
-                <div className="flex items-center gap-2 text-sm text-[#161616]">
+                <div className="flex items-center gap-2 pr-6 text-sm text-[#161616]">
                   <svg className="h-4 w-4 animate-spin text-[#0f62fe]" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-90" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
@@ -1361,46 +1407,84 @@ export default function Home() {
                 </div>
               </>
             )}
+
             {avisoDescarga.estado === 'listo' && (
-              <div className="flex items-start gap-2 text-sm text-[#161616]">
-                <span className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#24a148] text-white" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7" /></svg>
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="font-semibold">Descarga lista</p>
-                  {ultimoArchivo ? <p className="truncate text-xs text-[#525252]">{ultimoArchivo.nombre}</p> : null}
-                  {ultimoArchivo ? (
-                    <div className="pointer-events-auto mt-2 flex flex-wrap gap-2">
-                      <a
-                        href={ultimoArchivo.url}
-                        target="_blank"
-                        rel="noopener"
-                        className="inline-flex h-8 items-center rounded-md bg-[#0f62fe] px-3 text-xs font-semibold text-white transition-colors hover:bg-[#0353e9]"
-                      >
-                        Abrir archivo
-                      </a>
-                      <a
-                        href={ultimoArchivo.url}
-                        download={ultimoArchivo.nombre}
+              <div className="pr-6">
+                <div className="flex items-center gap-2 text-sm text-[#161616]">
+                  <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#24a148] text-white" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7" /></svg>
+                  </span>
+                  <span className="font-semibold">Archivo descargado</span>
+                  <span className="ml-auto text-xs text-[#525252]">100%</span>
+                </div>
+                {ultimoArchivo ? <p className="mt-1 truncate text-xs text-[#525252]">{ultimoArchivo.nombre}</p> : null}
+                {ultimoArchivo ? (
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    <a
+                      href={ultimoArchivo.url}
+                      target="_blank"
+                      rel="noopener"
+                      className="inline-flex h-8 items-center rounded-md bg-[#0f62fe] px-3 text-xs font-semibold text-white transition-colors hover:bg-[#0353e9]"
+                    >
+                      Abrir
+                    </a>
+                    <a
+                      href={ultimoArchivo.url}
+                      download={ultimoArchivo.nombre}
+                      className="inline-flex h-8 items-center rounded-md border border-[#8d8d8d] px-3 text-xs font-semibold text-[#161616] transition-colors hover:bg-[#f4f4f4]"
+                    >
+                      Guardar de nuevo
+                    </a>
+                    {puedeCompartir ? (
+                      <button
+                        type="button"
+                        onClick={compartirArchivo}
                         className="inline-flex h-8 items-center rounded-md border border-[#8d8d8d] px-3 text-xs font-semibold text-[#161616] transition-colors hover:bg-[#f4f4f4]"
                       >
-                        Guardar de nuevo
-                      </a>
-                    </div>
-                  ) : null}
-                  <p className="mt-2 text-[11px] leading-snug text-[#8d8d8d]">Se guardó en la carpeta de descargas de tu navegador.</p>
-                </div>
-                <span className="ml-auto text-xs text-[#525252]">100%</span>
+                        Compartir
+                      </button>
+                    ) : null}
+                  </div>
+                ) : null}
+                <p className="mt-2 text-[11px] leading-snug text-[#8d8d8d]">Guardado en la carpeta de descargas del navegador. Puedes cerrar este aviso.</p>
               </div>
             )}
+
             {avisoDescarga.estado === 'error' && (
-              <div className="flex items-center gap-2 text-sm text-[#161616]">
-                <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#da1e28] text-xs font-bold text-white" aria-hidden="true">!</span>
+              <div className="flex items-center gap-2 pr-6 text-sm text-[#161616]">
+                <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#da1e28] text-xs font-bold text-white" aria-hidden="true">!</span>
                 <span>{avisoDescarga.mensaje || 'No se pudo generar el archivo.'}</span>
               </div>
             )}
+
+            {/* "Cerrar" (texto) para cerrar de inmediato */}
+            <div className="mt-3 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setAvisoDescarga(null)}
+                className="text-xs font-medium text-[#525252] transition-colors hover:text-[#161616] underline underline-offset-2"
+              >
+                Cerrar
+              </button>
+            </div>
           </div>
         </div>
+      )}
+
+      {/* VOLVER ARRIBA — discreto, estilo Carbon, solo al hacer scroll */}
+      {mostrarArriba && (
+        <button
+          type="button"
+          onClick={volverArriba}
+          aria-label="Volver arriba"
+          title="Volver arriba"
+          style={{ touchAction: 'manipulation' }}
+          className="fixed bottom-24 right-4 z-[65] inline-flex h-10 w-10 select-none items-center justify-center border border-[#393939] bg-[#262626] text-[#f4f4f4] shadow-[0_8px_20px_rgba(0,0,0,0.45)] transition-colors hover:bg-[#353535] active:bg-[#0043ce] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#0f62fe]"
+        >
+          <svg className="h-5 w-5" viewBox="0 0 32 32" fill="currentColor" aria-hidden="true">
+            <path d="M16 4 6 14l1.4 1.4L15 7.8V28h2V7.8l7.6 7.6L26 14z" />
+          </svg>
+        </button>
       )}
 
       {/* FOOTER PERFECTAMENTE VISIBLE Y ELEVADO */}

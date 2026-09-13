@@ -496,6 +496,37 @@ export async function exportarInfografiaPng(node: HTMLElement): Promise<string> 
   }
 }
 
+// Variante que devuelve un Blob (descarga directa, sin data URL/base64): más
+// fiable y ligera en móvil. Es la que usa el botón "Descargar infografía PNG".
+export async function exportarInfografiaBlob(node: HTMLElement): Promise<Blob> {
+  const { default: domtoimage } = await import('dom-to-image-more')
+  const ancho = node.offsetWidth
+  const alto = node.offsetHeight
+  if (!ancho || !alto) throw new Error('Artboard vacío')
+
+  const MAX_AREA = 14_000_000
+  const MAX_DIM = 4096
+  const escala = Math.min(1, Math.sqrt(MAX_AREA / (ancho * alto)), MAX_DIM / Math.max(ancho, alto))
+
+  const opciones = (s: number) => ({
+    width: Math.max(1, Math.round(ancho * s)),
+    height: Math.max(1, Math.round(alto * s)),
+    style: {
+      width: `${ancho}px`,
+      height: `${alto}px`,
+      transform: `scale(${s})`,
+      transformOrigin: 'top left',
+    },
+    bgcolor: '#FFFFFF',
+  })
+
+  try {
+    return await domtoimage.toBlob(node, opciones(escala))
+  } catch {
+    return await domtoimage.toBlob(node, opciones(Math.max(0.35, escala * 0.6)))
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Visualización responsive
 // ---------------------------------------------------------------------------
