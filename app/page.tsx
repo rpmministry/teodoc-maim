@@ -40,6 +40,12 @@ function validarArchivo(file: File): string | null {
   return null;
 }
 
+// Entrada por enlace (YouTube) OCULTA temporalmente hasta tener una vía open
+// source viable. La infraestructura (lib/youtube + /api/youtube) queda intacta
+// y lista: basta con definir NEXT_PUBLIC_ENABLE_YOUTUBE=true y redesplegar para
+// volver a mostrar la opción, sin tocar el resto del flujo.
+const YOUTUBE_ENABLED = process.env.NEXT_PUBLIC_ENABLE_YOUTUBE === 'true';
+
 export default function Home() {
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -52,6 +58,8 @@ export default function Home() {
   const [avisoAudio, setAvisoAudio] = useState<AvisoAudio | null>(null);
   // Fuente de entrada: audio local o YouTube. Mismo pipeline después.
   const [modo, setModo] = useState<'audio' | 'youtube'>('audio');
+  // Con la entrada por enlace oculta, siempre se usa el modo audio.
+  const modoActivo: 'audio' | 'youtube' = YOUTUBE_ENABLED ? modo : 'audio';
   const [youtubeUrl, setYoutubeUrl] = useState('');
   const [avisoYoutube, setAvisoYoutube] = useState<string | null>(null);
 
@@ -806,8 +814,8 @@ export default function Home() {
           </div>
         )}
 
-        {/* SELECTOR DE FUENTE — dos puertas de entrada, un solo pipeline */}
-        {!loading && !resultado && (
+        {/* SELECTOR DE FUENTE — oculto hasta encontrar vía open source viable */}
+        {YOUTUBE_ENABLED && !loading && !resultado && (
           <div
             className="mb-5 inline-flex border border-[#393939] bg-[#262626] p-1 z-20 relative"
             role="tablist"
@@ -833,7 +841,7 @@ export default function Home() {
         )}
 
         {/* ORBE — audio local, o procesamiento en curso (cualquier fuente) */}
-        {!resultado && (modo === 'audio' || loading) && (
+        {!resultado && (modoActivo === 'audio' || loading) && (
           <div className="z-20 relative">
             <LiquidOrb
               ref={orbRef}
@@ -845,8 +853,8 @@ export default function Home() {
           </div>
         )}
 
-        {/* ENTRADA YOUTUBE — sólo el origen cambia; el resto del flujo es igual */}
-        {!resultado && !loading && modo === 'youtube' && (
+        {/* ENTRADA YOUTUBE — oculta; el resto del flujo es igual */}
+        {YOUTUBE_ENABLED && !resultado && !loading && modo === 'youtube' && (
           <form
             onSubmit={(e) => { e.preventDefault(); analizarDesdeYouTube(); }}
             className="z-20 relative w-full max-w-lg flex flex-col items-center gap-3 animate-fade-in"
@@ -934,8 +942,8 @@ export default function Home() {
           </div>
         )}
 
-        {/* YOUTUBE NO DISPONIBLE — mensaje amigable + salida al flujo de audio */}
-        {!loading && !resultado && avisoYoutube && (
+        {/* YOUTUBE NO DISPONIBLE — oculto junto con la entrada por enlace */}
+        {YOUTUBE_ENABLED && !loading && !resultado && avisoYoutube && (
           <div className="mt-8 w-full max-w-lg border-l-4 border-[#f1c21b] bg-[#262626] px-5 py-5 text-sm text-[#f4f4f4] animate-fade-in">
             <p className="font-semibold mb-2">🕊️ No pudimos usar ese enlace</p>
             <p className="text-[#c6c6c6] leading-relaxed">{avisoYoutube}</p>
