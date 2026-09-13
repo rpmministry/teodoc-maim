@@ -1318,10 +1318,12 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Artboard OCULTO de tamaño fijo (900px): el PNG se exporta SOLO
-                  desde aquí, así no depende del contenedor visible ni del viewport. */}
-              <div aria-hidden="true" style={{ position: 'fixed', left: -100000, top: 0, width: 0, height: 0, overflow: 'hidden', pointerEvents: 'none' }}>
-                <div ref={infografiaRef}>
+              {/* Artboard OCULTO para exportar el PNG. IMPORTANTE: el contenedor
+                  no debe tener width/height 0, porque el nodo de referencia
+                  colapsaría a ancho 0 ("artboard vacío"). Se oculta fuera de
+                  pantalla con max-content para conservar el tamaño real. */}
+              <div aria-hidden="true" style={{ position: 'fixed', left: -100000, top: 0, pointerEvents: 'none', opacity: 0 }}>
+                <div ref={infografiaRef} style={{ width: 'max-content' }}>
                   <Infografia data={resultado} />
                 </div>
               </div>
