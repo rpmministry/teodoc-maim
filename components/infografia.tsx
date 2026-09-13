@@ -163,24 +163,35 @@ export default function Infografia({ data }: { data: InfografiaData; variant?: I
 
   const gap = Math.round(canvasW * 0.022)
   const pad = Math.round(canvasW * 0.05)
-  const headerH = Math.round(canvasW * 0.44)
   const footerH = Math.round(canvasW * 0.058)
   const cols = canvasW <= 1200 ? 1 : canvasW <= 1800 ? 2 : 3
   const fontScale = 1
 
-  // Pasada 1: mide el alto natural (root con alto automático). Se mide una vez.
+  // Pasada 1: mide el alto natural (root con alto automático). Se espera a que
+  // carguen las fuentes para medir con las métricas reales (si no, se subestima
+  // y el contenido se recortaría al fijar la altura).
   useEffect(() => {
     if (medido) return
     const el = rootRef.current
     if (!el) return
-    const measure = () => setNaturalH(Math.ceil(el.getBoundingClientRect().height))
-    measure()
-    const ro = new ResizeObserver(measure)
-    ro.observe(el)
-    if (typeof document !== 'undefined' && document.fonts?.ready) {
-      document.fonts.ready.then(measure).catch(() => {})
+    let cancelled = false
+    const run = () => {
+      if (cancelled) return
+      // offsetHeight NO incluye transformaciones: mide el alto real de layout
+      // aunque la vista previa esté escalada con transform: scale().
+      const h = Math.ceil(el.offsetHeight)
+      if (h > 0) setNaturalH(h)
     }
-    return () => ro.disconnect()
+    if (typeof document !== 'undefined' && document.fonts?.ready) {
+      document.fonts.ready.then(() => setTimeout(run, 60)).catch(run)
+    } else {
+      setTimeout(run, 60)
+    }
+    const respaldo = setTimeout(run, 900)
+    return () => {
+      cancelled = true
+      clearTimeout(respaldo)
+    }
   }, [medido])
 
   // Pasada 2: lienzo 9:16 exacto, con altura garantizada ≥ contenido.
@@ -240,6 +251,7 @@ export default function Infografia({ data }: { data: InfografiaData; variant?: I
 
   return (
     <div
+      ref={rootRef}
       style={{
         width: canvasW,
         height: medido ? canvasH : 'auto',
@@ -256,7 +268,6 @@ export default function Infografia({ data }: { data: InfografiaData; variant?: I
       {/* ENCABEZADO */}
       <header
         style={{
-          height: headerH,
           boxSizing: 'border-box',
           position: 'relative',
           overflow: 'hidden',
@@ -273,7 +284,7 @@ export default function Infografia({ data }: { data: InfografiaData; variant?: I
           </defs>
           <rect width="1600" height="400" fill={`url(#grid-${uid})`} />
         </svg>
-        <div style={{ position: 'relative', height: '100%', display: 'flex', alignItems: 'center', gap: Math.round(pad * 0.7) }}>
+        <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: Math.round(pad * 0.7) }}>
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
             {TeoLogo(small * 9.5)}
@@ -299,7 +310,7 @@ export default function Infografia({ data }: { data: InfografiaData; variant?: I
           </div>
           </div>
           <div style={{ width: '34%', alignSelf: 'stretch', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-            <AnalisisFlow compact={Math.round(headerH * 0.1)} accent={acento} small={small} />
+            <AnalisisFlow compact={Math.round(canvasW * 0.05)} accent={acento} small={small} />
           </div>
         </div>
       </header>

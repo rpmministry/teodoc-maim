@@ -98,6 +98,9 @@ export default function Home() {
   const [generandoPDF, setGenerandoPDF] = useState(false);
   // Transcripción guardada para reintentar el análisis sin volver a subir audio.
   const [textoPendiente, setTextoPendiente] = useState<string | null>(null);
+  // Aviso de descarga (porcentaje + confirmación), visible con resultados en pantalla.
+  const [avisoDescarga, setAvisoDescarga] = useState<{ tipo: 'pdf' | 'png'; progreso: number; estado: 'generando' | 'listo' | 'error'; mensaje?: string } | null>(null);
+  const descargaTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const [avisoAudio, setAvisoAudio] = useState<AvisoAudio | null>(null);
   // Fuente de entrada: audio local o YouTube. Mismo pipeline después.
@@ -537,13 +540,42 @@ export default function Home() {
     a.href = url;
     a.download = nombre;
     a.rel = 'noopener';
-    a.style.display = 'none';
+    // Fuera de pantalla en lugar de display:none (algunos navegadores ignoran
+    // el clic en enlaces no visibles).
+    a.style.position = 'fixed';
+    a.style.left = '-9999px';
+    a.style.top = '0';
     document.body.appendChild(a);
     a.click();
     // Retirar el enlace de inmediato puede cancelar la descarga en algunos
-    // navegadores, por eso se retira en el siguiente ciclo.
-    setTimeout(() => a.remove(), 1000);
+    // navegadores, por eso se retira después.
+    setTimeout(() => a.remove(), 1500);
     setTimeout(() => URL.revokeObjectURL(url), 30_000);
+  };
+
+  const iniciarDescarga = (tipo: 'pdf' | 'png') => {
+    setAvisoDescarga({ tipo, progreso: 6, estado: 'generando' });
+    if (descargaTimerRef.current) clearInterval(descargaTimerRef.current);
+    descargaTimerRef.current = setInterval(() => {
+      setAvisoDescarga((d) =>
+        d && d.estado === 'generando'
+          ? { ...d, progreso: Math.min(92, d.progreso + Math.max(2, Math.round((92 - d.progreso) * 0.18))) }
+          : d,
+      );
+    }, 160);
+  };
+
+  const finalizarDescarga = (ok: boolean, mensaje?: string) => {
+    if (descargaTimerRef.current) {
+      clearInterval(descargaTimerRef.current);
+      descargaTimerRef.current = null;
+    }
+    if (ok) {
+      setAvisoDescarga((d) => (d ? { ...d, progreso: 100, estado: 'listo' } : d));
+      setTimeout(() => setAvisoDescarga(null), 1800);
+    } else {
+      setAvisoDescarga({ tipo: 'png', progreso: 0, estado: 'error', mensaje: mensaje || 'No se pudo generar el archivo.' });
+    }
   };
 
   const nombreArchivoPDF = () => {
@@ -559,13 +591,15 @@ export default function Home() {
     const safe = (resultado?.titulo || 'predica').replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 60);
     const nombre = `Infografia_${safe || 'predica'}.png`;
     setDescargando(true);
+    iniciarDescarga('png');
     try {
       const node = infografiaRef.current;
       if (!node) throw new Error('Sin artboard');
       const dataUrl = await exportarInfografiaPng(node);
       descargarBlob(dataUrlABlob(dataUrl), nombre);
+      finalizarDescarga(true);
     } catch {
-      setError('No se pudo generar la imagen. Inténtalo de nuevo.');
+      finalizarDescarga(false, 'No se pudo generar la imagen. Inténtalo de nuevo.');
     } finally {
       setDescargando(false);
     }
@@ -575,6 +609,7 @@ export default function Home() {
     if (!resultado || generandoPDF) return;
     const nombre = nombreArchivoPDF();
     setGenerandoPDF(true);
+    iniciarDescarga('pdf');
     try {
       // jsPDF viene precargado: la descarga se dispara dentro del gesto del
       // usuario (el navegador muestra su aviso nativo y no se duplica).
@@ -586,8 +621,9 @@ export default function Home() {
         jsPDFRef.current = JsPDF;
       }
       descargarBlob(construirPDFBlob(JsPDF, resultado), nombre);
+      finalizarDescarga(true);
     } catch {
-      setError('No se pudo generar el PDF. Inténtalo de nuevo.');
+      finalizarDescarga(false, 'No se pudo generar el PDF. Inténtalo de nuevo.');
     } finally {
       setGenerandoPDF(false);
     }
@@ -1131,10 +1167,12 @@ export default function Home() {
                       Nuevo
                     </button>
                     <button
+                      type="button"
                       onClick={generarPDF}
                       disabled={generandoPDF}
                       aria-busy={generandoPDF}
-                      className="h-10 w-full sm:w-auto justify-center px-5 text-sm font-medium text-[#f4f4f4] border border-[#6f6f6f] hover:bg-[#353535] transition-colors flex items-center gap-2 disabled:opacity-60 disabled:cursor-wait"
+                      style={{ touchAction: 'manipulation' }}
+                      className="h-11 w-full sm:w-auto justify-center px-5 text-sm font-medium text-[#f4f4f4] border border-[#6f6f6f] hover:bg-[#353535] active:bg-[#0043ce] transition-colors flex items-center gap-2 disabled:opacity-60 disabled:cursor-wait select-none"
                     >
                       {generandoPDF ? (
                         <svg className="w-4 h-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -1222,9 +1260,11 @@ export default function Home() {
                 </p>
                 <div className="flex justify-center mt-4">
                   <button
+                    type="button"
                     onClick={descargarInfografia}
                     disabled={descargando}
-                    className="h-10 px-6 text-sm font-medium text-white bg-[#0f62fe] hover:bg-[#0353e9] transition-colors disabled:opacity-60 disabled:cursor-wait"
+                    style={{ touchAction: 'manipulation' }}
+                    className="h-11 px-6 text-sm font-medium text-white bg-[#0f62fe] hover:bg-[#0353e9] active:bg-[#0043ce] transition-colors disabled:opacity-60 disabled:cursor-wait select-none"
                   >
                     {descargando ? 'Generando PNG…' : 'Descargar infografía PNG'}
                   </button>
@@ -1286,6 +1326,44 @@ export default function Home() {
                   {feedbackStatus === 'sending' ? 'Enviando…' : 'Enviar mensaje'}
                 </button>
               </form>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* AVISO DE DESCARGA — porcentaje y confirmación, visible con resultados */}
+      {avisoDescarga && (
+        <div className="fixed inset-x-0 bottom-4 z-[70] flex justify-center px-4 pointer-events-none">
+          <div className="w-full max-w-xs rounded-xl bg-white border border-[#e0e0e0] shadow-[0_16px_40px_rgba(0,0,0,0.6)] px-4 py-3">
+            {avisoDescarga.estado === 'generando' && (
+              <>
+                <div className="flex items-center gap-2 text-sm text-[#161616]">
+                  <svg className="h-4 w-4 animate-spin text-[#0f62fe]" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-90" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                  </svg>
+                  <span className="font-semibold">{avisoDescarga.tipo === 'pdf' ? 'Generando PDF…' : 'Generando infografía…'}</span>
+                  <span className="ml-auto tabular-nums font-bold text-[#0f62fe]">{avisoDescarga.progreso}%</span>
+                </div>
+                <div className="mt-2 h-1.5 w-full rounded-full bg-[#e0e0e0]">
+                  <div className="h-full rounded-full bg-[#0f62fe] transition-[width] duration-150" style={{ width: `${avisoDescarga.progreso}%` }} />
+                </div>
+              </>
+            )}
+            {avisoDescarga.estado === 'listo' && (
+              <div className="flex items-center gap-2 text-sm text-[#161616]">
+                <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#24a148] text-white" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7" /></svg>
+                </span>
+                <span className="font-semibold">Descarga iniciada</span>
+                <span className="ml-auto text-xs text-[#525252]">100%</span>
+              </div>
+            )}
+            {avisoDescarga.estado === 'error' && (
+              <div className="flex items-center gap-2 text-sm text-[#161616]">
+                <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#da1e28] text-xs font-bold text-white" aria-hidden="true">!</span>
+                <span>{avisoDescarga.mensaje || 'No se pudo generar el archivo.'}</span>
+              </div>
             )}
           </div>
         </div>
