@@ -109,6 +109,12 @@ export default function Home() {
 
   const infografiaRef = useRef<HTMLDivElement>(null);
   const orbRef = useRef<LiquidOrbHandle>(null);
+  // jsPDF precargado: permite que el clic descargue dentro del gesto del usuario.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const jsPDFRef = useRef<any>(null);
+  useEffect(() => {
+    import('jspdf').then((m) => { jsPDFRef.current = m.jsPDF; }).catch(() => {});
+  }, []);
   // Metadatos y timestamps de la última fuente (YouTube), para futuras funciones.
   const ultimaFuenteRef = useRef<{ meta: unknown; segments: unknown[] } | null>(null);
 
@@ -570,12 +576,16 @@ export default function Home() {
     const nombre = nombreArchivoPDF();
     setGenerandoPDF(true);
     try {
-      // Cede un frame para que el botón muestre "Generando PDF…" antes del
-      // trabajo pesado (jsPDF dibuja de forma síncrona y bloquea el hilo).
-      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-      const { jsPDF } = await import('jspdf');
-      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-      descargarBlob(construirPDFBlob(jsPDF, resultado), nombre);
+      // jsPDF viene precargado: la descarga se dispara dentro del gesto del
+      // usuario (el navegador muestra su aviso nativo y no se duplica).
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let JsPDF: any = jsPDFRef.current;
+      if (!JsPDF) {
+        const mod = await import('jspdf');
+        JsPDF = mod.jsPDF;
+        jsPDFRef.current = JsPDF;
+      }
+      descargarBlob(construirPDFBlob(JsPDF, resultado), nombre);
     } catch {
       setError('No se pudo generar el PDF. Inténtalo de nuevo.');
     } finally {
@@ -891,12 +901,23 @@ export default function Home() {
           className="flex items-center gap-3 min-w-0 hover:opacity-90 transition-opacity"
           aria-label="Volver al inicio"
         >
-          {/* Logo oficial horizontal (variante blanca para fondo oscuro) */}
-          <img
-            src="/teodoc/logo-horizontal-blanco.png"
-            alt="TeoDoc"
-            className="h-9 sm:h-11 w-auto shrink-0"
-          />
+          {/* Logo oficial (trazo, SIN fondo) para integrarse con el negro de la app */}
+          <svg viewBox="0 0 640 180" className="h-9 sm:h-11 w-auto shrink-0" role="img" aria-label="TeoDoc">
+            <g transform="translate(90,90)">
+              <rect x="-58" y="-40" width="116" height="80" fill="none" stroke="#f4f4f4" strokeWidth="4" />
+              <circle cx="-58" cy="0" r="12" fill="none" stroke="#f4f4f4" strokeWidth="4" />
+              <circle cx="58" cy="0" r="12" fill="none" stroke="#f4f4f4" strokeWidth="4" />
+              <rect x="-44" y="-20" width="58" height="6" fill="#f4f4f4" />
+              <rect x="-44" y="-4" width="58" height="6" fill="#f4f4f4" />
+              <rect x="-44" y="12" width="34" height="6" fill="#f4f4f4" />
+              <rect x="22" y="-24" width="5" height="12" fill="#f4f4f4" />
+              <rect x="32" y="-30" width="5" height="24" fill="#f4f4f4" />
+              <rect x="42" y="-20" width="5" height="12" fill="#f4f4f4" />
+            </g>
+            <text x="185" y="105" fontSize="56" fontWeight="600" fill="#f4f4f4" fontFamily="var(--font-plex), sans-serif">
+              Teo<tspan fill="#78a9ff">Doc</tspan>
+            </text>
+          </svg>
         </button>
 
         <div className="flex items-center gap-1 sm:gap-2 shrink-0">

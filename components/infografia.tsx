@@ -50,29 +50,13 @@ const TEMAS = [
   { accent: '#005d5d', accentDark: '#003a3a', soft: '#e5f6f6' },
 ] as const
 
-// Lienzos verticales 9:16 (para redes sociales). Se elige el menor que quepa.
-const PRESETS_W = [1080, 1440, 1800, 2160, 2700]
+
 
 function hashIndex(texto: string, n: number): number {
   let h = 0
   const s = texto || ''
   for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0
   return n > 0 ? h % n : 0
-}
-
-function totalCaracteres(data: InfografiaData): number {
-  const puntos = data.desarrollo_progresivo || []
-  const partes: string[] = [
-    data.titulo || '',
-    data.idea_principal || '',
-    data.infografia?.frase_corta || '',
-    data.infografia?.contexto_breve || '',
-    data.infografia?.texto_clave || '',
-    data.oracion || '',
-    ...(data.aplicacion || []),
-    ...puntos.flatMap((p) => [p.punto || '', p.explicacion || '', ...(p.versiculos || []).flatMap((v) => [v.cita || '', v.texto || ''])]),
-  ]
-  return partes.join(' ').length
 }
 
 // Reparte bloques en columnas balanceando por peso (evita columnas vacías o
@@ -135,80 +119,61 @@ function TeoLogo(width: number) {
   )
 }
 
-function TeoOrb(size: number, id: string) {
+// "Cajones" que muestran la evolución del análisis (Texto → Idea → Puntos →
+// Aplicación → Oración), dibujados y conectados. Ocupan el lateral del encabezado.
+function AnalisisFlow({ compact, accent, small }: { compact: number; accent: string; small: number }) {
+  const pasos: Array<[string, (s: number, c: string) => React.ReactNode]> = [
+    ['Texto bíblico', G.bible],
+    ['Idea central', G.target],
+    ['Puntos clave', G.lamp],
+    ['Aplicación', G.check],
+    ['Oración', G.pray],
+  ]
   return (
-    <svg width={size} height={size} viewBox="0 0 64 64" aria-hidden="true">
-      <defs>
-        <radialGradient id={id} cx="50%" cy="34%" r="70%">
-          <stop offset="0%" stopColor="#ffffff" />
-          <stop offset="52%" stopColor="#78a9ff" />
-          <stop offset="100%" stopColor="#0f62fe" />
-        </radialGradient>
-      </defs>
-      <circle cx="32" cy="32" r="23" fill={`url(#${id})`} />
-      <path d="M13 34.5c5.4-3.2 10.3-3.2 15.6 0 5.2 3.1 9.7 1.6 13.4-1.2" stroke="#001141" strokeOpacity="0.8" strokeWidth="2.6" strokeLinecap="round" fill="none" />
-    </svg>
-  )
-}
-
-function HeroArt({ size, accent, uid }: { size: number; accent: string; uid: string }) {
-  return (
-    <svg width={size} height={size * 0.78} viewBox="0 0 320 250" aria-hidden="true" style={{ display: 'block' }}>
-      <defs>
-        <radialGradient id={`orb-${uid}`} cx="50%" cy="32%" r="72%">
-          <stop offset="0%" stopColor="#ffffff" />
-          <stop offset="45%" stopColor="#9dc0ff" />
-          <stop offset="100%" stopColor={accent} />
-        </radialGradient>
-        <linearGradient id={`wave-${uid}`} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#78a9ff" />
-          <stop offset="100%" stopColor={accent} />
-        </linearGradient>
-      </defs>
-      <circle cx="160" cy="96" r="70" fill={`url(#orb-${uid})`} />
-      <circle cx="160" cy="96" r="86" fill="none" stroke="#78a9ff" strokeOpacity="0.35" strokeWidth="1.5" />
-      <circle cx="160" cy="96" r="102" fill="none" stroke="#78a9ff" strokeOpacity="0.18" strokeWidth="1.5" />
-      <path d="M78 120c22-14 42-14 62 0 20 13 40 13 62-2 14-9 26-11 40-6" fill="none" stroke={`url(#wave-${uid})`} strokeWidth="4" strokeLinecap="round" />
-      <path d="M86 138c22-14 42-14 62 0 20 13 40 13 62-2 12-8 22-10 34-7" fill="none" stroke="#ffffff" strokeOpacity="0.5" strokeWidth="3" strokeLinecap="round" />
-      <g fill="#78a9ff" opacity="0.8">
-        <circle cx="52" cy="60" r="3.5" /><circle cx="272" cy="52" r="3.5" /><circle cx="284" cy="150" r="2.6" /><circle cx="44" cy="168" r="2.6" />
-      </g>
-    </svg>
+    <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', width: '100%' }}>
+      {pasos.map(([label, draw], i) => (
+        <div key={label}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: compact * 0.55, background: 'rgba(255,255,255,0.09)', border: '1px solid rgba(120,169,255,0.42)', borderRadius: compact * 0.5, padding: `${compact * 0.3}px ${compact * 0.5}px` }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: compact, height: compact, borderRadius: compact * 0.35, background: accent, flexShrink: 0 }}>
+              {draw(compact * 0.56, '#ffffff')}
+            </span>
+            <span style={{ fontSize: small * 1.02, color: '#e6ecf7', fontWeight: 600, letterSpacing: '0.02em' }}>{label}</span>
+            <span style={{ marginLeft: 'auto', fontSize: small * 0.88, color: '#9db8e8', fontWeight: 800 }}>{String(i + 1).padStart(2, '0')}</span>
+          </div>
+          {i < pasos.length - 1 ? (
+            <div style={{ width: 2, height: compact * 0.42, background: 'rgba(120,169,255,0.5)', marginLeft: compact * 0.95 }} />
+          ) : null}
+        </div>
+      ))}
+    </div>
   )
 }
 
 // ---------------------------------------------------------------------------
-// Motor 16:9 con MEDICIÓN: el lienzo crece con el contenido real y siempre
-// conserva la proporción 16:9, de modo que NADA se corta.
+// Motor 9:16 con MEDICIÓN (dos pasadas): se mide el alto natural del componente
+// y el lienzo se fija a esa altura (mínimo 1920) manteniendo 9:16 exacto. Así
+// NADA se corta y el reparto interno llena todo el lienzo.
 // ---------------------------------------------------------------------------
 export default function Infografia({ data }: { data: InfografiaData; variant?: InfografiaVariant }) {
   const uid = React.useId().replace(/[^a-zA-Z0-9]/g, '')
-  const contenidoRef = useRef<HTMLDivElement>(null)
-  const chars = totalCaracteres(data)
-  const presetInicial = chars < 800 ? 0 : chars < 1600 ? 1 : chars < 3000 ? 2 : chars < 4800 ? 3 : 4
-  const [preset, setPreset] = useState(presetInicial)
-  const [contenidoH, setContenidoH] = useState(0)
+  const rootRef = useRef<HTMLDivElement>(null)
+  const [canvasW, setCanvasW] = useState(1080)
+  const [naturalH, setNaturalH] = useState(0)
+  const medido = naturalH > 0
 
-  // Lienzo vertical 9:16 (retrato). El preset crece con el contenido.
-  const W = PRESETS_W[Math.min(preset, PRESETS_W.length - 1)]
-  const H = Math.round((W * 16) / 9)
-  const gap = Math.round(W * 0.022)
-  const pad = Math.round(W * 0.05)
-  const bodyW = W - pad * 2
-  const headerH = Math.round(W * 0.44)
-  const footerH = Math.round(W * 0.058)
-  const area = H - headerH - footerH
-  const cols = W <= 1200 ? 1 : W <= 1800 ? 2 : 3
+  const gap = Math.round(canvasW * 0.022)
+  const pad = Math.round(canvasW * 0.05)
+  const headerH = Math.round(canvasW * 0.44)
+  const footerH = Math.round(canvasW * 0.058)
+  const cols = canvasW <= 1200 ? 1 : canvasW <= 1800 ? 2 : 3
   const fontScale = 1
 
-  // Mide la altura real del cuerpo y avanza de lienzo si no cabe (nunca recorta).
+  // Pasada 1: mide el alto natural (root con alto automático). Se mide una vez.
   useEffect(() => {
-    const el = contenidoRef.current
+    if (medido) return
+    const el = rootRef.current
     if (!el) return
-    const measure = () => {
-      const h = Math.ceil(el.getBoundingClientRect().height)
-      setContenidoH((prev) => (h > 0 && Math.abs(h - prev) > 1 ? h : prev))
-    }
+    const measure = () => setNaturalH(Math.ceil(el.getBoundingClientRect().height))
     measure()
     const ro = new ResizeObserver(measure)
     ro.observe(el)
@@ -216,15 +181,15 @@ export default function Infografia({ data }: { data: InfografiaData; variant?: I
       document.fonts.ready.then(measure).catch(() => {})
     }
     return () => ro.disconnect()
-  }, [preset])
+  }, [medido])
 
+  // Pasada 2: lienzo 9:16 exacto, con altura garantizada ≥ contenido.
+  const canvasH = Math.max(naturalH || 1920, 1920)
   useEffect(() => {
-    if (!contenidoH) return
-    // Margen de seguridad: si el contenido ocupa casi todo el alto, sube de lienzo.
-    if (contenidoH > area * 0.92 && preset < PRESETS_W.length - 1) {
-      setPreset((p) => p + 1)
-    }
-  }, [contenidoH, area, preset])
+    if (!medido) return
+    const neededW = Math.max(1080, Math.round((canvasH * 9) / 16))
+    if (Math.abs(neededW - canvasW) >= 8) setCanvasW(neededW)
+  }, [medido, canvasH, canvasW])
 
   const tema = TEMAS[hashIndex(data.titulo || 'teodoc', TEMAS.length)]
   const acento = tema.accent
@@ -241,11 +206,11 @@ export default function Infografia({ data }: { data: InfografiaData; variant?: I
   const fecha = new Date().toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' })
   const totalVersiculos = new Set(puntos.flatMap((p) => (p.versiculos || []).map((v) => v.cita)).filter(Boolean)).size
 
-  const h1 = Math.round(Math.max(40, Math.min(86, W * 0.06)) * fontScale)
-  const h2 = Math.round(Math.max(22, Math.min(40, W * 0.03)) * fontScale)
-  const body = Math.round(Math.max(17, Math.min(22, W * 0.019)) * fontScale)
+  const h1 = Math.round(Math.max(40, Math.min(86, canvasW * 0.06)) * fontScale)
+  const h2 = Math.round(Math.max(22, Math.min(40, canvasW * 0.03)) * fontScale)
+  const body = Math.round(Math.max(17, Math.min(22, canvasW * 0.019)) * fontScale)
   const small = Math.round(body * 0.82)
-  const lead = Math.round(W * 0.026 * fontScale)
+  const lead = Math.round(canvasW * 0.026 * fontScale)
 
   const chip: React.CSSProperties = {
     display: 'inline-flex',
@@ -276,8 +241,8 @@ export default function Infografia({ data }: { data: InfografiaData; variant?: I
   return (
     <div
       style={{
-        width: W,
-        height: H,
+        width: canvasW,
+        height: medido ? canvasH : 'auto',
         boxSizing: 'border-box',
         background: C.white,
         color: C.ink,
@@ -308,11 +273,8 @@ export default function Infografia({ data }: { data: InfografiaData; variant?: I
           </defs>
           <rect width="1600" height="400" fill={`url(#grid-${uid})`} />
         </svg>
-        <div style={{ position: 'absolute', top: -headerH * 0.06, right: -headerH * 0.02, width: headerH * 0.72, opacity: 0.92 }}>
-          <HeroArt size={headerH * 0.72} accent={acento} uid={uid} />
-        </div>
-
-        <div style={{ position: 'relative', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', maxWidth: '62%' }}>
+        <div style={{ position: 'relative', height: '100%', display: 'flex', alignItems: 'center', gap: Math.round(pad * 0.7) }}>
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
             {TeoLogo(small * 9.5)}
             <span style={{ fontSize: small, letterSpacing: '0.32em', textTransform: 'uppercase', color: '#a6c8ff' }}>Análisis bíblico</span>
@@ -335,12 +297,16 @@ export default function Infografia({ data }: { data: InfografiaData; variant?: I
             {aplicaciones.length ? <span style={{ ...chip, background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(120,169,255,0.35)', color: '#cfe0ff' }}>{aplicaciones.length} aplicaciones</span> : null}
             <span style={{ ...chip, background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(120,169,255,0.2)', color: '#9db8e8' }}>Generado el {fecha}</span>
           </div>
+          </div>
+          <div style={{ width: '34%', alignSelf: 'stretch', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <AnalisisFlow compact={Math.round(headerH * 0.1)} accent={acento} small={small} />
+          </div>
         </div>
       </header>
 
-      {/* CUERPO — columnas balanceadas por bloques (sin multicol: nunca recorta) */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: `${Math.round(pad * 0.5)}px ${pad}px`, overflow: 'hidden' }}>
-        <div ref={contenidoRef} style={{ display: 'flex', flexDirection: 'column', gap }}>
+      {/* CUERPO — ocupa todo el alto útil (sin espacios muertos) */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: `${Math.round(pad * 0.5)}px ${pad}px`, overflow: 'hidden' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap }}>
           {/* 01 · DESARROLLO BÍBLICO */}
           <section style={{ ...card, borderTop: `4px solid ${acento}` }}>
             {sectionTitle('01', 'Desarrollo bíblico', acento)}
