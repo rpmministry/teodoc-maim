@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 
 // ---------------------------------------------------------------------------
-// Tipos (estructuralmente compatibles con el análisis de /api/analyze)
+// Datos (estructuralmente compatibles con el análisis de /api/analyze)
 // ---------------------------------------------------------------------------
 type Versiculo = { cita: string; texto: string }
 type Punto = { punto: string; explicacion: string; versiculos?: Versiculo[] }
@@ -19,27 +19,18 @@ export type InfografiaData = {
 
 export type InfografiaVariant = 'wide' | 'medium' | 'compact'
 
-// ---------------------------------------------------------------------------
-// Utilidad de resumen (exportada: el PDF la reutiliza)
-// ---------------------------------------------------------------------------
+// `resumir` lo usa el PDF (bosquejo). La INFOGRAFÍA ya NO recorta texto.
 export function resumir(texto: string, max: number): string {
   const t = (texto || '').replace(/\s+/g, ' ').trim()
   return t.length > max ? `${t.slice(0, max).trimEnd()}…` : t
 }
 
 // ---------------------------------------------------------------------------
-// Sistema visual TeoDoc — inspirado en la plantilla narrativa de referencia:
-//   · franjas de color a todo lo ancho (capítulos del relato)
-//   · encabezado oscuro protagonista
-//   · números en círculos de color (anclas visuales)
-//   · iconos ilustrados dentro de círculos
-//   · títulos de sección centrados con énfasis mixto
-//   · arco conector entre capítulos
+// Identidad visual TeoDoc (Carbon)
 // ---------------------------------------------------------------------------
 const C = {
   ink: '#161616',
   sub: '#525252',
-  faint: '#8d8d8d',
   rule: '#e0e0e0',
   white: '#ffffff',
   gray: '#f4f4f4',
@@ -48,366 +39,383 @@ const C = {
   blue: '#0f62fe',
   blueDark: '#0043ce',
   blueTint: '#edf5ff',
-  purple: '#6929c4',
   amber: '#b28600',
-  amberBright: '#f1c21b',
   amberTint: '#fdf6e0',
 } as const
 
-const ACCENTS = [C.blue, C.purple, C.amber, C.blueDark, '#8a3ffc']
+const TEMAS = [
+  { accent: C.blue, accentDark: C.blueDark, soft: C.blueTint },
+  { accent: '#6929c4', accentDark: '#491d8b', soft: '#f6f2ff' },
+  { accent: '#005d5d', accentDark: '#003a3a', soft: '#e5f6f6' },
+] as const
 
-type Cfg = {
-  pad: number
-  bandY: number
-  title: number
-  sermon: number
-  h2: number
-  body: number
-  small: number
-  cols: 1 | 2 | 3
-  gap: number
-  circle: number
+const MIN_W = 1920
+const MAX_W = 5120
+
+function hashIndex(texto: string, n: number): number {
+  let h = 0
+  const s = texto || ''
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0
+  return n > 0 ? h % n : 0
 }
 
-const VARIANTS: Record<InfografiaVariant, Cfg> = {
-  wide: { pad: 48, bandY: 38, title: 60, sermon: 27, h2: 30, body: 12.5, small: 10.5, cols: 3, gap: 18, circle: 66 },
-  medium: { pad: 32, bandY: 28, title: 44, sermon: 21, h2: 25, body: 12, small: 10.5, cols: 2, gap: 14, circle: 56 },
-  compact: { pad: 20, bandY: 24, title: 33, sermon: 18, h2: 21, body: 13, small: 11, cols: 1, gap: 14, circle: 50 },
+function totalCaracteres(data: InfografiaData): number {
+  const puntos = data.desarrollo_progresivo || []
+  const partes: string[] = [
+    data.titulo || '',
+    data.idea_principal || '',
+    data.infografia?.frase_corta || '',
+    data.infografia?.contexto_breve || '',
+    data.infografia?.texto_clave || '',
+    data.oracion || '',
+    ...(data.aplicacion || []),
+    ...puntos.flatMap((p) => [p.punto || '', p.explicacion || '', ...(p.versiculos || []).flatMap((v) => [v.cita || '', v.texto || ''])]),
+  ]
+  return partes.join(' ').length
+}
+
+// Reparte bloques en columnas balanceando por peso (evita columnas vacías o
+// desbordadas y garantiza que TODO el contenido quede dentro del lienzo).
+function distribuir<T extends { peso: number }>(items: T[], columnas: number): T[][] {
+  const n = Math.max(1, columnas)
+  const cols: T[][] = Array.from({ length: n }, () => [])
+  const pesos = new Array(n).fill(0) as number[]
+  for (const item of items) {
+    const i = pesos.indexOf(Math.min(...pesos))
+    cols[i].push(item)
+    pesos[i] += item.peso
+  }
+  return cols
 }
 
 // ---------------------------------------------------------------------------
-// Glifos monocromos (para círculos de color)
+// Iconografía
 // ---------------------------------------------------------------------------
-function glyph(size: number, color: string, children: React.ReactNode) {
+function svg(size: number, color: string, children: React.ReactNode, sw = 2) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round">
       {children}
     </svg>
   )
 }
 const G = {
-  cross: (s: number, c: string) => glyph(s, c, <><path d="M12 3.5v17" /><path d="M6.5 9h11" /></>),
-  bible: (s: number, c: string) => glyph(s, c, <><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H19v15H6.5A2.5 2.5 0 0 0 4 20.5z" /><path d="M4 5.5v15" /><path d="M11.5 7.5v5M9.2 10h4.6" /></>),
-  lamp: (s: number, c: string) => glyph(s, c, <><path d="M9 18h6M10 21h4" /><path d="M12 3a6 6 0 0 0-3.5 10.9c.7.5 1 1.2 1 2.1h5c0-.9.3-1.6 1-2.1A6 6 0 0 0 12 3z" /></>),
-  seed: (s: number, c: string) => glyph(s, c, <><path d="M12 21c0-6 3-10 8-11-1 6-4 10-8 11z" /><path d="M12 21c0-6-3-10-8-11 1 6 4 10 8 11z" /><path d="M12 21v-6" /></>),
-  path: (s: number, c: string) => glyph(s, c, <><path d="M5 19c6 0 4-7 9-7s5-5 5-9" /><circle cx="5" cy="19" r="1.6" /><path d="M19 3l-2.2 3h4.4z" fill={c} stroke="none" /></>),
-  heart: (s: number, c: string) => glyph(s, c, <path d="M12 20.5c-1.6-1.3-7-4.9-7-9A3.9 3.9 0 0 1 12 8.9a3.9 3.9 0 0 1 7-2.4c0 4.1-5.4 7.7-7 14z" />),
-  dove: (s: number, c: string) => glyph(s, c, <><path d="M4 15c5 1 8-1 10-4 1.2-1.8 2.6-2.5 5-2.5-.4 3-1.8 5-4 6-1.4 5-6 7-11 6 2-1 3-3 3-5.5" /><path d="M14 8.5l2-2" /></>),
-  steps: (s: number, c: string) => glyph(s, c, <><path d="M5 19h4v-4h4v-4h4V7" /><path d="M14 7l2.5-2.5L19 7" /></>),
-  pray: (s: number, c: string) => glyph(s, c, <><path d="M12 3c1.6 2.2 2.4 4.6 2.4 8.2V19a2.4 2.4 0 0 1-4.8 0v-7.8C9.6 7.6 10.4 5.2 12 3z" /><path d="M12 10.5v6" /></>),
-  ear: (s: number, c: string) => glyph(s, c, <path d="M8 9a4 4 0 1 1 8 0c0 2-1.5 2.5-2 4-.5 1.4-.5 3-2.5 3M6 9a6 6 0 0 1 12 0M9 20c1.5 1 5 1 6-2" />),
-  think: (s: number, c: string) => glyph(s, c, <><path d="M12 3a6 6 0 0 0-3.7 10.7c.5.4.7 1 .7 1.6V17h6v-1.7c0-.6.2-1.2.7-1.6A6 6 0 0 0 12 3z" /><path d="M10 21h4" /></>),
-  decide: (s: number, c: string) => glyph(s, c, <><path d="M12 21V4" /><path d="M12 5h7l-2 3 2 3h-7" /><path d="M5 5h7v6H5z" /></>),
-  act: (s: number, c: string) => glyph(s, c, <><path d="M5 20h6l8-8-4-4-8 8v4z" /><path d="M14 7l3-3 4 4-3 3" /></>),
-  check: (s: number, c: string) => glyph(s, c, <path d="M4 12.5 L9.5 18 L20 6.5" />),
+  bible: (s: number, c: string) => svg(s, c, <><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H19v15H6.5A2.5 2.5 0 0 0 4 20.5z" /><path d="M4 5.5v15" /><path d="M11.5 7.5v5M9.2 10h4.6" /></>),
+  lamp: (s: number, c: string) => svg(s, c, <><path d="M9 18h6M10 21h4" /><path d="M12 3a6 6 0 0 0-3.5 10.9c.7.5 1 1.2 1 2.1h5c0-.9.3-1.6 1-2.1A6 6 0 0 0 12 3z" /></>),
+  seed: (s: number, c: string) => svg(s, c, <><path d="M12 21c0-6 3-10 8-11-1 6-4 10-8 11z" /><path d="M12 21c0-6-3-10-8-11 1 6 4 10 8 11z" /><path d="M12 21v-6" /></>),
+  path: (s: number, c: string) => svg(s, c, <><path d="M5 19c6 0 4-7 9-7s5-5 5-9" /><circle cx="5" cy="19" r="1.6" /><path d="M19 3l-2.2 3h4.4z" fill={c} stroke="none" /></>),
+  heart: (s: number, c: string) => svg(s, c, <path d="M12 20.5c-1.6-1.3-7-4.9-7-9A3.9 3.9 0 0 1 12 8.9a3.9 3.9 0 0 1 7-2.4c0 4.1-5.4 7.7-7 14z" />),
+  dove: (s: number, c: string) => svg(s, c, <><path d="M4 15c5 1 8-1 10-4 1.2-1.8 2.6-2.5 5-2.5-.4 3-1.8 5-4 6-1.4 5-6 7-11 6 2-1 3-3 3-5.5" /><path d="M14 8.5l2-2" /></>),
+  pray: (s: number, c: string) => svg(s, c, <><path d="M12 3c1.6 2.2 2.4 4.6 2.4 8.2V19a2.4 2.4 0 0 1-4.8 0v-7.8C9.6 7.6 10.4 5.2 12 3z" /><path d="M12 10.5v6" /></>),
+  check: (s: number, c: string) => svg(s, c, <path d="M4 12.5 L9.5 18 L20 6.5" />, 2.4),
+  quote: (s: number, c: string) => svg(s, c, <><path d="M7 7h4v4H7zM13 7h4v4h-4z" /><path d="M7 11c0 3-1 5-3 7M13 11c0 3-1 5-3 7" /></>),
+  target: (s: number, c: string) => svg(s, c, <><circle cx="12" cy="12" r="8" /><circle cx="12" cy="12" r="3.5" /><path d="M12 2v3M12 19v3M2 12h3M19 12h3" /></>),
 }
+const POINT_GLYPHS = [G.lamp, G.seed, G.path, G.heart, G.dove, G.bible, G.pray, G.target]
 
-const POINT_GLYPHS = [G.lamp, G.seed, G.path, G.heart, G.dove, G.bible]
-
-// Orbe + ola (identidad TeoDoc) en blanco para el encabezado oscuro
-function TeoMark(size: number, id: string) {
+function TeoOrb(size: number, id: string) {
   return (
     <svg width={size} height={size} viewBox="0 0 64 64" aria-hidden="true">
       <defs>
-        <radialGradient id={id} cx="50%" cy="36%" r="68%">
+        <radialGradient id={id} cx="50%" cy="34%" r="70%">
           <stop offset="0%" stopColor="#ffffff" />
-          <stop offset="55%" stopColor="#78a9ff" />
+          <stop offset="52%" stopColor="#78a9ff" />
           <stop offset="100%" stopColor="#0f62fe" />
         </radialGradient>
       </defs>
       <circle cx="32" cy="32" r="23" fill={`url(#${id})`} />
-      <path d="M13 34.5c5.4-3.2 10.3-3.2 15.6 0 5.2 3.1 9.7 1.6 13.4-1.2" stroke={C.navyDeep} strokeOpacity="0.85" strokeWidth="2.6" strokeLinecap="round" fill="none" />
+      <path d="M13 34.5c5.4-3.2 10.3-3.2 15.6 0 5.2 3.1 9.7 1.6 13.4-1.2" stroke="#001141" strokeOpacity="0.8" strokeWidth="2.6" strokeLinecap="round" fill="none" />
     </svg>
   )
 }
 
-// Nodos/decoración técnica del encabezado (inspirado en la referencia)
-function HeaderNodes() {
+function HeroArt({ size, accent, uid }: { size: number; accent: string; uid: string }) {
   return (
-    <svg viewBox="0 0 900 150" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: 'auto', opacity: 0.5, pointerEvents: 'none' }} aria-hidden="true">
-      <g fill="none" stroke="#78a9ff" strokeWidth="1.6">
-        <path d="M40 120 L40 40 L120 40 M40 70 L96 70 M120 40 L120 12" />
-        <path d="M860 120 L860 40 L780 40 M860 70 L804 70 M780 40 L780 12" />
-        <path d="M150 24 L210 24 M690 24 L750 24" />
-      </g>
-      <g fill="#78a9ff">
-        <circle cx="40" cy="120" r="4" /><circle cx="120" cy="40" r="4" /><circle cx="96" cy="70" r="3.5" />
-        <circle cx="860" cy="120" r="4" /><circle cx="780" cy="40" r="4" /><circle cx="804" cy="70" r="3.5" />
-        <rect x="146" y="20" width="8" height="8" /><rect x="686" y="20" width="8" height="8" />
+    <svg width={size} height={size * 0.78} viewBox="0 0 320 250" aria-hidden="true" style={{ display: 'block' }}>
+      <defs>
+        <radialGradient id={`orb-${uid}`} cx="50%" cy="32%" r="72%">
+          <stop offset="0%" stopColor="#ffffff" />
+          <stop offset="45%" stopColor="#9dc0ff" />
+          <stop offset="100%" stopColor={accent} />
+        </radialGradient>
+        <linearGradient id={`wave-${uid}`} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#78a9ff" />
+          <stop offset="100%" stopColor={accent} />
+        </linearGradient>
+      </defs>
+      <circle cx="160" cy="96" r="70" fill={`url(#orb-${uid})`} />
+      <circle cx="160" cy="96" r="86" fill="none" stroke="#78a9ff" strokeOpacity="0.35" strokeWidth="1.5" />
+      <circle cx="160" cy="96" r="102" fill="none" stroke="#78a9ff" strokeOpacity="0.18" strokeWidth="1.5" />
+      <path d="M78 120c22-14 42-14 62 0 20 13 40 13 62-2 14-9 26-11 40-6" fill="none" stroke={`url(#wave-${uid})`} strokeWidth="4" strokeLinecap="round" />
+      <path d="M86 138c22-14 42-14 62 0 20 13 40 13 62-2 12-8 22-10 34-7" fill="none" stroke="#ffffff" strokeOpacity="0.5" strokeWidth="3" strokeLinecap="round" />
+      <g fill="#78a9ff" opacity="0.8">
+        <circle cx="52" cy="60" r="3.5" /><circle cx="272" cy="52" r="3.5" /><circle cx="284" cy="150" r="2.6" /><circle cx="44" cy="168" r="2.6" />
       </g>
     </svg>
   )
 }
 
-// Ilustración central: Biblia abierta con rayos (sin texto, sin datos inventados)
-function BibleArt({ width }: { width: number }) {
-  return (
-    <svg width={width} height={width * 0.62} viewBox="0 0 240 150" aria-hidden="true" style={{ display: 'block', margin: '0 auto' }}>
-      <g stroke={C.amberBright} strokeWidth="3" strokeLinecap="round">
-        <path d="M120 16v-10" /><path d="M92 24l-7-9" /><path d="M148 24l7-9" />
-      </g>
-      <path d="M120 56c-16-10-40-12-58-8v62c18-4 42-2 58 8 16-10 40-12 58-8V48c-18-4-42-2-58 8z" fill={C.white} stroke={C.blue} strokeWidth="3" />
-      <path d="M120 56v62" stroke={C.blue} strokeWidth="3" />
-      <g stroke={C.rule} strokeWidth="2">
-        <path d="M78 66h30M78 76h30M78 86h24" /><path d="M132 66h30M132 76h30M132 86h24" />
-      </g>
-      <path d="M120 72v22M112 80h16" stroke={C.amber} strokeWidth="4" strokeLinecap="round" />
-      <path d="M62 110c18-4 42-2 58 8 16-10 40-12 58-8" stroke={C.blueDark} strokeWidth="3" fill="none" strokeLinecap="round" />
-    </svg>
-  )
-}
+// ---------------------------------------------------------------------------
+// Motor 16:9 con MEDICIÓN: el lienzo crece con el contenido real y siempre
+// conserva la proporción 16:9, de modo que NADA se corta.
+// ---------------------------------------------------------------------------
+export default function Infografia({ data }: { data: InfografiaData; variant?: InfografiaVariant }) {
+  const uid = React.useId().replace(/[^a-zA-Z0-9]/g, '')
+  const rootRef = useRef<HTMLDivElement>(null)
+  const [naturalH, setNaturalH] = useState(0)
 
-// Arco conector entre capítulos (como el embudo de la referencia)
-function ArcConnector() {
-  return (
-    <svg width="100%" height="70" viewBox="0 0 900 70" preserveAspectRatio="xMidYMid meet" aria-hidden="true" style={{ display: 'block' }}>
-      <path d="M120 20 Q 450 96 780 20" fill="none" stroke={C.blue} strokeWidth="3" opacity="0.55" />
-      <circle cx="120" cy="20" r="7" fill={C.blue} />
-      <circle cx="780" cy="20" r="7" fill={C.amber} />
-      <circle cx="120" cy="20" r="13" fill="none" stroke={C.blue} strokeWidth="2" opacity="0.4" />
-      <circle cx="780" cy="20" r="13" fill="none" stroke={C.amber} strokeWidth="2" opacity="0.4" />
-      <circle cx="450" cy="55" r="5" fill={C.purple} />
-    </svg>
-  )
-}
+  // Métricas estables (dependen solo del ancho del cuerpo, no del lienzo): así la
+  // altura natural medida en la 1.ª pasada coincide con la 2.ª.
+  const chars = totalCaracteres(data)
+  const cols = chars < 1500 ? 2 : chars < 4200 ? 3 : 4
+  const bodyW = cols === 2 ? 1560 : cols === 3 ? 2340 : 3120
+  const gap = Math.round(bodyW * 0.014)
+  const pad = Math.round(bodyW * 0.03)
+  const headerH = Math.round(Math.min(bodyW * 0.34, 640))
+  const footerH = Math.round(bodyW * 0.045)
+  const fontScale = 1
 
-// Título de sección con énfasis mixto (patrón "USE A STORY ARC FOR YOUR ...")
-function BandTitle({ lead, main, note, dark, accent, cfg }: { lead?: string; main: string; note?: string; dark?: boolean; accent: string; cfg: Cfg }) {
-  return (
-    <div style={{ textAlign: 'center', marginBottom: cfg.bandY * 0.7 }}>
-      <h2 style={{ margin: 0, lineHeight: 1.05, letterSpacing: '0.01em', color: dark ? C.white : C.ink }}>
-        {lead ? <span style={{ fontSize: cfg.h2 * 0.62, fontWeight: 500, opacity: 0.75, letterSpacing: '0.08em' }}>{lead} </span> : null}
-        <span style={{ fontSize: cfg.h2, fontWeight: 800, textTransform: 'uppercase', color: dark ? C.white : accent }}>{main}</span>
-      </h2>
-      <svg width={cfg.cols === 1 ? 180 : 260} height="10" viewBox="0 0 260 10" style={{ display: 'block', margin: '6px auto 0' }}>
-        <path d="M4 6 C 60 1, 120 10, 180 5 S 240 1, 256 6" fill="none" stroke={accent} strokeWidth="3" strokeLinecap="round" />
-      </svg>
-      {note ? <p style={{ margin: '10px auto 0', maxWidth: cfg.cols === 1 ? '100%' : 620, fontSize: cfg.body + 0.5, lineHeight: 1.45, color: dark ? '#c6c6c6' : C.sub }}>{note}</p> : null}
+  // 1.ª pasada: se mide la altura natural del componente completo.
+  useEffect(() => {
+    if (naturalH) return
+    const el = rootRef.current
+    if (!el) return
+    const measure = () => setNaturalH(Math.ceil(el.getBoundingClientRect().height))
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    if (typeof document !== 'undefined' && document.fonts?.ready) {
+      document.fonts.ready.then(measure).catch(() => {})
+    }
+    return () => ro.disconnect()
+  }, [naturalH])
+
+  // 2.ª pasada: lienzo 16:9 con altura garantizada ≥ contenido (nunca recorta).
+  const canvasHmin = Math.max(1080, Math.round((bodyW + pad * 2) * (9 / 16)), naturalH || 0)
+  let canvasW = Math.max(MIN_W, Math.round((canvasHmin * 16) / 9))
+  if (canvasW > MAX_W) canvasW = MAX_W
+  const canvasH = Math.round((canvasW * 9) / 16)
+  const medido = naturalH > 0
+
+  const tema = TEMAS[hashIndex(data.titulo || 'teodoc', TEMAS.length)]
+  const acento = tema.accent
+  const acentoOscuro = tema.accentDark
+  const suave = tema.soft
+
+  const puntos = data.desarrollo_progresivo || []
+  const aplicaciones = data.aplicacion || []
+  const frases = data.infografia?.frase_corta || ''
+  const contexto = data.infografia?.contexto_breve || ''
+  const pasaje = puntos.find((p) => p.versiculos?.[0]?.cita)?.versiculos?.[0]?.cita || ''
+  const textoClave = data.infografia?.texto_clave || ''
+  const fecha = new Date().toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' })
+  const totalVersiculos = new Set(puntos.flatMap((p) => (p.versiculos || []).map((v) => v.cita)).filter(Boolean)).size
+
+  const h1 = Math.round(Math.max(38, Math.min(88, bodyW * 0.048)) * fontScale)
+  const h2 = Math.round(Math.max(24, Math.min(46, bodyW * 0.022)) * fontScale)
+  const body = Math.round(Math.max(18, Math.min(24, bodyW * 0.0145)) * fontScale)
+  const small = Math.round(body * 0.78)
+  const lead = Math.round(bodyW * 0.017 * fontScale)
+
+  const chip: React.CSSProperties = {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 8,
+    fontSize: small,
+    fontWeight: 600,
+    letterSpacing: '0.04em',
+    borderRadius: 999,
+    padding: `${Math.round(small * 0.35)}px ${Math.round(small * 0.8)}px`,
+  }
+  const card: React.CSSProperties = {
+    background: C.white,
+    border: `1px solid ${C.rule}`,
+    borderRadius: 16,
+    padding: Math.round(body * 1.1),
+    breakInside: 'avoid',
+    boxShadow: '0 6px 18px rgba(22,22,22,0.06)',
+  }
+  const sectionTitle = (n: string, label: string, color: string) => (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '0 0 12px' }}>
+      <span style={{ fontSize: h2 * 0.9, fontWeight: 800, color, lineHeight: 1 }}>{n}</span>
+      <span style={{ fontSize: h2, fontWeight: 800, color: C.ink, lineHeight: 1.1, textTransform: 'uppercase', letterSpacing: '0.01em' }}>{label}</span>
+      <span style={{ flex: 1, height: 2, background: color, opacity: 0.2, borderRadius: 2 }} />
     </div>
   )
-}
-
-function CircleGlyph({ size, color, children }: { size: number; color: string; children: React.ReactNode }) {
-  return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: size, height: size, borderRadius: '50%', background: color, boxShadow: `0 0 0 6px ${color}22`, flexShrink: 0 }}>
-      <span style={{ display: 'inline-flex', transform: `scale(${size / 56})` }}>{children}</span>
-    </span>
-  )
-}
-
-// ---------------------------------------------------------------------------
-// Composición principal
-// ---------------------------------------------------------------------------
-export default function Infografia({ data, variant = 'wide' }: { data: InfografiaData; variant?: InfografiaVariant }) {
-  const cfg = VARIANTS[variant]
-  const uid = React.useId().replace(/[^a-zA-Z0-9]/g, '')
-
-  const primerVersiculo = (() => {
-    for (const p of data.desarrollo_progresivo || []) {
-      const v = (p.versiculos || [])[0]
-      if (v?.cita) return v
-    }
-    return null
-  })()
-  const pasaje = primerVersiculo?.cita || ''
-  const textoPasaje = primerVersiculo?.texto || data.infografia?.texto_clave || ''
-  const contexto = data.infografia?.contexto_breve || ''
-  const fraseCorta = data.infografia?.frase_corta || ''
-  // Sin límite de diseño: el tope es solo una salvaguarda ante datos anómalos.
-  const puntos = (data.desarrollo_progresivo || []).slice(0, 12)
-  const aplicaciones = (data.aplicacion || []).slice(0, 8)
-  const palabrasClave = Array.from(new Set(
-    (data.desarrollo_progresivo || [])
-      .map((p) => (p.punto || '').split(/\s+/).slice(0, 2).join(' ').replace(/[.,;:]+$/, '').trim())
-      .filter((k) => k.length > 2),
-  )).slice(0, 8)
-  const nPasajes = new Set((data.desarrollo_progresivo || []).flatMap((p) => (p.versiculos || []).map((v) => v.cita)).filter(Boolean)).size
-  const fecha = new Date().toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' })
-
-  // Columnas de los puntos según la cantidad real (evita filas huérfanas).
-  const pointCols: 1 | 2 | 3 =
-    variant === 'compact' || puntos.length <= 1
-      ? 1
-      : puntos.length % 3 === 0
-        ? 3
-        : 2
-  const band: React.CSSProperties = { position: 'relative', padding: `${cfg.bandY}px ${cfg.pad}px` }
-  const gridCols = pointCols === 3 ? '1fr 1fr 1fr' : pointCols === 2 ? '1fr 1fr' : '1fr'
-  const rutaAplicacion: Array<[string, (s: number, c: string) => React.ReactNode]> = [
-    ['Escuchar', G.ear], ['Reflexionar', G.think], ['Decidir', G.decide], ['Actuar', G.act],
-  ]
 
   return (
     <div
       style={{
-        backgroundColor: C.white,
+        width: medido ? canvasW : bodyW + pad * 2,
+        height: medido ? canvasH : 'auto',
+        boxSizing: 'border-box',
+        background: C.white,
         color: C.ink,
         fontFamily: 'var(--font-plex), system-ui, sans-serif',
         position: 'relative',
         overflow: 'hidden',
-        boxSizing: 'border-box',
-        width: '100%',
       }}
     >
-      {/* ======================= ENCABEZADO OSCURO ======================= */}
-      <header style={{ position: 'relative', background: `linear-gradient(160deg, ${C.navy} 0%, ${C.navyDeep} 70%)`, padding: `${cfg.bandY + 14}px ${cfg.pad}px ${cfg.bandY}px`, textAlign: 'center', overflow: 'hidden' }}>
-        <HeaderNodes />
-        <div style={{ position: 'relative' }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 9, marginBottom: 8 }}>
-            {TeoMark(cfg.cols === 1 ? 26 : 30, `tdg${uid}`)}
-            <span style={{ fontSize: cfg.small, letterSpacing: '0.28em', textTransform: 'uppercase', color: '#a6c8ff' }}>TeoDoc · Mapa visual de una prédica</span>
+      {/* ENCABEZADO */}
+      <header
+        style={{
+          height: headerH,
+          boxSizing: 'border-box',
+          position: 'relative',
+          overflow: 'hidden',
+          color: C.white,
+          background: `linear-gradient(140deg, ${C.navy} 0%, ${C.navyDeep} 62%, #000a1f 100%)`,
+          padding: `${Math.round(pad * 0.55)}px ${pad}px`,
+        }}
+      >
+        <svg viewBox="0 0 1600 400" preserveAspectRatio="none" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0.22, pointerEvents: 'none' }} aria-hidden="true">
+          <defs>
+            <pattern id={`grid-${uid}`} width="64" height="64" patternUnits="userSpaceOnUse">
+              <path d="M64 0H0V64" fill="none" stroke="#78a9ff" strokeWidth="1" />
+            </pattern>
+          </defs>
+          <rect width="1600" height="400" fill={`url(#grid-${uid})`} />
+        </svg>
+        <div style={{ position: 'absolute', top: -headerH * 0.12, right: -headerH * 0.02, width: headerH * 1.05, opacity: 0.95 }}>
+          <HeroArt size={headerH * 1.05} accent={acento} uid={uid} />
+        </div>
+
+        <div style={{ position: 'relative', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', maxWidth: '62%' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+            {TeoOrb(small * 2.2, `tdorb-${uid}`)}
+            <span style={{ fontSize: small, letterSpacing: '0.32em', textTransform: 'uppercase', color: '#a6c8ff' }}>TeoDoc · Análisis bíblico</span>
           </div>
 
-          <h1 style={{ margin: 0, lineHeight: 1, letterSpacing: '-0.01em' }}>
-            <span style={{ fontSize: cfg.title, fontWeight: 800, color: '#78a9ff' }}>ANÁLISIS</span>
-            {'\u00A0'}
-            <span style={{ fontSize: cfg.title, fontWeight: 800, color: C.white }}>DE LA PRÉDICA</span>
+          <h1 style={{ margin: 0, lineHeight: 1.02, fontWeight: 800, letterSpacing: '-0.01em', fontSize: h1, overflowWrap: 'anywhere' }}>
+            {data.titulo || 'Análisis de la prédica'}
           </h1>
 
-          {/* Título completo: nunca se recorta (envuelve si es largo). */}
-          <div style={{ marginTop: 12, fontSize: cfg.sermon, fontWeight: 600, color: C.amberBright, lineHeight: 1.2, overflowWrap: 'anywhere' }}>
-            {data.titulo || 'Prédica'}
-          </div>
-
-          {fraseCorta ? (
-            <div className="font-hand" style={{ fontSize: cfg.sermon + 6, color: C.white, marginTop: 6, lineHeight: 1.15, overflowWrap: 'anywhere' }}>{fraseCorta}</div>
-          ) : null}
+          {frases ? <div style={{ marginTop: 8, fontSize: lead, fontStyle: 'italic', color: '#cfe0ff', overflowWrap: 'anywhere' }}>{frases}</div> : null}
 
           {data.idea_principal ? (
-            <p style={{ margin: '10px auto 0', maxWidth: cfg.cols === 1 ? '100%' : 660, fontSize: cfg.body + 1.5, fontStyle: 'italic', color: '#e0e0e0', lineHeight: 1.5 }}>
-              “{resumir(data.idea_principal, 200)}”
-            </p>
+            <p style={{ margin: '10px 0 0', fontSize: body, lineHeight: 1.5, color: '#e6ecf7', maxWidth: 1500, overflowWrap: 'anywhere' }}>{data.idea_principal}</p>
           ) : null}
 
-          {/* Llamados de datos (stat callouts de la referencia) */}
-          <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: cfg.cols === 1 ? 18 : 34, marginTop: 20 }}>
-            {[
-              { n: puntos.length, l: 'Puntos' },
-              { n: nPasajes, l: 'Pasajes' },
-              { n: aplicaciones.length, l: 'Aplicaciones' },
-            ].map((s) => (
-              <div key={s.l} style={{ textAlign: 'center', minWidth: 64 }}>
-                <div style={{ fontSize: cfg.h2 + 6, fontWeight: 800, color: C.amberBright, lineHeight: 1 }}>{String(s.n).padStart(2, '0')}</div>
-                <div style={{ fontSize: cfg.small - 1, letterSpacing: '0.2em', textTransform: 'uppercase', color: '#a6c8ff', marginTop: 4 }}>{s.l}</div>
-              </div>
-            ))}
-          </div>
-
-          <div style={{ marginTop: 16, fontSize: cfg.small, color: '#a6c8ff', letterSpacing: '0.06em' }}>
-            {pasaje ? <span style={{ color: C.white, fontWeight: 700 }}>{pasaje}</span> : null}
-            {pasaje ? '   ·   ' : ''}Generado el {fecha}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: 14 }}>
+            {pasaje ? <span style={{ ...chip, background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(120,169,255,0.5)', color: C.white }}>{pasaje}</span> : null}
+            <span style={{ ...chip, background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(120,169,255,0.35)', color: '#cfe0ff' }}>{puntos.length} puntos</span>
+            {totalVersiculos ? <span style={{ ...chip, background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(120,169,255,0.35)', color: '#cfe0ff' }}>{totalVersiculos} pasajes</span> : null}
+            {aplicaciones.length ? <span style={{ ...chip, background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(120,169,255,0.35)', color: '#cfe0ff' }}>{aplicaciones.length} aplicaciones</span> : null}
+            <span style={{ ...chip, background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(120,169,255,0.2)', color: '#9db8e8' }}>Generado el {fecha}</span>
           </div>
         </div>
       </header>
 
-      {/* ======================= 01 · DESARROLLO BÍBLICO ======================= */}
-      <section style={{ ...band, background: C.white }}>
-        <BandTitle lead="El fundamento de todo:" main="Desarrollo bíblico" note={contexto ? resumir(contexto, 210) : undefined} accent={C.blue} cfg={cfg} />
-        <BibleArt width={cfg.cols === 1 ? 190 : 250} />
-
-        <div style={{ display: 'grid', gridTemplateColumns: cfg.cols === 1 ? '1fr' : '1fr 1fr', gap: cfg.gap, marginTop: cfg.bandY * 0.6 }}>
-          <div style={{ border: `2px solid ${C.blue}`, borderRadius: 12, padding: '14px 16px', background: C.blueTint }}>
-            <div style={{ fontSize: cfg.small - 1.5, letterSpacing: '0.18em', textTransform: 'uppercase', color: C.blueDark, marginBottom: 6 }}>Pasaje principal</div>
-            <div className="font-hand" style={{ fontSize: cfg.cols === 1 ? 22 : 26, color: C.blue, lineHeight: 1.05 }}>{pasaje || '—'}</div>
-            {textoPasaje ? <div style={{ fontSize: cfg.body, color: C.sub, fontStyle: 'italic', marginTop: 6, lineHeight: 1.45 }}>“{resumir(textoPasaje, 170)}”</div> : null}
-          </div>
-          <div style={{ border: `2px solid ${C.rule}`, borderRadius: 12, padding: '14px 16px', background: C.white }}>
-            <div style={{ fontSize: cfg.small - 1.5, letterSpacing: '0.18em', textTransform: 'uppercase', color: C.sub, marginBottom: 6 }}>Idea central</div>
-            <div style={{ fontSize: cfg.body + 1.5, fontWeight: 600, lineHeight: 1.45 }}>{resumir(data.idea_principal || '', 210) || '—'}</div>
-          </div>
-        </div>
-
-        {palabrasClave.length > 0 ? (
-          <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 8, marginTop: cfg.bandY * 0.6 }}>
-            {palabrasClave.map((k, i) => (
-              <span key={i} className="font-hand" style={{ fontSize: cfg.small > 11 ? 18 : 17, lineHeight: 1, color: C.blue, border: `1.5px solid ${C.blue}`, borderRadius: 999, padding: '4px 12px', background: C.white }}>{k}</span>
-            ))}
-          </div>
-        ) : null}
-      </section>
-
-      {/* Arco conector */}
-      <div style={{ background: C.white, padding: `0 ${cfg.pad}px` }}>
-        <ArcConnector />
-      </div>
-
-      {/* ======================= 02 · PUNTOS PRINCIPALES ======================= */}
-      <section style={{ ...band, background: C.gray }}>
-        <BandTitle lead="La enseñanza se sostiene en" main={puntos.length === 1 ? '1 punto principal' : puntos.length ? `${puntos.length} puntos principales` : 'Puntos principales'} accent={C.purple} cfg={cfg} />
-        <div style={{ display: 'grid', gridTemplateColumns: gridCols, gap: cfg.gap }}>
-          {puntos.map((p, i) => {
-            const color = ACCENTS[i % ACCENTS.length]
-            const v = (p.versiculos || [])[0]
-            return (
-              <div key={i} style={{ position: 'relative', background: C.white, borderRadius: 14, border: `2px solid ${C.ink}`, padding: '18px 16px 16px', boxShadow: `5px 5px 0 ${color}26` }}>
-                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}>
-                  <CircleGlyph size={cfg.circle} color={color}>{POINT_GLYPHS[i % POINT_GLYPHS.length](24, C.white)}</CircleGlyph>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 6 }}>
-                  <span style={{ fontSize: cfg.small, fontWeight: 800, letterSpacing: '0.14em', color, background: `${color}1a`, borderRadius: 999, padding: '2px 9px' }}>
-                    {String(i + 1).padStart(2, '0')}
-                  </span>
-                </div>
-                {/* Título del punto completo, sin recortar. */}
-                <div className="font-hand" style={{ fontSize: pointCols === 1 ? 23 : 21, lineHeight: 1.1, textAlign: 'center', overflowWrap: 'anywhere' }}>{p.punto}</div>
-                <div style={{ fontSize: cfg.body, color: C.sub, lineHeight: 1.45, marginTop: 8, textAlign: 'center' }}>{resumir(p.explicacion, 150)}</div>
-                {v?.cita ? (
-                  <div style={{ marginTop: 10, paddingTop: 8, borderTop: `1px dashed ${C.rule}`, textAlign: 'center' }}>
-                    <div style={{ fontSize: cfg.small, fontWeight: 700, color }}>{v.cita}</div>
-                    {v.texto ? <div style={{ fontSize: cfg.small - 1, color: C.faint, fontStyle: 'italic', marginTop: 3, lineHeight: 1.4 }}>“{resumir(v.texto, 80)}”</div> : null}
-                  </div>
-                ) : null}
+      {/* CUERPO — columnas balanceadas por bloques (sin multicol: nunca recorta) */}
+      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+        <div style={{ width: bodyW, display: 'flex', flexDirection: 'column', gap }}>
+          {/* 01 · DESARROLLO BÍBLICO */}
+          <section style={{ ...card, borderTop: `4px solid ${acento}` }}>
+            {sectionTitle('01', 'Desarrollo bíblico', acento)}
+            {contexto ? <p style={{ margin: '0 0 12px', fontSize: body, lineHeight: 1.55, color: C.sub }}>{contexto}</p> : null}
+            {pasaje || textoClave ? (
+              <div style={{ background: suave, borderLeft: `4px solid ${acento}`, borderRadius: 10, padding: Math.round(body * 0.8), marginBottom: 10 }}>
+                {pasaje ? <div style={{ fontSize: h2 * 0.85, fontWeight: 800, color: acentoOscuro }}>{pasaje}</div> : null}
+                {textoClave ? <div style={{ marginTop: 6, fontSize: body, fontStyle: 'italic', lineHeight: 1.5, color: C.ink }}>“{textoClave}”</div> : null}
               </div>
-            )
-          })}
-        </div>
-      </section>
+            ) : null}
+            {data.idea_principal ? (
+              <div style={{ display: 'flex', gap: 10 }}>
+                <span style={{ flexShrink: 0, marginTop: 2 }}>{G.target(small * 1.3, acento)}</span>
+                <span style={{ fontSize: body, lineHeight: 1.5, fontWeight: 600 }}>{data.idea_principal}</span>
+              </div>
+            ) : null}
+          </section>
 
-      {/* ======================= 03 · APLICACIÓN PRÁCTICA ======================= */}
-      <section style={{ ...band, background: C.amberTint }}>
-        <BandTitle lead="La enseñanza se vuelve vida en la" main="Aplicación práctica" accent={C.amber} cfg={cfg} />
-
-        {/* Ruta de aplicación en círculos (patrón de iconos de la referencia) */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: cfg.cols === 1 ? 20 : 40, marginBottom: cfg.bandY * 0.7 }}>
-          {rutaAplicacion.map(([label, draw]) => (
-            <div key={label} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, minWidth: 72 }}>
-              <CircleGlyph size={cfg.circle} color={C.amber}>{draw(24, C.white)}</CircleGlyph>
-              <span style={{ fontSize: cfg.small, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: C.amber }}>{label}</span>
-            </div>
-          ))}
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: cfg.cols === 1 ? '1fr' : '1fr 1fr', gap: cfg.gap, maxWidth: cfg.cols === 1 ? '100%' : 760, margin: '0 auto' }}>
-          {aplicaciones.map((a, i) => (
-            <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', background: C.white, borderRadius: 10, border: `1.5px solid ${C.amber}`, padding: '10px 12px' }}>
-              <span style={{ display: 'inline-flex', flexShrink: 0, marginTop: 1 }}>{G.check(18, C.amber)}</span>
-              <span style={{ fontSize: cfg.body, lineHeight: 1.45 }}>{resumir(a, 130)}</span>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ======================= 04 · ORACIÓN MINISTERIAL ======================= */}
-      <section style={{ ...band, background: `linear-gradient(160deg, ${C.navy} 0%, ${C.navyDeep} 100%)` }}>
-        <BandTitle lead="El recorrido termina en" main="Oración ministerial" dark accent={C.amberBright} cfg={cfg} />
-        <div style={{ maxWidth: cfg.cols === 1 ? '100%' : 700, margin: '0 auto' }}>
-          <div style={{ borderRadius: 14, border: `2px solid ${C.amberBright}`, background: 'rgba(255,255,255,0.08)', padding: '16px 18px' }}>
-            <div style={{ fontSize: cfg.body + 1, fontStyle: 'italic', lineHeight: 1.6, color: C.white }}>{resumir(data.oracion || '', 480)}</div>
-          </div>
+          {/* 02 · PUNTOS PRINCIPALES (repartidos en columnas balanceadas) */}
           {puntos.length > 0 ? (
-            <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 8, marginTop: 16 }}>
-              {puntos.slice(0, 5).map((p, i) => (
-                <span key={i} style={{ fontSize: cfg.small, color: C.white, border: '1.5px solid #78a9ff', borderRadius: 999, padding: '4px 11px', background: 'rgba(15,98,254,0.18)' }}>
-                  {resumir(p.punto || '', 34)}
-                </span>
-              ))}
-            </div>
+            <section>
+              {sectionTitle('02', 'Puntos principales', acento)}
+              <div style={{ display: 'flex', gap, alignItems: 'flex-start' }}>
+                {distribuir(
+                  puntos.map((p, i) => ({
+                    peso: (p.punto || '').length + (p.explicacion || '').length + (p.versiculos?.[0]?.texto || '').length + 120,
+                    nodo: (
+                      <article key={i} style={card}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+                          <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: h2 * 1.7, height: h2 * 1.7, borderRadius: '50%', background: i % 2 === 0 ? acento : C.navy, color: C.white, fontWeight: 800, fontSize: h2 * 0.8, flexShrink: 0 }}>
+                            {String(i + 1).padStart(2, '0')}
+                          </span>
+                          <span style={{ display: 'inline-flex', flexShrink: 0 }}>{POINT_GLYPHS[i % POINT_GLYPHS.length](h2 * 1.1, i % 2 === 0 ? acento : C.navy)}</span>
+                          <h3 style={{ margin: 0, fontSize: h2 * 0.82, fontWeight: 800, lineHeight: 1.15, overflowWrap: 'anywhere' }}>{p.punto}</h3>
+                        </div>
+                        {p.explicacion ? <p style={{ margin: 0, fontSize: body, lineHeight: 1.55, color: C.sub }}>{p.explicacion}</p> : null}
+                        {p.versiculos?.[0]?.cita ? (
+                          <div style={{ marginTop: 10, paddingTop: 8, borderTop: `1px dashed ${C.rule}`, display: 'flex', gap: 8 }}>
+                            <span style={{ flexShrink: 0, marginTop: 2 }}>{G.quote(small * 1.2, i % 2 === 0 ? acento : C.navy)}</span>
+                            <span style={{ fontSize: body, lineHeight: 1.5 }}>
+                              <strong style={{ color: i % 2 === 0 ? acento : C.navy }}>{p.versiculos[0].cita}</strong>
+                              {p.versiculos[0].texto ? <span style={{ color: C.sub }}> {p.versiculos[0].texto}</span> : null}
+                            </span>
+                          </div>
+                        ) : null}
+                      </article>
+                    ),
+                  })),
+                  cols,
+                ).map((columna, ci) => (
+                  <div key={ci} style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: gap * 0.8 }}>
+                    {columna.map((b) => b.nodo)}
+                  </div>
+                ))}
+              </div>
+            </section>
+          ) : null}
+
+          {/* 03 · APLICACIÓN PRÁCTICA */}
+          {aplicaciones.length > 0 ? (
+            <section style={{ ...card, background: C.amberTint, borderTop: `4px solid ${C.amber}` }}>
+              {sectionTitle('03', 'Aplicación práctica', C.amber)}
+              <div style={{ display: 'flex', gap, alignItems: 'flex-start' }}>
+                {distribuir(
+                  aplicaciones.map((a, i) => ({
+                    peso: a.length + 40,
+                    nodo: (
+                      <li key={i} style={{ display: 'flex', gap: 10 }}>
+                        <span style={{ flexShrink: 0, marginTop: 2 }}>{G.check(small * 1.2, C.amber)}</span>
+                        <span style={{ fontSize: body, lineHeight: 1.55 }}>{a}</span>
+                      </li>
+                    ),
+                  })),
+                  Math.min(cols, 2),
+                ).map((columna, ci) => (
+                  <ul key={ci} style={{ flex: 1, minWidth: 0, margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {columna.map((b) => b.nodo)}
+                  </ul>
+                ))}
+              </div>
+            </section>
+          ) : null}
+
+          {/* 04 · ORACIÓN MINISTERIAL */}
+          {data.oracion ? (
+            <section style={{ ...card, background: suave, borderTop: `4px solid ${acento}` }}>
+              {sectionTitle('04', 'Oración ministerial', acento)}
+              <p style={{ margin: 0, fontSize: body, lineHeight: 1.65, fontStyle: 'italic' }}>{data.oracion}</p>
+            </section>
           ) : null}
         </div>
-      </section>
+      </div>
 
-      {/* ======================= PIE ======================= */}
-      <footer style={{ background: C.navyDeep, padding: `16px ${cfg.pad}px`, display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, color: '#a6c8ff', fontSize: cfg.small - 1, letterSpacing: '0.18em', textTransform: 'uppercase' }}>
+      {/* PIE */}
+      <footer
+        style={{
+          height: footerH,
+          background: C.navyDeep,
+          color: '#a6c8ff',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: `0 ${pad}px`,
+          fontSize: small,
+          letterSpacing: '0.16em',
+          textTransform: 'uppercase',
+        }}
+      >
         <span>TeoDoc · Análisis Ministerial</span>
         <span>RPM Ministry</span>
       </footer>
@@ -416,9 +424,7 @@ export default function Infografia({ data, variant = 'wide' }: { data: Infografi
 }
 
 // ---------------------------------------------------------------------------
-// Exportación PNG: parte del artboard (tamaño de diseño fijo, no del viewport)
-// y amplía el clon con transform para que el contenido llene el canvas exacto.
-// Resultado: la infografía completa, sin hoja A4, sin recortes ni fondo extra.
+// Exportación PNG (una sola imagen 16:9)
 // ---------------------------------------------------------------------------
 export async function exportarInfografiaPng(node: HTMLElement): Promise<string> {
   const { default: domtoimage } = await import('dom-to-image-more')
@@ -426,12 +432,9 @@ export async function exportarInfografiaPng(node: HTMLElement): Promise<string> 
   const alto = node.offsetHeight
   if (!ancho || !alto) throw new Error('Artboard vacío')
 
-  // Nitidez ~15 MP: nítido y por debajo del límite de canvas de Safari/iOS.
   const MAX_AREA = 15_000_000
-  const escala = Math.min(3, Math.max(1.5, Math.sqrt(MAX_AREA / (ancho * alto))))
+  const escala = ancho * alto <= MAX_AREA ? 1 : Math.sqrt(MAX_AREA / (ancho * alto))
 
-  // dom-to-image-more aplica width/height al clon y refluye su contenido; por
-  // eso fijamos el clon en su tamaño natural y lo escalamos con transform.
   return domtoimage.toPng(node, {
     width: Math.round(ancho * escala),
     height: Math.round(alto * escala),
@@ -446,19 +449,13 @@ export async function exportarInfografiaPng(node: HTMLElement): Promise<string> 
 }
 
 // ---------------------------------------------------------------------------
-// Visualización responsive: elige variante por ancho real del contenedor y
-// escala el artboard de diseño para conservar proporciones y jerarquía.
-// NUNCA se usa para exportar: la exportación parte del artboard fijo de 900px.
+// Visualización responsive
 // ---------------------------------------------------------------------------
 export function ResponsiveInfografia({ data }: { data: InfografiaData }) {
   const hostRef = useRef<HTMLDivElement>(null)
   const innerRef = useRef<HTMLDivElement>(null)
   const [hostW, setHostW] = useState(0)
-  const [innerH, setInnerH] = useState(0)
-
-  // El contenedor visible está acotado a 900px, así que el breakpoint se mide
-  // sobre el ancho real disponible (no sobre el viewport).
-  const variant: InfografiaVariant = hostW < 640 ? 'compact' : hostW < 860 ? 'medium' : 'wide'
+  const [size, setSize] = useState({ w: 0, h: 0 })
 
   useEffect(() => {
     const host = hostRef.current
@@ -472,40 +469,26 @@ export function ResponsiveInfografia({ data }: { data: InfografiaData }) {
 
   useEffect(() => {
     const inner = innerRef.current
-    if (!inner) {
-      setInnerH(0)
-      return
-    }
-    const measure = () => setInnerH(inner.offsetHeight)
+    if (!inner) return
+    const measure = () =>
+      setSize((prev) => {
+        const w = inner.offsetWidth
+        const h = inner.offsetHeight
+        return prev.w === w && prev.h === h ? prev : { w, h }
+      })
     measure()
     const ro = new ResizeObserver(measure)
     ro.observe(inner)
     return () => ro.disconnect()
-  }, [variant])
+  })
 
-  if (variant === 'compact') {
-    return (
-      <div ref={hostRef} style={{ width: '100%' }}>
-        <Infografia data={data} variant="compact" />
-      </div>
-    )
-  }
-
-  const designW = variant === 'wide' ? 900 : 760
-  const scale = hostW > 0 ? Math.min(1, hostW / designW) : 0
+  const scale = hostW > 0 && size.w > 0 ? hostW / size.w : 0
 
   return (
     <div ref={hostRef} style={{ width: '100%' }}>
-      <div
-        style={{
-          width: innerH ? designW * scale : '100%',
-          height: innerH ? innerH * scale : undefined,
-          marginInline: 'auto',
-          overflow: 'hidden',
-        }}
-      >
-        <div ref={innerRef} style={{ width: designW, transform: `scale(${scale})`, transformOrigin: 'top left' }}>
-          <Infografia data={data} variant={variant} />
+      <div style={{ width: '100%', height: size.h && scale ? size.h * scale : undefined, overflow: 'hidden' }}>
+        <div ref={innerRef} style={{ transform: `scale(${scale})`, transformOrigin: 'top left', width: 'max-content' }}>
+          <Infografia data={data} />
         </div>
       </div>
     </div>

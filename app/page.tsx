@@ -13,7 +13,7 @@ type Descarga = {
   tipo: 'pdf' | 'png';
   nombre: string;
   progreso: number;
-  estado: 'generando' | 'listo' | 'error';
+  estado: 'generando' | 'error';
   mensaje?: string;
 };
 interface PredicaAnalisis {
@@ -67,8 +67,6 @@ export default function Home() {
   // en móvil, donde el sistema no siempre muestra aviso de descarga.
   const [descarga, setDescarga] = useState<Descarga | null>(null);
   const progresoTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  // Último archivo generado, para poder guardarlo de nuevo desde el aviso.
-  const ultimoArchivoRef = useRef<{ blob: Blob; nombre: string } | null>(null);
   const [avisoAudio, setAvisoAudio] = useState<AvisoAudio | null>(null);
   // Fuente de entrada: audio local o YouTube. Mismo pipeline después.
   const [modo, setModo] = useState<'audio' | 'youtube'>('audio');
@@ -469,7 +467,12 @@ export default function Home() {
       clearInterval(progresoTimerRef.current);
       progresoTimerRef.current = null;
     }
-    setDescarga((d) => (d ? { ...d, progreso: ok ? 100 : d.progreso, estado: ok ? 'listo' : 'error', mensaje } : d));
+    // En éxito se cierra el aviso: la descarga ya la muestra el navegador.
+    if (ok) {
+      setDescarga(null);
+      return;
+    }
+    setDescarga((d) => (d ? { ...d, estado: 'error', mensaje } : d));
   };
 
   const dataUrlABlob = (dataUrl: string): Blob => {
@@ -493,25 +496,6 @@ export default function Home() {
     setTimeout(() => URL.revokeObjectURL(url), 60_000);
   };
 
-  // En móvil, el panel nativo de compartir/guardar SÍ muestra confirmación del
-  // sistema. Se invoca desde un toque del usuario (requisito de iOS).
-  const compartirBlob = async (blob: Blob, nombre: string) => {
-    const nav = navigator as Navigator & {
-      canShare?: (data: ShareData) => boolean;
-      share?: (data: ShareData) => Promise<void>;
-    };
-    try {
-      const file = new File([blob], nombre, { type: blob.type || 'application/octet-stream' });
-      if (typeof nav.share === 'function' && typeof nav.canShare === 'function' && nav.canShare({ files: [file] })) {
-        await nav.share({ files: [file], title: nombre });
-        return;
-      }
-    } catch (err) {
-      if ((err as Error)?.name === 'AbortError') return;
-    }
-    descargarBlob(blob, nombre);
-  };
-
   const nombreArchivoPDF = () => {
     const safe = (resultado?.titulo || 'analisis').replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 60);
     return `TeoDoc_${safe || 'analisis'}.pdf`;
@@ -530,9 +514,8 @@ export default function Home() {
       const node = infografiaRef.current;
       if (!node) throw new Error('Sin artboard');
       const dataUrl = await exportarInfografiaPng(node);
-      const blob = dataUrlABlob(dataUrl);
-      ultimoArchivoRef.current = { blob, nombre };
-      descargarBlob(blob, nombre);
+      // Descarga única: la maneja el navegador (mensaje y carpeta nativos).
+      descargarBlob(dataUrlABlob(dataUrl), nombre);
       terminarProgreso(true);
     } catch {
       terminarProgreso(false, 'No se pudo generar la imagen. Inténtalo de nuevo.');
@@ -552,9 +535,8 @@ export default function Home() {
       await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
       const { jsPDF } = await import('jspdf');
       await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-      const blob = construirPDFBlob(jsPDF, resultado);
-      ultimoArchivoRef.current = { blob, nombre };
-      descargarBlob(blob, nombre);
+      // Descarga única: la maneja el navegador (mensaje y carpeta nativos).
+      descargarBlob(construirPDFBlob(jsPDF, resultado), nombre);
       terminarProgreso(true);
     } catch {
       terminarProgreso(false, 'No se pudo generar el PDF. Inténtalo de nuevo.');
@@ -1183,8 +1165,8 @@ export default function Home() {
               {/* Artboard OCULTO de tamaño fijo (900px): el PNG se exporta SOLO
                   desde aquí, así no depende del contenedor visible ni del viewport. */}
               <div aria-hidden="true" style={{ position: 'fixed', left: -100000, top: 0, width: 0, height: 0, overflow: 'hidden', pointerEvents: 'none' }}>
-                <div ref={infografiaRef} style={{ width: 900 }}>
-                  <Infografia data={resultado} variant="wide" />
+                <div ref={infografiaRef}>
+                  <Infografia data={resultado} />
                 </div>
               </div>
             </div>
@@ -1270,32 +1252,6 @@ export default function Home() {
                 >
                   <div className="h-full rounded-full bg-[#0f62fe] transition-[width] duration-200" style={{ width: `${descarga.progreso}%` }} />
                 </div>
-              </div>
-            )}
-
-            {descarga.estado === 'listo' && (
-              <div className="px-6 py-6 text-center">
-                <span className="mx-auto inline-flex h-14 w-14 items-center justify-center rounded-full bg-[#24a148] text-white shadow-[0_0_0_8px_rgba(36,161,72,0.15)]" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7" /></svg>
-                </span>
-                <p className="mt-4 text-lg font-bold text-[#161616]">¡Descarga lista!</p>
-                <p className="mt-1 break-all text-sm text-[#525252]">{descarga.nombre}</p>
-                <button
-                  onClick={() => {
-                    const ultimo = ultimoArchivoRef.current;
-                    if (ultimo) void compartirBlob(ultimo.blob, ultimo.nombre);
-                  }}
-                  className="mt-5 inline-flex h-12 w-full items-center justify-center gap-2 rounded-md bg-[#0f62fe] text-base font-semibold text-white transition-colors hover:bg-[#0353e9]"
-                >
-                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v1a3 3 0 003 3h10a3 3 0 003-3v-1" /></svg>
-                  Guardar en el dispositivo
-                </button>
-                <button
-                  onClick={() => setDescarga(null)}
-                  className="mt-3 text-sm font-medium text-[#525252] transition-colors hover:text-[#161616]"
-                >
-                  Cerrar
-                </button>
               </div>
             )}
 
