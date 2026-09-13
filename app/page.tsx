@@ -1231,73 +1231,84 @@ export default function Home() {
         </div>
       )}
 
-      {/* AVISO DE DESCARGA — progreso y confirmación (móvil y escritorio) */}
+      {/* AVISO DE DESCARGA — modal de alto contraste (móvil y escritorio) */}
       {descarga && (
-        <div className="fixed inset-x-0 bottom-4 z-50 flex justify-center px-4 pointer-events-none">
-          <div className="pointer-events-auto w-full max-w-sm bg-[#262626] border border-[#393939] shadow-[0_8px_24px_rgba(0,0,0,0.45)] px-4 py-3">
+        <div
+          className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Descarga"
+          onClick={() => { if (descarga.estado !== 'generando') setDescarga(null); }}
+        >
+          <div
+            className="w-full max-w-sm overflow-hidden rounded-xl bg-white shadow-[0_20px_60px_rgba(0,0,0,0.65)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="h-1.5 w-full bg-[#0f62fe]" />
+
             {descarga.estado === 'generando' && (
-              <>
-                <div className="flex items-center gap-2 text-sm text-[#f4f4f4]">
-                  <svg className="w-4 h-4 animate-spin text-[#0f62fe]" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <div className="px-6 py-6">
+                <div className="flex items-center gap-3">
+                  <svg className="h-6 w-6 animate-spin text-[#0f62fe]" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-90" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
                   </svg>
-                  <span>{descarga.tipo === 'pdf' ? 'Generando PDF…' : 'Generando infografía…'}</span>
-                  <span className="ml-auto tabular-nums text-[#c6c6c6]">{descarga.progreso}%</span>
+                  <div className="flex-1">
+                    <p className="text-base font-semibold text-[#161616]">
+                      {descarga.tipo === 'pdf' ? 'Generando PDF…' : 'Generando infografía…'}
+                    </p>
+                    <p className="text-xs text-[#525252]">Un momento, por favor.</p>
+                  </div>
+                  <span className="text-2xl font-bold tabular-nums text-[#0f62fe]">{descarga.progreso}%</span>
                 </div>
                 <div
-                  className="mt-2 h-1 w-full bg-[#393939]"
+                  className="mt-4 h-2 w-full rounded-full bg-[#e0e0e0]"
                   role="progressbar"
                   aria-valuenow={descarga.progreso}
                   aria-valuemin={0}
                   aria-valuemax={100}
                 >
-                  <div className="h-full bg-[#0f62fe] transition-[width] duration-200" style={{ width: `${descarga.progreso}%` }} />
+                  <div className="h-full rounded-full bg-[#0f62fe] transition-[width] duration-200" style={{ width: `${descarga.progreso}%` }} />
                 </div>
-              </>
+              </div>
             )}
 
             {descarga.estado === 'listo' && (
-              <div className="flex items-start gap-3">
-                <span className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#24a148] text-white" aria-hidden="true">
-                  <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7" /></svg>
+              <div className="px-6 py-6 text-center">
+                <span className="mx-auto inline-flex h-14 w-14 items-center justify-center rounded-full bg-[#24a148] text-white shadow-[0_0_0_8px_rgba(36,161,72,0.15)]" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7" /></svg>
                 </span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm text-[#f4f4f4]">Descarga lista</p>
-                  <p className="text-xs text-[#a8a8a8] truncate">{descarga.nombre}</p>
-                  <button
-                    onClick={() => {
-                      const ultimo = ultimoArchivoRef.current;
-                      if (ultimo) void compartirBlob(ultimo.blob, ultimo.nombre);
-                    }}
-                    className="mt-2 h-8 px-3 text-xs font-medium text-white bg-[#0f62fe] hover:bg-[#0353e9] transition-colors"
-                  >
-                    Guardar en el dispositivo
-                  </button>
-                </div>
+                <p className="mt-4 text-lg font-bold text-[#161616]">¡Descarga lista!</p>
+                <p className="mt-1 break-all text-sm text-[#525252]">{descarga.nombre}</p>
+                <button
+                  onClick={() => {
+                    const ultimo = ultimoArchivoRef.current;
+                    if (ultimo) void compartirBlob(ultimo.blob, ultimo.nombre);
+                  }}
+                  className="mt-5 inline-flex h-12 w-full items-center justify-center gap-2 rounded-md bg-[#0f62fe] text-base font-semibold text-white transition-colors hover:bg-[#0353e9]"
+                >
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 3v12m0 0l-4-4m4 4l4-4M4 17v1a3 3 0 003 3h10a3 3 0 003-3v-1" /></svg>
+                  Guardar en el dispositivo
+                </button>
                 <button
                   onClick={() => setDescarga(null)}
-                  className="text-[#c6c6c6] hover:text-[#f4f4f4] text-lg leading-none px-1"
-                  aria-label="Cerrar aviso"
+                  className="mt-3 text-sm font-medium text-[#525252] transition-colors hover:text-[#161616]"
                 >
-                  ×
+                  Cerrar
                 </button>
               </div>
             )}
 
             {descarga.estado === 'error' && (
-              <div className="flex items-start gap-3">
-                <span className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#da1e28] text-white text-xs font-bold" aria-hidden="true">!</span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm text-[#f4f4f4]">No se pudo generar el archivo</p>
-                  <p className="text-xs text-[#a8a8a8]">{descarga.mensaje || 'Inténtalo de nuevo.'}</p>
-                </div>
+              <div className="px-6 py-6 text-center">
+                <span className="mx-auto inline-flex h-14 w-14 items-center justify-center rounded-full bg-[#da1e28] text-2xl font-bold text-white" aria-hidden="true">!</span>
+                <p className="mt-4 text-lg font-bold text-[#161616]">No se pudo generar el archivo</p>
+                <p className="mt-1 text-sm text-[#525252]">{descarga.mensaje || 'Inténtalo de nuevo.'}</p>
                 <button
                   onClick={() => setDescarga(null)}
-                  className="text-[#c6c6c6] hover:text-[#f4f4f4] text-lg leading-none px-1"
-                  aria-label="Cerrar aviso"
+                  className="mt-5 inline-flex h-12 w-full items-center justify-center rounded-md border border-[#8d8d8d] text-base font-semibold text-[#161616] transition-colors hover:bg-[#f4f4f4]"
                 >
-                  ×
+                  Cerrar
                 </button>
               </div>
             )}
