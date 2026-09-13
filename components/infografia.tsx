@@ -49,8 +49,8 @@ const TEMAS = [
   { accent: '#005d5d', accentDark: '#003a3a', soft: '#e5f6f6' },
 ] as const
 
-const MIN_W = 1920
-const MAX_W = 5120
+// Lienzos verticales 9:16 (para redes sociales). Se elige el menor que quepa.
+const PRESETS_W = [1080, 1440, 1800, 2160, 2700]
 
 function hashIndex(texto: string, n: number): number {
   let h = 0
@@ -160,26 +160,32 @@ function HeroArt({ size, accent, uid }: { size: number; accent: string; uid: str
 // ---------------------------------------------------------------------------
 export default function Infografia({ data }: { data: InfografiaData; variant?: InfografiaVariant }) {
   const uid = React.useId().replace(/[^a-zA-Z0-9]/g, '')
-  const rootRef = useRef<HTMLDivElement>(null)
-  const [naturalH, setNaturalH] = useState(0)
-
-  // Métricas estables (dependen solo del ancho del cuerpo, no del lienzo): así la
-  // altura natural medida en la 1.ª pasada coincide con la 2.ª.
+  const contenidoRef = useRef<HTMLDivElement>(null)
   const chars = totalCaracteres(data)
-  const cols = chars < 1500 ? 2 : chars < 4200 ? 3 : 4
-  const bodyW = cols === 2 ? 1560 : cols === 3 ? 2340 : 3120
-  const gap = Math.round(bodyW * 0.014)
-  const pad = Math.round(bodyW * 0.03)
-  const headerH = Math.round(Math.min(bodyW * 0.34, 640))
-  const footerH = Math.round(bodyW * 0.045)
+  const presetInicial = chars < 800 ? 0 : chars < 1600 ? 1 : chars < 3000 ? 2 : chars < 4800 ? 3 : 4
+  const [preset, setPreset] = useState(presetInicial)
+  const [contenidoH, setContenidoH] = useState(0)
+
+  // Lienzo vertical 9:16 (retrato). El preset crece con el contenido.
+  const W = PRESETS_W[Math.min(preset, PRESETS_W.length - 1)]
+  const H = Math.round((W * 16) / 9)
+  const gap = Math.round(W * 0.022)
+  const pad = Math.round(W * 0.05)
+  const bodyW = W - pad * 2
+  const headerH = Math.round(W * 0.44)
+  const footerH = Math.round(W * 0.058)
+  const area = H - headerH - footerH
+  const cols = W <= 1200 ? 1 : W <= 1800 ? 2 : 3
   const fontScale = 1
 
-  // 1.ª pasada: se mide la altura natural del componente completo.
+  // Mide la altura real del cuerpo y avanza de lienzo si no cabe (nunca recorta).
   useEffect(() => {
-    if (naturalH) return
-    const el = rootRef.current
+    const el = contenidoRef.current
     if (!el) return
-    const measure = () => setNaturalH(Math.ceil(el.getBoundingClientRect().height))
+    const measure = () => {
+      const h = Math.ceil(el.getBoundingClientRect().height)
+      setContenidoH((prev) => (h > 0 && Math.abs(h - prev) > 1 ? h : prev))
+    }
     measure()
     const ro = new ResizeObserver(measure)
     ro.observe(el)
@@ -187,14 +193,15 @@ export default function Infografia({ data }: { data: InfografiaData; variant?: I
       document.fonts.ready.then(measure).catch(() => {})
     }
     return () => ro.disconnect()
-  }, [naturalH])
+  }, [preset])
 
-  // 2.ª pasada: lienzo 16:9 con altura garantizada ≥ contenido (nunca recorta).
-  const canvasHmin = Math.max(1080, Math.round((bodyW + pad * 2) * (9 / 16)), naturalH || 0)
-  let canvasW = Math.max(MIN_W, Math.round((canvasHmin * 16) / 9))
-  if (canvasW > MAX_W) canvasW = MAX_W
-  const canvasH = Math.round((canvasW * 9) / 16)
-  const medido = naturalH > 0
+  useEffect(() => {
+    if (!contenidoH) return
+    // Margen de seguridad: si el contenido ocupa casi todo el alto, sube de lienzo.
+    if (contenidoH > area * 0.92 && preset < PRESETS_W.length - 1) {
+      setPreset((p) => p + 1)
+    }
+  }, [contenidoH, area, preset])
 
   const tema = TEMAS[hashIndex(data.titulo || 'teodoc', TEMAS.length)]
   const acento = tema.accent
@@ -210,11 +217,11 @@ export default function Infografia({ data }: { data: InfografiaData; variant?: I
   const fecha = new Date().toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' })
   const totalVersiculos = new Set(puntos.flatMap((p) => (p.versiculos || []).map((v) => v.cita)).filter(Boolean)).size
 
-  const h1 = Math.round(Math.max(38, Math.min(88, bodyW * 0.048)) * fontScale)
-  const h2 = Math.round(Math.max(24, Math.min(46, bodyW * 0.022)) * fontScale)
-  const body = Math.round(Math.max(18, Math.min(24, bodyW * 0.0145)) * fontScale)
-  const small = Math.round(body * 0.78)
-  const lead = Math.round(bodyW * 0.017 * fontScale)
+  const h1 = Math.round(Math.max(40, Math.min(86, W * 0.06)) * fontScale)
+  const h2 = Math.round(Math.max(22, Math.min(40, W * 0.03)) * fontScale)
+  const body = Math.round(Math.max(17, Math.min(22, W * 0.019)) * fontScale)
+  const small = Math.round(body * 0.82)
+  const lead = Math.round(W * 0.026 * fontScale)
 
   const chip: React.CSSProperties = {
     display: 'inline-flex',
@@ -245,14 +252,16 @@ export default function Infografia({ data }: { data: InfografiaData; variant?: I
   return (
     <div
       style={{
-        width: medido ? canvasW : bodyW + pad * 2,
-        height: medido ? canvasH : 'auto',
+        width: W,
+        height: H,
         boxSizing: 'border-box',
         background: C.white,
         color: C.ink,
         fontFamily: 'var(--font-plex), system-ui, sans-serif',
         position: 'relative',
         overflow: 'hidden',
+        display: 'flex',
+        flexDirection: 'column',
       }}
     >
       {/* ENCABEZADO */}
@@ -275,8 +284,8 @@ export default function Infografia({ data }: { data: InfografiaData; variant?: I
           </defs>
           <rect width="1600" height="400" fill={`url(#grid-${uid})`} />
         </svg>
-        <div style={{ position: 'absolute', top: -headerH * 0.12, right: -headerH * 0.02, width: headerH * 1.05, opacity: 0.95 }}>
-          <HeroArt size={headerH * 1.05} accent={acento} uid={uid} />
+        <div style={{ position: 'absolute', top: -headerH * 0.06, right: -headerH * 0.02, width: headerH * 0.72, opacity: 0.92 }}>
+          <HeroArt size={headerH * 0.72} accent={acento} uid={uid} />
         </div>
 
         <div style={{ position: 'relative', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', maxWidth: '62%' }}>
@@ -306,8 +315,8 @@ export default function Infografia({ data }: { data: InfografiaData; variant?: I
       </header>
 
       {/* CUERPO — columnas balanceadas por bloques (sin multicol: nunca recorta) */}
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-        <div style={{ width: bodyW, display: 'flex', flexDirection: 'column', gap }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: `${Math.round(pad * 0.5)}px ${pad}px`, overflow: 'hidden' }}>
+        <div ref={contenidoRef} style={{ display: 'flex', flexDirection: 'column', gap }}>
           {/* 01 · DESARROLLO BÍBLICO */}
           <section style={{ ...card, borderTop: `4px solid ${acento}` }}>
             {sectionTitle('01', 'Desarrollo bíblico', acento)}
