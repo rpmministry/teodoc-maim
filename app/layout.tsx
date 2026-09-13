@@ -18,6 +18,13 @@ const hand = Caveat({
 export const metadata: Metadata = {
   title: 'TeoDoc — Analizador Ministerial',
   description: 'Transcripción instantánea y extracción de estructura teológica impulsada por IA.',
+  icons: {
+    icon: [
+      { url: '/icon.svg', type: 'image/svg+xml' },
+      { url: '/favicon.ico' },
+    ],
+    apple: '/apple-icon.png',
+  },
 };
 
 export const viewport: Viewport = {

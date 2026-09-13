@@ -12,6 +12,7 @@ export type InfografiaData = {
   titulo?: string
   idea_principal?: string
   infografia?: { frase_corta?: string; texto_clave?: string; contexto_breve?: string }
+  conceptos_clave?: string[]
   desarrollo_progresivo?: Punto[]
   aplicacion?: string[]
   oracion?: string
@@ -112,6 +113,28 @@ const G = {
 }
 const POINT_GLYPHS = [G.lamp, G.seed, G.path, G.heart, G.dove, G.bible, G.pray, G.target]
 
+// Logo oficial horizontal en blanco (para fondos oscuros), vectorial.
+function TeoLogo(width: number) {
+  return (
+    <svg width={width} height={(width * 180) / 640} viewBox="0 0 640 180" aria-label="TeoDoc">
+      <g transform="translate(90,90)">
+        <rect x="-58" y="-40" width="116" height="80" fill="none" stroke="#ffffff" strokeWidth="4" />
+        <circle cx="-58" cy="0" r="12" fill="none" stroke="#ffffff" strokeWidth="4" />
+        <circle cx="58" cy="0" r="12" fill="none" stroke="#ffffff" strokeWidth="4" />
+        <rect x="-44" y="-20" width="58" height="6" fill="#ffffff" />
+        <rect x="-44" y="-4" width="58" height="6" fill="#ffffff" />
+        <rect x="-44" y="12" width="34" height="6" fill="#ffffff" />
+        <rect x="22" y="-24" width="5" height="12" fill="#ffffff" />
+        <rect x="32" y="-30" width="5" height="24" fill="#ffffff" />
+        <rect x="42" y="-20" width="5" height="12" fill="#ffffff" />
+      </g>
+      <text x="185" y="105" fontSize="56" fontWeight="600" fill="#ffffff" fontFamily="var(--font-plex), sans-serif">
+        Teo<tspan fill="#78a9ff">Doc</tspan>
+      </text>
+    </svg>
+  )
+}
+
 function TeoOrb(size: number, id: string) {
   return (
     <svg width={size} height={size} viewBox="0 0 64 64" aria-hidden="true">
@@ -210,6 +233,7 @@ export default function Infografia({ data }: { data: InfografiaData; variant?: I
 
   const puntos = data.desarrollo_progresivo || []
   const aplicaciones = data.aplicacion || []
+  const conceptos = (data.conceptos_clave || []).map((c) => String(c || '').trim()).filter(Boolean).slice(0, 8)
   const frases = data.infografia?.frase_corta || ''
   const contexto = data.infografia?.contexto_breve || ''
   const pasaje = puntos.find((p) => p.versiculos?.[0]?.cita)?.versiculos?.[0]?.cita || ''
@@ -290,8 +314,8 @@ export default function Infografia({ data }: { data: InfografiaData; variant?: I
 
         <div style={{ position: 'relative', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', maxWidth: '62%' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-            {TeoOrb(small * 2.2, `tdorb-${uid}`)}
-            <span style={{ fontSize: small, letterSpacing: '0.32em', textTransform: 'uppercase', color: '#a6c8ff' }}>TeoDoc · Análisis bíblico</span>
+            {TeoLogo(small * 9.5)}
+            <span style={{ fontSize: small, letterSpacing: '0.32em', textTransform: 'uppercase', color: '#a6c8ff' }}>Análisis bíblico</span>
           </div>
 
           <h1 style={{ margin: 0, lineHeight: 1.02, fontWeight: 800, letterSpacing: '-0.01em', fontSize: h1, overflowWrap: 'anywhere' }}>
@@ -334,6 +358,34 @@ export default function Infografia({ data }: { data: InfografiaData; variant?: I
               </div>
             ) : null}
           </section>
+
+          {/* CONCEPTOS CLAVE */}
+          {conceptos.length > 0 ? (
+            <section style={{ ...card, background: suave, borderTop: `4px solid ${acento}` }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                <span style={{ display: 'inline-flex' }}>{G.target(small * 1.4, acento)}</span>
+                <span style={{ fontSize: h2, fontWeight: 800, textTransform: 'uppercase', color: C.ink, letterSpacing: '0.01em' }}>Conceptos clave</span>
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                {conceptos.map((c, i) => (
+                  <span
+                    key={i}
+                    className="font-hand"
+                    style={{
+                      fontSize: small * 1.3,
+                      color: acentoOscuro,
+                      border: `1.5px solid ${acento}`,
+                      borderRadius: 999,
+                      padding: `${Math.round(small * 0.3)}px ${Math.round(small * 0.85)}px`,
+                      background: C.white,
+                    }}
+                  >
+                    {c}
+                  </span>
+                ))}
+              </div>
+            </section>
+          ) : null}
 
           {/* 02 · PUNTOS PRINCIPALES (repartidos en columnas balanceadas) */}
           {puntos.length > 0 ? (
@@ -400,10 +452,10 @@ export default function Infografia({ data }: { data: InfografiaData; variant?: I
             </section>
           ) : null}
 
-          {/* 04 · ORACIÓN MINISTERIAL */}
+          {/* 04 · ORACIÓN */}
           {data.oracion ? (
             <section style={{ ...card, background: suave, borderTop: `4px solid ${acento}` }}>
-              {sectionTitle('04', 'Oración ministerial', acento)}
+              {sectionTitle('04', 'Oración', acento)}
               <p style={{ margin: 0, fontSize: body, lineHeight: 1.65, fontStyle: 'italic' }}>{data.oracion}</p>
             </section>
           ) : null}
@@ -425,7 +477,7 @@ export default function Infografia({ data }: { data: InfografiaData; variant?: I
           textTransform: 'uppercase',
         }}
       >
-        <span>TeoDoc · Análisis Ministerial</span>
+        {TeoLogo(small * 8)}
         <span>RPM Ministry</span>
       </footer>
     </div>

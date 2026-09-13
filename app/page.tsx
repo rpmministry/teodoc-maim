@@ -9,18 +9,51 @@ interface PuntoDesarrollo { punto: string; explicacion: string; versiculos: Vers
 interface DatosInfografia { frase_corta: string; texto_clave: string; contexto_breve: string; }
 type AvisoAudio = 'corto' | 'no_relacionado';
 
-type Descarga = {
-  tipo: 'pdf' | 'png';
-  nombre: string;
-  progreso: number;
-  estado: 'generando' | 'error';
-  mensaje?: string;
-};
+// Normaliza lo que devuelve el backend: garantiza una estructura segura para el
+// PDF y la infografía aunque falte algún campo (nunca rompe el render).
+function normalizarAnalisisCliente(d: any): PredicaAnalisis {
+  const puntos = Array.isArray(d?.desarrollo_progresivo)
+    ? d.desarrollo_progresivo
+        .map((p: any) => ({
+          punto: String(p?.punto || '').trim(),
+          explicacion: String(p?.explicacion || '').trim(),
+          versiculos: Array.isArray(p?.versiculos)
+            ? p.versiculos
+                .map((v: any) => ({ cita: String(v?.cita || '').trim(), texto: String(v?.texto || '').trim() }))
+                .filter((v: any) => v.cita || v.texto)
+            : [],
+        }))
+        .filter((p: any) => p.punto || p.explicacion)
+    : [];
+  const aplicacion = Array.isArray(d?.aplicacion)
+    ? d.aplicacion.map((a: any) => String(a || '').trim()).filter(Boolean)
+    : [];
+  const conceptos = Array.isArray(d?.conceptos_clave)
+    ? d.conceptos_clave
+        .map((c: any) => String(c || '').replace(/\s+/g, ' ').trim())
+        .filter((c: string) => c.length > 0 && c.length <= 32)
+        .slice(0, 8)
+    : [];
+  return {
+    titulo: String(d?.titulo || 'Análisis de la prédica').trim(),
+    idea_principal: String(d?.idea_principal || '').trim(),
+    infografia: {
+      frase_corta: String(d?.infografia?.frase_corta || '').trim(),
+      texto_clave: String(d?.infografia?.texto_clave || '').trim(),
+      contexto_breve: String(d?.infografia?.contexto_breve || '').trim(),
+    },
+    desarrollo_progresivo: puntos,
+    aplicacion,
+    conceptos_clave: conceptos,
+    oracion: String(d?.oracion || '').trim(),
+  };
+}
 interface PredicaAnalisis {
   titulo: string; idea_principal: string;
   infografia?: DatosInfografia;
   desarrollo_progresivo: PuntoDesarrollo[];
   aplicacion: string[]; oracion: string;
+  conceptos_clave?: string[];
 }
 
 const ALLOWED_EXTENSIONS = ['.mp3', '.wav', '.m4a', '.m4b', '.aac', '.flac', '.ogg', '.oga', '.opus', '.wma', '.amr', '.webm', '.mp4', '.mov', '.aiff', '.aif', '.caf', '.3gp'];
@@ -63,10 +96,9 @@ export default function Home() {
   const [versoIndex, setVersoIndex] = useState(0);
   const [descargando, setDescargando] = useState(false);
   const [generandoPDF, setGenerandoPDF] = useState(false);
-  // Retroalimentación visible de descarga (progreso + confirmación), sobre todo
-  // en móvil, donde el sistema no siempre muestra aviso de descarga.
-  const [descarga, setDescarga] = useState<Descarga | null>(null);
-  const progresoTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Transcripción guardada para reintentar el análisis sin volver a subir audio.
+  const [textoPendiente, setTextoPendiente] = useState<string | null>(null);
+
   const [avisoAudio, setAvisoAudio] = useState<AvisoAudio | null>(null);
   // Fuente de entrada: audio local o YouTube. Mismo pipeline después.
   const [modo, setModo] = useState<'audio' | 'youtube'>('audio');
@@ -291,12 +323,41 @@ export default function Home() {
     await startAnalysisPipeline(data.secure_url);
   };
 
+  // Llama a /api/analyze con timeout y un reintento automático; normaliza la
+  // respuesta para que el render nunca falle por campos faltantes.
+  const analizarConReintentos = async (texto: string): Promise<PredicaAnalisis> => {
+    let ultimoError: unknown = null;
+    for (let intento = 0; intento < 2; intento++) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 260_000);
+      try {
+        const res = await fetch('/api/analyze', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: texto }),
+          signal: controller.signal,
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        if (!data || typeof data !== 'object') throw new Error('Respuesta vacía');
+        return normalizarAnalisisCliente(data);
+      } catch (e) {
+        ultimoError = e;
+        if (intento === 0) await new Promise((r) => setTimeout(r, 1500));
+      } finally {
+        clearTimeout(timeout);
+      }
+    }
+    throw ultimoError instanceof Error ? ultimoError : new Error('Análisis no disponible');
+  };
+
   // Pipeline POSTERIOR a la transcripción (validación + análisis + resultados).
   // Lo comparten el audio local y YouTube: no se duplica lógica.
   const continuarConTranscripcion = async (textoTranscrito: string) => {
     let timerAnalyze: ReturnType<typeof setInterval> | undefined;
     try {
       setProgress(48);
+      setTextoPendiente(null);
 
       // Validación previa: ¿hay contenido suficiente y afín al propósito de
       // TeoDoc? Filtro leniente; si la validación falla, NO bloqueamos.
@@ -329,24 +390,19 @@ export default function Home() {
         setProgress((prev) => prev >= 98 ? 98 : prev + Math.max(1, Math.floor((99 - prev) * 0.05)));
       }, 1000);
 
-      const resAnalyze = await fetch('/api/analyze', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: textoTranscrito })
-      });
+      const analisis = await analizarConReintentos(textoTranscrito);
       clearInterval(timerAnalyze); timerAnalyze = undefined;
-
-      if (!resAnalyze.ok) {
-        throw new Error('La IA tiene muchas solicitudes en este momento. Vuelve a intentarlo en unos segundos.');
-      }
-      const dataAnalyze = await resAnalyze.json();
 
       setProgress(100);
       setTimeout(() => {
-        setResultado(dataAnalyze);
+        setResultado(analisis);
         setLoading(false);
       }, 500);
     } catch (err: any) {
       if (timerAnalyze) clearInterval(timerAnalyze);
-      setError(err?.message || 'La IA tiene muchas solicitudes en este momento. Vuelve a intentarlo en unos segundos.');
+      // No se destruye el trabajo: se guarda la transcripción para reintentar.
+      setTextoPendiente(textoTranscrito);
+      setError('No se pudo completar el análisis en este momento. Pulsa «Reintentar» para continuar sin volver a subir el audio.');
       setLoading(false);
       setProgress(0);
     }
@@ -439,6 +495,15 @@ export default function Home() {
   };
 
   // El aviso se limpia, se vuelve al modo audio y se abre el selector.
+  // Reintenta el análisis con la transcripción ya obtenida (no vuelve a subir).
+  const reintentarAnalisis = () => {
+    if (!textoPendiente) return;
+    setError(null);
+    setLoading(true);
+    setProgress(50);
+    void continuarConTranscripcion(textoPendiente);
+  };
+
   const reintentarAudio = () => {
     setAvisoAudio(null);
     setAvisoYoutube(null);
@@ -447,32 +512,6 @@ export default function Home() {
     setLoading(false);
     setModo('audio');
     setTimeout(() => orbRef.current?.abrirSelector(), 50);
-  };
-
-  // --- Utilidades de descarga (PDF y PNG) con progreso y confirmación ---
-  const iniciarProgreso = (tipo: 'pdf' | 'png', nombre: string) => {
-    setDescarga({ tipo, nombre, progreso: 8, estado: 'generando' });
-    if (progresoTimerRef.current) clearInterval(progresoTimerRef.current);
-    progresoTimerRef.current = setInterval(() => {
-      setDescarga((d) =>
-        d && d.estado === 'generando'
-          ? { ...d, progreso: Math.min(90, d.progreso + Math.max(1, Math.round((90 - d.progreso) * 0.12))) }
-          : d,
-      );
-    }, 180);
-  };
-
-  const terminarProgreso = (ok: boolean, mensaje?: string) => {
-    if (progresoTimerRef.current) {
-      clearInterval(progresoTimerRef.current);
-      progresoTimerRef.current = null;
-    }
-    // En éxito se cierra el aviso: la descarga ya la muestra el navegador.
-    if (ok) {
-      setDescarga(null);
-      return;
-    }
-    setDescarga((d) => (d ? { ...d, estado: 'error', mensaje } : d));
   };
 
   const dataUrlABlob = (dataUrl: string): Blob => {
@@ -484,16 +523,21 @@ export default function Home() {
     return new Blob([bytes], { type: mime });
   };
 
+  // Descarga estándar del navegador: Blob -> enlace temporal -> clic. Sin
+  // ventanas ni pantallas intermedias; el navegador muestra su propio aviso.
   const descargarBlob = (blob: Blob, nombre: string) => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
     a.download = nombre;
     a.rel = 'noopener';
+    a.style.display = 'none';
     document.body.appendChild(a);
     a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    // Retirar el enlace de inmediato puede cancelar la descarga en algunos
+    // navegadores, por eso se retira en el siguiente ciclo.
+    setTimeout(() => a.remove(), 1000);
+    setTimeout(() => URL.revokeObjectURL(url), 30_000);
   };
 
   const nombreArchivoPDF = () => {
@@ -509,16 +553,13 @@ export default function Home() {
     const safe = (resultado?.titulo || 'predica').replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 60);
     const nombre = `Infografia_${safe || 'predica'}.png`;
     setDescargando(true);
-    iniciarProgreso('png', nombre);
     try {
       const node = infografiaRef.current;
       if (!node) throw new Error('Sin artboard');
       const dataUrl = await exportarInfografiaPng(node);
-      // Descarga única: la maneja el navegador (mensaje y carpeta nativos).
       descargarBlob(dataUrlABlob(dataUrl), nombre);
-      terminarProgreso(true);
     } catch {
-      terminarProgreso(false, 'No se pudo generar la imagen. Inténtalo de nuevo.');
+      setError('No se pudo generar la imagen. Inténtalo de nuevo.');
     } finally {
       setDescargando(false);
     }
@@ -528,18 +569,15 @@ export default function Home() {
     if (!resultado || generandoPDF) return;
     const nombre = nombreArchivoPDF();
     setGenerandoPDF(true);
-    iniciarProgreso('pdf', nombre);
     try {
-      // Cede un frame para que el aviso de progreso se pinte antes del trabajo
-      // pesado (jsPDF dibuja de forma síncrona y bloquea el hilo).
+      // Cede un frame para que el botón muestre "Generando PDF…" antes del
+      // trabajo pesado (jsPDF dibuja de forma síncrona y bloquea el hilo).
       await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
       const { jsPDF } = await import('jspdf');
       await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-      // Descarga única: la maneja el navegador (mensaje y carpeta nativos).
       descargarBlob(construirPDFBlob(jsPDF, resultado), nombre);
-      terminarProgreso(true);
     } catch {
-      terminarProgreso(false, 'No se pudo generar el PDF. Inténtalo de nuevo.');
+      setError('No se pudo generar el PDF. Inténtalo de nuevo.');
     } finally {
       setGenerandoPDF(false);
     }
@@ -567,6 +605,24 @@ export default function Home() {
     const setFill = (c: RGB) => doc.setFillColor(c[0], c[1], c[2]);
     const setStroke = (c: RGB) => doc.setDrawColor(c[0], c[1], c[2]);
 
+    // Logo TeoDoc vectorial (icono + wordmark), sin depender de imágenes.
+    const dibujarLogoPDF = (x: number, yTop: number, escala: number) => {
+      const s = escala;
+      setFill(C.accent); doc.roundedRect(x, yTop, 26 * s, 26 * s, 6 * s, 6 * s, 'F');
+      setFill([255, 255, 255] as RGB); doc.roundedRect(x + 6 * s, yTop + 7.5 * s, 14 * s, 11 * s, 2 * s, 2 * s, 'F');
+      setFill(C.accent);
+      doc.rect(x + 8 * s, yTop + 10 * s, 7 * s, 1 * s, 'F');
+      doc.rect(x + 8 * s, yTop + 12.3 * s, 7 * s, 1 * s, 'F');
+      doc.rect(x + 8 * s, yTop + 14.6 * s, 4.5 * s, 1 * s, 'F');
+      doc.rect(x + 16 * s, yTop + 9.8 * s, 0.9 * s, 1.8 * s, 'F');
+      doc.rect(x + 17.8 * s, yTop + 8.8 * s, 0.9 * s, 3.6 * s, 'F');
+      doc.rect(x + 19.6 * s, yTop + 10 * s, 0.9 * s, 1.8 * s, 'F');
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(13 * s);
+      const anchoTeo = doc.getTextWidth('Teo');
+      setText(C.ink); doc.text('Teo', x + 31 * s, yTop + 18 * s);
+      setText(C.accent); doc.text('Doc', x + 31 * s + anchoTeo, yTop + 18 * s);
+    };
+
     const listaPuntos = Array.isArray(resultado.desarrollo_progresivo) ? resultado.desarrollo_progresivo : [];
     const listaAplicaciones = Array.isArray(resultado.aplicacion) ? resultado.aplicacion : [];
     const pv = (() => {
@@ -590,6 +646,7 @@ export default function Home() {
     setFill(C.accent); doc.rect(0, 0, pageW, 6, 'F');
     doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); setText(C.sub);
     doc.text('ANÁLISIS DE PRÉDICA', margin, margin + 2);
+    dibujarLogoPDF(pageW - margin - 82, margin - 16, 1);
 
     doc.setFont('helvetica', 'bold'); doc.setFontSize(26); setText(C.ink);
     const mastTitle = doc.splitTextToSize(resultado.titulo || 'Prédica', contentW);
@@ -737,12 +794,12 @@ export default function Home() {
       setStroke(C.rule); doc.setLineWidth(0.5); doc.line(margin, y, pageW - margin, y); y += 14;
     });
 
-    // 5. Conceptos clave
-    const conceptos = Array.from(new Set(
-      listaPuntos
-        .map((p) => (p.punto || '').split(/\s+/).slice(0, 2).join(' ').replace(/[.,;:]+$/, '').trim())
-        .filter((k) => k.length > 2),
-    )).slice(0, 8);
+    // 5. Conceptos clave (reales, normalizados desde la IA; nunca fragmentos)
+    const conceptos = (Array.isArray(resultado.conceptos_clave) ? resultado.conceptos_clave : [])
+      .map((c) => String(c || '').replace(/\s+/g, ' ').trim())
+      .filter((c) => c.length > 1 && c.length <= 32 && /[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]/.test(c))
+      .filter((c, i, arr) => arr.findIndex((x) => x.toLowerCase() === c.toLowerCase()) === i)
+      .slice(0, 8);
     if (conceptos.length) {
       heading('Conceptos clave');
       chips(conceptos);
@@ -778,8 +835,8 @@ export default function Home() {
       });
     }
 
-    // 8. Oración ministerial
-    heading('Oración ministerial');
+    // 8. Oración
+    heading('Oración');
     if (listaPuntos.length) {
       paragraph('Motivos de oración', { size: 9, color: C.sub });
       listaPuntos.slice(0, 5).forEach((p, i) => {
@@ -812,7 +869,7 @@ export default function Home() {
         doc.line(margin, margin - 20, pageW - margin, margin - 20);
         doc.setFont('helvetica', 'normal'); doc.setFontSize(8); setText(C.sub);
         doc.text(resumir(resultado.titulo || 'Análisis de prédica', 64), margin, margin - 28);
-        doc.text('TeoDoc', pageW - margin, margin - 28, { align: 'right' });
+        dibujarLogoPDF(pageW - margin - 50, margin - 44, 0.6);
       }
       doc.line(margin, pageH - margin + 14, pageW - margin, pageH - margin + 14);
       doc.setFont('helvetica', 'normal'); doc.setFontSize(8); setText(C.sub);
@@ -834,20 +891,12 @@ export default function Home() {
           className="flex items-center gap-3 min-w-0 hover:opacity-90 transition-opacity"
           aria-label="Volver al inicio"
         >
-          <svg viewBox="0 0 64 64" className="w-8 h-8 sm:w-10 sm:h-10 shrink-0 drop-shadow-[0_0_10px_rgba(15,98,254,0.45)]" aria-hidden="true">
-            <defs>
-              <radialGradient id="tdOrb" cx="50%" cy="36%" r="68%">
-                <stop offset="0%" stopColor="#a6c8ff" />
-                <stop offset="52%" stopColor="#0f62fe" />
-                <stop offset="100%" stopColor="#002d9c" />
-              </radialGradient>
-            </defs>
-            <circle cx="32" cy="32" r="22" fill="url(#tdOrb)" />
-            <path d="M14 34.5c5.4-3.2 10.3-3.2 15.6 0 5.2 3.1 9.7 1.6 13.4-1.2" stroke="#ffffff" strokeOpacity="0.9" strokeWidth="2.4" strokeLinecap="round" fill="none" />
-          </svg>
-          <span className="text-lg sm:text-xl font-bold tracking-tight text-[#f4f4f4] truncate">
-            Teo<span className="text-[#78a9ff]">Doc</span>
-          </span>
+          {/* Logo oficial horizontal (variante blanca para fondo oscuro) */}
+          <img
+            src="/teodoc/logo-horizontal-blanco.png"
+            alt="TeoDoc"
+            className="h-9 sm:h-11 w-auto shrink-0"
+          />
         </button>
 
         <div className="flex items-center gap-1 sm:gap-2 shrink-0">
@@ -986,6 +1035,14 @@ export default function Home() {
           <div className="mt-8 w-full max-w-md border-l-4 border-[#0f62fe] bg-[#262626] px-4 py-3 text-sm text-[#f4f4f4]">
             <p className="font-semibold mb-1">🕊️ Un momento</p>
             <p className="text-[#c6c6c6]">{error}</p>
+            {textoPendiente && (
+              <button
+                onClick={reintentarAnalisis}
+                className="mt-3 h-10 px-5 text-sm font-medium text-white bg-[#0f62fe] hover:bg-[#0353e9] transition-colors"
+              >
+                Reintentar
+              </button>
+            )}
           </div>
         )}
 
@@ -1127,7 +1184,7 @@ export default function Home() {
                   <section className="bg-[#262626] p-6 sm:p-8 border border-[#393939]">
                     <h3 className="text-sm font-semibold text-[#f4f4f4] mb-5 sm:mb-6 uppercase tracking-wider flex items-center gap-2">
                       <svg className="w-5 h-5 shrink-0 text-[#78a9ff]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
-                      Oración Ministerial
+                      Oración
                     </h3>
                     <p className="text-[#c6c6c6] italic leading-relaxed font-normal text-sm sm:text-base">"{resultado.oracion}"</p>
                   </section>
@@ -1208,65 +1265,6 @@ export default function Home() {
                   {feedbackStatus === 'sending' ? 'Enviando…' : 'Enviar mensaje'}
                 </button>
               </form>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* AVISO DE DESCARGA — modal de alto contraste (móvil y escritorio) */}
-      {descarga && (
-        <div
-          className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fade-in"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Descarga"
-          onClick={() => { if (descarga.estado !== 'generando') setDescarga(null); }}
-        >
-          <div
-            className="w-full max-w-sm overflow-hidden rounded-xl bg-white shadow-[0_20px_60px_rgba(0,0,0,0.65)]"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="h-1.5 w-full bg-[#0f62fe]" />
-
-            {descarga.estado === 'generando' && (
-              <div className="px-6 py-6">
-                <div className="flex items-center gap-3">
-                  <svg className="h-6 w-6 animate-spin text-[#0f62fe]" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-90" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-                  </svg>
-                  <div className="flex-1">
-                    <p className="text-base font-semibold text-[#161616]">
-                      {descarga.tipo === 'pdf' ? 'Generando PDF…' : 'Generando infografía…'}
-                    </p>
-                    <p className="text-xs text-[#525252]">Un momento, por favor.</p>
-                  </div>
-                  <span className="text-2xl font-bold tabular-nums text-[#0f62fe]">{descarga.progreso}%</span>
-                </div>
-                <div
-                  className="mt-4 h-2 w-full rounded-full bg-[#e0e0e0]"
-                  role="progressbar"
-                  aria-valuenow={descarga.progreso}
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                >
-                  <div className="h-full rounded-full bg-[#0f62fe] transition-[width] duration-200" style={{ width: `${descarga.progreso}%` }} />
-                </div>
-              </div>
-            )}
-
-            {descarga.estado === 'error' && (
-              <div className="px-6 py-6 text-center">
-                <span className="mx-auto inline-flex h-14 w-14 items-center justify-center rounded-full bg-[#da1e28] text-2xl font-bold text-white" aria-hidden="true">!</span>
-                <p className="mt-4 text-lg font-bold text-[#161616]">No se pudo generar el archivo</p>
-                <p className="mt-1 text-sm text-[#525252]">{descarga.mensaje || 'Inténtalo de nuevo.'}</p>
-                <button
-                  onClick={() => setDescarga(null)}
-                  className="mt-5 inline-flex h-12 w-full items-center justify-center rounded-md border border-[#8d8d8d] text-base font-semibold text-[#161616] transition-colors hover:bg-[#f4f4f4]"
-                >
-                  Cerrar
-                </button>
-              </div>
             )}
           </div>
         </div>
