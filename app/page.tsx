@@ -8,6 +8,14 @@ interface Versiculo { cita: string; texto: string; }
 interface PuntoDesarrollo { punto: string; explicacion: string; versiculos: Versiculo[]; }
 interface DatosInfografia { frase_corta: string; texto_clave: string; contexto_breve: string; }
 type AvisoAudio = 'corto' | 'no_relacionado';
+
+type Descarga = {
+  tipo: 'pdf' | 'png';
+  nombre: string;
+  progreso: number;
+  estado: 'generando' | 'listo' | 'error';
+  mensaje?: string;
+};
 interface PredicaAnalisis {
   titulo: string; idea_principal: string;
   infografia?: DatosInfografia;
@@ -55,6 +63,12 @@ export default function Home() {
   const [versoIndex, setVersoIndex] = useState(0);
   const [descargando, setDescargando] = useState(false);
   const [generandoPDF, setGenerandoPDF] = useState(false);
+  // Retroalimentación visible de descarga (progreso + confirmación), sobre todo
+  // en móvil, donde el sistema no siempre muestra aviso de descarga.
+  const [descarga, setDescarga] = useState<Descarga | null>(null);
+  const progresoTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Último archivo generado, para poder guardarlo de nuevo desde el aviso.
+  const ultimoArchivoRef = useRef<{ blob: Blob; nombre: string } | null>(null);
   const [avisoAudio, setAvisoAudio] = useState<AvisoAudio | null>(null);
   // Fuente de entrada: audio local o YouTube. Mismo pipeline después.
   const [modo, setModo] = useState<'audio' | 'youtube'>('audio');
@@ -437,23 +451,91 @@ export default function Home() {
     setTimeout(() => orbRef.current?.abrirSelector(), 50);
   };
 
+  // --- Utilidades de descarga (PDF y PNG) con progreso y confirmación ---
+  const iniciarProgreso = (tipo: 'pdf' | 'png', nombre: string) => {
+    setDescarga({ tipo, nombre, progreso: 8, estado: 'generando' });
+    if (progresoTimerRef.current) clearInterval(progresoTimerRef.current);
+    progresoTimerRef.current = setInterval(() => {
+      setDescarga((d) =>
+        d && d.estado === 'generando'
+          ? { ...d, progreso: Math.min(90, d.progreso + Math.max(1, Math.round((90 - d.progreso) * 0.12))) }
+          : d,
+      );
+    }, 180);
+  };
+
+  const terminarProgreso = (ok: boolean, mensaje?: string) => {
+    if (progresoTimerRef.current) {
+      clearInterval(progresoTimerRef.current);
+      progresoTimerRef.current = null;
+    }
+    setDescarga((d) => (d ? { ...d, progreso: ok ? 100 : d.progreso, estado: ok ? 'listo' : 'error', mensaje } : d));
+  };
+
+  const dataUrlABlob = (dataUrl: string): Blob => {
+    const [meta, b64] = dataUrl.split(',');
+    const mime = /:(.*?);/.exec(meta)?.[1] || 'application/octet-stream';
+    const bin = atob(b64 || '');
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return new Blob([bytes], { type: mime });
+  };
+
+  const descargarBlob = (blob: Blob, nombre: string) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = nombre;
+    a.rel = 'noopener';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  };
+
+  // En móvil, el panel nativo de compartir/guardar SÍ muestra confirmación del
+  // sistema. Se invoca desde un toque del usuario (requisito de iOS).
+  const compartirBlob = async (blob: Blob, nombre: string) => {
+    const nav = navigator as Navigator & {
+      canShare?: (data: ShareData) => boolean;
+      share?: (data: ShareData) => Promise<void>;
+    };
+    try {
+      const file = new File([blob], nombre, { type: blob.type || 'application/octet-stream' });
+      if (typeof nav.share === 'function' && typeof nav.canShare === 'function' && nav.canShare({ files: [file] })) {
+        await nav.share({ files: [file], title: nombre });
+        return;
+      }
+    } catch (err) {
+      if ((err as Error)?.name === 'AbortError') return;
+    }
+    descargarBlob(blob, nombre);
+  };
+
+  const nombreArchivoPDF = () => {
+    const safe = (resultado?.titulo || 'analisis').replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 60);
+    return `TeoDoc_${safe || 'analisis'}.pdf`;
+  };
+
   // C. Export PNG: parte del artboard FIJO de 900px (independiente del
   // contenedor visible y del viewport). El resultado es EXACTAMENTE la
   // infografía completa: sin hoja A4, sin recortes y sin fondo blanco extra.
   const descargarInfografia = async () => {
     if (descargando) return;
+    const safe = (resultado?.titulo || 'predica').replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 60);
+    const nombre = `Infografia_${safe || 'predica'}.png`;
     setDescargando(true);
+    iniciarProgreso('png', nombre);
     try {
       const node = infografiaRef.current;
       if (!node) throw new Error('Sin artboard');
       const dataUrl = await exportarInfografiaPng(node);
-      const safe = (resultado?.titulo || 'predica').replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 60);
-      const link = document.createElement('a');
-      link.download = `Infografia_${safe || 'predica'}.png`;
-      link.href = dataUrl;
-      link.click();
+      const blob = dataUrlABlob(dataUrl);
+      ultimoArchivoRef.current = { blob, nombre };
+      descargarBlob(blob, nombre);
+      terminarProgreso(true);
     } catch {
-      alert('No se pudo generar la imagen. Inténtalo de nuevo.');
+      terminarProgreso(false, 'No se pudo generar la imagen. Inténtalo de nuevo.');
     } finally {
       setDescargando(false);
     }
@@ -461,23 +543,28 @@ export default function Home() {
 
   const generarPDF = async () => {
     if (!resultado || generandoPDF) return;
+    const nombre = nombreArchivoPDF();
     setGenerandoPDF(true);
+    iniciarProgreso('pdf', nombre);
     try {
-      // Cede un frame para que el botón pinte "Generando PDF…" antes del
-      // trabajo pesado (jsPDF dibuja de forma síncrona y bloquea el hilo).
+      // Cede un frame para que el aviso de progreso se pinte antes del trabajo
+      // pesado (jsPDF dibuja de forma síncrona y bloquea el hilo).
       await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
       const { jsPDF } = await import('jspdf');
       await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-      await construirYDescargarPDF(jsPDF, resultado);
+      const blob = construirPDFBlob(jsPDF, resultado);
+      ultimoArchivoRef.current = { blob, nombre };
+      descargarBlob(blob, nombre);
+      terminarProgreso(true);
     } catch {
-      alert('No se pudo generar el PDF. Inténtalo de nuevo.');
+      terminarProgreso(false, 'No se pudo generar el PDF. Inténtalo de nuevo.');
     } finally {
       setGenerandoPDF(false);
     }
   };
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const construirYDescargarPDF = async (jsPDF: any, resultado: PredicaAnalisis) => {
+  const construirPDFBlob = (jsPDF: any, resultado: PredicaAnalisis): Blob => {
     const doc = new jsPDF({ unit: 'pt', format: 'a4' });
     const pageW = doc.internal.pageSize.getWidth();
     const pageH = doc.internal.pageSize.getHeight();
@@ -751,8 +838,7 @@ export default function Home() {
       doc.text(`Página ${i} de ${total}`, pageW - margin, pageH - margin + 25, { align: 'right' });
     }
 
-    const safe = (resultado.titulo || 'analisis').replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 60);
-    doc.save(`TeoDoc_${safe || 'analisis'}.pdf`);
+    return doc.output('blob') as Blob;
   };
 
   return (
@@ -1140,6 +1226,80 @@ export default function Home() {
                   {feedbackStatus === 'sending' ? 'Enviando…' : 'Enviar mensaje'}
                 </button>
               </form>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* AVISO DE DESCARGA — progreso y confirmación (móvil y escritorio) */}
+      {descarga && (
+        <div className="fixed inset-x-0 bottom-4 z-50 flex justify-center px-4 pointer-events-none">
+          <div className="pointer-events-auto w-full max-w-sm bg-[#262626] border border-[#393939] shadow-[0_8px_24px_rgba(0,0,0,0.45)] px-4 py-3">
+            {descarga.estado === 'generando' && (
+              <>
+                <div className="flex items-center gap-2 text-sm text-[#f4f4f4]">
+                  <svg className="w-4 h-4 animate-spin text-[#0f62fe]" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-90" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+                  </svg>
+                  <span>{descarga.tipo === 'pdf' ? 'Generando PDF…' : 'Generando infografía…'}</span>
+                  <span className="ml-auto tabular-nums text-[#c6c6c6]">{descarga.progreso}%</span>
+                </div>
+                <div
+                  className="mt-2 h-1 w-full bg-[#393939]"
+                  role="progressbar"
+                  aria-valuenow={descarga.progreso}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                >
+                  <div className="h-full bg-[#0f62fe] transition-[width] duration-200" style={{ width: `${descarga.progreso}%` }} />
+                </div>
+              </>
+            )}
+
+            {descarga.estado === 'listo' && (
+              <div className="flex items-start gap-3">
+                <span className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#24a148] text-white" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7" /></svg>
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm text-[#f4f4f4]">Descarga lista</p>
+                  <p className="text-xs text-[#a8a8a8] truncate">{descarga.nombre}</p>
+                  <button
+                    onClick={() => {
+                      const ultimo = ultimoArchivoRef.current;
+                      if (ultimo) void compartirBlob(ultimo.blob, ultimo.nombre);
+                    }}
+                    className="mt-2 h-8 px-3 text-xs font-medium text-white bg-[#0f62fe] hover:bg-[#0353e9] transition-colors"
+                  >
+                    Guardar en el dispositivo
+                  </button>
+                </div>
+                <button
+                  onClick={() => setDescarga(null)}
+                  className="text-[#c6c6c6] hover:text-[#f4f4f4] text-lg leading-none px-1"
+                  aria-label="Cerrar aviso"
+                >
+                  ×
+                </button>
+              </div>
+            )}
+
+            {descarga.estado === 'error' && (
+              <div className="flex items-start gap-3">
+                <span className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#da1e28] text-white text-xs font-bold" aria-hidden="true">!</span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm text-[#f4f4f4]">No se pudo generar el archivo</p>
+                  <p className="text-xs text-[#a8a8a8]">{descarga.mensaje || 'Inténtalo de nuevo.'}</p>
+                </div>
+                <button
+                  onClick={() => setDescarga(null)}
+                  className="text-[#c6c6c6] hover:text-[#f4f4f4] text-lg leading-none px-1"
+                  aria-label="Cerrar aviso"
+                >
+                  ×
+                </button>
+              </div>
             )}
           </div>
         </div>
