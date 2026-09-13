@@ -1,0 +1,7 @@
+El porqué del concepto J (pergamino + onda de audio):
+
+Es específico de TeoDoc, no genérico. Una cruz o paloma sola serviría para cualquier app cristiana. El pergamino que termina en barras de audio solo tiene sentido para una herramienta que transcribe y analiza — nadie más podría usar exactamente este símbolo.
+Se lee en cualquier tamaño. La silueta rectangular se simplifica bien a 32px sin perder reconocibilidad — algo que formas más orgánicas (paloma, llama) pierden a ese tamaño.
+Encaja con Carbon Design System. Ángulos rectos, formas planas, un solo azul de acento (
+#0f62fe), sin decoración — el mismo lenguaje que después vas a usar en la interfaz de la app.
+Es neutral en denominación. No usa un símbolo ligado a una tradición específica, así que sirve para un público ministerial amplio.
