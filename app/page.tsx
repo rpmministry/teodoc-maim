@@ -101,6 +101,9 @@ export default function Home() {
   // Aviso de descarga (porcentaje + confirmación), visible con resultados en pantalla.
   const [avisoDescarga, setAvisoDescarga] = useState<{ tipo: 'pdf' | 'png'; progreso: number; estado: 'generando' | 'listo' | 'error'; mensaje?: string } | null>(null);
   const descargaTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Último archivo descargado (para el enlace "Abrir" del aviso).
+  const [ultimoArchivo, setUltimoArchivo] = useState<{ url: string; nombre: string; tipo: 'pdf' | 'png' } | null>(null);
+  const ultimoUrlRef = useRef<string | null>(null);
 
   const [avisoAudio, setAvisoAudio] = useState<AvisoAudio | null>(null);
   // Fuente de entrada: audio local o YouTube. Mismo pipeline después.
@@ -534,7 +537,8 @@ export default function Home() {
 
   // Descarga estándar del navegador: Blob -> enlace temporal -> clic. Sin
   // ventanas ni pantallas intermedias; el navegador muestra su propio aviso.
-  const descargarBlob = (blob: Blob, nombre: string) => {
+  // Descarga y DEVUELVE la URL del Blob para poder ofrecer "Abrir" en el aviso.
+  const descargarBlob = (blob: Blob, nombre: string): string => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -550,7 +554,7 @@ export default function Home() {
     // Retirar el enlace de inmediato puede cancelar la descarga en algunos
     // navegadores, por eso se retira después.
     setTimeout(() => a.remove(), 1500);
-    setTimeout(() => URL.revokeObjectURL(url), 30_000);
+    return url;
   };
 
   const iniciarDescarga = (tipo: 'pdf' | 'png') => {
@@ -572,7 +576,8 @@ export default function Home() {
     }
     if (ok) {
       setAvisoDescarga((d) => (d ? { ...d, progreso: 100, estado: 'listo' } : d));
-      setTimeout(() => setAvisoDescarga(null), 1800);
+      // Se deja visible para que el usuario pueda "Abrir" el archivo.
+      setTimeout(() => setAvisoDescarga(null), 12000);
     } else {
       setAvisoDescarga({ tipo: 'png', progreso: 0, estado: 'error', mensaje: mensaje || 'No se pudo generar el archivo.' });
     }
@@ -596,7 +601,10 @@ export default function Home() {
       const node = infografiaRef.current;
       if (!node) throw new Error('Sin artboard');
       const dataUrl = await exportarInfografiaPng(node);
-      descargarBlob(dataUrlABlob(dataUrl), nombre);
+      const url = descargarBlob(dataUrlABlob(dataUrl), nombre);
+      if (ultimoUrlRef.current) URL.revokeObjectURL(ultimoUrlRef.current);
+      ultimoUrlRef.current = url;
+      setUltimoArchivo({ url, nombre, tipo: 'png' });
       finalizarDescarga(true);
     } catch {
       finalizarDescarga(false, 'No se pudo generar la imagen. Inténtalo de nuevo.');
@@ -620,7 +628,10 @@ export default function Home() {
         JsPDF = mod.jsPDF;
         jsPDFRef.current = JsPDF;
       }
-      descargarBlob(construirPDFBlob(JsPDF, resultado), nombre);
+      const url = descargarBlob(construirPDFBlob(JsPDF, resultado), nombre);
+      if (ultimoUrlRef.current) URL.revokeObjectURL(ultimoUrlRef.current);
+      ultimoUrlRef.current = url;
+      setUltimoArchivo({ url, nombre, tipo: 'pdf' });
       finalizarDescarga(true);
     } catch {
       finalizarDescarga(false, 'No se pudo generar el PDF. Inténtalo de nuevo.');
@@ -1351,11 +1362,34 @@ export default function Home() {
               </>
             )}
             {avisoDescarga.estado === 'listo' && (
-              <div className="flex items-center gap-2 text-sm text-[#161616]">
-                <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#24a148] text-white" aria-hidden="true">
+              <div className="flex items-start gap-2 text-sm text-[#161616]">
+                <span className="mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#24a148] text-white" aria-hidden="true">
                   <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7" /></svg>
                 </span>
-                <span className="font-semibold">Descarga iniciada</span>
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold">Descarga lista</p>
+                  {ultimoArchivo ? <p className="truncate text-xs text-[#525252]">{ultimoArchivo.nombre}</p> : null}
+                  {ultimoArchivo ? (
+                    <div className="pointer-events-auto mt-2 flex flex-wrap gap-2">
+                      <a
+                        href={ultimoArchivo.url}
+                        target="_blank"
+                        rel="noopener"
+                        className="inline-flex h-8 items-center rounded-md bg-[#0f62fe] px-3 text-xs font-semibold text-white transition-colors hover:bg-[#0353e9]"
+                      >
+                        Abrir archivo
+                      </a>
+                      <a
+                        href={ultimoArchivo.url}
+                        download={ultimoArchivo.nombre}
+                        className="inline-flex h-8 items-center rounded-md border border-[#8d8d8d] px-3 text-xs font-semibold text-[#161616] transition-colors hover:bg-[#f4f4f4]"
+                      >
+                        Guardar de nuevo
+                      </a>
+                    </div>
+                  ) : null}
+                  <p className="mt-2 text-[11px] leading-snug text-[#8d8d8d]">Se guardó en la carpeta de descargas de tu navegador.</p>
+                </div>
                 <span className="ml-auto text-xs text-[#525252]">100%</span>
               </div>
             )}

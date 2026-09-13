@@ -470,20 +470,30 @@ export async function exportarInfografiaPng(node: HTMLElement): Promise<string> 
   const alto = node.offsetHeight
   if (!ancho || !alto) throw new Error('Artboard vacío')
 
-  const MAX_AREA = 15_000_000
-  const escala = ancho * alto <= MAX_AREA ? 1 : Math.sqrt(MAX_AREA / (ancho * alto))
+  // Límites seguros para iOS/Safari: no superar ~14 MP ni 4096 px por lado.
+  const MAX_AREA = 14_000_000
+  const MAX_DIM = 4096
+  const escala = Math.min(1, Math.sqrt(MAX_AREA / (ancho * alto)), MAX_DIM / Math.max(ancho, alto))
 
-  return domtoimage.toPng(node, {
-    width: Math.round(ancho * escala),
-    height: Math.round(alto * escala),
-    style: {
-      width: `${ancho}px`,
-      height: `${alto}px`,
-      transform: `scale(${escala})`,
-      transformOrigin: 'top left',
-    },
-    bgcolor: '#FFFFFF',
-  })
+  const intentar = (s: number) =>
+    domtoimage.toPng(node, {
+      width: Math.max(1, Math.round(ancho * s)),
+      height: Math.max(1, Math.round(alto * s)),
+      style: {
+        width: `${ancho}px`,
+        height: `${alto}px`,
+        transform: `scale(${s})`,
+        transformOrigin: 'top left',
+      },
+      bgcolor: '#FFFFFF',
+    })
+
+  try {
+    return await intentar(escala)
+  } catch {
+    // Reintento con menos resolución: evita fallos por límites de canvas.
+    return await intentar(Math.max(0.35, escala * 0.6))
+  }
 }
 
 // ---------------------------------------------------------------------------
