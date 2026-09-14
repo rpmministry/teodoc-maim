@@ -13,6 +13,7 @@ const page = leer('app/page.tsx');
 const infografia = leer('components/infografia.tsx');
 const ilustraciones = leer('components/ilustraciones/index.tsx');
 const layout = leer('lib/infografia-layout.ts');
+const modular = leer('lib/infografia-modular.ts');
 const analyze = leer('app/api/analyze/route.ts');
 
 let pasadas = 0;
@@ -117,19 +118,29 @@ comprobar('PDF: sin recorte a mitad de idea y sin solape de etiquetas', () => {
   assert.ok(page.includes('const apilado'), 'las etiquetas anchas no pasan a su propia línea');
 });
 
-comprobar('Infografía: relleno útil de holgura (nunca color plano)', () => {
-  assert.ok(infografia.includes('const holgura'), 'no calcula holgura');
-  assert.ok(infografia.includes('const rellenos'), 'sin pool de relleno');
-  assert.ok(infografia.includes('Ilustracion del mensaje') || infografia.includes('Imagen del mensaje'), 'sin ilustración de relleno');
-  assert.ok(infografia.includes('versiculosLibres'), 'sin versículo no usado');
-  assert.ok(infografia.includes('conceptoLibre'), 'sin concepto teológico de relleno');
+comprobar('Infografía modular: filas 1/2/3 columnas, timeline y destacados', () => {
+  assert.ok(infografia.includes("tipo_fila === 'grid_columnas'"), 'sin grid de columnas');
+  assert.ok(infografia.includes("tipo_fila === 'timeline_secuencial'"), 'sin timeline secuencial');
+  assert.ok(infografia.includes('destacado_ancho_completo'), 'sin destacados a ancho completo');
+  assert.ok(infografia.includes('plan.cabecera.palabras_clave'), 'sin palabras clave de cabecera');
+  assert.ok(infografia.includes('plan.cabecera.subtitulo'), 'sin subtítulo de cabecera');
 });
 
-comprobar('Infografía: los puntos principales se derivan del análisis real', () => {
+comprobar('Infografía modular: límites de texto y conexiones SVG', () => {
+  assert.ok(modular.includes('export const LIMITES'), 'sin límites de texto');
+  assert.ok(modular.includes('limitarPalabras'), 'sin recorte por palabras');
+  assert.ok(modular.includes('conexiones_visuales'), 'sin conexiones visuales');
+  assert.ok(modular.includes('categoriaDe'), 'sin mapeo de categorías SVG');
+  assert.ok(infografia.includes('conexionesPagina'), 'las conexiones no se calculan');
+  assert.ok(infografia.includes('<path'), 'sin trazo SVG de conexión');
+});
+
+comprobar('Infografía modular: usa los puntos reales del análisis', () => {
   assert.ok(infografia.includes('data.desarrollo_progresivo'), 'no usa los puntos del análisis');
-  assert.ok(layout.includes("id: 'puntos'"), 'sin unidad de puntos principales');
-  assert.ok(layout.includes('dividirUnidad'), 'no reparte listas largas entre páginas');
-  assert.ok(layout.includes("u.id === 'puntos'") , 'resumen no preserva los puntos');
+  assert.ok(modular.includes('LIMITES.pasosPorFila'), 'no reparte pasos por fila');
+  assert.ok(modular.includes('pasosPorFila: 4'), 'el límite por fila no es 4');
+  assert.ok(modular.includes('ideaPalabras: 15'), 'el límite de idea no es 15 palabras');
+  assert.ok(modular.includes('pasoPalabras: 20'), 'el límite de paso no es 20 palabras');
 });
 
 // ---- Infografía: canvas FIJO 9:16, densidad y safe zones ----
@@ -176,10 +187,9 @@ comprobar('Safe zones ampliadas de Stories y feed', () => {
   assert.ok(layout.includes('export function metricasCanvas'), 'sin métricas de canvas');
 });
 
-comprobar('Infografía con conectores, breadcrumbs y progreso', () => {
-  assert.ok(infografia.includes('ConectorNodo'), 'sin conector riel↔tarjeta');
-  assert.ok(infografia.includes('Breadcrumb'), 'sin breadcrumbs en listas');
-  assert.ok(infografia.includes('BarraProgreso'), 'sin indicador de progreso');
+comprobar('Infografía con breadcrumbs y flechas de conexión', () => {
+  assert.ok(infografia.includes('Breadcrumb'), 'sin breadcrumbs en el timeline');
+  assert.ok(infografia.includes('marker'), 'sin punta de flecha en las conexiones');
 });
 
 comprobar('Infografía sin recursos remotos (Safari-safe)', () => {
