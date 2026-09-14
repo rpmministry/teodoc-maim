@@ -81,6 +81,40 @@ comprobar('PDF con keep-with-next y control de página (sin huérfanos)', () => 
   assert.ok(page.includes('const nuevaPagina = ()'), 'sin control de página');
 });
 
+comprobar('PDF: título de 2+ líneas con altura real y padding fijo', () => {
+  assert.ok(page.includes('TITLE_LINE_H'), 'sin interlineado real de título');
+  assert.ok(page.includes('PAD_TITULO_CUERPO'), 'sin padding fijo título→cuerpo');
+  assert.ok(page.includes('titleBlockH'), 'el cuerpo no se posiciona según el bloque del título');
+  assert.ok(page.includes('titleLines.forEach'), 'el título no se dibuja línea por línea');
+  // El cuerpo arranca debajo del bloque completo del título.
+  assert.match(page, /y = Math\.max\(top \+ numSize, titleTop \+ titleBlockH\) \+ PAD_TITULO_CUERPO/);
+});
+
+comprobar('Franjas superior/inferior funcionales y ≤15% (sin color vacío)', () => {
+  assert.ok(layout.includes('MAX_FRANJA_SIN_CONTENIDO'), 'sin tope de franja');
+  assert.ok(layout.includes('SAFE_ZONE_STORY_TOP = 0.12'), 'franja superior mayor al 12%');
+  assert.ok(layout.includes('SAFE_ZONE_STORY_BOTTOM = 0.14'), 'franja inferior mayor al 14%');
+  assert.ok(infografia.includes('FRANJA SUPERIOR (funcional'), 'la franja superior no declara contenido funcional');
+  assert.ok(infografia.includes('TeoLogo(preset.caption * 8.5)'), 'la franja superior no lleva logo');
+  assert.ok(infografia.includes('fecha'), 'la franja superior no lleva fecha');
+  assert.ok(infografia.includes('FRANJA INFERIOR (funcional'), 'la franja inferior no declara contenido funcional');
+});
+
+comprobar('Infografía: relleno útil de holgura (nunca color plano)', () => {
+  assert.ok(infografia.includes('const holgura'), 'no calcula holgura');
+  assert.ok(infografia.includes('const rellenos'), 'sin pool de relleno');
+  assert.ok(infografia.includes('Ilustracion del mensaje') || infografia.includes('Imagen del mensaje'), 'sin ilustración de relleno');
+  assert.ok(infografia.includes('versiculosLibres'), 'sin versículo no usado');
+  assert.ok(infografia.includes('conceptoLibre'), 'sin concepto teológico de relleno');
+});
+
+comprobar('Infografía: los puntos principales se derivan del análisis real', () => {
+  assert.ok(infografia.includes('data.desarrollo_progresivo'), 'no usa los puntos del análisis');
+  assert.ok(layout.includes("id: 'puntos'"), 'sin unidad de puntos principales');
+  assert.ok(layout.includes('dividirUnidad'), 'no reparte listas largas entre páginas');
+  assert.ok(layout.includes("u.id === 'puntos'") , 'resumen no preserva los puntos');
+});
+
 // ---- Infografía: canvas FIJO 9:16, densidad y safe zones ----
 comprobar('Infografía con canvas FIJO 9:16 (nunca crece por contenido)', () => {
   assert.ok(layout.includes('export const CANVAS_W = 1080'), 'sin ancho 1080');

@@ -10,6 +10,7 @@ import {
   SAFE_ZONE_STORY_TOP,
   SAFE_ZONE_STORY_BOTTOM,
   SAFE_ZONE_FEED,
+  MAX_FRANJA_SIN_CONTENIDO,
   presetRespetaPiso,
   construirUnidades,
   indiceContenido,
@@ -36,7 +37,7 @@ const plan = (e: EntradaInfografia) =>
     spineW: m.spineW,
     altoDisponible: m.altoBanda - 24,
     titulo: e.titulo || '',
-    maxPaginasCarrusel: 3,
+    maxPaginasCarrusel: 6,
   });
 
 const palabras = (n: number, tam = 6) => Array.from({ length: n }, (_, i) => `concepto${i}${'x'.repeat(tam)}`);
@@ -53,12 +54,13 @@ comprobar('El canvas es SIEMPRE 1080×1920 (9:16 exacto)', () => {
 });
 
 // ---- Zonas seguras ampliadas y configurables ----
-comprobar('Safe zones de Stories, feed y laterales definidas', () => {
-  assert.ok(SAFE_ZONE_STORY_TOP >= 0.15 && SAFE_ZONE_STORY_TOP <= 0.2, 'top fuera de rango');
-  assert.ok(SAFE_ZONE_STORY_BOTTOM >= 0.2 && SAFE_ZONE_STORY_BOTTOM <= 0.3, 'bottom fuera de rango');
+comprobar('Safe zones funcionales y franjas acotadas (≤15%)', () => {
+  assert.ok(SAFE_ZONE_STORY_TOP > 0 && SAFE_ZONE_STORY_TOP <= MAX_FRANJA_SIN_CONTENIDO, 'top fuera de rango');
+  assert.ok(SAFE_ZONE_STORY_BOTTOM > 0 && SAFE_ZONE_STORY_BOTTOM <= MAX_FRANJA_SIN_CONTENIDO, 'bottom fuera de rango');
   assert.equal(SAFE_ZONE_FEED, 0.8);
-  assert.ok(m.safeTop >= Math.round(CANVAS_H * 0.15), 'zona superior insuficiente');
-  assert.ok(m.safeBottom >= Math.round(CANVAS_H * 0.2), 'zona inferior insuficiente');
+  assert.ok(SAFE_ZONE_STORY_TOP <= 0.15 && SAFE_ZONE_STORY_BOTTOM <= 0.15, 'franja supera el 15%');
+  assert.ok(m.safeTop <= Math.round(CANVAS_H * MAX_FRANJA_SIN_CONTENIDO), 'franja superior demasiado alta');
+  assert.ok(m.safeBottom <= Math.round(CANVAS_H * MAX_FRANJA_SIN_CONTENIDO), 'franja inferior demasiado alta');
   assert.ok(m.altoBanda === CANVAS_H - m.safeTop - m.safeBottom, 'banda inconsistente');
   assert.ok(m.safeLateral >= Math.round(CANVAS_W * 0.1) - 1, 'safe lateral fuera del 80% central');
 });
@@ -102,6 +104,31 @@ comprobar('Contenido ligero → una sola página', () => {
   assert.equal(r.paginas.length, 1);
 });
 
+comprobar('Mensaje con 10 puntos: se reflejan los 10 (no solo 3)', () => {
+  const puntos = Array.from({ length: 10 }, (_, i) => ({
+    titulo: `Punto principal número ${i + 1}`,
+    detalle: 'desarrollo breve del punto con su argumento teológico central. '.repeat(3),
+  }))
+  const r = plan({
+    titulo: 'Mensaje extenso de 50 minutos',
+    mensajeCentral: 'Dios nos llama a cuidar de nuestro hermano.',
+    pasaje: 'Génesis 4:9',
+    textoClave: '¿Dónde está tu hermano?',
+    verdadPrincipal: 'Somos guardianes de nuestro hermano.',
+    contextoBreve: 'contexto del pasaje.',
+    puntos,
+    palabras: palabras(8),
+    conexiones: conexiones(4, 120),
+    fraseRecordar: 'Cuida de tu hermano.',
+  })
+  // Ningún punto se descarta: la suma de ítems del bloque "puntos" debe ser 10.
+  const itemsPuntos = r.paginas.flat().filter((u) => u.id === 'puntos').reduce((a, u) => a + u.items, 0)
+  assert.equal(itemsPuntos, 10, `solo se muestran ${itemsPuntos} de 10 puntos`)
+  assert.ok(r.nivel >= 3, `nivel demasiado bajo para 10 puntos: ${r.nivel}`)
+  assert.ok(r.paginas.every((p) => p.length > 0), 'página vacía')
+  assert.ok(presetRespetaPiso(PRESETS[r.nivel]))
+})
+
 comprobar('Contenido denso → carrusel o resumen (nunca recorta el piso)', () => {
   const r = plan({
     titulo: 'Enseñanza profunda sobre la gracia y la fe',
@@ -118,7 +145,7 @@ comprobar('Contenido denso → carrusel o resumen (nunca recorta el piso)', () =
   assert.ok(r.modo === 'carrusel' || r.modo === 'resumen', `modo inesperado: ${r.modo}`);
   if (r.modo === 'carrusel') {
     assert.ok(r.paginas.length >= 2, 'carrusel sin páginas múltiples');
-    assert.ok(r.paginas.length <= 3, 'carrusel excede el máximo');
+    assert.ok(r.paginas.length <= 6, 'carrusel excede el máximo');
   }
   assert.ok(presetRespetaPiso(PRESETS[r.nivel]), 'el nivel elegido cruza el piso');
 });

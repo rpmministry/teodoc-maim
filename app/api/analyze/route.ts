@@ -500,7 +500,7 @@ async function analizarConGemini(text: string, contexto: string): Promise<any | 
 }
 
 // Respaldo: OpenRouter con modelos gratuitos.
-const OPENROUTER_TIMEOUT_MS = 150_000;
+const OPENROUTER_TIMEOUT_MS = 120_000;
 const OPENROUTER_PREFERIDOS = ['google/gemini-2.0-flash-exp:free', 'google/gemini-flash-1.5:free', 'meta-llama/llama-3.3-70b-instruct:free', 'qwen/qwen-2.5-72b-instruct:free'];
 
 async function analizarConOpenRouter(text: string, contexto: string): Promise<any | null> {
@@ -564,17 +564,9 @@ async function analizarConOpenRouter(text: string, contexto: string): Promise<an
 
 const DEEPSEEK_URL = 'https://api.deepseek.com/chat/completions';
 const DEEPSEEK_MODEL = process.env.DEEPSEEK_MODEL || 'deepseek-chat';
-const DEEPSEEK_TIMEOUT_MS = 90_000;
+const DEEPSEEK_TIMEOUT_MS = 110_000;
 
-// Último recurso: DeepSeek (de pago). Solo se usa cuando TODOS los modelos
-// gratuitos fallaron, para que el análisis nunca se quede sin respuesta.
-async function analizarConDeepSeek(text: string, contexto: string): Promise<any | null> {
-  const apiKey = process.env.DEEPSEEK_API_KEY;
-  if (!apiKey) {
-    console.warn('[DeepSeek] Sin DEEPSEEK_API_KEY: se omite el respaldo de pago.');
-    return null;
-  }
-
+async function intentarDeepSeek(text: string, contexto: string, apiKey: string): Promise<any | null> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), DEEPSEEK_TIMEOUT_MS);
   try {
@@ -591,26 +583,50 @@ async function analizarConDeepSeek(text: string, contexto: string): Promise<any 
           { role: 'user', content: `Transcripción:\n\n${text}` },
         ],
         temperature: 0.3,
+        // Salida JSON garantizada por el proveedor y margen de tokens para que
+        // el JSON nunca se trunque (era el riesgo al usarlo como respaldo).
         response_format: { type: 'json_object' },
+        max_tokens: 8000,
         stream: false,
       }),
       signal: controller.signal,
     });
 
     if (!response.ok) {
-      console.warn(`[DeepSeek Falló]: HTTP ${response.status}`);
+      const detalle = await response.text().catch(() => '');
+      console.warn(`[DeepSeek Falló]: HTTP ${response.status} ${detalle.slice(0, 160)}`);
       return null;
     }
     const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
-    if (content) {
-      console.log('[DeepSeek] Análisis completado con el respaldo de pago.');
-      return extraerJSON(content);
+    const content = data?.choices?.[0]?.message?.content;
+    if (!content) {
+      console.warn('[DeepSeek Falló]: respuesta sin contenido.');
+      return null;
     }
+    const json = extraerJSON(content);
+    console.log('[DeepSeek] Análisis completado con el respaldo de pago.');
+    return json;
   } catch (dsErr: any) {
     console.warn('[DeepSeek Falló]:', dsErr?.name === 'AbortError' ? 'timeout' : dsErr?.message || dsErr);
+    return null;
   } finally {
     clearTimeout(timeout);
+  }
+}
+
+// Último recurso: DeepSeek (de pago). Solo se usa cuando TODOS los proveedores
+// gratuitos fallaron, para que el análisis nunca se quede sin respuesta.
+async function analizarConDeepSeek(text: string, contexto: string): Promise<any | null> {
+  const apiKey = process.env.DEEPSEEK_API_KEY;
+  if (!apiKey) {
+    console.warn('[DeepSeek] Sin DEEPSEEK_API_KEY: se omite el respaldo de pago.');
+    return null;
+  }
+  // Un reintento ante fallos transitorios del respaldo de pago.
+  for (let intento = 0; intento < 2; intento++) {
+    const json = await intentarDeepSeek(text, contexto, apiKey);
+    if (json) return json;
+    if (intento === 0) await delay(1000);
   }
   return null;
 }

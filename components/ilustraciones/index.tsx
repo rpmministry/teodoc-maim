@@ -21,11 +21,16 @@ export type IlustracionId =
   | 'manantial' | 'semilla' | 'amanecer'
   // Bíblica genérica
   | 'rollo' | 'cayado' | 'paloma'
+  // Comunidad y cuidado
+  | 'comunidad' | 'cueva' | 'manosSostienen'
   // Refuerzos temáticos
   | 'biblia' | 'monte' | 'agua' | 'ciudad' | 'cruz'
 
 // Orden importa: la primera categoría que coincida gana.
 const REGLAS: { id: IlustracionId; re: RegExp }[] = [
+  { id: 'comunidad', re: /(hermano|prójimo|projimo|comunidad|comunión|comunion|iglesia|cuerpo de cristo|juntos|unidad|familia|sociedad|vecino)/ },
+  { id: 'cueva', re: /(cueva|adulam|refugio|roca|escondite|caverna|desierto|montaña|montana)/ },
+  { id: 'manosSostienen', re: /(sostener|sostiene|sostén|sosten|levantar|ayudar|ayuda|suplir|servir|servicio|misericordia|compartir la carga)/ },
   { id: 'casa', re: /(casa|hogar|hospitalidad|puerta|techo|morada|habitac|recibir)/ },
   { id: 'mesa', re: /(mesa|banquete|comida|pan|cena|convite|partir el pan|compartir)/ },
   { id: 'vela', re: /(vela|candelabro|candela|lámpara|lampara|antorcha|alumbrar)/ },
@@ -60,6 +65,7 @@ export function categoriaIlustracion(id: IlustracionId): string {
   if (['bifurcacion', 'brujula', 'huellas'].includes(id)) return 'Decisión y camino'
   if (['manantial', 'semilla', 'amanecer'].includes(id)) return 'Milagro y resurrección'
   if (['rollo', 'cayado', 'paloma'].includes(id)) return 'Bíblica'
+  if (['comunidad', 'cueva', 'manosSostienen'].includes(id)) return 'Comunidad y cuidado'
   return 'Temática'
 }
 
@@ -241,6 +247,34 @@ function figura(id: IlustracionId, base: string, dark: string, soft: string): Re
           <path d="M18 62c10-8 20-8 30 0s20 8 30 0 20-8 30 0" fill="none" stroke={base} strokeWidth="6" strokeLinecap="round" />
           <path d="M18 78c10-8 20-8 30 0s20 8 30 0 20-8 30 0" fill="none" stroke={dark} strokeWidth="6" strokeLinecap="round" opacity="0.8" />
           <path d="M60 22c10 10 15 17 15 24a15 15 0 0 1-30 0c0-7 5-14 15-24z" fill={base} opacity="0.7" />
+        </>
+      )
+    case 'comunidad':
+      return (
+        <>
+          <circle cx="42" cy="46" r="10" fill={base} opacity="0.85" />
+          <circle cx="60" cy="38" r="12" fill={dark} opacity="0.9" />
+          <circle cx="78" cy="46" r="10" fill={base} opacity="0.85" />
+          <path d="M22 92c0-12 9-20 20-20s20 8 20 20z" fill={base} opacity="0.8" />
+          <path d="M40 92c0-14 9-24 20-24s20 10 20 24z" fill={dark} opacity="0.85" />
+          <path d="M60 92c0-12 9-20 20-20s20 8 20 20z" fill={base} opacity="0.8" />
+        </>
+      )
+    case 'cueva':
+      return (
+        <>
+          <path d="M18 92V54c0-24 19-42 42-42s42 18 42 42v38z" fill={base} opacity="0.8" />
+          <path d="M46 92V64c0-9 6-16 14-16s14 7 14 16v28z" fill={dark} opacity="0.9" />
+          <path d="M20 92h80" stroke={dark} strokeWidth="5" strokeLinecap="round" />
+        </>
+      )
+    case 'manosSostienen':
+      return (
+        <>
+          <path {...trazo} d="M20 84c8-14 20-20 40-20s32 6 40 20" />
+          <path d="M40 74c0-8 8-14 20-14s20 6 20 14" fill="none" stroke={dark} strokeWidth="6" strokeLinecap="round" />
+          <path d="M46 40c4-10 10-16 14-16s10 6 14 16" fill="none" stroke={base} strokeWidth="6" strokeLinecap="round" />
+          <circle cx="60" cy="30" r="8" fill={base} opacity="0.85" />
         </>
       )
     case 'biblia':

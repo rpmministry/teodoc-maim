@@ -10,12 +10,15 @@
 export const CANVAS_W = 1080
 export const CANVAS_H = 1920
 
-// Zonas reservadas para las superposiciones típicas de cada red/uso.
-// Son constantes configurables (fracción del alto/ancho del canvas).
-export const SAFE_ZONE_STORY_TOP = 0.15 // barra de progreso, perfil, hora
-export const SAFE_ZONE_STORY_BOTTOM = 0.2 // caja de respuesta, reacciones
+// Zonas reservadas de las apps (fracción del canvas). Ahora son franjas
+// FUNCIONALES: contienen logo, categoría, fecha y gráficos, nunca color vacío.
+export const SAFE_ZONE_STORY_TOP = 0.12
+export const SAFE_ZONE_STORY_BOTTOM = 0.14
 export const SAFE_ZONE_FEED = 0.8 // área central que sobrevive al recorte a cuadrado
 export const SAFE_ZONE_SIDES = Math.max(0.045, (1 - SAFE_ZONE_FEED) / 2) // = 0.1
+
+// Ninguna franja de fondo puede superar este porcentaje sin contenido funcional.
+export const MAX_FRANJA_SIN_CONTENIDO = 0.15
 
 // Piso ABSOLUTO de legibilidad (px sobre canvas de 1080 de ancho). Nunca se
 // renderiza texto por debajo de estos valores, en ningún nivel de densidad.
@@ -31,7 +34,7 @@ export type NivelDensidad = 1 | 2 | 3 | 4
 export type Preset = {
   nivel: NivelDensidad
   nombre: string
-  display: number // título principal
+  display: number
   tituloTarjeta: number
   numeral: number
   cuerpo: number
@@ -41,14 +44,15 @@ export type Preset = {
   gapTarjetas: number
   icono: number
   ilustracion: 'grande' | 'mediana' | 'pequena' | 'ninguna'
+  /** En niveles densos, los puntos se muestran solo con su título. */
+  detallePuntos: boolean
 }
 
-// Cada nivel es un preset COMPLETO (no un factor de escala).
 export const PRESETS: Record<NivelDensidad, Preset> = {
-  1: { nivel: 1, nombre: 'Ligero', display: 82, tituloTarjeta: 52, numeral: 58, cuerpo: 40, caption: 30, lineHeight: 1.5, padTarjeta: 40, gapTarjetas: 34, icono: 120, ilustracion: 'grande' },
-  2: { nivel: 2, nombre: 'Medio', display: 72, tituloTarjeta: 46, numeral: 50, cuerpo: 34, caption: 26, lineHeight: 1.4, padTarjeta: 32, gapTarjetas: 26, icono: 96, ilustracion: 'mediana' },
-  3: { nivel: 3, nombre: 'Denso', display: 64, tituloTarjeta: 40, numeral: 42, cuerpo: 31, caption: 24, lineHeight: 1.28, padTarjeta: 24, gapTarjetas: 18, icono: 72, ilustracion: 'pequena' },
-  4: { nivel: 4, nombre: 'Muy denso', display: 58, tituloTarjeta: 38, numeral: 38, cuerpo: 30, caption: 23, lineHeight: 1.2, padTarjeta: 18, gapTarjetas: 12, icono: 48, ilustracion: 'ninguna' },
+  1: { nivel: 1, nombre: 'Ligero', display: 82, tituloTarjeta: 52, numeral: 58, cuerpo: 40, caption: 30, lineHeight: 1.5, padTarjeta: 40, gapTarjetas: 32, icono: 120, ilustracion: 'grande', detallePuntos: true },
+  2: { nivel: 2, nombre: 'Medio', display: 72, tituloTarjeta: 46, numeral: 50, cuerpo: 34, caption: 26, lineHeight: 1.4, padTarjeta: 32, gapTarjetas: 24, icono: 96, ilustracion: 'mediana', detallePuntos: true },
+  3: { nivel: 3, nombre: 'Denso', display: 64, tituloTarjeta: 40, numeral: 42, cuerpo: 31, caption: 24, lineHeight: 1.28, padTarjeta: 22, gapTarjetas: 16, icono: 72, ilustracion: 'pequena', detallePuntos: true },
+  4: { nivel: 4, nombre: 'Muy denso', display: 58, tituloTarjeta: 38, numeral: 38, cuerpo: 30, caption: 23, lineHeight: 1.2, padTarjeta: 16, gapTarjetas: 10, icono: 48, ilustracion: 'ninguna', detallePuntos: false },
 }
 
 export function presetRespetaPiso(p: Preset): boolean {
@@ -66,7 +70,10 @@ export type UnidadContenido = {
   etiqueta: string
   tipo: TipoUnidad
   chars: number
+  /** Número de ítems que se muestran en esta unidad (o porción). */
   items: number
+  /** Índice del primer ítem cuando la unidad se dividió entre páginas. */
+  desde?: number
   esencial: boolean
   peso: PesoVisual
   semilla: string
@@ -97,6 +104,8 @@ export type EntradaInfografia = {
   textoClave?: string
   verdadPrincipal?: string
   contextoBreve?: string
+  /** Puntos principales REALES del análisis (desarrollo_progresivo). */
+  puntos?: { titulo?: string; detalle?: string }[]
   grandes?: { titulo?: string; descripcion?: string }[]
   palabras?: string[]
   conexiones?: { cita?: string; texto?: string }[]
@@ -118,11 +127,18 @@ export function construirUnidades(e: EntradaInfografia): UnidadContenido[] {
   }
   if (e.verdadPrincipal) u.push(unidadTexto('verdad', 'Verdad principal', e.verdadPrincipal, true))
   if (e.contextoBreve && e.contextoBreve !== e.mensajeCentral) u.push(unidadTexto('contexto', 'Contexto', e.contextoBreve, false))
+
+  // Puntos principales REALES del análisis. Se usan todos (no un subconjunto).
+  const puntos = (e.puntos || []).filter((p) => p?.titulo || p?.detalle)
   const grandes = (e.grandes || []).filter((g) => g?.titulo || g?.descripcion)
-  if (grandes.length) {
+  if (puntos.length) {
+    const chars = puntos.reduce((a, p) => a + (p.titulo || '').length + (p.detalle || '').length, 0)
+    u.push({ id: 'puntos', etiqueta: 'Puntos principales', tipo: 'lista', chars, items: puntos.length, esencial: true, peso: 'pesado', semilla: puntos.map((p) => `${p.titulo} ${p.detalle}`).join(' ') })
+  } else if (grandes.length) {
     const chars = grandes.reduce((a, g) => a + (g.titulo || '').length + (g.descripcion || '').length, 0)
-    u.push({ id: 'grandes', etiqueta: 'Grandes enseñanzas', tipo: 'lista', chars, items: grandes.length, esencial: true, peso: 'pesado', semilla: grandes.map((g) => `${g.titulo} ${g.descripcion}`).join(' ') })
+    u.push({ id: 'puntos', etiqueta: 'Grandes enseñanzas', tipo: 'lista', chars, items: grandes.length, esencial: true, peso: 'pesado', semilla: grandes.map((g) => `${g.titulo} ${g.descripcion}`).join(' ') })
   }
+
   const palabras = e.palabras || []
   if (palabras.length) {
     u.push({ id: 'palabras', etiqueta: 'Palabras clave', tipo: 'chips', chars: 0, items: palabras.length, esencial: false, peso: pesar(masaUnidad('chips', 0, palabras.length)), semilla: palabras.join(' ') })
@@ -153,11 +169,9 @@ export function elegirNivelPorIndice(indice: number): NivelDensidad {
 // ---------------------------------------------------------------------------
 // Estimación determinista de alturas (sin DOM). Conservadora a propósito.
 // ---------------------------------------------------------------------------
-const ANCHO_GLIFO = 0.52 // ancho medio de glifo relativo al tamaño de fuente
+const ANCHO_GLIFO = 0.52
 
 export function anchoTarjeta(_peso: PesoVisual, anchoContenido: number, spineW: number): number {
-  // Columna única con riel lateral: se maximiza el ancho de lectura para que
-  // el piso tipográfico quepa sin forzar más densidad de la necesaria.
   return Math.max(320, anchoContenido - spineW)
 }
 
@@ -191,10 +205,11 @@ export function estimarAltoUnidad(u: UnidadContenido, p: Preset, anchoContenido:
     const l = numLineas(u.chars, p.caption, interior)
     return Math.round(base + l * p.caption * p.lineHeight + p.caption * 1.2 * u.items)
   }
-  // lista (grandes enseñanzas / conexiones)
-  const lineasTitulo = numLineas(Math.max(1, Math.round(u.chars / Math.max(1, u.items) * 0.5)), p.cuerpo, interior - p.caption * 3)
-  const lineasDesc = numLineas(Math.max(1, Math.round(u.chars / Math.max(1, u.items) * 0.5)), p.caption, interior - p.caption * 3)
-  const altoItem = lineasTitulo * p.cuerpo * 1.25 + lineasDesc * p.caption * 1.45 + p.caption * 1.3
+  // lista (puntos / conexiones)
+  const porItemChars = Math.max(1, Math.round(u.chars / Math.max(1, u.items)))
+  const lineasTitulo = numLineas(porItemChars * 0.55, p.cuerpo, interior - p.caption * 3)
+  const lineasDesc = p.detallePuntos ? numLineas(porItemChars * 0.45, p.caption, interior - p.caption * 3) : 0
+  const altoItem = lineasTitulo * p.cuerpo * 1.25 + lineasDesc * p.caption * 1.45 + p.caption * 1.1
   return Math.round(base + u.items * altoItem)
 }
 
@@ -202,14 +217,31 @@ export function estimarAltoPagina(unidades: UnidadContenido[], p: Preset, anchoC
   return Math.round(altoCabecera + unidades.reduce((a, u) => a + estimarAltoUnidad(u, p, anchoContenido, spineW), 0))
 }
 
-// ---------------------------------------------------------------------------
-// Empaquetado en páginas (carrusel) y planificación automática.
-// ---------------------------------------------------------------------------
+// Divide una unidad de lista demasiado alta en porciones que quepan en una
+// página. Así los 10 puntos nunca se descartan: se reparten entre páginas.
+function dividirUnidad(u: UnidadContenido, p: Preset, anchoContenido: number, spineW: number, disponible: number): UnidadContenido[] {
+  const h = estimarAltoUnidad(u, p, anchoContenido, spineW)
+  if (u.tipo !== 'lista' || u.items <= 1 || h <= disponible) return [u]
+  const base = estimarAltoUnidad({ ...u, items: 0, chars: 0 }, p, anchoContenido, spineW)
+  const porItem = (h - base) / u.items
+  const maxItems = Math.max(1, Math.floor((disponible - base) / porItem))
+  if (maxItems >= u.items) return [u]
+  const partes: UnidadContenido[] = []
+  const desde0 = u.desde ?? 0
+  for (let i = 0; i < u.items; i += maxItems) {
+    const n = Math.min(maxItems, u.items - i)
+    partes.push({ ...u, desde: desde0 + i, items: n, chars: Math.round((u.chars * n) / u.items) })
+  }
+  return partes
+}
+
 export function empaquetarEnPaginas(unidades: UnidadContenido[], p: Preset, anchoContenido: number, spineW: number, altoCabecera: number, altoDisponible: number): UnidadContenido[][] {
+  const disponible = altoDisponible - altoCabecera
+  const expandidas = unidades.flatMap((u) => dividirUnidad(u, p, anchoContenido, spineW, disponible))
   const paginas: UnidadContenido[][] = []
   let actual: UnidadContenido[] = []
   let alto = altoCabecera
-  for (const u of unidades) {
+  for (const u of expandidas) {
     const h = estimarAltoUnidad(u, p, anchoContenido, spineW)
     if (actual.length && alto + h > altoDisponible) {
       paginas.push(actual)
@@ -224,10 +256,15 @@ export function empaquetarEnPaginas(unidades: UnidadContenido[], p: Preset, anch
 }
 
 // Recorte inteligente para modo resumen: conserva lo esencial y limita las
-// listas a sus puntos más relevantes. El detalle completo queda en el PDF.
+// listas, pero NUNCA descarta los puntos principales por completo.
 export function recortarParaResumen(unidades: UnidadContenido[]): UnidadContenido[] {
-  const esenciales = unidades.filter((u) => u.esencial)
-  return esenciales.map((u) => (u.tipo === 'lista' ? { ...u, items: Math.min(u.items, 3), chars: Math.min(u.chars, 320), semilla: u.semilla.slice(0, 320) } : u))
+  return unidades
+    .filter((u) => u.esencial)
+    .map((u) => {
+      if (u.id === 'puntos') return { ...u, items: Math.min(u.items, 8), chars: Math.min(u.chars, 900) }
+      if (u.tipo === 'lista') return { ...u, items: Math.min(u.items, 3), chars: Math.min(u.chars, 320) }
+      return u
+    })
 }
 
 export type PlanInfografia = {
@@ -249,11 +286,9 @@ export type OpcionesPlan = {
 export function planificarInfografia(unidades: UnidadContenido[], opciones: OpcionesPlan): PlanInfografia {
   const { anchoContenido, spineW, altoDisponible, titulo } = opciones
   const extra = opciones.extraCabecera ?? 0
-  const maxPaginas = opciones.maxPaginasCarrusel ?? 3
+  const maxPaginas = opciones.maxPaginasCarrusel ?? 6
   const indice = indiceContenido(unidades)
 
-  // Altura de cabecera estimada con el preset correspondiente (+ extras como
-  // la barra de progreso), para que entre en el presupuesto del canvas fijo.
   const altoCab = (p: Preset) => extra + estimarAltoCabecera(titulo, p, anchoContenido)
 
   // Escalada de densidad: se parte del nivel por índice y se sube hasta que
@@ -269,19 +304,20 @@ export function planificarInfografia(unidades: UnidadContenido[], opciones: Opci
     return { modo: 'unico', nivel, indice, paginas: [unidades] }
   }
 
-  // Ni el Nivel 4 (con el piso respetado) logra una sola página.
+  // No cabe en una página: se prefiere CARRUSEL (no se descarta contenido).
   const cab4 = altoCab(PRESETS[4])
   const paginas = empaquetarEnPaginas(unidades, PRESETS[4], anchoContenido, spineW, cab4, altoDisponible)
   if (paginas.length <= maxPaginas) {
     return { modo: 'carrusel', nivel: 4, indice, paginas }
   }
 
-  // Demasiadas páginas: modo resumen (recorta lo menos esencial, nunca el piso).
+  // Demasiadas páginas: modo resumen (recorta lo no esencial, nunca el piso ni
+  // los puntos principales).
   let resumen = recortarParaResumen(unidades)
   if (estimarAltoPagina(resumen, PRESETS[4], anchoContenido, spineW, cab4) > altoDisponible) {
     resumen = resumen
-      .filter((u) => u.id === 'mensaje' || u.id === 'texto-clave' || u.id === 'frase')
-      .map((u) => (u.tipo === 'lista' ? { ...u, items: Math.min(u.items, 1), chars: Math.min(u.chars, 200) } : u))
+      .filter((u) => u.id === 'mensaje' || u.id === 'texto-clave' || u.id === 'puntos' || u.id === 'frase')
+      .map((u) => (u.tipo === 'lista' ? { ...u, items: Math.min(u.items, 6), chars: Math.min(u.chars, 600) } : u))
   }
   return { modo: 'resumen', nivel: 4, indice, paginas: [resumen] }
 }
@@ -294,7 +330,6 @@ export function metricasCanvas() {
   const top = Math.round(CANVAS_H * SAFE_ZONE_STORY_TOP)
   const bottom = Math.round(CANVAS_H * SAFE_ZONE_STORY_BOTTOM)
   const spineW = Math.round(CANVAS_W * 0.115)
-  const footerH = Math.round(CANVAS_H * 0.0) // sin pie fuera de la zona segura
   return {
     anchoEsen,
     safeTop: top,
@@ -302,6 +337,5 @@ export function metricasCanvas() {
     safeLateral: Math.round(CANVAS_W * SAFE_ZONE_SIDES),
     altoBanda: CANVAS_H - top - bottom,
     spineW,
-    footerH,
   }
 }

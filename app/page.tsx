@@ -1180,15 +1180,18 @@ export default function Home() {
     const nPuntos = puntosPDF.length;
     heading(`${nPuntos} ${nPuntos === 1 ? 'punto principal' : 'puntos principales'}`, 96);
     puntosPDF.forEach((pt) => {
-      // Alturas MEDIDAS con las métricas reales de fuente (no estimaciones fijas).
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(14);
+      // Alturas MEDIDAS con las métricas reales de fuente.
+      const TITLE_FONT = 14;
+      const TITLE_LINE_H = 19; // interlineado real del título (1 o 2+ líneas)
+      const PAD_TITULO_CUERPO = 18; // separación FIJA garantizada título → cuerpo
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(TITLE_FONT);
       const titleLines: string[] = doc.splitTextToSize(resumir(pt.titulo, 120), contentW - 52);
-      const titleH = Math.max(20, titleLines.length * 18);
-      const numSize = Math.max(30, Math.min(34, titleH + 10));
-      const headerH = Math.max(numSize, titleH);
+      const titleBlockH = titleLines.length * TITLE_LINE_H;
+      const numSize = Math.max(30, Math.min(38, titleBlockH + 8));
+      const headerH = Math.max(numSize, titleBlockH);
 
-      // Reserva numeral + título + al menos dos líneas de cuerpo (sin huérfanos).
-      ensure(headerH + 46);
+      // Reserva cabecera + separación + al menos dos líneas de cuerpo.
+      ensure(headerH + PAD_TITULO_CUERPO + 30);
       const top = y;
 
       // Numeral en su propio bloque; nunca comparte línea base con el título.
@@ -1196,24 +1199,31 @@ export default function Home() {
       doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.setTextColor(255, 255, 255);
       doc.text(pt.numero, margin + numSize / 2, top + numSize / 2 + 5, { align: 'center' });
 
-      // Título centrado verticalmente respecto al numeral, con separación real.
+      // Título: cada línea se posiciona con su propia altura real, sin depender
+      // del line-height interno de jsPDF (que causaba el solape con el cuerpo).
       const titleX = margin + numSize + 14;
-      const titleBaseline = top + (numSize - titleH) / 2 + titleH * 0.78;
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(14); setText(C.ink);
-      doc.text(titleLines, titleX, titleBaseline);
+      const titleTop = top + Math.max(0, (numSize - titleBlockH) / 2);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(TITLE_FONT); setText(C.ink);
+      titleLines.forEach((linea, li) => {
+        doc.text(linea, titleX, titleTop + 14 + li * TITLE_LINE_H);
+      });
 
-      // El cuerpo arranca SIEMPRE debajo del bloque numeral+título.
-      y = top + headerH + 14;
+      // El cuerpo arranca SIEMPRE debajo del bloque completo del título + padding.
+      y = Math.max(top + numSize, titleTop + titleBlockH) + PAD_TITULO_CUERPO;
 
       if (pt.explicacion) paragraph(resumir(pt.explicacion, 700), { size: 10.5, lead: 15, color: C.sub });
 
       // Subtemas reales dentro del tema (solo si el contenido los contiene).
       pt.subtemas.forEach((s) => {
-        doc.setFont('helvetica', 'bold'); doc.setFontSize(10.5); setText(C.ink);
+        const SUB_FONT = 10.5;
+        const SUB_LINE_H = 15;
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(SUB_FONT); setText(C.ink);
         const subTitle: string[] = doc.splitTextToSize(resumir(s.titulo || '', 120), contentW - 24);
-        // El subtítulo viaja con las primeras líneas de su desarrollo.
-        ensure(subTitle.length * 15 + 26);
-        doc.text(subTitle, margin + 16, y); y += subTitle.length * 15 + 4;
+        // El subtítulo viaja con las primeras líneas de su desarrollo y con
+        // separación medida según cuántas líneas ocupe.
+        ensure(subTitle.length * SUB_LINE_H + 26);
+        subTitle.forEach((linea, li) => doc.text(linea, margin + 16, y + 12 + li * SUB_LINE_H));
+        y += subTitle.length * SUB_LINE_H + 8;
         if (s.desarrollo) {
           paragraph(resumir(s.desarrollo, 420), { size: 10, lead: 14, color: C.sub, indent: 16 });
         }
