@@ -1781,7 +1781,7 @@ export default function Home() {
 
               {/* Artboard OCULTO para exportar el PNG (una página por nodo). El
                   contenedor conserva tamaño real con max-content. */}
-              <div aria-hidden="true" style={{ position: 'fixed', left: 0, top: 0, pointerEvents: 'none', opacity: 0.001, width: CANVAS_W, height: CANVAS_H, overflow: 'hidden' }}>
+              <div aria-hidden="true" style={{ position: 'fixed', left: -9999, top: 0, width: CANVAS_W, height: CANVAS_H, overflow: 'hidden' }}>
                 {Array.from({ length: totalPaginasInfografia }).map((_, i) => (
                   <div key={i} ref={(el) => { infografiaRefs.current[i] = el; }} style={{ width: CANVAS_W, height: CANVAS_H }}>
                     <Infografia data={resultado} pagina={i} />
