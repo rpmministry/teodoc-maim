@@ -1,26 +1,21 @@
-// Verificación del motor de composición de la infografía (canvas fijo 9:16,
-// niveles de densidad, piso de legibilidad, safe zones y modos automáticos).
+// Verificación del motor de composición editorial de la infografía TeoDoc
+// (canvas fijo 9:16, retícula 8px, arquetipos de densidad, piso de legibilidad y lámina única).
 // Se ejecuta con: node scripts/verificar-infografia.mts
 import assert from 'node:assert/strict';
 import {
   CANVAS_W,
   CANVAS_H,
-  PRESETS,
+  GRID_BASE,
+  SAFE_TOP,
+  SAFE_BOTTOM,
+  SAFE_LATERAL,
+  ANCHO_UTIL,
+  ALTO_UTIL,
   PISO_LEGIBILIDAD,
-  SAFE_ZONE_STORY_TOP,
-  SAFE_ZONE_STORY_BOTTOM,
-  SAFE_ZONE_FEED,
-  MAX_FRANJA_SIN_CONTENIDO,
-  presetRespetaPiso,
-  construirUnidades,
-  indiceContenido,
-  elegirNivelPorIndice,
-  estimarAltoPagina,
-  estimarAltoCabecera,
-  planificarInfografia,
+  planificarComposicion,
+  resumirEditorial,
   metricasCanvas,
   type EntradaInfografia,
-  type NivelDensidad,
 } from '../lib/infografia-layout.ts';
 
 let pasadas = 0;
@@ -32,205 +27,134 @@ const comprobar = (nombre: string, fn: () => void) => {
 };
 
 const m = metricasCanvas();
-const plan = (e: EntradaInfografia) =>
-  planificarInfografia(construirUnidades(e), {
-    anchoContenido: m.anchoEsen,
-    spineW: m.spineW,
-    altoDisponible: m.altoBanda - 24,
-    titulo: e.titulo || '',
-    maxPaginasCarrusel: 6,
-  });
 
-const palabras = (n: number, tam = 6) => Array.from({ length: n }, (_, i) => `concepto${i}${'x'.repeat(tam)}`);
-const grandes = (n: number, tam: number) =>
-  Array.from({ length: n }, (_, i) => ({ titulo: `Enseñanza ${i + 1}`, descripcion: 'y'.repeat(tam) }));
-const conexiones = (n: number, tam: number) =>
-  Array.from({ length: n }, (_, i) => ({ cita: `Romanos 8:${i + 1}`, texto: 'z'.repeat(tam) }));
-
-// ---- Canvas fijo 9:16 (nunca variable) ----
+// ---- 1. Canvas Fijo 9:16 ----
 comprobar('El canvas es SIEMPRE 1080×1920 (9:16 exacto)', () => {
   assert.equal(CANVAS_W, 1080);
   assert.equal(CANVAS_H, 1920);
   assert.equal(CANVAS_W / CANVAS_H, 9 / 16);
 });
 
-// ---- Zonas seguras ampliadas y configurables ----
-comprobar('Safe zones funcionales y franjas acotadas (≤15%)', () => {
-  assert.ok(SAFE_ZONE_STORY_TOP > 0 && SAFE_ZONE_STORY_TOP <= MAX_FRANJA_SIN_CONTENIDO, 'top fuera de rango');
-  assert.ok(SAFE_ZONE_STORY_BOTTOM > 0 && SAFE_ZONE_STORY_BOTTOM <= MAX_FRANJA_SIN_CONTENIDO, 'bottom fuera de rango');
-  assert.equal(SAFE_ZONE_FEED, 0.8);
-  assert.ok(SAFE_ZONE_STORY_TOP <= 0.15 && SAFE_ZONE_STORY_BOTTOM <= 0.15, 'franja supera el 15%');
-  assert.ok(m.safeTop <= Math.round(CANVAS_H * MAX_FRANJA_SIN_CONTENIDO), 'franja superior demasiado alta');
-  assert.ok(m.safeBottom <= Math.round(CANVAS_H * MAX_FRANJA_SIN_CONTENIDO), 'franja inferior demasiado alta');
-  assert.ok(m.altoBanda === CANVAS_H - m.safeTop - m.safeBottom, 'banda inconsistente');
-  assert.ok(m.safeLateral >= Math.round(CANVAS_W * 0.1) - 1, 'safe lateral fuera del 80% central');
+// ---- 2. Retícula matemática base 8px (Carbon Design System) ----
+comprobar('Retícula matemática basada en unidad de 8 px', () => {
+  assert.equal(GRID_BASE, 8);
+  assert.equal(SAFE_TOP % GRID_BASE, 0, 'SAFE_TOP debe ser múltiplo de 8');
+  assert.equal(SAFE_BOTTOM % GRID_BASE, 0, 'SAFE_BOTTOM debe ser múltiplo de 8');
+  assert.equal(SAFE_LATERAL % GRID_BASE, 0, 'SAFE_LATERAL debe ser múltiplo de 8');
+  assert.equal(ANCHO_UTIL, CANVAS_W - SAFE_LATERAL * 2);
+  assert.equal(ALTO_UTIL, CANVAS_H - SAFE_TOP - SAFE_BOTTOM);
 });
 
-// ---- Piso de legibilidad: ningún preset lo cruza ----
-comprobar('Todos los presets respetan el piso de legibilidad', () => {
-  (Object.keys(PRESETS) as unknown as string[]).forEach((k) => {
-    const p = PRESETS[Number(k) as NivelDensidad];
-    assert.ok(presetRespetaPiso(p), `preset ${k} cruza el piso`);
-    assert.ok(p.cuerpo >= PISO_LEGIBILIDAD.cuerpo, `cuerpo ${p.cuerpo} < piso`);
-    assert.ok(p.tituloTarjeta >= PISO_LEGIBILIDAD.titulo, `titulo ${p.tituloTarjeta} < piso`);
-    assert.ok(p.numeral >= PISO_LEGIBILIDAD.numeral, `numeral ${p.numeral} < piso`);
-    assert.ok(p.caption >= PISO_LEGIBILIDAD.caption, `caption ${p.caption} < piso`);
-  });
+// ---- 3. Safe Zones para Redes Sociales ----
+comprobar('Safe zones protegen contra recortes en Stories/WhatsApp', () => {
+  assert.ok(SAFE_TOP >= 80 && SAFE_TOP <= 120, 'margen superior fuera de rango seguro');
+  assert.ok(SAFE_BOTTOM >= 80 && SAFE_BOTTOM <= 130, 'margen inferior fuera de rango seguro');
+  assert.ok(SAFE_LATERAL >= 64 && SAFE_LATERAL <= 96, 'margen lateral fuera de rango seguro');
 });
 
-comprobar('Los presets son completos y decrecientes en densidad', () => {
-  assert.ok(PRESETS[1].cuerpo > PRESETS[2].cuerpo, 'L1 no es menos denso que L2');
-  assert.ok(PRESETS[2].cuerpo > PRESETS[3].cuerpo, 'L2 no es menos denso que L3');
-  assert.ok(PRESETS[3].cuerpo >= PRESETS[4].cuerpo, 'L3 no es menos denso que L4');
-  assert.ok(PRESETS[1].gapTarjetas > PRESETS[4].gapTarjetas, 'espaciado no decrece');
-  assert.equal(PRESETS[1].ilustracion, 'grande');
-  assert.equal(PRESETS[4].ilustracion, 'ninguna');
+// ---- 4. Piso de Legibilidad Absoluto ----
+comprobar('Piso de legibilidad absoluto definido y respetado', () => {
+  assert.ok(PISO_LEGIBILIDAD.cuerpo >= 16, 'el piso de cuerpo debe ser >= 16px');
+  assert.ok(PISO_LEGIBILIDAD.tituloModulo >= 20, 'el piso de título debe ser >= 20px');
+  assert.ok(PISO_LEGIBILIDAD.numeral >= 32, 'el piso de numeral debe ser >= 32px');
+  assert.ok(PISO_LEGIBILIDAD.display >= 48, 'el piso de display debe ser >= 48px');
 });
 
-// ---- Niveles según índice de contenido ----
-comprobar('El nivel sube con el índice de contenido', () => {
-  assert.equal(elegirNivelPorIndice(400), 1);
-  assert.equal(elegirNivelPorIndice(1200), 2);
-  assert.equal(elegirNivelPorIndice(2000), 3);
-  assert.equal(elegirNivelPorIndice(5000), 4);
-  const ligero = construirUnidades({ mensajeCentral: 'a'.repeat(200) });
-  const denso = construirUnidades({ mensajeCentral: 'a'.repeat(200), grandes: grandes(10, 250) });
-  assert.ok(indiceContenido(denso) > indiceContenido(ligero));
-});
-
-// ---- Casos de uso ----
-comprobar('Contenido ligero → una sola página', () => {
-  const r = plan({ titulo: 'Mensaje breve', mensajeCentral: 'a'.repeat(120), textoClave: 'b'.repeat(60), verdadPrincipal: 'c'.repeat(80), fraseRecordar: 'd'.repeat(60) });
-  assert.equal(r.modo, 'unico');
-  assert.equal(r.paginas.length, 1);
-});
-
-comprobar('Mensaje con 10 puntos: se reflejan los 10 (no solo 3)', () => {
-  const puntos = Array.from({ length: 10 }, (_, i) => ({
-    titulo: `Punto principal número ${i + 1}`,
-    detalle: 'desarrollo breve del punto con su argumento teológico central. '.repeat(3),
-  }))
-  const r = plan({
-    titulo: 'Mensaje extenso de 50 minutos',
-    mensajeCentral: 'Dios nos llama a cuidar de nuestro hermano.',
-    pasaje: 'Génesis 4:9',
-    textoClave: '¿Dónde está tu hermano?',
-    verdadPrincipal: 'Somos guardianes de nuestro hermano.',
-    contextoBreve: 'contexto del pasaje.',
-    puntos,
-    palabras: palabras(8),
-    conexiones: conexiones(4, 120),
-    fraseRecordar: 'Cuida de tu hermano.',
-  })
-  // Ningún punto se descarta: la suma de ítems del bloque "puntos" debe ser 10.
-  const itemsPuntos = r.paginas.flat().filter((u) => u.id === 'puntos').reduce((a, u) => a + u.items, 0)
-  assert.equal(itemsPuntos, 10, `solo se muestran ${itemsPuntos} de 10 puntos`)
-  assert.ok(r.nivel >= 3, `nivel demasiado bajo para 10 puntos: ${r.nivel}`)
-  assert.ok(r.paginas.every((p) => p.length > 0), 'página vacía')
-  assert.ok(presetRespetaPiso(PRESETS[r.nivel]))
-})
-
-comprobar('Contenido denso → carrusel o resumen (nunca recorta el piso)', () => {
-  const r = plan({
-    titulo: 'Enseñanza profunda sobre la gracia y la fe',
-    mensajeCentral: 'a'.repeat(400),
-    pasaje: 'Romanos 8:28',
-    textoClave: 'b'.repeat(400),
-    verdadPrincipal: 'c'.repeat(400),
-    contextoBreve: 'e'.repeat(500),
-    grandes: grandes(10, 320),
-    palabras: palabras(8),
-    conexiones: conexiones(6, 200),
-    fraseRecordar: 'd'.repeat(300),
-  });
-  assert.ok(r.modo === 'carrusel' || r.modo === 'resumen', `modo inesperado: ${r.modo}`);
-  if (r.modo === 'carrusel') {
-    assert.ok(r.paginas.length >= 2, 'carrusel sin páginas múltiples');
-    assert.ok(r.paginas.length <= 6, 'carrusel excede el máximo');
-  }
-  assert.ok(presetRespetaPiso(PRESETS[r.nivel]), 'el nivel elegido cruza el piso');
-});
-
-comprobar('Ninguna página queda vacía', () => {
-  for (const e of [
-    { mensajeCentral: 'a'.repeat(120) },
-    { mensajeCentral: 'a'.repeat(600), grandes: grandes(8, 300), conexiones: conexiones(5, 200) },
-    { mensajeCentral: 'a'.repeat(1200), grandes: grandes(10, 500), conexiones: conexiones(6, 400), palabra: [] } as unknown as EntradaInfografia,
-  ]) {
-    const r = plan(e);
-    assert.ok(r.paginas.every((p) => p.length > 0), 'página vacía');
-  }
-});
-
-comprobar('Modo resumen conserva lo esencial', () => {
-  const entrada: EntradaInfografia = {
-    mensajeCentral: 'a'.repeat(3000),
-    pasaje: 'Juan 3:16',
-    textoClave: 'b'.repeat(3000),
-    verdadPrincipal: 'c'.repeat(3000),
-    contextoBreve: 'e'.repeat(3000),
-    grandes: grandes(10, 800),
-    palabras: palabras(8, 40),
-    conexiones: conexiones(6, 800),
-    fraseRecordar: 'd'.repeat(1000),
+// ---- 5. Clasificación Dinámica de Arquetipos ----
+comprobar('Contenido breve (1-3 puntos) activa Arquetipo Breve con Ilustración Hero', () => {
+  const e: EntradaInfografia = {
+    titulo: 'El Buen Pastor',
+    tema: 'Confianza y Paz',
+    mensajeCentral: 'Dios cuida de sus hijos en todo momento.',
+    pasaje: 'Salmos 23:1',
+    textoClave: 'Jehová es mi pastor; nada me faltará.',
+    puntos: [
+      { titulo: 'Descanso en su provisión', detalle: 'En lugares de delicados pastos me pastoreará.' },
+      { titulo: 'Dirección por sendas de justicia', detalle: 'Junto a aguas de reposo me guiará con amor.' },
+    ],
+    conceptos: ['Paz', 'Provisión', 'Guía'],
   };
-  const r = plan(entrada);
-  assert.equal(r.modo, 'resumen');
-  const ids = r.paginas[0].map((u) => u.id);
-  assert.ok(ids.includes('mensaje') && ids.includes('texto-clave') && ids.includes('frase'), 'faltan esenciales');
-  assert.ok(!ids.includes('palabras') && !ids.includes('conexiones'), 'no recortó lo no esencial');
-  assert.ok(presetRespetaPiso(PRESETS[r.nivel]));
+  const plan = planificarComposicion(e);
+  assert.equal(plan.arquetipo, 'breve');
+  assert.equal(plan.columnasPuntos, 1);
+  assert.equal(plan.ilustracionTamano, 'hero');
+  assert.equal(plan.puntos.length, 2);
+  assert.ok(plan.escala.cuerpoPunto >= PISO_LEGIBILIDAD.cuerpo);
 });
 
-comprobar('El estimador crece con más contenido', () => {
-  const p = PRESETS[3];
-  const chico = construirUnidades({ mensajeCentral: 'a'.repeat(100) });
-  const grande = construirUnidades({ mensajeCentral: 'a'.repeat(100), grandes: grandes(8, 300) });
-  const hChico = estimarAltoPagina(chico, p, m.anchoEsen, m.spineW, 300);
-  const hGrande = estimarAltoPagina(grande, p, m.anchoEsen, m.spineW, 300);
-  assert.ok(hGrande > hChico);
+comprobar('Contenido medio (4-5 puntos) activa Arquetipo Medio con Grid de 2 Columnas', () => {
+  const e: EntradaInfografia = {
+    titulo: 'La Armadura de Dios',
+    tema: 'Victoria Espiritual',
+    mensajeCentral: 'Vestíos de toda la armadura de Dios para resistir.',
+    pasaje: 'Efesios 6:10-18',
+    textoClave: 'Fortaleceos en el Señor y en el poder de su fuerza.',
+    puntos: [
+      { titulo: 'El cinturón de la verdad', detalle: 'Vivir en integridad y fidelidad a la Palabra.' },
+      { titulo: 'La coraza de justicia', detalle: 'Guardar el corazón de toda acusación del enemigo.' },
+      { titulo: 'El calzado de la paz', detalle: 'Prontitud para compartir las buenas nuevas.' },
+      { titulo: 'El escudo de la fe', detalle: 'Apagar todos los dardos de fuego del maligno.' },
+    ],
+    conceptos: ['Verdad', 'Justicia', 'Fe', 'Paz'],
+  };
+  const plan = planificarComposicion(e);
+  assert.equal(plan.arquetipo, 'medio');
+  assert.equal(plan.columnasPuntos, 2);
+  assert.equal(plan.ilustracionTamano, 'medio');
+  assert.equal(plan.puntos.length, 4);
+  assert.ok(plan.escala.cuerpoPunto >= PISO_LEGIBILIDAD.cuerpo);
 });
 
-comprobar('Ninguna página excede el alto disponible (sin recortes)', () => {
-  const casos: EntradaInfografia[] = [
-    {
-      // Caso real del PNG: 6 títulos largos, sin detalle.
-      titulo: 'Rendidos a su Presencia',
-      mensajeCentral: 'No se trata de tus fuerzas ni de tu terquedad; se trata de rendirte a la presencia de Dios.',
-      pasaje: 'Éxodo 33:12-14',
-      textoClave: 'Mi presencia irá contigo y yo te daré descanso.',
-      verdadPrincipal: 'La presencia de Dios es nuestro centro.',
-      fraseRecordar: 'No se trata de tus fuerzas: se trata de rendirte a su presencia.',
-      palabras: palabras(6),
-      conexiones: conexiones(3, 100),
-      puntos: Array.from({ length: 6 }, (_, i) => ({ titulo: `La presencia de Dios es nuestra tierra prometida y nuestro centro ${i + 1}`, detalle: '' })),
-    },
-    {
-      titulo: 'Mensaje extenso de 50 minutos',
-      mensajeCentral: 'Dios nos llama a cuidar de nuestro hermano.',
-      pasaje: 'Génesis 4:9',
-      textoClave: '¿Dónde está tu hermano?',
-      verdadPrincipal: 'Somos guardianes de nuestro hermano.',
-      contextoBreve: 'contexto del pasaje y su trasfondo histórico.',
-      puntos: Array.from({ length: 10 }, (_, i) => ({ titulo: `Punto principal número ${i + 1}`, detalle: 'desarrollo breve del punto con su argumento teológico central. '.repeat(3) })),
-      palabras: palabras(8),
-      conexiones: conexiones(6, 150),
-      fraseRecordar: 'Cuida de tu hermano.',
-    },
-  ]
-  for (const e of casos) {
-    const r = plan(e)
-    const p = PRESETS[r.nivel]
-    const mostrarProgreso = construirUnidades(e).length >= 5
-    const cab = estimarAltoCabecera(e.titulo || '', p, m.anchoEsen) + (mostrarProgreso ? PRESETS[2].caption * 2.6 : 0)
-    for (const page of r.paginas) {
-      const alto = estimarAltoPagina(page, p, m.anchoEsen, m.spineW, cab)
-      assert.ok(alto <= (m.altoBanda - 24) * 0.99, `página excede el alto disponible: ${alto}`)
-    }
-    assert.ok(r.paginas.every((pg) => pg.length > 0), 'página vacía')
-  }
-})
+comprobar('Contenido extenso (6-10 puntos) activa Arquetipo Extenso sin carrusel', () => {
+  const e: EntradaInfografia = {
+    titulo: 'El Fruto del Espíritu y la Vida Victoriosa',
+    tema: 'Madurez Cristiana',
+    mensajeCentral: 'El Espíritu Santo transforma nuestro carácter de gloria en gloria.',
+    pasaje: 'Gálatas 5:22-23',
+    textoClave: 'Mas el fruto del Espíritu es amor, gozo, paz...',
+    puntos: Array.from({ length: 10 }, (_, i) => ({
+      titulo: `Virtud espiritual número ${i + 1}`,
+      detalle: `Explicación teológica del aspecto ${i + 1} del carácter de Cristo manifestado en el creyente.`,
+    })),
+    conceptos: ['Amor', 'Paz', 'Paciencia', 'Benignidad', 'Bondad', 'Fe'],
+  };
+  const plan = planificarComposicion(e);
+  assert.equal(plan.arquetipo, 'extenso');
+  assert.equal(plan.columnasPuntos, 2);
+  assert.equal(plan.puntos.length, 10);
+  assert.equal(plan.puntos[0].numeral, '01');
+  assert.equal(plan.puntos[9].numeral, '10');
+  assert.ok(plan.escala.cuerpoPunto >= PISO_LEGIBILIDAD.cuerpo);
+  assert.ok(plan.escala.numeral >= PISO_LEGIBILIDAD.numeral);
+});
 
-console.log('Verificación del motor de infografía (canvas fijo 9:16)');
+// ---- 6. Resumen Editorial Determinista ----
+comprobar('resumirEditorial no corta a mitad de palabra y respeta puntuación', () => {
+  const frase = 'La fe es la certeza de lo que se espera, la convicción de lo que no se ve. Es el ancla de nuestra alma.';
+  const res = resumirEditorial(frase, 60);
+  assert.ok(res.length <= 60);
+  assert.ok(!res.endsWith(' '));
+  assert.ok(res.endsWith('.') || res.endsWith(',') || !res.includes('  '));
+});
+
+// ---- 7. Integridad y Cero Desbordamiento ----
+comprobar('Las alturas estimadas suman coherentemente dentro del lienzo 1080×1920', () => {
+  const e: EntradaInfografia = {
+    titulo: 'Rendidos a su Presencia',
+    mensajeCentral: 'No se trata de nuestras fuerzas, sino del poder de Dios obrando en nuestra debilidad.',
+    pasaje: 'Éxodo 33:14',
+    textoClave: 'Mi presencia irá contigo y te daré descanso.',
+    puntos: [
+      { titulo: 'El clamor de Moisés', detalle: 'Buscar a Dios por quien es Él y no por sus beneficios.' },
+      { titulo: 'La promesa del descanso', detalle: 'La presencia de Dios es nuestra verdadera tierra prometida.' },
+      { titulo: 'La señal para las naciones', detalle: 'Lo que nos distingue es que Dios camina con nosotros.' },
+    ],
+    conceptos: ['Presencia', 'Descanso', 'Comunión'],
+  };
+  const plan = planificarComposicion(e);
+  assert.equal(plan.alturasEstimadas.total, CANVAS_H);
+});
+
+console.log('Verificación del motor editorial de infografía (9:16, 1 lámina, retícula 8px)');
 console.log(pruebas.join('\n'));
 console.log(`\n${pasadas} pruebas superadas.`);

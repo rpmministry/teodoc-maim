@@ -2,29 +2,38 @@
 
 import React, { useEffect, useRef, useState } from 'react'
 import {
-  Ilustracion,
-  BarraProgreso,
+  IlustracionEditorial,
   elegirIlustracion,
+  categoriaIlustracion,
+  type IlustracionId,
+  type PaletaIlustracion,
 } from '@/components/ilustraciones'
 import {
   CANVAS_W,
   CANVAS_H,
-  PRESETS,
+  GRID_BASE,
+  SAFE_TOP,
+  SAFE_BOTTOM,
+  SAFE_LATERAL,
+  ANCHO_UTIL,
+  planificarComposicion,
+  resumirEditorial,
   metricasCanvas,
-  construirUnidades,
-  planificarInfografia,
-  estimarAltoCabecera,
-  estimarAltoPagina,
   type EntradaInfografia,
-  type UnidadContenido,
-  type PlanInfografia,
+  type PlanEditorial,
+  type PuntoEditorial,
 } from '@/lib/infografia-layout'
 
 // ---------------------------------------------------------------------------
-// Datos (estructuralmente compatibles con el análisis de /api/analyze).
+// Tipos de Datos (compatibles con el análisis de /api/analyze y app/page.tsx).
 // ---------------------------------------------------------------------------
-type Versiculo = { cita: string; texto: string }
-type Punto = { punto: string; explicacion: string; subtemas?: { titulo: string; desarrollo: string }[]; versiculos?: Versiculo[] }
+export type Versiculo = { cita: string; texto: string }
+export type Punto = {
+  punto: string
+  explicacion: string
+  subtemas?: { titulo: string; desarrollo: string }[]
+  versiculos?: Versiculo[]
+}
 
 export type InfografiaData = {
   titulo?: string
@@ -48,327 +57,136 @@ export type InfografiaData = {
   desarrollo_progresivo?: Punto[]
   aplicacion?: string[]
   oracion?: string
+  conclusion?: string
 }
-
-export type InfografiaVariant = 'wide' | 'medium' | 'compact'
 
 export function resumir(texto: string, max: number): string {
-  const t = String(texto || '').replace(/\s+/g, ' ').trim()
-  if (t.length <= max) return t
-  const corte = t.slice(0, max)
-  const fin = Math.max(corte.lastIndexOf('. '), corte.lastIndexOf('! '), corte.lastIndexOf('? '))
-  if (fin >= Math.round(max * 0.35)) return corte.slice(0, fin + 1).trim()
-  const punto = Math.max(corte.lastIndexOf('.'), corte.lastIndexOf('!'), corte.lastIndexOf('?'))
-  if (punto >= Math.round(max * 0.35)) return corte.slice(0, punto + 1).trim()
-  const fin2 = Math.max(corte.lastIndexOf(', '), corte.lastIndexOf('; '))
-  if (fin2 >= Math.round(max * 0.5)) return corte.slice(0, fin2).trim()
-  return t
+  return resumirEditorial(texto, max)
 }
 
 // ---------------------------------------------------------------------------
-// Identidad visual. La infografía es una pieza EDITORIAL libre (no replica el
-// Carbon Design System de la interfaz): colorida, con profundidad y una paleta
-// de acento que varía según el mensaje dentro de la marca TeoDoc.
+// Paletas de Color TeoDoc (Identidad propia: Tecnológica + Bíblica + Premium)
 // ---------------------------------------------------------------------------
-const C = {
-  ink: '#161616',
-  sub: '#525252',
-  rule: '#e0e0e0',
-  white: '#ffffff',
-  navy: '#002d9c',
-  navyDeep: '#001141',
-  grid: '#78a9ff',
-} as const
-
-type Paleta = { base: string; dark: string; soft: string }
-const PALETA: Paleta[] = [
-  { base: '#e0a400', dark: '#7a5c00', soft: '#fff6d9' },
-  { base: '#e4572e', dark: '#8f2d12', soft: '#ffede4' },
-  { base: '#0fa3b1', dark: '#075e66', soft: '#e2f7f8' },
-  { base: '#0f62fe', dark: '#002d9c', soft: '#edf5ff' },
-  { base: '#8a3ffc', dark: '#491d8b', soft: '#f6f2ff' },
-  { base: '#d02670', dark: '#740937', soft: '#fff0f6' },
-  { base: '#198038', dark: '#0b4a20', soft: '#defbe6' },
+const PALETAS: PaletaIlustracion[] = [
+  // 0: Azul Celestial & Cian
+  { primary: '#1d4ed8', secondary: '#0284c7', accent: '#38bdf8', glow: '#60a5fa' },
+  // 1: Ámbar & Oro del Templo
+  { primary: '#b45309', secondary: '#d97706', accent: '#fbbf24', glow: '#fef08a' },
+  // 2: Púrpura Real & Gracia
+  { primary: '#6d28d9', secondary: '#7c3aed', accent: '#c084fc', glow: '#e9d5ff' },
+  // 3: Esmeralda & Esperanza
+  { primary: '#047857', secondary: '#059669', accent: '#34d399', glow: '#a7f3d0' },
+  // 4: Coral Cálido & Avivamiento
+  { primary: '#c2410c', secondary: '#ea580c', accent: '#fb923c', glow: '#ffedd5' },
+  // 5: Zafiro & Índigo
+  { primary: '#4338ca', secondary: '#4f46e5', accent: '#818cf8', glow: '#c7d2fe' },
 ]
 
-function hashIndex(texto: string, n: number): number {
+function hashColor(texto: string, max: number): number {
   let h = 0
-  const s = texto || ''
+  const s = texto || 'teodoc'
   for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0
-  return n > 0 ? h % n : 0
+  return max > 0 ? h % max : 0
 }
 
-function svg(size: number, color: string, children: React.ReactNode, sw = 2) {
+// Isotipo TeoDoc: minimalista, nítido y geométrico (sin wordmark borroso)
+function TeoDocBadge({ color }: { color: string }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round">
-      {children}
-    </svg>
-  )
-}
-const G = {
-  target: (s: number, c: string) => svg(s, c, <><circle cx="12" cy="12" r="8" /><circle cx="12" cy="12" r="3.5" /><path d="M12 2v3M12 19v3M2 12h3M19 12h3" /></>),
-  bible: (s: number, c: string) => svg(s, c, <><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H19v15H6.5A2.5 2.5 0 0 0 4 20.5z" /><path d="M4 5.5v15" /><path d="M11.5 7.5v5M9.2 10h4.6" /></>),
-  spark: (s: number, c: string) => svg(s, c, <><path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2.5 2.5M15.5 15.5 18 18M18 6l-2.5 2.5M8.5 15.5 6 18" /></>),
-  list: (s: number, c: string) => svg(s, c, <><path d="M8 6h12M8 12h12M8 18h12" /><circle cx="4" cy="6" r="1.4" /><circle cx="4" cy="12" r="1.4" /><circle cx="4" cy="18" r="1.4" /></>),
-  tag: (s: number, c: string) => svg(s, c, <><path d="M3 12V4a1 1 0 0 1 1-1h8l9 9-9 9-9-9z" /><circle cx="7.5" cy="7.5" r="1.6" /></>),
-  quote: (s: number, c: string) => svg(s, c, <><path d="M7 7h4v4H7zM13 7h4v4h-4z" /><path d="M7 11c0 3-1 5-3 7M13 11c0 3-1 5-3 7" /></>),
-  cross: (s: number, c: string) => svg(s, c, <><path d="M12 3v18M6 9h12" /></>),
-}
-
-const ICONO_POR_UNIDAD: Record<string, (s: number, c: string) => React.ReactNode> = {
-  mensaje: G.target,
-  'texto-clave': G.bible,
-  verdad: G.spark,
-  contexto: G.bible,
-  puntos: G.list,
-  palabras: G.tag,
-  conexiones: G.list,
-  frase: G.quote,
-}
-
-// Icono de marca TeoDoc (SIN wordmark: se eliminó el texto "TeoDoc" y su
-// relleno, que dañaba la legibilidad). Trazo claro y limpio.
-function TeoIcono(size: number) {
-  const w = size
-  const h = (size * 180) / 320
-  return (
-    <svg width={w} height={h} viewBox="0 0 320 180" aria-label="TeoDoc">
-      <g transform="translate(160,90)">
-        <rect x="-108" y="-62" width="216" height="124" rx="14" fill="none" stroke="#ffffff" strokeWidth="9" />
-        <circle cx="-108" cy="0" r="20" fill="none" stroke="#ffffff" strokeWidth="9" />
-        <circle cx="108" cy="0" r="20" fill="none" stroke="#ffffff" strokeWidth="9" />
-        <rect x="-78" y="-32" width="96" height="11" rx="5" fill="#ffffff" />
-        <rect x="-78" y="-6" width="96" height="11" rx="5" fill="#ffffff" />
-        <rect x="-78" y="20" width="58" height="11" rx="5" fill="#ffffff" />
-        <rect x="34" y="-38" width="9" height="20" rx="4" fill="#ffffff" />
-        <rect x="52" y="-50" width="9" height="44" rx="4" fill="#ffffff" />
-        <rect x="70" y="-32" width="9" height="20" rx="4" fill="#ffffff" />
-      </g>
-    </svg>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <svg width={28} height={28} viewBox="0 0 100 100" aria-label="TeoDoc">
+        <rect x="8" y="8" width="84" height="84" rx="20" fill="none" stroke={color} strokeWidth="7" />
+        <rect x="24" y="26" width="52" height="8" rx="4" fill="#ffffff" />
+        <rect x="24" y="44" width="36" height="8" rx="4" fill="#ffffff" />
+        <rect x="24" y="62" width="46" height="8" rx="4" fill={color} />
+      </svg>
+      <div style={{ display: 'flex', flexDirection: 'column' }}>
+        <span style={{ fontSize: 13, fontWeight: 800, letterSpacing: '0.22em', textTransform: 'uppercase', color: '#ffffff' }}>
+          TEODOC
+        </span>
+        <span style={{ fontSize: 9, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: color }}>
+          ESTUDIO MINISTERIAL
+        </span>
+      </div>
+    </div>
   )
 }
 
 // ---------------------------------------------------------------------------
-// Entrada estructural + plan (puro y determinista; lo comparte app/page.tsx).
+// Extracción Normalizada de Entrada
 // ---------------------------------------------------------------------------
 export function construirEntrada(data: InfografiaData): EntradaInfografia {
   const info = data.infografia || {}
-  const pasaje = data.texto_biblico_principal?.cita
-    || (data.desarrollo_progresivo || []).find((p) => p.versiculos?.[0]?.cita)?.versiculos?.[0]?.cita
-    || ''
-  const puntos = (data.desarrollo_progresivo || [])
-    .map((p) => ({ titulo: p.punto || '', detalle: p.explicacion || '' }))
-    .filter((p) => p.titulo || p.detalle)
-    .slice(0, 12)
+  const pasaje =
+    data.texto_biblico_principal?.cita ||
+    (data.desarrollo_progresivo || []).flatMap((p) => p.versiculos || []).find((v) => v.cita)?.cita ||
+    ''
+
+  const textoClave =
+    info.texto_clave ||
+    data.texto_biblico_principal?.texto ||
+    (data.desarrollo_progresivo || []).flatMap((p) => p.versiculos || []).find((v) => v.texto)?.texto ||
+    ''
+
+  const puntosRaw = (data.desarrollo_progresivo && data.desarrollo_progresivo.length > 0)
+    ? data.desarrollo_progresivo.map((p) => ({
+        titulo: p.punto || '',
+        detalle: p.explicacion || '',
+        versiculo: p.versiculos?.[0]?.cita,
+      }))
+    : (info.grandes_ensenanzas || []).map((g) => ({
+        titulo: g.titulo || '',
+        detalle: g.descripcion || '',
+        versiculo: undefined,
+      }))
+
+  const puntos = puntosRaw.filter((p) => p.titulo || p.detalle)
+
+  const conceptos = (info.palabras_clave?.length
+    ? info.palabras_clave
+    : (data.conceptos_clave || []).slice(0, 6)
+  ).filter(Boolean)
+
   return {
-    titulo: data.titulo || '',
+    titulo: data.titulo || 'Análisis Bíblico',
+    tema: data.tema_principal || 'Doctrina y Vida Cristiana',
     mensajeCentral: info.mensaje_central || data.idea_principal || '',
     pasaje,
-    textoClave: info.texto_clave || data.texto_biblico_principal?.texto || '',
+    textoClave,
     verdadPrincipal: info.verdad_principal || data.tema_principal || '',
     contextoBreve: info.contexto_breve || data.contexto_biblico || '',
     puntos,
-    grandes: (info.grandes_ensenanzas || []).slice(0, 10),
-    palabras: (info.palabras_clave?.length ? info.palabras_clave : data.conceptos_clave || []).slice(0, 8),
-    conexiones: (info.conexiones_biblicas || []).slice(0, 6),
-    fraseRecordar: info.frase_recordar || info.frase_corta || '',
+    conceptos,
+    conexiones: (info.conexiones_biblicas || []).slice(0, 4),
+    fraseRecordar: info.frase_recordar || info.frase_corta || data.conclusion || '',
   }
 }
 
-const extraCabeceraProgreso = (mostrar: boolean) => (mostrar ? PRESETS[2].caption * 2.6 : 0)
-
-export function planInfografia(data: InfografiaData): PlanInfografia {
-  const m = metricasCanvas()
+export function planInfografia(data: InfografiaData) {
   const entrada = construirEntrada(data)
-  const unidades = construirUnidades(entrada)
-  const mostrarProgreso = unidades.length >= 5
-  return planificarInfografia(unidades, {
-    anchoContenido: m.anchoEsen,
-    spineW: m.spineW,
-    altoDisponible: m.altoBanda - 24,
-    titulo: entrada.titulo || '',
-    extraCabecera: extraCabeceraProgreso(mostrarProgreso),
-    maxPaginasCarrusel: 6,
-  })
+  const plan = planificarComposicion(entrada)
+  return {
+    ...plan,
+    paginas: [plan.puntos], // compatibilidad con pruebas e invariantes
+    modo: 'unico' as const,
+  }
 }
 
 // ---------------------------------------------------------------------------
-// Render de una página (el canvas SIEMPRE es 1080×1920, 9:16 exacto).
+// Componente de Infografía Editorial 9:16 (1080×1920)
 // ---------------------------------------------------------------------------
-export default function Infografia({ data, pagina = 0 }: { data: InfografiaData; pagina?: number; variant?: InfografiaVariant }) {
+export default function Infografia({ data }: { data: InfografiaData; pagina?: number }) {
   const entrada = construirEntrada(data)
-  const plan = planInfografia(data)
-  const preset = PRESETS[plan.nivel]
-  const m = metricasCanvas()
-  const total = plan.paginas.length
-  const idx = Math.max(0, Math.min(pagina, total - 1))
-  const unidadesPagina = plan.paginas[idx] || []
-  const mostrarProgreso = plan.modo === 'unico' && total === 1 && construirUnidades(entrada).length >= 5
-  const tema = PALETA[hashIndex(entrada.titulo || 'teodoc', PALETA.length)]
-  const tema2 = PALETA[(hashIndex(entrada.titulo || 'teodoc', PALETA.length) + 3) % PALETA.length]
-  const fecha = new Date().toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' })
-  const temaNombre = data.tema_principal || 'Análisis bíblico'
-  const ilustracionId = elegirIlustracion(`${entrada.titulo} ${entrada.mensajeCentral} ${entrada.pasaje} ${(entrada.palabras || []).join(' ')}`)
-  const fuenteIlustracion = preset.ilustracion === 'grande' ? preset.icono * 1.5
-    : preset.ilustracion === 'mediana' ? preset.icono * 1.15
-      : preset.ilustracion === 'pequena' ? preset.icono * 0.85
-        : 0
+  const plan = planificarComposicion(entrada)
+  const palIndex = hashColor(entrada.titulo + entrada.tema, PALETAS.length)
+  const pal = PALETAS[palIndex]
 
-  const listaPuntos = (entrada.puntos && entrada.puntos.length)
-    ? entrada.puntos
-    : (entrada.grandes || []).map((g) => ({ titulo: g.titulo, detalle: g.descripcion }))
+  // Búsqueda temática de ilustración
+  const semillaIlustracion = `${entrada.titulo} ${entrada.tema} ${entrada.mensajeCentral} ${entrada.pasaje} ${entrada.conceptos.join(' ')}`
+  const ilustracionId: IlustracionId = elegirIlustracion(semillaIlustracion)
+  const categoriaTema = categoriaIlustracion(ilustracionId)
+  const fechaHoy = new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
 
-  const contenidoUnidad = (u: UnidadContenido): React.ReactNode => {
-    switch (u.id) {
-      case 'mensaje':
-        return <p style={{ margin: 0, fontSize: preset.cuerpo, lineHeight: preset.lineHeight, color: C.ink, fontWeight: 600 }}>{resumir(entrada.mensajeCentral || '', 420)}</p>
-      case 'texto-clave':
-        return (
-          <div>
-            {entrada.pasaje ? <div style={{ fontSize: preset.tituloTarjeta * 0.82, fontWeight: 800, color: C.ink, marginBottom: 6 }}>{entrada.pasaje}</div> : null}
-            {entrada.textoClave ? <p style={{ margin: 0, fontSize: preset.cuerpo, fontStyle: 'italic', lineHeight: preset.lineHeight, color: C.sub }}>“{resumir(entrada.textoClave, 420)}”</p> : null}
-          </div>
-        )
-      case 'verdad':
-        return <p style={{ margin: 0, fontSize: preset.cuerpo, lineHeight: preset.lineHeight, color: C.ink }}>{resumir(entrada.verdadPrincipal || '', 380)}</p>
-      case 'contexto':
-        return <p style={{ margin: 0, fontSize: preset.cuerpo, lineHeight: preset.lineHeight, color: C.sub }}>{resumir(entrada.contextoBreve || '', 380)}</p>
-      case 'puntos': {
-        const desde = u.desde ?? 0
-        const items = listaPuntos.slice(desde, desde + u.items)
-        return (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: Math.round(preset.caption * 0.7) }}>
-            {items.map((p, i) => {
-              const pn = desde + i + 1
-              const pal = PALETA[(pn - 1) % PALETA.length]
-              return (
-                <div key={pn} style={{ display: 'flex', gap: Math.round(preset.caption * 0.6), alignItems: 'flex-start' }}>
-                  <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                    <span style={{ width: preset.caption * 2.2, height: preset.caption * 2.2, borderRadius: '50%', background: pal.base, color: '#fff', fontWeight: 800, fontSize: preset.caption * 0.98, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      {String(pn).padStart(2, '0')}
-                    </span>
-                    {i < items.length - 1 ? (
-                      <span aria-hidden="true" style={{ display: 'flex', gap: 3, marginTop: 4 }}>
-                        {Array.from({ length: 3 }).map((_, ci) => (
-                          <span key={ci} style={{ width: 4, height: 4, borderRadius: '50%', background: pal.base, opacity: ci === 2 ? 0.5 : 1 }} />
-                        ))}
-                      </span>
-                    ) : null}
-                  </div>
-                  <div style={{ minWidth: 0 }}>
-                    {p.titulo ? <div style={{ fontSize: preset.cuerpo, fontWeight: 700, color: C.ink, lineHeight: 1.25 }}>{resumir(p.titulo, 100)}</div> : null}
-                    {preset.detallePuntos && p.detalle ? <div style={{ fontSize: preset.caption, color: C.sub, lineHeight: 1.4, marginTop: 2 }}>{resumir(p.detalle, preset.nivel <= 2 ? 200 : 120)}</div> : null}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        )
-      }
-      case 'palabras': {
-        const items = (entrada.palabras || []).slice(0, u.items)
-        return (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: Math.round(preset.caption * 0.55) }}>
-            {items.map((p, i) => {
-              const pal = PALETA[i % PALETA.length]
-              return (
-                <span key={i} style={{ fontSize: preset.caption * 1.12, fontWeight: 700, color: pal.dark, background: pal.soft, border: `1.5px solid ${pal.base}`, borderRadius: 999, padding: `${Math.round(preset.caption * 0.3)}px ${Math.round(preset.caption * 0.85)}px` }}>
-                  {p}
-                </span>
-              )
-            })}
-          </div>
-        )
-      }
-      case 'conexiones': {
-        const items = (entrada.conexiones || []).slice(0, u.items)
-        return (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: Math.round(preset.caption * 0.5) }}>
-            {items.map((c, i) => (
-              <div key={i} style={{ display: 'flex', gap: Math.round(preset.caption * 0.6), alignItems: 'baseline' }}>
-                <span style={{ flexShrink: 0, fontSize: preset.caption * 1.02, fontWeight: 800, color: PALETA[i % PALETA.length].dark }}>{c.cita}</span>
-                {c.texto ? <span style={{ fontSize: preset.caption, color: C.sub, lineHeight: 1.4 }}>{resumir(c.texto, 130)}</span> : null}
-              </div>
-            ))}
-          </div>
-        )
-      }
-      case 'frase':
-        return <p style={{ margin: 0, fontSize: preset.tituloTarjeta * 0.9, lineHeight: 1.35, fontStyle: 'italic', color: C.ink, fontWeight: 600 }}>“{resumir(entrada.fraseRecordar || '', 260)}”</p>
-      default:
-        return null
-    }
-  }
-
-  // ---- Relleno útil de la holgura (nunca color plano vacío) ----
-  const altoCabPage = estimarAltoCabecera(entrada.titulo || '', preset, m.anchoEsen) + extraCabeceraProgreso(mostrarProgreso)
-  const altoUsado = estimarAltoPagina(unidadesPagina, preset, m.anchoEsen, m.spineW, altoCabPage)
-  const holgura = Math.max(0, m.altoBanda - 24 - altoUsado)
-
-  const versiculosLibres = (data.desarrollo_progresivo || [])
-    .flatMap((p) => p.versiculos || [])
-    .filter((v) => v.cita && !(entrada.conexiones || []).some((c) => c.cita === v.cita))
-    .filter((v, i, arr) => arr.findIndex((x) => x.cita === v.cita) === i)
-    .slice(0, 2)
-  const conceptoLibre = (data.conceptos_teologicos || []).find((c) => c.concepto && c.significado)
-  const citaLibre = (entrada.puntos || []).map((p) => resumir(p.detalle || '', 160)).find((t) => t.length > 50 && !(entrada.mensajeCentral || '').includes(t.slice(0, 40)))
-
-  const rellenos: { id: string; alto: number; nodo: React.ReactNode }[] = []
-  rellenos.push({
-    id: 'ilustracion',
-    alto: Math.round(preset.icono * 2.4 + preset.caption * 4),
-    nodo: (
-      <div style={{ display: 'flex', alignItems: 'center', gap: Math.round(preset.caption * 1.2), background: `linear-gradient(120deg, ${tema.soft}, ${tema2.soft})`, border: `1.5px solid ${tema.base}55`, borderRadius: 18, padding: Math.round(preset.caption * 1.1), boxSizing: 'border-box' }}>
-        <Ilustracion id={ilustracionId} size={Math.round(preset.icono * 1.9)} pal={tema} />
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <span style={{ fontSize: preset.caption * 0.9, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: tema.dark }}>Imagen del mensaje</span>
-          <span style={{ fontSize: preset.cuerpo, fontWeight: 700, lineHeight: 1.35, color: C.ink }}>{resumir(entrada.verdadPrincipal || entrada.mensajeCentral || '', 120)}</span>
-        </div>
-      </div>
-    ),
-  })
-  if (citaLibre) {
-    rellenos.push({
-      id: 'pull',
-      alto: Math.round(preset.caption * 9),
-      nodo: <div style={{ background: tema.soft, borderLeft: `8px solid ${tema.base}`, borderRadius: 14, padding: Math.round(preset.caption * 1.1), fontSize: preset.cuerpo, fontStyle: 'italic', color: C.ink, lineHeight: 1.45, boxSizing: 'border-box' }}>“{citaLibre}”</div>,
-    })
-  }
-  versiculosLibres.forEach((v, i) => {
-    rellenos.push({
-      id: `verso-${i}`,
-      alto: Math.round(preset.caption * 9),
-      nodo: (
-        <div style={{ background: '#fff', border: `1.5px solid ${PALETA[i % PALETA.length].soft}`, borderTop: `6px solid ${PALETA[i % PALETA.length].base}`, borderRadius: 14, padding: Math.round(preset.caption * 1.1), boxSizing: 'border-box' }}>
-          <div style={{ fontSize: preset.caption * 1.05, fontWeight: 800, color: PALETA[i % PALETA.length].dark, marginBottom: 4 }}>{v.cita}</div>
-          {v.texto ? <div style={{ fontSize: preset.caption, color: C.sub, lineHeight: 1.45 }}>“{resumir(v.texto, 150)}”</div> : null}
-        </div>
-      ),
-    })
-  })
-  if (conceptoLibre) {
-    rellenos.push({
-      id: 'concepto',
-      alto: Math.round(preset.caption * 8),
-      nodo: (
-        <div style={{ background: tema2.soft, border: `1.5px solid ${tema2.base}55`, borderRadius: 14, padding: Math.round(preset.caption * 1.1), boxSizing: 'border-box' }}>
-          <div style={{ fontSize: preset.caption * 0.9, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: tema2.dark }}>Concepto teológico</div>
-          <div style={{ fontSize: preset.cuerpo, fontWeight: 800, color: C.ink, marginTop: 2 }}>{resumir(conceptoLibre.concepto || '', 60)}</div>
-          <div style={{ fontSize: preset.caption, color: C.sub, lineHeight: 1.4, marginTop: 2 }}>{resumir(conceptoLibre.significado || '', 180)}</div>
-        </div>
-      ),
-    })
-  }
-
-  const elegidos: { id: string; nodo: React.ReactNode }[] = []
-  let acumulado = 0
-  for (const r of rellenos) {
-    if (r.id === 'ilustracion') continue
-    if (acumulado + r.alto > holgura - 40) break
-    elegidos.push({ id: r.id, nodo: r.nodo })
-    acumulado += r.alto
-  }
-  const altoIlustracion = holgura - acumulado
+  const { arquetipo, puntos, escala } = plan
 
   return (
     <div
@@ -376,172 +194,439 @@ export default function Infografia({ data, pagina = 0 }: { data: InfografiaData;
         width: CANVAS_W,
         height: CANVAS_H,
         boxSizing: 'border-box',
-        background: `linear-gradient(180deg, ${C.white} 0%, ${C.white} 40%, ${tema.soft} 70%, ${tema.soft} 100%)`,
-        color: C.ink,
-        fontFamily: 'var(--font-plex), system-ui, sans-serif',
+        backgroundColor: '#070b14',
+        backgroundImage: 'radial-gradient(ellipse 90% 70% at 50% -10%, #172554 0%, #070b14 70%)',
+        color: '#f8fafc',
+        fontFamily: 'var(--font-plex), system-ui, -apple-system, sans-serif',
         position: 'relative',
         overflow: 'hidden',
+        display: 'flex',
+        flexDirection: 'column',
       }}
     >
-      {/* Elementos visuales sutiles: degradado + círculos geométricos */}
+      {/* ================= FONDO EDITORIAL RETICULADO ================= */}
       <div aria-hidden="true" style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0 }}>
+        {/* Retícula matemática sutil de 64 px (Carbon blueprint) */}
         <svg width="100%" height="100%" viewBox="0 0 1080 1920" preserveAspectRatio="none">
           <defs>
-            <linearGradient id="gradFondo" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="rgba(240,240,240,0.4)" />
-              <stop offset="100%" stopColor="rgba(220,220,220,0.2)" />
-            </linearGradient>
+            <pattern id="grid-pattern" width="64" height="64" patternUnits="userSpaceOnUse">
+              <path d="M 64 0 L 0 0 0 64" fill="none" stroke="rgba(255, 255, 255, 0.024)" strokeWidth="1" />
+            </pattern>
+            <radialGradient id="glow-hero" cx="50%" cy="20%" r="45%">
+              <stop offset="0%" stopColor={pal.glow} stopOpacity="0.18" />
+              <stop offset="100%" stopColor="#070b14" stopOpacity="0" />
+            </radialGradient>
+            <radialGradient id="glow-bottom" cx="80%" cy="85%" r="40%">
+              <stop offset="0%" stopColor={pal.accent} stopOpacity="0.12" />
+              <stop offset="100%" stopColor="#070b14" stopOpacity="0" />
+            </radialGradient>
           </defs>
-          <rect width="100%" height="100%" fill="url(#gradFondo)" />
-          {Array.from({ length: 6 }).map((_, i) => {
-            const x = Math.round(120 + (i * 160) % 800)
-            const y = Math.round(280 + (i * 210) % 600)
-            const size = Math.round(80 + ((i * 37) % 120))
-            return (
-              <circle key={i} cx={x} cy={y} r={size} fill={tema.base} opacity={0.06} />
-            )
-          })}
-          <path d="M0 1400 Q 540 1200, 1080 1400" stroke={tema.base} strokeWidth="2" fill="none" opacity={0.12} />
-          <path d="M0 1600 Q 540 1450, 1080 1600" stroke={tema.base} strokeWidth="2" fill="none" opacity={0.08} />
+          <rect width="100%" height="100%" fill="url(#grid-pattern)" />
+          <circle cx="540" cy="400" r="450" fill="url(#glow-hero)" />
+          <circle cx="850" cy="1500" r="400" fill="url(#glow-bottom)" />
+          {/* Líneas geométricas de acento */}
+          <line x1={SAFE_LATERAL} y1={SAFE_TOP} x2={CANVAS_W - SAFE_LATERAL} y2={SAFE_TOP} stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
+          <line x1={SAFE_LATERAL} y1={CANVAS_H - SAFE_BOTTOM} x2={CANVAS_W - SAFE_LATERAL} y2={CANVAS_H - SAFE_BOTTOM} stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
         </svg>
       </div>
 
-      {/* ================= FRANJA SUPERIOR (funcional, ≤12%) ================= */}
+      {/* ================= CONTENEDOR PRINCIPAL (DENTRO DE SAFE AREA) ================= */}
       <div
         style={{
-          position: 'absolute', top: 0, left: 0, width: '100%', height: m.safeTop, boxSizing: 'border-box',
-          background: `linear-gradient(135deg, ${tema.dark} 0%, ${C.navyDeep} 45%, ${tema.base} 135%)`,
-          display: 'flex', alignItems: 'center', gap: Math.round(preset.caption * 1.2),
-          padding: `0 ${m.safeLateral}px`, overflow: 'hidden',
+          position: 'relative',
+          zIndex: 1,
+          width: '100%',
+          height: '100%',
+          boxSizing: 'border-box',
+          padding: `${SAFE_TOP}px ${SAFE_LATERAL}px ${SAFE_BOTTOM}px`,
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
         }}
       >
-        <div style={{ position: 'relative', flexShrink: 0, display: 'flex', alignItems: 'center' }}>
-          {TeoIcono(preset.caption * 5.4)}
-        </div>
-        <div style={{ position: 'relative', flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: Math.round(preset.caption * 0.25) }}>
-          <span style={{ fontSize: preset.caption * 0.98, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#ffffff', lineHeight: 1.24, overflowWrap: 'anywhere' }}>
-            {temaNombre}
-          </span>
-          <span style={{ fontSize: preset.caption * 0.9, color: '#cfe0ff', letterSpacing: '0.05em' }}>{fecha}</span>
-        </div>
-        <div aria-hidden="true" style={{ position: 'relative', flexShrink: 0, opacity: 0.95 }}>
-          <Ilustracion id={ilustracionId} size={Math.round(m.safeTop * 0.66)} pal={{ base: '#ffffff', dark: '#d6e4ff', soft: 'rgba(255,255,255,0.18)' }} />
-        </div>
-      </div>
-
-      {/* ================= BANDA DE CONTENIDO (zona segura) ================= */}
-      <div style={{ position: 'absolute', top: m.safeTop, left: 0, width: '100%', height: m.altoBanda, boxSizing: 'border-box', padding: `${Math.round(preset.caption * 0.7)}px ${m.safeLateral}px`, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-        {total > 1 ? (
-          <div style={{ position: 'absolute', top: Math.round(preset.caption * 0.5), right: m.safeLateral, background: tema.base, color: '#fff', fontWeight: 800, fontSize: preset.caption, borderRadius: 999, padding: `${Math.round(preset.caption * 0.28)}px ${Math.round(preset.caption * 0.75)}px`, zIndex: 3 }}>
-            {idx + 1}/{total}
+        {/* ---------------- 1. HEADER EDITORIAL ---------------- */}
+        <header
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            paddingBottom: 16,
+            borderBottom: '1px solid rgba(255, 255, 255, 0.12)',
+            flexShrink: 0,
+          }}
+        >
+          <TeoDocBadge color={pal.accent} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span
+              style={{
+                fontSize: 12,
+                fontWeight: 700,
+                letterSpacing: '0.12em',
+                textTransform: 'uppercase',
+                color: pal.accent,
+                background: 'rgba(255, 255, 255, 0.05)',
+                border: `1px solid ${pal.accent}44`,
+                borderRadius: 999,
+                padding: '4px 14px',
+              }}
+            >
+              {categoriaTema}
+            </span>
+            <span style={{ fontSize: 13, color: '#94a3b8', fontWeight: 500, letterSpacing: '0.04em' }}>
+              {fechaHoy}
+            </span>
           </div>
-        ) : null}
-
-        {/* CABECERA: título + etiquetas (elementos esenciales, dentro de la zona segura) */}
-        <header style={{ position: 'relative', flexShrink: 0 }}>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: Math.round(preset.caption * 0.5) }}>
-            {entrada.pasaje ? (
-              <span style={{ fontSize: preset.caption, fontWeight: 700, letterSpacing: '0.03em', borderRadius: 999, padding: `${Math.round(preset.caption * 0.3)}px ${Math.round(preset.caption * 0.8)}px`, background: tema.base, color: '#ffffff' }}>{entrada.pasaje}</span>
-            ) : null}
-          </div>
-          <h1 style={{ margin: 0, lineHeight: 1.06, fontWeight: 800, letterSpacing: '-0.01em', fontSize: preset.display, color: C.ink, overflowWrap: 'anywhere' }}>
-            {entrada.titulo || 'Análisis del mensaje'}
-          </h1>
-          <div style={{ width: Math.round(preset.numeral * 1.5), height: Math.round(preset.caption * 0.6), background: tema.base, borderRadius: 999, marginTop: Math.round(preset.caption * 0.6) }} />
-          {mostrarProgreso ? (
-            <div style={{ marginTop: Math.round(preset.caption * 0.7) }}>
-              <BarraProgreso total={construirUnidades(entrada).length} colorActivo={tema.base} colorInactivo={C.rule} etiquetaColor={C.sub} small={preset.caption} />
-            </div>
-          ) : null}
         </header>
 
-        {/* BLOQUES: todas las secciones con contenido real */}
-        <div style={{ position: 'relative', flex: 1, minHeight: 0, paddingTop: Math.round(preset.gapTarjetas * 0.8), overflow: 'hidden' }}>
-          {unidadesPagina.map((u, i) => {
-            const num = String(i + 1).padStart(2, '0')
-            const pal = PALETA[(i + 1) % PALETA.length]
-            const icono = ICONO_POR_UNIDAD[u.id] || G.spark
-            const esUltimo = i === unidadesPagina.length - 1 && elegidos.length === 0 && altoIlustracion <= 0
-            return (
-              <div key={`${u.id}-${u.desde ?? 0}`} style={{ position: 'relative', display: 'flex', gap: Math.round(preset.caption * 0.9), marginBottom: esUltimo ? 0 : preset.gapTarjetas }}>
-                <div style={{ width: m.spineW, flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}>
-                  <div
-                    style={{
-                      width: preset.numeral, height: preset.numeral, borderRadius: '50%', background: '#ffffff',
-                      border: `4px solid ${tema.base}`, color: tema.dark, fontWeight: 800, fontSize: preset.numeral * 0.42,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(22,22,22,0.16)', position: 'relative', zIndex: 1,
-                    }}
-                  >
-                    {num}
-                  </div>
-                  {!esUltimo ? (
-                    <div aria-hidden="true" style={{ position: 'absolute', top: preset.numeral, bottom: -preset.gapTarjetas, width: 3, backgroundImage: `repeating-linear-gradient(to bottom, ${tema.base} 0 5px, transparent 5px 12px)`, opacity: 0.6 }} />
-                  ) : null}
-                </div>
+        {/* ---------------- 2. HERO: TÍTULO & MENSAJE CENTRAL ---------------- */}
+        <section style={{ marginTop: 20, marginBottom: 16, flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+            <div style={{ width: 28, height: 3, backgroundColor: pal.accent, borderRadius: 2 }} />
+            <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: pal.accent }}>
+              {entrada.tema}
+            </span>
+          </div>
 
-                <div aria-hidden="true" style={{ position: 'absolute', top: Math.round(preset.numeral / 2 - preset.numeral * 0.6), left: m.spineW, width: Math.round(preset.caption * 1.6), height: Math.round(preset.numeral * 1.2), pointerEvents: 'none' }}>
-                  <svg aria-hidden="true" width={Math.round(preset.caption * 1.6)} height={Math.round(preset.numeral * 1.2)} viewBox={`0 0 ${Math.round(preset.caption * 1.6)} ${Math.round(preset.numeral * 1.2)}`} fill="none">
-                  <path d={`M0 ${Math.round(preset.numeral * 1.2 * 0.5)} Q ${Math.round(preset.caption * 0.8)} ${Math.round(preset.numeral * 1.2 * 0.3)}, ${Math.round(preset.caption * 1.6)} ${Math.round(preset.numeral * 1.2 * 0.5)}`} stroke={pal.base} strokeWidth="2" strokeDasharray={`${Math.round(preset.caption * 0.15)} ${Math.round(preset.caption * 0.1)}`} opacity="0.6" />
-                </svg>
-                </div>
+          <h1
+            style={{
+              margin: 0,
+              fontSize: escala.display,
+              fontWeight: 800,
+              lineHeight: 1.06,
+              letterSpacing: '-0.02em',
+              color: '#ffffff',
+              overflowWrap: 'break-word',
+            }}
+          >
+            {entrada.titulo}
+          </h1>
 
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ padding: `${Math.round(preset.padTarjeta * 0.8)}px 0 ${Math.round(preset.padTarjeta * 0.5)}px`, borderBottom: `2px solid ${pal.soft}`, position: 'relative' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: Math.round(preset.caption * 0.6), marginBottom: Math.round(preset.caption * 0.5) }}>
-                      <span style={{ width: preset.caption * 1.5, height: preset.caption * 1.5, borderRadius: '50%', background: pal.base, color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        {icono(preset.caption * 1.1, C.white)}
-                      </span>
-                      <span style={{ fontSize: preset.tituloTarjeta * 0.7, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: pal.dark, lineHeight: 1.1 }}>
-                        {u.etiqueta}
-                      </span>
-                    </div>
-                    <div style={{ position: 'relative' }}>{contenidoUnidad(u)}</div>
-                  </div>
-                </div>
-              </div>
-            )
-          })}
-
-          {/* RELLENO ÚTIL de la holgura */}
-          {elegidos.map((r) => (
-            <div key={r.id} style={{ width: '100%', marginBottom: preset.gapTarjetas }}>{r.nodo}</div>
-          ))}
-          {altoIlustracion > 140 ? (
-            <div style={{ width: '100%', height: altoIlustracion, borderRadius: 18, overflow: 'hidden', background: `linear-gradient(120deg, ${tema.soft}, ${tema2.soft})`, border: `1.5px solid ${tema.base}44`, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: Math.round(preset.caption * 1.2), boxSizing: 'border-box' }}>
-              {fuenteIlustracion > 0 ? <Ilustracion id={ilustracionId} size={Math.min(altoIlustracion * 0.6, preset.icono * 2.2)} pal={tema} /> : null}
-              <div style={{ maxWidth: '46%', display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <span style={{ fontSize: preset.caption * 0.9, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: tema.dark }}>Imagen del mensaje</span>
-                <span style={{ fontSize: preset.cuerpo, fontWeight: 700, color: C.ink, lineHeight: 1.35 }}>{resumir(entrada.verdadPrincipal || entrada.mensajeCentral || '', 120)}</span>
-              </div>
+          {entrada.mensajeCentral ? (
+            <div
+              style={{
+                marginTop: 14,
+                paddingLeft: 18,
+                borderLeft: `3px solid ${pal.accent}`,
+              }}
+            >
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: escala.subtitulo,
+                  fontWeight: 500,
+                  lineHeight: 1.35,
+                  color: '#cbd5e1',
+                }}
+              >
+                {resumirEditorial(entrada.mensajeCentral, 260)}
+              </p>
             </div>
           ) : null}
-        </div>
-      </div>
+        </section>
 
-      {/* ================= FRANJA INFERIOR (funcional, ≤14%) ================= */}
-      <div
-        style={{
-          position: 'absolute', bottom: 0, left: 0, width: '100%', height: m.safeBottom, boxSizing: 'border-box',
-          background: `linear-gradient(0deg, ${C.navyDeep} 0%, ${tema.dark} 60%, ${tema.base} 175%)`,
-          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: `0 ${m.safeLateral}px`, overflow: 'hidden',
-        }}
-      >
-        <div aria-hidden="true" style={{ display: 'flex', alignItems: 'center', gap: Math.round(preset.caption * 1.8), opacity: 0.95 }}>
-          <Ilustracion id={ilustracionId} size={Math.round(m.safeBottom * 0.46)} pal={{ base: '#ffffff', dark: '#d6e4ff', soft: 'rgba(255,255,255,0.16)' }} />
-          <Ilustracion id={elegirIlustracion(`${entrada.titulo} ${entrada.mensajeCentral} comunidad manosSostienen`)} size={Math.round(m.safeBottom * 0.46)} pal={{ base: '#ffffff', dark: '#d6e4ff', soft: 'rgba(255,255,255,0.16)' }} />
-        </div>
-        {total > 1 ? (
-          <div style={{ position: 'absolute', right: m.safeLateral, background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.45)', color: '#ffffff', fontWeight: 800, fontSize: preset.caption, borderRadius: 999, padding: `${Math.round(preset.caption * 0.28)}px ${Math.round(preset.caption * 0.75)}px` }}>
-            {idx + 1}/{total}
-          </div>
+        {/* ---------------- 3. BLOQUE BÍBLICO PROTAGONISTA ---------------- */}
+        {entrada.textoClave || entrada.pasaje ? (
+          <section
+            style={{
+              flexShrink: 0,
+              marginBottom: 18,
+              background: 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%)',
+              border: '1px solid rgba(255, 255, 255, 0.14)',
+              borderRadius: 16,
+              padding: '16px 22px',
+              position: 'relative',
+              overflow: 'hidden',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span
+                  style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    backgroundColor: pal.accent,
+                    boxShadow: `0 0 10px ${pal.accent}`,
+                  }}
+                />
+                <span style={{ fontSize: 12, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: pal.accent }}>
+                  TEXTO BÍBLICO CLAVE
+                </span>
+              </div>
+              {entrada.pasaje ? (
+                <span style={{ fontSize: 15, fontWeight: 800, color: '#ffffff', letterSpacing: '0.04em' }}>
+                  {entrada.pasaje}
+                </span>
+              ) : null}
+            </div>
+
+            {entrada.textoClave ? (
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: escala.biblia,
+                  fontStyle: 'italic',
+                  fontWeight: 400,
+                  lineHeight: 1.38,
+                  color: '#f1f5f9',
+                }}
+              >
+                “{resumirEditorial(entrada.textoClave, 320)}”
+              </p>
+            ) : null}
+          </section>
         ) : null}
+
+        {/* ---------------- 4. DESARROLLO EDITORIAL (ARQUETIPOS BREVE / MEDIO / EXTENSO) ---------------- */}
+        <section style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+          {arquetipo === 'breve' ? (
+            /* ===== ARQUETIPO BREVE (1-3 PUNTOS): HERO VISUAL + PUNTOS AMPLIOS ===== */
+            <div style={{ display: 'flex', gap: 24, alignItems: 'center', height: '100%' }}>
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 16, justifyContent: 'center' }}>
+                {puntos.map((p) => (
+                  <div
+                    key={p.numeral}
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.03)',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      borderRadius: 14,
+                      padding: '16px 20px',
+                      position: 'relative',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: 4 }}>
+                      <span style={{ fontSize: escala.numeral, fontWeight: 800, color: pal.accent, lineHeight: 1 }}>
+                        {p.numeral}
+                      </span>
+                      <h3 style={{ margin: 0, fontSize: escala.tituloPunto, fontWeight: 700, color: '#ffffff', lineHeight: 1.25 }}>
+                        {p.titulo}
+                      </h3>
+                    </div>
+                    {p.detalle ? (
+                      <p style={{ margin: 0, fontSize: escala.cuerpoPunto, color: '#94a3b8', lineHeight: 1.45, paddingLeft: 4 }}>
+                        {p.detalle}
+                      </p>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+
+              {/* Gran ilustración protagonista integrada */}
+              <div
+                style={{
+                  width: 290,
+                  height: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  background: 'radial-gradient(circle at center, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.01) 70%)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: 20,
+                  boxSizing: 'border-box',
+                  padding: 16,
+                }}
+              >
+                <IlustracionEditorial id={ilustracionId} size={250} pal={pal} modo="hero" />
+              </div>
+            </div>
+          ) : arquetipo === 'medio' ? (
+            /* ===== ARQUETIPO MEDIO (4-5 PUNTOS): GRID 2 COLUMNAS + ILUSTRACIÓN CENTRAL ===== */
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14, height: '100%', justifyContent: 'center' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                {puntos.slice(0, 4).map((p) => (
+                  <div
+                    key={p.numeral}
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.03)',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      borderRadius: 14,
+                      padding: '14px 16px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'flex-start',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                      <span style={{ fontSize: escala.numeral, fontWeight: 800, color: pal.accent, lineHeight: 1 }}>
+                        {p.numeral}
+                      </span>
+                      <h3 style={{ margin: 0, fontSize: escala.tituloPunto, fontWeight: 700, color: '#ffffff', lineHeight: 1.2 }}>
+                        {p.titulo}
+                      </h3>
+                    </div>
+                    {p.detalle ? (
+                      <p style={{ margin: 0, fontSize: escala.cuerpoPunto, color: '#94a3b8', lineHeight: 1.4 }}>
+                        {p.detalle}
+                      </p>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+
+              {/* Fila inferior con el 5to punto + ilustración integrada */}
+              <div style={{ display: 'grid', gridTemplateColumns: puntos[4] ? '1.4fr 1fr' : '1fr', gap: 14, alignItems: 'center' }}>
+                {puntos[4] ? (
+                  <div
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.03)',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      borderRadius: 14,
+                      padding: '14px 16px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                      <span style={{ fontSize: escala.numeral, fontWeight: 800, color: pal.accent, lineHeight: 1 }}>
+                        {puntos[4].numeral}
+                      </span>
+                      <h3 style={{ margin: 0, fontSize: escala.tituloPunto, fontWeight: 700, color: '#ffffff', lineHeight: 1.2 }}>
+                        {puntos[4].titulo}
+                      </h3>
+                    </div>
+                    {puntos[4].detalle ? (
+                      <p style={{ margin: 0, fontSize: escala.cuerpoPunto, color: '#94a3b8', lineHeight: 1.4 }}>
+                        {puntos[4].detalle}
+                      </p>
+                    ) : null}
+                  </div>
+                ) : null}
+
+                <div
+                  style={{
+                    height: 110,
+                    borderRadius: 14,
+                    background: 'rgba(255,255,255,0.02)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <IlustracionEditorial id={ilustracionId} size={130} pal={pal} modo="medio" />
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* ===== ARQUETIPO EXTENSO (6-10 PUNTOS): GRID EDITORIAL DENSO 2 COLUMNAS ===== */
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: 12,
+                height: '100%',
+                alignContent: 'center',
+              }}
+            >
+              {puntos.map((p) => (
+                <div
+                  key={p.numeral}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.025)',
+                    border: '1px solid rgba(255, 255, 255, 0.09)',
+                    borderRadius: 12,
+                    padding: '10px 14px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+                    <span style={{ fontSize: escala.numeral, fontWeight: 800, color: pal.accent, lineHeight: 1 }}>
+                      {p.numeral}
+                    </span>
+                    <h3 style={{ margin: 0, fontSize: escala.tituloPunto, fontWeight: 700, color: '#ffffff', lineHeight: 1.18 }}>
+                      {p.titulo}
+                    </h3>
+                  </div>
+                  {p.detalle ? (
+                    <p style={{ margin: 0, fontSize: escala.cuerpoPunto, color: '#94a3b8', lineHeight: 1.35 }}>
+                      {p.detalle}
+                    </p>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        {/* ---------------- 5. CONCEPTOS TEOLÓGICOS / TAGS ---------------- */}
+        {entrada.conceptos.length > 0 ? (
+          <section
+            style={{
+              flexShrink: 0,
+              marginTop: 14,
+              marginBottom: 14,
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: 8,
+              alignItems: 'center',
+            }}
+          >
+            <span style={{ fontSize: 12, fontWeight: 800, color: '#64748b', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+              CONCEPTOS:
+            </span>
+            {entrada.conceptos.map((c, i) => (
+              <span
+                key={i}
+                style={{
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: '#e2e8f0',
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid rgba(255, 255, 255, 0.12)',
+                  borderRadius: 6,
+                  padding: '3px 10px',
+                }}
+              >
+                {c}
+              </span>
+            ))}
+          </section>
+        ) : null}
+
+        {/* ---------------- 6. CIERRE / FRASE PARA RECORDAR ---------------- */}
+        <footer
+          style={{
+            flexShrink: 0,
+            background: `linear-gradient(90deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%)`,
+            border: `1px solid ${pal.accent}33`,
+            borderLeft: `5px solid ${pal.accent}`,
+            borderRadius: 14,
+            padding: '14px 20px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 16,
+          }}
+        >
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: pal.accent }}>
+              VERDAD PARA RECORDAR
+            </span>
+            <p
+              style={{
+                margin: '2px 0 0',
+                fontSize: arquetipo === 'extenso' ? 18 : 21,
+                fontWeight: 600,
+                fontStyle: 'italic',
+                color: '#ffffff',
+                lineHeight: 1.3,
+              }}
+            >
+              “{resumirEditorial(entrada.fraseRecordar || entrada.verdadPrincipal || entrada.mensajeCentral, 200)}”
+            </p>
+          </div>
+
+          <div style={{ flexShrink: 0, opacity: 0.9 }}>
+            <TeoDocBadge color={pal.accent} />
+          </div>
+        </footer>
       </div>
     </div>
   )
 }
 
 // ---------------------------------------------------------------------------
-// Exportación PNG (una sola imagen por página).
+// Exportación PNG (Siempre 1 Sola Imagen PNG, 1080×1920 real, compatible iOS)
 // ---------------------------------------------------------------------------
 function asegurarPng(blob: Blob | null | undefined): Blob {
   if (!blob) throw new Error('La exportación no devolvió imagen')
@@ -549,49 +634,65 @@ function asegurarPng(blob: Blob | null | undefined): Blob {
   return new Blob([blob], { type: 'image/png' })
 }
 
-export async function exportarInfografiaPng(node: HTMLElement): Promise<string> {
-  const { default: domtoimage } = await import('dom-to-image-more')
-  const ancho = node.offsetWidth
-  const alto = node.offsetHeight
-  if (!ancho || !alto) throw new Error('Artboard vacío')
-  const MAX_AREA = 14_000_000
-  const MAX_DIM = 4096
-  const escala = Math.min(1, Math.sqrt(MAX_AREA / (ancho * alto)), MAX_DIM / Math.max(ancho, alto))
-  const intentar = (s: number) =>
-    domtoimage.toPng(node, {
-      width: Math.max(1, Math.round(ancho * s)),
-      height: Math.max(1, Math.round(alto * s)),
-      style: { width: `${ancho}px`, height: `${alto}px`, transform: `scale(${s})`, transformOrigin: 'top left' },
-      bgcolor: '#FFFFFF',
-    })
-  try {
-    return await intentar(escala)
-  } catch {
-    return await intentar(Math.max(0.35, escala * 0.6))
-  }
-}
-
 export async function exportarInfografiaBlob(node: HTMLElement): Promise<Blob> {
   const { default: domtoimage } = await import('dom-to-image-more')
-  const ancho = node.offsetWidth
-  const alto = node.offsetHeight
+  const ancho = node.offsetWidth || CANVAS_W
+  const alto = node.offsetHeight || CANVAS_H
   if (!ancho || !alto) throw new Error('Artboard vacío')
+
   const MAX_AREA = 14_000_000
   const MAX_DIM = 4096
   const escala = Math.min(1, Math.sqrt(MAX_AREA / (ancho * alto)), MAX_DIM / Math.max(ancho, alto))
+
   const opciones = (s: number) => ({
     width: Math.max(1, Math.round(ancho * s)),
     height: Math.max(1, Math.round(alto * s)),
-    style: { width: `${ancho}px`, height: `${alto}px`, transform: `scale(${s})`, transformOrigin: 'top left' },
-    bgcolor: '#FFFFFF',
+    style: {
+      width: `${ancho}px`,
+      height: `${alto}px`,
+      transform: `scale(${s})`,
+      transformOrigin: 'top left',
+    },
+    bgcolor: '#070b14',
   })
+
   let blob: Blob
   try {
     blob = await domtoimage.toBlob(node, opciones(escala))
   } catch {
-    blob = await domtoimage.toBlob(node, opciones(Math.max(0.35, escala * 0.6)))
+    // Respaldo de escala segura para dispositivos con menor RAM (Safari iOS)
+    blob = await domtoimage.toBlob(node, opciones(Math.max(0.4, escala * 0.65)))
   }
   return asegurarPng(blob)
+}
+
+export async function exportarInfografiaPng(node: HTMLElement): Promise<string> {
+  const { default: domtoimage } = await import('dom-to-image-more')
+  const ancho = node.offsetWidth || CANVAS_W
+  const alto = node.offsetHeight || CANVAS_H
+  if (!ancho || !alto) throw new Error('Artboard vacío')
+
+  const MAX_AREA = 14_000_000
+  const MAX_DIM = 4096
+  const escala = Math.min(1, Math.sqrt(MAX_AREA / (ancho * alto)), MAX_DIM / Math.max(ancho, alto))
+
+  const opciones = (s: number) => ({
+    width: Math.max(1, Math.round(ancho * s)),
+    height: Math.max(1, Math.round(alto * s)),
+    style: {
+      width: `${ancho}px`,
+      height: `${alto}px`,
+      transform: `scale(${s})`,
+      transformOrigin: 'top left',
+    },
+    bgcolor: '#070b14',
+  })
+
+  try {
+    return await domtoimage.toPng(node, opciones(escala))
+  } catch {
+    return await domtoimage.toPng(node, opciones(Math.max(0.4, escala * 0.65)))
+  }
 }
 
 export async function exportarInfografiaFile(node: HTMLElement, nombre: string): Promise<File> {
@@ -602,14 +703,11 @@ export async function exportarInfografiaFile(node: HTMLElement, nombre: string):
 }
 
 // ---------------------------------------------------------------------------
-// Visualización responsive: muestra todas las páginas (carrusel) apiladas.
+// Visualización Responsive (Escala limpia del lienzo 1080×1920 en 1 sola lámina)
 // ---------------------------------------------------------------------------
 export function ResponsiveInfografia({ data }: { data: InfografiaData }) {
   const hostRef = useRef<HTMLDivElement>(null)
   const [hostW, setHostW] = useState(0)
-  const [pagina, setPagina] = useState(0)
-  const plan = planInfografia(data)
-  const total = plan.paginas.length
 
   useEffect(() => {
     const host = hostRef.current
@@ -625,29 +723,31 @@ export function ResponsiveInfografia({ data }: { data: InfografiaData }) {
   const altoEscalado = CANVAS_H * scale
 
   return (
-    <div ref={hostRef} style={{ width: '100%' }}>
-      <div style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
-        <div style={{ width: '100%', maxWidth: CANVAS_W, height: altoEscalado || undefined, overflow: 'hidden' }}>
-          <div style={{ transform: `scale(${scale})`, transformOrigin: 'top left', width: CANVAS_W, height: CANVAS_H }}>
-            <Infografia data={data} pagina={pagina} />
-          </div>
+    <div ref={hostRef} style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+      <div
+        style={{
+          width: '100%',
+          maxWidth: CANVAS_W,
+          height: altoEscalado || undefined,
+          overflow: 'hidden',
+          borderRadius: 16,
+          boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+          border: '1px solid rgba(255,255,255,0.1)',
+        }}
+      >
+        <div
+          style={{
+            transform: `scale(${scale})`,
+            transformOrigin: 'top left',
+            width: CANVAS_W,
+            height: CANVAS_H,
+          }}
+        >
+          <Infografia data={data} />
         </div>
       </div>
-      {total > 1 ? (
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 12, marginTop: 12 }}>
-          <button type="button" onClick={() => setPagina((p) => Math.max(0, p - 1))} disabled={pagina === 0}
-            style={{ padding: '6px 16px', fontSize: 13, fontWeight: 600, border: '1px solid #393939', borderRadius: 6, background: '#161616', color: pagina === 0 ? '#555' : '#c6c6c6', cursor: pagina === 0 ? 'default' : 'pointer' }}>
-            Anterior
-          </button>
-          <span style={{ fontSize: 13, color: '#6f6f6f' }}>{pagina + 1} / {total}</span>
-          <button type="button" onClick={() => setPagina((p) => Math.min(total - 1, p + 1))} disabled={pagina === total - 1}
-            style={{ padding: '6px 16px', fontSize: 13, fontWeight: 600, border: '1px solid #393939', borderRadius: 6, background: '#161616', color: pagina === total - 1 ? '#555' : '#c6c6c6', cursor: pagina === total - 1 ? 'default' : 'pointer' }}>
-            Siguiente
-          </button>
-        </div>
-      ) : null}
-      <p style={{ marginTop: 8, fontSize: 12, color: '#6f6f6f', textAlign: 'center' }}>
-        Infografía 9:16 (1080×1920)
+      <p style={{ marginTop: 12, fontSize: 13, color: '#94a3b8', textAlign: 'center', fontWeight: 500 }}>
+        Infografía Editorial 9:16 (1080×1920 px) · Composición Única en Alta Definición
       </p>
     </div>
   )

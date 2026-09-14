@@ -1,356 +1,223 @@
 // ---------------------------------------------------------------------------
-// Motor de composición de la infografía (lógica PURA, sin dependencias ni DOM).
-//
-// Objetivo: el canvas de exportación es SIEMPRE 9:16 fijo (1080×1920). El alto
-// NUNCA depende del texto. Para que el contenido quepa se usan presets de
-// densidad (completos, no un escalado proporcional) y, si ni el preset más
-// denso respeta el piso de legibilidad, se activa modo carrusel o resumen.
+// Motor de Composición Editorial de la Infografía TeoDoc
+// Principios inspirados en Carbon Design System:
+// - Retícula estructurada con unidad base de 8 px
+// - Escala tipográfica deliberada con jerarquía visual estricta
+// - Composición continua en una sola lámina vertical 9:16 (1080×1920 px)
+// - Densidad adaptativa según volumen real (Breve, Medio, Extenso)
+// - Cero invención de contenidos y cero carrusel
 // ---------------------------------------------------------------------------
 
-export const CANVAS_W = 1080
-export const CANVAS_H = 1920
+export const CANVAS_W = 1080;
+export const CANVAS_H = 1920;
 
-// Zonas reservadas de las apps (fracción del canvas). Ahora son franjas
-// FUNCIONALES: contienen logo, categoría, fecha y gráficos, nunca color vacío.
-export const SAFE_ZONE_STORY_TOP = 0.12
-export const SAFE_ZONE_STORY_BOTTOM = 0.14
-export const SAFE_ZONE_FEED = 0.8 // área central que sobrevive al recorte a cuadrado
-export const SAFE_ZONE_SIDES = Math.max(0.045, (1 - SAFE_ZONE_FEED) / 2) // = 0.1
+// Unidad base de retícula (Carbon 8px grid)
+export const GRID_BASE = 8;
+export const g = (n: number) => n * GRID_BASE;
 
-// Ninguna franja de fondo puede superar este porcentaje sin contenido funcional.
-export const MAX_FRANJA_SIN_CONTENIDO = 0.15
+// Zonas seguras (Safe Areas para Instagram Stories, WhatsApp Status y redes)
+// Nada crítico toca los bordes: margen funcional para controles de interfaz móvil
+export const SAFE_TOP = 96;       // 12 * 8 = 96 px (~5% superior para stories)
+export const SAFE_BOTTOM = 104;   // 13 * 8 = 104 px (~5.4% inferior para barra de interacción)
+export const SAFE_LATERAL = 72;   // 9 * 8 = 72 px (~6.6% a cada lado)
+export const ANCHO_UTIL = CANVAS_W - SAFE_LATERAL * 2; // 936 px
+export const ALTO_UTIL = CANVAS_H - SAFE_TOP - SAFE_BOTTOM; // 1720 px
 
-// Piso ABSOLUTO de legibilidad (px sobre canvas de 1080 de ancho). Nunca se
-// renderiza texto por debajo de estos valores, en ningún nivel de densidad.
+// Piso de legibilidad absoluto en px (canvas 1080 px).
+// Ningún texto de la infografía puede caer por debajo de estos mínimos:
 export const PISO_LEGIBILIDAD = {
-  cuerpo: 30,
-  titulo: 38, // títulos de sección de las tarjetas
-  numeral: 38, // números del timeline y de tarjeta
-  caption: 23, // etiquetas y captions secundarios
-} as const
+  display: 48,
+  subtitulo: 24,
+  tituloModulo: 20,
+  cuerpo: 16,
+  numeral: 32,
+  caption: 13,
+} as const;
 
-export type NivelDensidad = 1 | 2 | 3 | 4
+export type ArquetipoEditorial = 'breve' | 'medio' | 'extenso';
 
-export type Preset = {
-  nivel: NivelDensidad
-  nombre: string
-  display: number
-  tituloTarjeta: number
-  numeral: number
-  cuerpo: number
-  caption: number
-  lineHeight: number
-  padTarjeta: number
-  gapTarjetas: number
-  icono: number
-  ilustracion: 'grande' | 'mediana' | 'pequena' | 'ninguna'
-  /** En niveles densos, los puntos se muestran solo con su título. */
-  detallePuntos: boolean
-}
+export type VersiculoInfografia = {
+  cita: string;
+  texto: string;
+};
 
-export const PRESETS: Record<NivelDensidad, Preset> = {
-  1: { nivel: 1, nombre: 'Ligero', display: 82, tituloTarjeta: 52, numeral: 58, cuerpo: 40, caption: 30, lineHeight: 1.5, padTarjeta: 40, gapTarjetas: 32, icono: 120, ilustracion: 'grande', detallePuntos: true },
-  2: { nivel: 2, nombre: 'Medio', display: 72, tituloTarjeta: 46, numeral: 50, cuerpo: 34, caption: 26, lineHeight: 1.4, padTarjeta: 32, gapTarjetas: 24, icono: 96, ilustracion: 'mediana', detallePuntos: true },
-  3: { nivel: 3, nombre: 'Denso', display: 64, tituloTarjeta: 40, numeral: 42, cuerpo: 31, caption: 24, lineHeight: 1.28, padTarjeta: 22, gapTarjetas: 16, icono: 72, ilustracion: 'pequena', detallePuntos: true },
-  4: { nivel: 4, nombre: 'Muy denso', display: 58, tituloTarjeta: 38, numeral: 38, cuerpo: 30, caption: 23, lineHeight: 1.2, padTarjeta: 16, gapTarjetas: 10, icono: 48, ilustracion: 'ninguna', detallePuntos: false },
-}
+export type PuntoEditorial = {
+  indice: number;
+  numeral: string; // "01", "02", etc.
+  titulo: string;
+  detalle: string;
+  versiculo?: string;
+};
 
-export function presetRespetaPiso(p: Preset): boolean {
-  return p.cuerpo >= PISO_LEGIBILIDAD.cuerpo
-    && p.tituloTarjeta >= PISO_LEGIBILIDAD.titulo
-    && p.numeral >= PISO_LEGIBILIDAD.numeral
-    && p.caption >= PISO_LEGIBILIDAD.caption
-}
-
-export type TipoUnidad = 'texto' | 'lista' | 'citas' | 'chips'
-export type PesoVisual = 'ligero' | 'medio' | 'pesado'
-
-export type UnidadContenido = {
-  id: string
-  etiqueta: string
-  tipo: TipoUnidad
-  chars: number
-  /** Caracteres de los títulos (para medir líneas reales de la lista). */
-  charsTitulo?: number
-  /** Caracteres de las descripciones/desarrollos de la lista. */
-  charsDetalle?: number
-  /** Número de ítems que se muestran en esta unidad (o porción). */
-  items: number
-  /** Índice del primer ítem cuando la unidad se dividió entre páginas. */
-  desde?: number
-  esencial: boolean
-  peso: PesoVisual
-  semilla: string
-}
-
-export function pesar(masa: number): PesoVisual {
-  return masa < 260 ? 'ligero' : masa < 560 ? 'medio' : 'pesado'
-}
-
-export function masaUnidad(tipo: TipoUnidad, chars: number, items: number): number {
-  switch (tipo) {
-    case 'texto':
-      return chars
-    case 'lista':
-      return chars + items * 46
-    case 'citas':
-      return chars + items * 34
-    case 'chips':
-      return items * 22
-  }
-}
-
-// Entrada estructural (compatible con InfografiaData del componente).
 export type EntradaInfografia = {
-  titulo?: string
-  mensajeCentral?: string
-  pasaje?: string
-  textoClave?: string
-  verdadPrincipal?: string
-  contextoBreve?: string
-  /** Puntos principales REALES del análisis (desarrollo_progresivo). */
-  puntos?: { titulo?: string; detalle?: string }[]
-  grandes?: { titulo?: string; descripcion?: string }[]
-  palabras?: string[]
-  conexiones?: { cita?: string; texto?: string }[]
-  fraseRecordar?: string
+  titulo: string;
+  tema?: string;
+  mensajeCentral: string;
+  pasaje?: string;
+  textoClave?: string;
+  verdadPrincipal?: string;
+  contextoBreve?: string;
+  puntos: { titulo: string; detalle: string; versiculo?: string }[];
+  conceptos: string[];
+  conexiones?: { cita?: string; texto?: string }[];
+  fraseRecordar?: string;
+};
+
+export type PlanEditorial = {
+  arquetipo: ArquetipoEditorial;
+  columnasPuntos: 1 | 2;
+  puntos: PuntoEditorial[];
+  ilustracionTamano: 'hero' | 'medio' | 'banner';
+  escala: {
+    display: number;
+    subtitulo: number;
+    biblia: number;
+    tituloPunto: number;
+    cuerpoPunto: number;
+    numeral: number;
+    caption: number;
+  };
+  alturasEstimadas: {
+    header: number;
+    hero: number;
+    biblico: number;
+    desarrollo: number;
+    doctrina: number;
+    cierre: number;
+    total: number;
+  };
+};
+
+// Resumen editorial respetuoso: corta por oraciones o comas sin truncar a mitad de palabra ni inventar
+export function resumirEditorial(texto: string, maxChars: number): string {
+  const t = String(texto || '').replace(/\s+/g, ' ').trim();
+  if (!t || t.length <= maxChars) return t;
+
+  const corte = t.slice(0, maxChars);
+  // Buscar fin de oración dentro del 40% final del corte
+  const minPos = Math.round(maxChars * 0.4);
+  const finOracion = Math.max(
+    corte.lastIndexOf('. '),
+    corte.lastIndexOf('! '),
+    corte.lastIndexOf('? ')
+  );
+  if (finOracion >= minPos) return corte.slice(0, finOracion + 1).trim();
+
+  const puntoDirecto = Math.max(corte.lastIndexOf('.'), corte.lastIndexOf('!'), corte.lastIndexOf('?'));
+  if (puntoDirecto >= minPos) return corte.slice(0, puntoDirecto + 1).trim();
+
+  // Buscar coma o punto y coma
+  const finFrase = Math.max(corte.lastIndexOf(', '), corte.lastIndexOf('; '));
+  if (finFrase >= minPos) return corte.slice(0, finFrase).trim();
+
+  // Si no hay puntuación, cortar en último espacio
+  const ultimoEspacio = corte.lastIndexOf(' ');
+  if (ultimoEspacio >= minPos) return corte.slice(0, ultimoEspacio).trim();
+
+  return corte.trim();
 }
 
-function unidadTexto(id: string, etiqueta: string, texto: string, esencial: boolean, forzarPesado = false): UnidadContenido {
-  const chars = (texto || '').length
-  const masa = masaUnidad('texto', chars, 0)
-  return { id, etiqueta, tipo: 'texto', chars, items: 0, esencial, peso: forzarPesado ? 'pesado' : pesar(masa), semilla: texto }
-}
+/**
+ * Clasifica el contenido disponible y planifica la composición editorial
+ * adaptada para encajar perfectamente en el lienzo de 1080×1920 px.
+ */
+export function planificarComposicion(e: EntradaInfografia): PlanEditorial {
+  const numPuntos = Math.min(e.puntos.length, 10);
 
-export function construirUnidades(e: EntradaInfografia): UnidadContenido[] {
-  const u: UnidadContenido[] = []
-  if (e.mensajeCentral) u.push(unidadTexto('mensaje', 'Mensaje central', e.mensajeCentral, true, true))
-  const textoClave = [e.pasaje, e.textoClave].filter(Boolean).join(' ')
-  if (textoClave) {
-    u.push({ id: 'texto-clave', etiqueta: 'Texto bíblico clave', tipo: 'citas', chars: textoClave.length, items: 1, esencial: true, peso: pesar(masaUnidad('citas', textoClave.length, 1)), semilla: textoClave })
-  }
-  if (e.verdadPrincipal) u.push(unidadTexto('verdad', 'Verdad principal', e.verdadPrincipal, true))
-  if (e.contextoBreve && e.contextoBreve !== e.mensajeCentral) u.push(unidadTexto('contexto', 'Contexto', e.contextoBreve, false))
-
-  // Puntos principales REALES del análisis. Se usan todos (no un subconjunto).
-  const puntos = (e.puntos || []).filter((p) => p?.titulo || p?.detalle)
-  const grandes = (e.grandes || []).filter((g) => g?.titulo || g?.descripcion)
-  if (puntos.length) {
-    const charsTitulo = puntos.reduce((a, p) => a + (p.titulo || '').length, 0)
-    const charsDetalle = puntos.reduce((a, p) => a + (p.detalle || '').length, 0)
-    u.push({ id: 'puntos', etiqueta: 'Puntos principales', tipo: 'lista', chars: charsTitulo + charsDetalle, charsTitulo, charsDetalle, items: puntos.length, esencial: true, peso: 'pesado', semilla: puntos.map((p) => `${p.titulo} ${p.detalle}`).join(' ') })
-  } else if (grandes.length) {
-    const charsTitulo = grandes.reduce((a, g) => a + (g.titulo || '').length, 0)
-    const charsDetalle = grandes.reduce((a, g) => a + (g.descripcion || '').length, 0)
-    u.push({ id: 'puntos', etiqueta: 'Grandes enseñanzas', tipo: 'lista', chars: charsTitulo + charsDetalle, charsTitulo, charsDetalle, items: grandes.length, esencial: true, peso: 'pesado', semilla: grandes.map((g) => `${g.titulo} ${g.descripcion}`).join(' ') })
-  }
-
-  const palabras = e.palabras || []
-  if (palabras.length) {
-    u.push({ id: 'palabras', etiqueta: 'Palabras clave', tipo: 'chips', chars: 0, items: palabras.length, esencial: false, peso: pesar(masaUnidad('chips', 0, palabras.length)), semilla: palabras.join(' ') })
-  }
-  const conexiones = (e.conexiones || []).filter((c) => c?.cita)
-  if (conexiones.length) {
-    const charsTitulo = conexiones.reduce((a, c) => a + (c.cita || '').length, 0)
-    const charsDetalle = conexiones.reduce((a, c) => a + (c.texto || '').length, 0)
-    u.push({ id: 'conexiones', etiqueta: 'Conexiones bíblicas', tipo: 'lista', chars: charsTitulo + charsDetalle, charsTitulo, charsDetalle, items: conexiones.length, esencial: false, peso: pesar(masaUnidad('lista', charsTitulo + charsDetalle, conexiones.length)), semilla: conexiones.map((c) => `${c.cita} ${c.texto}`).join(' ') })
-  }
-  if (e.fraseRecordar) u.push(unidadTexto('frase', 'Frase para recordar', e.fraseRecordar, true))
-  return u
-}
-
-// Índice de contenido total: caracteres + ítems + número de bloques.
-export function indiceContenido(unidades: UnidadContenido[]): number {
-  const chars = unidades.reduce((a, x) => a + x.chars, 0)
-  const items = unidades.reduce((a, x) => a + x.items, 0)
-  return chars + items * 40 + unidades.length * 60
-}
-
-export function elegirNivelPorIndice(indice: number): NivelDensidad {
-  if (indice < 900) return 1
-  if (indice < 1700) return 2
-  if (indice < 2600) return 3
-  return 4
-}
-
-// ---------------------------------------------------------------------------
-// Estimación determinista de alturas (sin DOM). Conservadora a propósito.
-// ---------------------------------------------------------------------------
-const ANCHO_GLIFO = 0.52
-
-export function anchoTarjeta(_peso: PesoVisual, anchoContenido: number, spineW: number): number {
-  return Math.max(320, anchoContenido - spineW)
-}
-
-function numLineas(chars: number, font: number, ancho: number): number {
-  const porLinea = Math.max(6, Math.floor(ancho / (font * ANCHO_GLIFO)))
-  return Math.max(1, Math.ceil(chars / porLinea))
-}
-
-export function estimarAltoCabecera(titulo: string, p: Preset, anchoEsencial: number): number {
-  const lineas = numLineas((titulo || 'Análisis del mensaje').length, p.display, anchoEsencial)
-  const filaLogo = p.caption * 3.2
-  const chips = p.caption * 3
-  const margenes = p.caption * 2.4
-  return Math.round(lineas * p.display * 1.12 + filaLogo + chips + margenes)
-}
-
-export function estimarAltoUnidad(u: UnidadContenido, p: Preset, anchoContenido: number, spineW: number): number {
-  const ancho = anchoTarjeta(u.peso, anchoContenido, spineW)
-  const interior = Math.max(160, ancho - 2 * p.padTarjeta)
-  const header = p.caption * 2.8
-  const base = header + 2 * p.padTarjeta + p.gapTarjetas
-  if (u.tipo === 'texto') {
-    const l = numLineas(u.chars, p.cuerpo, interior)
-    return Math.round(base + l * p.cuerpo * p.lineHeight)
-  }
-  if (u.tipo === 'chips') {
-    const filas = Math.max(1, Math.ceil(u.items / 3))
-    return Math.round(base + filas * p.caption * 2.2)
-  }
-  if (u.tipo === 'citas') {
-    const l = numLineas(u.chars, p.caption, interior)
-    return Math.round(base + l * p.caption * p.lineHeight + p.caption * 1.2 * u.items)
-  }
-  // lista (puntos / conexiones). Se miden por separado títulos y descripciones
-  // para no subestimar las líneas reales (causa del recorte de contenido).
-  const items = Math.max(1, u.items)
-  const porItemTitulo = (u.charsTitulo ?? u.chars * 0.6) / items
-  const porItemDetalle = (u.charsDetalle ?? u.chars * 0.4) / items
-  const interiorItems = Math.max(160, interior - p.caption * 3)
-  const lineasTitulo = numLineas(porItemTitulo, p.cuerpo, interiorItems)
-  const lineasDesc = p.detallePuntos && porItemDetalle > 1 ? numLineas(porItemDetalle, p.caption, interiorItems) : 0
-  const altoItem = lineasTitulo * p.cuerpo * 1.3 + lineasDesc * p.caption * 1.5 + p.caption * 1.2
-  // Margen de seguridad: el estimador nunca debe quedar por debajo del render.
-  return Math.round((base + u.items * altoItem) * 1.06)
-}
-
-export function estimarAltoPagina(unidades: UnidadContenido[], p: Preset, anchoContenido: number, spineW: number, altoCabecera: number): number {
-  return Math.round(altoCabecera + unidades.reduce((a, u) => a + estimarAltoUnidad(u, p, anchoContenido, spineW), 0))
-}
-
-// Divide una unidad de lista demasiado alta en porciones que quepan en una
-// página. Así los 10 puntos nunca se descartan: se reparten entre páginas.
-function dividirUnidad(u: UnidadContenido, p: Preset, anchoContenido: number, spineW: number, disponible: number): UnidadContenido[] {
-  const h = estimarAltoUnidad(u, p, anchoContenido, spineW)
-  if (u.tipo !== 'lista' || u.items <= 1 || h <= disponible) return [u]
-  const base = estimarAltoUnidad({ ...u, items: 0, chars: 0 }, p, anchoContenido, spineW)
-  const porItem = (h - base) / u.items
-  const maxItems = Math.max(1, Math.floor((disponible - base) / porItem))
-  if (maxItems >= u.items) return [u]
-  const partes: UnidadContenido[] = []
-  const desde0 = u.desde ?? 0
-  for (let i = 0; i < u.items; i += maxItems) {
-    const n = Math.min(maxItems, u.items - i)
-    partes.push({ ...u, desde: desde0 + i, items: n, chars: Math.round((u.chars * n) / u.items) })
-  }
-  return partes
-}
-
-export function empaquetarEnPaginas(unidades: UnidadContenido[], p: Preset, anchoContenido: number, spineW: number, altoCabecera: number, altoDisponible: number): UnidadContenido[][] {
-  // Margen del 6%: garantiza que nada quede recortado al renderizar.
-  const limite = altoDisponible * 0.94
-  const disponible = limite - altoCabecera
-  const expandidas = unidades.flatMap((u) => dividirUnidad(u, p, anchoContenido, spineW, disponible))
-  const paginas: UnidadContenido[][] = []
-  let actual: UnidadContenido[] = []
-  let alto = altoCabecera
-  for (const u of expandidas) {
-    const h = estimarAltoUnidad(u, p, anchoContenido, spineW)
-    if (actual.length && alto + h > limite) {
-      paginas.push(actual)
-      actual = []
-      alto = altoCabecera
-    }
-    actual.push(u)
-    alto += h
-  }
-  if (actual.length) paginas.push(actual)
-  return paginas.length ? paginas : [[]]
-}
-
-// Recorte inteligente para modo resumen: conserva lo esencial y limita las
-// listas, pero NUNCA descarta los puntos principales por completo.
-export function recortarParaResumen(unidades: UnidadContenido[]): UnidadContenido[] {
-  return unidades
-    .filter((u) => u.esencial)
-    .map((u) => {
-      if (u.id === 'puntos') return { ...u, items: Math.min(u.items, 8), chars: Math.min(u.chars, 900) }
-      if (u.tipo === 'lista') return { ...u, items: Math.min(u.items, 3), chars: Math.min(u.chars, 320) }
-      return u
-    })
-}
-
-export type PlanInfografia = {
-  modo: 'unico' | 'carrusel' | 'resumen'
-  nivel: NivelDensidad
-  indice: number
-  paginas: UnidadContenido[][]
-}
-
-export type OpcionesPlan = {
-  anchoContenido: number
-  spineW: number
-  altoDisponible: number
-  titulo: string
-  extraCabecera?: number
-  maxPaginasCarrusel?: number
-}
-
-export function planificarInfografia(unidades: UnidadContenido[], opciones: OpcionesPlan): PlanInfografia {
-  const { anchoContenido, spineW, altoDisponible, titulo } = opciones
-  const extra = opciones.extraCabecera ?? 0
-  const maxPaginas = opciones.maxPaginasCarrusel ?? 6
-  const indice = indiceContenido(unidades)
-
-  const altoCab = (p: Preset) => extra + estimarAltoCabecera(titulo, p, anchoContenido)
-  const cabe = (alto: number) => alto <= altoDisponible * 0.94
-
-  // Escalada de densidad: se parte del nivel por índice y se sube hasta que
-  // quepa en una sola página (sin cruzar nunca el piso de legibilidad).
-  let nivel = elegirNivelPorIndice(indice)
-  while (nivel < 4 && !cabe(estimarAltoPagina(unidades, PRESETS[nivel], anchoContenido, spineW, altoCab(PRESETS[nivel])))) {
-    nivel = (nivel + 1) as NivelDensidad
+  // Arquetipo según riqueza de puntos reales:
+  // Breve: 1 a 3 puntos -> Gran presencia visual, héroe amplio, ilustración hero
+  // Medio: 4 a 5 puntos -> Grid de 2 columnas o módulos escalonados, ilustración media
+  // Extenso: 6 a 10 puntos -> Grid de 2 columnas compacto, números 01-10, ilustración banner
+  let arquetipo: ArquetipoEditorial = 'medio';
+  if (numPuntos <= 3) {
+    arquetipo = 'breve';
+  } else if (numPuntos >= 6) {
+    arquetipo = 'extenso';
   }
 
-  const preset = PRESETS[nivel]
-  const cab = altoCab(preset)
-  if (cabe(estimarAltoPagina(unidades, preset, anchoContenido, spineW, cab))) {
-    return { modo: 'unico', nivel, indice, paginas: [unidades] }
-  }
+  // Configuración de escalas tipográficas deliberadas (Carbon type scale)
+  const escalas = {
+    breve: {
+      display: 64,
+      subtitulo: 28,
+      biblia: 26,
+      tituloPunto: 26,
+      cuerpoPunto: 20,
+      numeral: 52,
+      caption: 16,
+    },
+    medio: {
+      display: 58,
+      subtitulo: 24,
+      biblia: 24,
+      tituloPunto: 22,
+      cuerpoPunto: 18,
+      numeral: 44,
+      caption: 14,
+    },
+    extenso: {
+      display: 52,
+      subtitulo: 22,
+      biblia: 22,
+      tituloPunto: 20,
+      cuerpoPunto: 16, // respeta PISO_LEGIBILIDAD.cuerpo
+      numeral: 38,    // respeta PISO_LEGIBILIDAD.numeral
+      caption: 13,
+    },
+  };
 
-  // No cabe en una página: se prefiere CARRUSEL (no se descarta contenido).
-  const cab4 = altoCab(PRESETS[4])
-  const paginas = empaquetarEnPaginas(unidades, PRESETS[4], anchoContenido, spineW, cab4, altoDisponible)
-  if (paginas.length <= maxPaginas) {
-    return { modo: 'carrusel', nivel: 4, indice, paginas }
-  }
+  const escala = escalas[arquetipo];
+  const columnasPuntos: 1 | 2 = arquetipo === 'breve' ? 1 : 2;
+  const ilustracionTamano: 'hero' | 'medio' | 'banner' =
+    arquetipo === 'breve' ? 'hero' : arquetipo === 'medio' ? 'medio' : 'banner';
 
-  // Demasiadas páginas: modo resumen (recorta lo no esencial, nunca el piso ni
-  // los puntos principales).
-  let resumen = recortarParaResumen(unidades)
-  if (!cabe(estimarAltoPagina(resumen, PRESETS[4], anchoContenido, spineW, cab4))) {
-    resumen = resumen
-      .filter((u) => u.id === 'mensaje' || u.id === 'texto-clave' || u.id === 'puntos' || u.id === 'frase')
-      .map((u) => (u.tipo === 'lista' ? { ...u, items: Math.min(u.items, 6), chars: Math.min(u.chars, 600) } : u))
-  }
-  return { modo: 'resumen', nivel: 4, indice, paginas: [resumen] }
-}
+  // Preparar puntos con numeración editorial 01, 02, 03...
+  const maxDetalle = arquetipo === 'breve' ? 220 : arquetipo === 'medio' ? 140 : 100;
+  const puntos: PuntoEditorial[] = e.puntos.slice(0, numPuntos).map((p, i) => ({
+    indice: i + 1,
+    numeral: String(i + 1).padStart(2, '0'),
+    titulo: resumirEditorial(p.titulo || '', 80),
+    detalle: resumirEditorial(p.detalle || '', maxDetalle),
+    versiculo: p.versiculo,
+  }));
 
-// ---------------------------------------------------------------------------
-// Constantes de composición derivadas del canvas fijo.
-// ---------------------------------------------------------------------------
-export function metricasCanvas() {
-  const anchoEsen = Math.round(CANVAS_W * (1 - 2 * SAFE_ZONE_SIDES))
-  const top = Math.round(CANVAS_H * SAFE_ZONE_STORY_TOP)
-  const bottom = Math.round(CANVAS_H * SAFE_ZONE_STORY_BOTTOM)
-  const spineW = Math.round(CANVAS_W * 0.115)
+  // Estimación de alturas para balance visual de la lámina completa
+  const altHeader = 88;
+  const altHero = arquetipo === 'breve' ? 260 : arquetipo === 'medio' ? 240 : 210;
+  const altBiblico = arquetipo === 'breve' ? 220 : arquetipo === 'medio' ? 180 : 160;
+  const altCierre = 130;
+  const altDoctrina = e.conceptos.length > 0 ? 80 : 0;
+  const altDesarrollo = ALTO_UTIL - altHeader - altHero - altBiblico - altDoctrina - altCierre;
+
   return {
-    anchoEsen,
-    safeTop: top,
-    safeBottom: bottom,
-    safeLateral: Math.round(CANVAS_W * SAFE_ZONE_SIDES),
-    altoBanda: CANVAS_H - top - bottom,
-    spineW,
-  }
+    arquetipo,
+    columnasPuntos,
+    puntos,
+    ilustracionTamano,
+    escala,
+    alturasEstimadas: {
+      header: altHeader,
+      hero: altHero,
+      biblico: altBiblico,
+      desarrollo: Math.max(300, altDesarrollo),
+      doctrina: altDoctrina,
+      cierre: altCierre,
+      total: CANVAS_H,
+    },
+  };
+}
+
+/**
+ * Métricas generales del canvas para consumo de componentes y pruebas.
+ */
+export function metricasCanvas() {
+  return {
+    ancho: CANVAS_W,
+    alto: CANVAS_H,
+    anchoUtil: ANCHO_UTIL,
+    altoUtil: ALTO_UTIL,
+    safeTop: SAFE_TOP,
+    safeBottom: SAFE_BOTTOM,
+    safeLateral: SAFE_LATERAL,
+  };
 }

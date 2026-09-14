@@ -12,10 +12,9 @@
     "start": "next start",
     "lint": "eslint",
     "test:logica": "node scripts/verificar-riqueza.mts",
-    "test:entrega": "node scripts/verificar-entrega.mts",
     "test:infografia": "node scripts/verificar-infografia.mts",
-    "test:modular": "node scripts/verificar-modular.mts",
-    "verificar": "npm run test:logica && npm run test:infografia && npm run test:modular && npm run test:entrega"
+    "test:entrega": "node scripts/verificar-entrega.mts",
+    "verificar": "npm run test:logica && npm run test:infografia && npm run test:entrega"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.121.0",

@@ -3,384 +3,383 @@
 import React from 'react'
 
 // ---------------------------------------------------------------------------
-// Biblioteca de ilustraciones vectoriales temáticas (SVG inline, sin red, sin
-// CORS, sin costo). Se eligen por palabras clave REALES del bloque, nunca al
-// azar, para que la imagen complemente el contenido.
+// Biblioteca de Ilustraciones Editoriales TeoDoc
+// Composiciones vectoriales SVG con profundidad, gradientes y estilo editorial
+// moderno. Relacionadas temáticamente con el mensaje real.
 // ---------------------------------------------------------------------------
 
-export type PaletaIlustracion = { base: string; dark: string; soft: string }
-
 export type IlustracionId =
-  // Hogar / hospitalidad
-  | 'casa' | 'mesa' | 'vela'
-  // Corazón / fe
-  | 'corazon' | 'manos' | 'llama'
-  // Decisión / camino
-  | 'bifurcacion' | 'brujula' | 'huellas'
-  // Milagro / resurrección
-  | 'manantial' | 'semilla' | 'amanecer'
-  // Bíblica genérica
-  | 'rollo' | 'cayado' | 'paloma'
-  // Comunidad y cuidado
-  | 'comunidad' | 'cueva' | 'manosSostienen'
-  // Refuerzos temáticos
-  | 'biblia' | 'monte' | 'agua' | 'ciudad' | 'cruz'
+  | 'batalla'    // David y Goliat, armadura de Dios, victoria
+  | 'exodo'      // Éxodo, desierto, columna de nube/fuego, travesía
+  | 'jesus'      // Jesús enseñando, maestro, sermón del monte
+  | 'fe'         // La fe, el faro en la tormenta, el ancla, certeza
+  | 'gracia'     // La cruz gloriosa, redención, perdón, sangre de Cristo
+  | 'espiritu'   // Espíritu Santo, Pentecostés, llama viva, paloma
+  | 'palabra'    // Biblia abierta, códice, sabiduría divina
+  | 'pastor'     // El Buen Pastor, cayado, aguas de reposo
+  | 'oracion'    // Oración, altar, clamor, manos levantadas
+  | 'ciudad'     // Jerusalén celestial, reino, templo
+  | 'semilla'    // Crecimiento, fruto, siembra, árbol de vida
+  | 'camino'     // El sendero, brújula, pasos de obediencia
+  | 'comunidad'  // La iglesia, unidad del cuerpo, amor fraternal
 
-// Orden importa: la primera categoría que coincida gana.
-const REGLAS: { id: IlustracionId; re: RegExp }[] = [
-  { id: 'comunidad', re: /(hermano|prójimo|projimo|comunidad|comunión|comunion|iglesia|cuerpo de cristo|juntos|unidad|familia|sociedad|vecino)/ },
-  { id: 'cueva', re: /(cueva|adulam|refugio|roca|escondite|caverna|desierto|montaña|montana)/ },
-  { id: 'manosSostienen', re: /(sostener|sostiene|sostén|sosten|levantar|ayudar|ayuda|suplir|servir|servicio|misericordia|compartir la carga)/ },
-  { id: 'casa', re: /(casa|hogar|hospitalidad|puerta|techo|morada|habitac|recibir)/ },
-  { id: 'mesa', re: /(mesa|banquete|comida|pan|cena|convite|partir el pan|compartir)/ },
-  { id: 'vela', re: /(vela|candelabro|candela|lámpara|lampara|antorcha|alumbrar)/ },
-  { id: 'corazon', re: /(corazón|corazon|amor|amar|misericord|compasión|compasion)/ },
-  { id: 'manos', re: /(manos|oración|oracion|orar|súplica|suplica|clamor|entrega)/ },
-  { id: 'llama', re: /(fuego|llama|espíritu santo|espiritu santo|pentecost|arder|avivamiento)/ },
-  { id: 'bifurcacion', re: /(decisión|decision|decidir|elegir|elección|eleccion|bifurc|dos caminos|encrucijada)/ },
-  { id: 'brujula', re: /(brújula|brujula|dirección|direccion|guía|guia|rumbo|propósito|proposito|voluntad de dios)/ },
-  { id: 'huellas', re: /(huellas|pasos|caminar|seguir|discipulado|sendero|andar)/ },
-  { id: 'manantial', re: /(manantial|fuente|agua viva|río|rio|pozo|bautis|sanidad|sanar|limpia)/ },
-  { id: 'semilla', re: /(semilla|sembrar|fruto|crecimiento|resurrección|resurreccion|vida nueva|renacer|brote)/ },
-  { id: 'amanecer', re: /(amanecer|alba|nuevo día|nuevo dia|esperanza|aurora|madrugada|nuevo comienzo)/ },
-  { id: 'rollo', re: /(rollo|pergamino|escritura|palabra de dios|profecía|profecia|la ley)/ },
-  { id: 'cayado', re: /(cayado|pastor|oveja|rebaño|rebano|cordero|guía|guia)/ },
-  { id: 'paloma', re: /(paloma|paz|espíritu|espiritu|cielo|bautismo|dove)/ },
-  { id: 'monte', re: /(monte|montaña|montana|sinaí|sinai|sion|calvario|colina|cima)/ },
-  { id: 'ciudad', re: /(ciudad|jerusalén|jerusalen|templo|muro|reino|nación|nacion)/ },
-  { id: 'cruz', re: /(cruz|sacrificio|sangre|reden|expiaci|calvario|perdón|perdon)/ },
-  { id: 'biblia', re: /(biblia|evangelio|versículo|versiculo|estudio|texto bíblico|texto biblico)/ },
-  { id: 'agua', re: /(agua|mar|océano|oceano|lluvia|ola|tormenta|pesca)/ },
+export type PaletaIlustracion = {
+  primary: string
+  secondary: string
+  accent: string
+  glow: string
+}
+
+const REGLAS_TEMATICAS: { id: IlustracionId; re: RegExp }[] = [
+  { id: 'batalla', re: /(david|goliat|gigante|batalla|filisteo|escudo|armadura|espada|victoria|vencer|pelea|honda|enemigo|fortaleza)/i },
+  { id: 'exodo', re: /(éxodo|exodo|desierto|mar rojo|egipto|sinaí|sinai|maná|mana|columna de fuego|nube|moisés|moises|travesía|travesia|peregrinaje|tierra prometida)/i },
+  { id: 'jesus', re: /(jesús|jesus|cristo|mesías|mesias|sermón|sermon|bienaventuranz|galilea|parábola|parabola|maestro|discípulo|discipulo|nazaret|sanidad)/i },
+  { id: 'gracia', re: /(gracia|cruz|calvario|redención|redencion|perdón|perdon|sacrificio|sangre|salvación|salvacion|expiación|expiacion|justificad)/i },
+  { id: 'espiritu', re: /(espíritu santo|espiritu santo|pentecostés|pentecostes|fuego|llama|avivamiento|unción|uncion|consolador|viento)/i },
+  { id: 'fe', re: /(fe|creer|confianza|fidelidad|certeza|convicción|conviccion|ancla|faro|esperanza|esperar)/i },
+  { id: 'pastor', re: /(pastor|oveja|rebaño|rebano|salmo 23|cayado|vara|aguas de reposo|delicados pastos|verde pasto)/i },
+  { id: 'oracion', re: /(oración|oracion|orar|clamor|súplica|suplica|intercesión|intercesion|altar|incienso|adoración|adoracion)/i },
+  { id: 'ciudad', re: /(ciudad|jerusalén|jerusalen|sion|reino de dios|templo|muros|nueva jerusalén|cielo|celestial)/i },
+  { id: 'semilla', re: /(semilla|sembrar|fruto|árbol|arbol|cosecha|raíz|raiz|crecimiento|resurrección|resurreccion|vida nueva)/i },
+  { id: 'camino', re: /(camino|sendero|senda|pasos|dirección|direccion|brújula|brujula|guiar|guía|guia|rumbo|andar)/i },
+  { id: 'comunidad', re: /(comunidad|iglesia|cuerpo|hermano|prójimo|projimo|comunión|comunion|unidad|servir|servicio|compartir)/i },
+  { id: 'palabra', re: /(biblia|palabra|escritura|evangelio|versículo|versiculo|mandamiento|ley|profecía|profecia|revelación|revelacion)/i },
 ]
 
-export function elegirIlustracion(semilla: string): IlustracionId {
-  const s = (semilla || '').toLowerCase()
-  for (const regla of REGLAS) if (regla.re.test(s)) return regla.id
-  return 'biblia'
+export function elegirIlustracion(texto: string): IlustracionId {
+  const t = String(texto || '').toLowerCase()
+  for (const regla of REGLAS_TEMATICAS) {
+    if (regla.re.test(t)) return regla.id
+  }
+  return 'palabra'
 }
 
 export function categoriaIlustracion(id: IlustracionId): string {
-  if (['casa', 'mesa', 'vela'].includes(id)) return 'Hogar y hospitalidad'
-  if (['corazon', 'manos', 'llama'].includes(id)) return 'Corazón y fe'
-  if (['bifurcacion', 'brujula', 'huellas'].includes(id)) return 'Decisión y camino'
-  if (['manantial', 'semilla', 'amanecer'].includes(id)) return 'Milagro y resurrección'
-  if (['rollo', 'cayado', 'paloma'].includes(id)) return 'Bíblica'
-  if (['comunidad', 'cueva', 'manosSostienen'].includes(id)) return 'Comunidad y cuidado'
-  return 'Temática'
+  const nombres: Record<IlustracionId, string> = {
+    batalla: 'Victoria y Fortaleza',
+    exodo: 'Éxodo y Provisión',
+    jesus: 'Enseñanza de Cristo',
+    fe: 'Fe y Confianza',
+    gracia: 'Gracia y Redención',
+    espiritu: 'Poder del Espíritu',
+    palabra: 'Sabiduría Bíblica',
+    pastor: 'Cuidado Pastoral',
+    oracion: 'Comunión y Oración',
+    ciudad: 'Reino Celestial',
+    semilla: 'Crecimiento Espiritual',
+    camino: 'El Camino de Dios',
+    comunidad: 'El Cuerpo de Cristo',
+  }
+  return nombres[id] || 'Estudio Bíblico'
 }
 
 // ---------------------------------------------------------------------------
-// Trazo de la ilustración (viewBox 120×120).
+// Vectores Editoriales Premium (viewBox 300×300)
+// Estilizados, limpios, con capas de gradientes, geometrías y resplandor
 // ---------------------------------------------------------------------------
-function figura(id: IlustracionId, base: string, dark: string, soft: string): React.ReactNode {
-  const trazo = {
-    fill: 'none',
-    stroke: base,
-    strokeWidth: 5,
-    strokeLinecap: 'round' as const,
-    strokeLinejoin: 'round' as const,
-  }
+function ArteVectorial({ id, pal }: { id: IlustracionId; pal: PaletaIlustracion }) {
+  const { primary, secondary, accent, glow } = pal
+  const gradId = `grad-${id}-${Math.floor(Math.random() * 1000)}`
+
   switch (id) {
-    case 'casa':
+    case 'batalla':
       return (
-        <>
-          <path {...trazo} d="M26 60 60 32l34 28" />
-          <path {...trazo} d="M34 58v34h52V58" />
-          <rect x="53" y="72" width="16" height="20" rx="2" fill={dark} />
-          <rect x="40" y="66" width="9" height="9" rx="1" fill={base} />
-          <path {...trazo} d="M72 40v-9h7v15" />
-        </>
+        <g>
+          <defs>
+            <linearGradient id={`${gradId}-shield`} x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor={accent} />
+              <stop offset="100%" stopColor={primary} />
+            </linearGradient>
+            <radialGradient id={`${gradId}-glow`} cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor={glow} stopOpacity="0.4" />
+              <stop offset="100%" stopColor={glow} stopOpacity="0" />
+            </radialGradient>
+          </defs>
+          <circle cx="150" cy="150" r="140" fill={`url(#${gradId}-glow)`} />
+          {/* Escudo de la fe */}
+          <path
+            d="M150 40 L220 70 V150 C220 210 150 250 150 250 C150 250 80 210 80 150 V70 Z"
+            fill={`url(#${gradId}-shield)`}
+            stroke="#ffffff"
+            strokeWidth="4"
+            opacity="0.9"
+          />
+          {/* Detalles heráldicos internos */}
+          <path
+            d="M150 60 L200 82 V145 C200 192 150 225 150 225 C150 225 100 192 100 145 V82 Z"
+            fill="none"
+            stroke="#ffffff"
+            strokeWidth="2"
+            opacity="0.5"
+          />
+          {/* Honda y corona */}
+          <circle cx="150" cy="140" r="32" fill={secondary} opacity="0.85" />
+          <path d="M135 135 L145 125 L150 135 L155 125 L165 135 V145 H135 Z" fill="#ffffff" />
+          <circle cx="150" cy="180" r="6" fill="#ffffff" />
+          <circle cx="136" cy="190" r="5" fill="#ffffff" opacity="0.8" />
+          <circle cx="164" cy="190" r="5" fill="#ffffff" opacity="0.8" />
+          {/* Rayos de victoria */}
+          <line x1="150" y1="15" x2="150" y2="32" stroke={accent} strokeWidth="4" strokeLinecap="round" />
+          <line x1="225" y1="45" x2="213" y2="57" stroke={accent} strokeWidth="3" strokeLinecap="round" />
+          <line x1="75" y1="45" x2="87" y2="57" stroke={accent} strokeWidth="3" strokeLinecap="round" />
+        </g>
       )
-    case 'mesa':
+
+    case 'exodo':
       return (
-        <>
-          <path {...trazo} d="M30 66h60" />
-          <path {...trazo} d="M36 66v22M84 66v22" />
-          <ellipse cx="60" cy="56" rx="16" ry="7" fill={soft} stroke={base} strokeWidth="4" />
-          <path {...trazo} d="M74 46v-8h10v8" />
-          <path {...trazo} d="M40 46h8v10h-8z" fill={dark} />
-        </>
+        <g>
+          <defs>
+            <linearGradient id={`${gradId}-mount`} x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor={accent} />
+              <stop offset="100%" stopColor={primary} />
+            </linearGradient>
+            <radialGradient id={`${gradId}-sun`} cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="#ffffff" />
+              <stop offset="60%" stopColor={accent} stopOpacity="0.6" />
+              <stop offset="100%" stopColor={primary} stopOpacity="0" />
+            </radialGradient>
+          </defs>
+          <circle cx="150" cy="110" r="80" fill={`url(#${gradId}-sun)`} />
+          {/* Montañas del Sinaí */}
+          <polygon points="40,240 140,110 240,240" fill={`url(#${gradId}-mount)`} opacity="0.75" />
+          <polygon points="120,240 200,90 280,240" fill={primary} opacity="0.9" />
+          {/* Columna de fuego / resplandor */}
+          <rect x="144" y="20" width="12" height="120" rx="6" fill="#ffffff" opacity="0.9" />
+          <circle cx="150" cy="24" r="18" fill={accent} opacity="0.8" />
+          {/* Sendero en el desierto */}
+          <path d="M150 160 Q140 200 110 250" stroke="#ffffff" strokeWidth="4" fill="none" strokeDasharray="6 6" />
+        </g>
       )
-    case 'vela':
+
+    case 'jesus':
       return (
-        <>
-          <path {...trazo} d="M60 78v-30" />
-          <ellipse cx="60" cy="92" rx="20" ry="6" fill={dark} />
-          <path d="M60 26c8 8 12 14 12 20a12 12 0 0 1-24 0c0-6 4-12 12-20z" fill={base} opacity="0.85" />
-          <path d="M60 36c4 5 6 8 6 11a6 6 0 0 1-12 0c0-3 2-6 6-11z" fill={soft} />
-        </>
+        <g>
+          <defs>
+            <radialGradient id={`${gradId}-halo`} cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="#ffffff" />
+              <stop offset="50%" stopColor={accent} stopOpacity="0.8" />
+              <stop offset="100%" stopColor={primary} stopOpacity="0" />
+            </radialGradient>
+          </defs>
+          <circle cx="150" cy="130" r="95" fill={`url(#${gradId}-halo)`} opacity="0.6" />
+          {/* Resplandor divino */}
+          <circle cx="150" cy="115" r="48" fill="none" stroke="#ffffff" strokeWidth="3" strokeDasharray="8 6" />
+          <circle cx="150" cy="115" r="32" fill={primary} />
+          {/* Silueta de enseñanza noble */}
+          <path d="M110 240 C110 185 130 160 150 160 C170 160 190 185 190 240 Z" fill={secondary} opacity="0.9" />
+          {/* Espigas de trigo / Pan de vida */}
+          <path d="M85 240 Q100 195 115 180" stroke={accent} strokeWidth="3" fill="none" />
+          <path d="M215 240 Q200 195 185 180" stroke={accent} strokeWidth="3" fill="none" />
+          <circle cx="150" cy="90" r="10" fill="#ffffff" />
+        </g>
       )
-    case 'corazon':
+
+    case 'fe':
       return (
-        <>
-          <path d="M60 88C34 70 26 56 34 46a16 16 0 0 1 26-2 16 16 0 0 1 26 2c8 10 0 24-26 42z" fill={base} opacity="0.85" />
-          <g stroke={dark} strokeWidth="4" strokeLinecap="round">
-            <path d="M60 20v-8M38 26l-6-6M82 26l6-6" />
-          </g>
-        </>
+        <g>
+          <defs>
+            <linearGradient id={`${gradId}-light`} x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#ffffff" stopOpacity="0.8" />
+              <stop offset="100%" stopColor={accent} stopOpacity="0.05" />
+            </linearGradient>
+          </defs>
+          {/* Haz de luz de la fe */}
+          <polygon points="150,90 20,240 280,240" fill={`url(#${gradId}-light)`} />
+          {/* Torre del faro / Roca de la fe */}
+          <polygon points="140,240 160,240 156,90 144,90" fill={primary} />
+          <rect x="138" y="76" width="24" height="14" rx="2" fill={secondary} />
+          <circle cx="150" cy="83" r="7" fill="#ffffff" />
+          {/* Cúpula */}
+          <path d="M140 76 Q150 62 160 76 Z" fill={accent} />
+          {/* Ancla estilizada al pie */}
+          <circle cx="150" cy="180" r="12" fill="none" stroke="#ffffff" strokeWidth="3" />
+          <line x1="150" y1="192" x2="150" y2="235" stroke="#ffffff" strokeWidth="4" />
+          <path d="M125 215 Q150 245 175 215" fill="none" stroke="#ffffff" strokeWidth="4" strokeLinecap="round" />
+        </g>
       )
-    case 'manos':
+
+    case 'gracia':
       return (
-        <>
-          <path {...trazo} d="M28 92c0-16 7-26 14-30M92 92c0-16-7-26-14-30" />
-          <path d="M60 34c9 8 14 15 14 22a14 14 0 0 1-28 0c0-7 5-14 14-22z" fill={base} opacity="0.85" />
-          <path {...trazo} d="M42 92h36" />
-        </>
+        <g>
+          <defs>
+            <radialGradient id={`${gradId}-crossglow`} cx="50%" cy="45%" r="55%">
+              <stop offset="0%" stopColor="#ffffff" stopOpacity="0.9" />
+              <stop offset="40%" stopColor={accent} stopOpacity="0.7" />
+              <stop offset="100%" stopColor={primary} stopOpacity="0" />
+            </radialGradient>
+          </defs>
+          <circle cx="150" cy="135" r="110" fill={`url(#${gradId}-crossglow)`} />
+          {/* La Cruz radiante */}
+          <rect x="141" y="45" width="18" height="180" rx="4" fill="#ffffff" />
+          <rect x="90" y="85" width="120" height="18" rx="4" fill="#ffffff" />
+          {/* Círculo de la eternidad / corona de gloria */}
+          <circle cx="150" cy="94" r="44" fill="none" stroke={accent} strokeWidth="3" strokeDasharray="4 4" />
+          <circle cx="150" cy="94" r="62" fill="none" stroke="#ffffff" strokeWidth="1.5" opacity="0.5" />
+          {/* Rayos expansivos */}
+          <line x1="150" y1="20" x2="150" y2="35" stroke="#ffffff" strokeWidth="3" strokeLinecap="round" />
+          <line x1="225" y1="94" x2="240" y2="94" stroke="#ffffff" strokeWidth="3" strokeLinecap="round" />
+          <line x1="75" y1="94" x2="60" y2="94" stroke="#ffffff" strokeWidth="3" strokeLinecap="round" />
+        </g>
       )
-    case 'llama':
+
+    case 'espiritu':
       return (
-        <>
-          <path d="M60 22c14 16 22 26 22 36a22 22 0 0 1-44 0c0-10 8-20 22-36z" fill={base} opacity="0.85" />
-          <path d="M60 44c7 9 11 15 11 21a11 11 0 0 1-22 0c0-6 4-12 11-21z" fill={soft} />
-        </>
+        <g>
+          <defs>
+            <linearGradient id={`${gradId}-flame`} x1="0%" y1="100%" x2="0%" y2="0%">
+              <stop offset="0%" stopColor={primary} />
+              <stop offset="50%" stopColor={accent} />
+              <stop offset="100%" stopColor="#ffffff" />
+            </linearGradient>
+          </defs>
+          {/* Resplandor de Pentecostés */}
+          <circle cx="150" cy="140" r="105" fill={glow} opacity="0.3" />
+          {/* Llama exterior */}
+          <path
+            d="M150 40 C175 85 210 120 210 165 C210 210 180 240 150 240 C120 240 90 210 90 165 C90 120 125 85 150 40 Z"
+            fill={`url(#${gradId}-flame)`}
+            opacity="0.9"
+          />
+          {/* Llama interior */}
+          <path
+            d="M150 95 C165 125 185 150 185 178 C185 208 168 226 150 226 C132 226 115 208 115 178 C115 150 135 125 150 95 Z"
+            fill="#ffffff"
+            opacity="0.9"
+          />
+          {/* Paloma de luz */}
+          <path
+            d="M130 160 C142 150 158 150 170 160 C160 172 140 172 130 160 Z"
+            fill={primary}
+          />
+        </g>
       )
-    case 'bifurcacion':
+
+    case 'pastor':
       return (
-        <>
-          <path {...trazo} d="M60 96V60" />
-          <path {...trazo} d="M60 60C60 44 44 42 36 30" />
-          <path {...trazo} d="M60 60c0-16 16-18 24-30" />
-          <path d="M36 30l-8-2 4 8z" fill={base} />
-          <path d="M84 30l8-2-4 8z" fill={dark} />
-        </>
+        <g>
+          <defs>
+            <linearGradient id={`${gradId}-hills`} x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor={accent} />
+              <stop offset="100%" stopColor={primary} />
+            </linearGradient>
+          </defs>
+          <circle cx="150" cy="110" r="70" fill={glow} opacity="0.35" />
+          {/* Colinas de reposo */}
+          <path d="M40 240 Q100 180 180 240 Z" fill={`url(#${gradId}-hills)`} opacity="0.8" />
+          <path d="M120 240 Q190 160 270 240 Z" fill={primary} opacity="0.9" />
+          {/* Cayado del Buen Pastor */}
+          <path
+            d="M142 240 V105 C142 75 175 75 175 95 C175 105 165 110 158 105"
+            fill="none"
+            stroke="#ffffff"
+            strokeWidth="7"
+            strokeLinecap="round"
+          />
+          {/* Oveja / Manada */}
+          <ellipse cx="95" cy="205" rx="14" ry="10" fill="#ffffff" />
+          <circle cx="85" cy="202" r="6" fill="#ffffff" />
+          <ellipse cx="205" cy="210" rx="16" ry="11" fill="#ffffff" opacity="0.9" />
+        </g>
       )
-    case 'brujula':
-      return (
-        <>
-          <circle cx="60" cy="60" r="34" {...trazo} />
-          <path d="M60 60 78 42 66 66 42 78z" fill={base} opacity="0.85" />
-          <circle cx="60" cy="60" r="4" fill={dark} />
-          <path {...trazo} d="M60 18v8M60 94v8M18 60h8M94 60h8" />
-        </>
-      )
-    case 'huellas':
-      return (
-        <>
-          <ellipse cx="45" cy="46" rx="11" ry="16" fill={base} opacity="0.8" />
-          <ellipse cx="76" cy="72" rx="11" ry="16" fill={dark} opacity="0.75" />
-          <circle cx="45" cy="26" r="4" fill={base} />
-          <circle cx="76" cy="52" r="4" fill={dark} />
-        </>
-      )
-    case 'manantial':
-      return (
-        <>
-          <path {...trazo} d="M28 96h64" />
-          <path {...trazo} d="M40 96c0-14 8-22 20-22s20 8 20 22" />
-          <path d="M60 30c8 8 12 14 12 20a12 12 0 0 1-24 0c0-6 4-12 12-20z" fill={base} opacity="0.85" />
-          <path {...trazo} d="M30 62c8 6 14 6 22 0M68 62c8 6 14 6 22 0" />
-        </>
-      )
-    case 'semilla':
-      return (
-        <>
-          <path {...trazo} d="M34 92h52" />
-          <path {...trazo} d="M60 92V66" />
-          <path d="M60 66c-2-14-14-18-22-14 0 10 10 16 22 14z" fill={base} opacity="0.85" />
-          <path d="M60 60c2-14 14-18 22-14 0 10-10 16-22 14z" fill={dark} opacity="0.8" />
-          <circle cx="60" cy="26" r="12" fill={soft} stroke={base} strokeWidth="4" />
-        </>
-      )
-    case 'amanecer':
-      return (
-        <>
-          <path {...trazo} d="M24 86h72" />
-          <path d="M60 86a24 24 0 0 1 48 0z" fill={base} opacity="0.8" transform="translate(-24 0)" />
-          <g stroke={base} strokeWidth="4" strokeLinecap="round">
-            <path d="M60 34v-12M36 44l-8-8M84 44l8-8" />
-          </g>
-        </>
-      )
-    case 'rollo':
-      return (
-        <>
-          <path {...trazo} d="M34 30h52v60H34z" fill={soft} />
-          <path {...trazo} d="M34 30h-8v60h8M86 30h8v60h-8" />
-          <path {...trazo} d="M46 50h28M46 62h28M46 74h18" />
-        </>
-      )
-    case 'cayado':
-      return (
-        <>
-          <path {...trazo} d="M44 96V34" />
-          <path {...trazo} d="M44 34c0-12 10-18 20-14" />
-          <circle cx="80" cy="80" r="10" fill={base} opacity="0.8" />
-          <circle cx="94" cy="88" r="8" fill={dark} opacity="0.7" />
-          <path {...trazo} d="M70 92h20" />
-        </>
-      )
-    case 'paloma':
-      return (
-        <>
-          <path d="M34 70c14-6 22-18 30-34 6 12 14 18 26 22-10 6-16 14-18 26-14 0-28-4-38-14z" fill={base} opacity="0.8" />
-          <path {...trazo} d="M34 70c-6 6-8 14-6 20" />
-          <path {...trazo} d="M70 74c8 2 14 8 16 16" />
-          <circle cx="72" cy="44" r="2.5" fill={dark} />
-        </>
-      )
-    case 'monte':
-      return (
-        <>
-          <path d="M18 92 48 44l30 48z" fill={base} opacity="0.75" />
-          <path d="M54 92 84 52l22 40z" fill={dark} opacity="0.7" />
-          <circle cx="86" cy="30" r="9" fill={soft} stroke={base} strokeWidth="4" />
-        </>
-      )
-    case 'ciudad':
-      return (
-        <>
-          <path {...trazo} d="M28 92V58h16v34M56 92V40h18v52M86 92V64h12v28" />
-          <path {...trazo} d="M20 92h72" />
-          <circle cx="65" cy="30" r="8" fill={base} opacity="0.75" />
-        </>
-      )
-    case 'cruz':
-      return (
-        <>
-          <path d="M56 22h8v22h18v8H64v46h-8V52H38v-8h18z" fill={dark} />
-          <circle cx="60" cy="60" r="30" fill="none" stroke={base} strokeWidth="4" opacity="0.5" />
-        </>
-      )
-    case 'agua':
-      return (
-        <>
-          <path d="M18 62c10-8 20-8 30 0s20 8 30 0 20-8 30 0" fill="none" stroke={base} strokeWidth="6" strokeLinecap="round" />
-          <path d="M18 78c10-8 20-8 30 0s20 8 30 0 20-8 30 0" fill="none" stroke={dark} strokeWidth="6" strokeLinecap="round" opacity="0.8" />
-          <path d="M60 22c10 10 15 17 15 24a15 15 0 0 1-30 0c0-7 5-14 15-24z" fill={base} opacity="0.7" />
-        </>
-      )
-    case 'comunidad':
-      return (
-        <>
-          <circle cx="42" cy="46" r="10" fill={base} opacity="0.85" />
-          <circle cx="60" cy="38" r="12" fill={dark} opacity="0.9" />
-          <circle cx="78" cy="46" r="10" fill={base} opacity="0.85" />
-          <path d="M22 92c0-12 9-20 20-20s20 8 20 20z" fill={base} opacity="0.8" />
-          <path d="M40 92c0-14 9-24 20-24s20 10 20 24z" fill={dark} opacity="0.85" />
-          <path d="M60 92c0-12 9-20 20-20s20 8 20 20z" fill={base} opacity="0.8" />
-        </>
-      )
-    case 'cueva':
-      return (
-        <>
-          <path d="M18 92V54c0-24 19-42 42-42s42 18 42 42v38z" fill={base} opacity="0.8" />
-          <path d="M46 92V64c0-9 6-16 14-16s14 7 14 16v28z" fill={dark} opacity="0.9" />
-          <path d="M20 92h80" stroke={dark} strokeWidth="5" strokeLinecap="round" />
-        </>
-      )
-    case 'manosSostienen':
-      return (
-        <>
-          <path {...trazo} d="M20 84c8-14 20-20 40-20s32 6 40 20" />
-          <path d="M40 74c0-8 8-14 20-14s20 6 20 14" fill="none" stroke={dark} strokeWidth="6" strokeLinecap="round" />
-          <path d="M46 40c4-10 10-16 14-16s10 6 14 16" fill="none" stroke={base} strokeWidth="6" strokeLinecap="round" />
-          <circle cx="60" cy="30" r="8" fill={base} opacity="0.85" />
-        </>
-      )
-    case 'biblia':
+
+    case 'palabra':
     default:
       return (
-        <>
-          <path d="M60 34c-10-7-24-8-36-4v54c12-4 26-3 36 4z" fill="#ffffff" stroke={base} strokeWidth="6" strokeLinejoin="round" />
-          <path d="M60 34c10-7 24-8 36-4v54c-12-4-26-3-36 4z" fill={soft} stroke={base} strokeWidth="6" strokeLinejoin="round" />
-          <path d="M60 34v58" stroke={dark} strokeWidth="5" strokeLinecap="round" />
-          <path d="M32 48h16M32 60h16M72 48h16M72 60h16" stroke={base} strokeWidth="5" strokeLinecap="round" />
-          <path d="M60 16v10" stroke={dark} strokeWidth="5" strokeLinecap="round" />
-        </>
+        <g>
+          <defs>
+            <linearGradient id={`${gradId}-book`} x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor={accent} />
+              <stop offset="100%" stopColor={primary} />
+            </linearGradient>
+            <radialGradient id={`${gradId}-glow`} cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="#ffffff" stopOpacity="0.8" />
+              <stop offset="50%" stopColor={accent} stopOpacity="0.4" />
+              <stop offset="100%" stopColor={glow} stopOpacity="0" />
+            </radialGradient>
+          </defs>
+          <circle cx="150" cy="140" r="115" fill={`url(#${gradId}-glow)`} />
+          {/* Páginas abiertas de las Sagradas Escrituras */}
+          <path
+            d="M150 170 Q100 155 50 170 V85 Q100 70 150 85 Z"
+            fill="#ffffff"
+            stroke={primary}
+            strokeWidth="3"
+          />
+          <path
+            d="M150 170 Q200 155 250 170 V85 Q200 70 150 85 Z"
+            fill="#ffffff"
+            stroke={primary}
+            strokeWidth="3"
+          />
+          {/* Encuadernación y solapas */}
+          <path
+            d="M46 174 Q100 158 150 174 Q200 158 254 174 L250 185 Q200 170 150 185 Q100 170 46 185 Z"
+            fill={primary}
+          />
+          {/* Líneas de texto bíblico en las páginas */}
+          <line x1="72" y1="102" x2="128" y2="95" stroke={accent} strokeWidth="2.5" strokeLinecap="round" />
+          <line x1="72" y1="116" x2="128" y2="109" stroke={accent} strokeWidth="2.5" strokeLinecap="round" />
+          <line x1="72" y1="130" x2="114" y2="123" stroke={accent} strokeWidth="2.5" strokeLinecap="round" />
+          <line x1="172" y1="95" x2="228" y2="102" stroke={accent} strokeWidth="2.5" strokeLinecap="round" />
+          <line x1="172" y1="109" x2="228" y2="116" stroke={accent} strokeWidth="2.5" strokeLinecap="round" />
+          <line x1="172" y1="123" x2="214" y2="130" stroke={accent} strokeWidth="2.5" strokeLinecap="round" />
+          {/* Resplandor central de sabiduría */}
+          <circle cx="150" cy="70" r="12" fill={accent} />
+          <line x1="150" y1="40" x2="150" y2="52" stroke={accent} strokeWidth="3" strokeLinecap="round" />
+          <line x1="128" y1="48" x2="137" y2="57" stroke={accent} strokeWidth="2.5" strokeLinecap="round" />
+          <line x1="172" y1="48" x2="163" y2="57" stroke={accent} strokeWidth="2.5" strokeLinecap="round" />
+        </g>
       )
   }
 }
 
-export function Ilustracion({
+export function IlustracionEditorial({
   id,
-  size = 120,
+  size = 200,
   pal,
+  modo = 'hero',
 }: {
   id: IlustracionId
   size?: number
   pal: PaletaIlustracion
+  modo?: 'hero' | 'medio' | 'banner' | 'icono'
 }) {
-  const { base, dark, soft } = pal
+  const w = size
+  const h = modo === 'banner' ? Math.round(size * 0.45) : size
+
   return (
-    <svg width={size} height={size} viewBox="0 0 120 120" aria-hidden="true" style={{ display: 'block' }}>
-      <circle cx="60" cy="60" r="56" fill={soft} />
-      {figura(id, base, dark, soft)}
-    </svg>
+    <div
+      style={{
+        width: w,
+        height: h,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        position: 'relative',
+        flexShrink: 0,
+      }}
+    >
+      <svg
+        width="100%"
+        height="100%"
+        viewBox="0 0 300 300"
+        preserveAspectRatio="xMidYMid meet"
+        aria-hidden="true"
+        style={{ display: 'block', overflow: 'visible' }}
+      >
+        <ArteVectorial id={id} pal={pal} />
+      </svg>
+    </div>
   )
 }
 
-// ---------------------------------------------------------------------------
-// Conectores narrativos: flecha curva que une el nodo del timeline con su
-// tarjeta cuando el contenido queda descentrado.
-// ---------------------------------------------------------------------------
-export function ConectorNodo({
-  lado,
-  ancho,
-  alto,
-  color,
-  opacidad = 0.55,
-}: {
-  lado: 'left' | 'right'
-  ancho: number
-  alto: number
-  color: string
-  opacidad?: number
-}) {
-  const curva = Math.max(24, ancho * 0.5)
-  const d =
-    lado === 'right'
-      ? `M2 ${alto * 0.5} C ${curva} ${alto * 0.5}, ${ancho - curva} ${alto * 0.5}, ${ancho - 8} ${alto * 0.5}`
-      : `M${ancho - 2} ${alto * 0.5} C ${ancho - curva} ${alto * 0.5}, ${curva} ${alto * 0.5}, 8 ${alto * 0.5}`
-  const punta = lado === 'right' ? `M${ancho - 14} ${alto * 0.5 - 6} L${ancho - 4} ${alto * 0.5} L${ancho - 14} ${alto * 0.5 + 6}`
-    : `M14 ${alto * 0.5 - 6} L4 ${alto * 0.5} L14 ${alto * 0.5 + 6}`
+// Compatibilidad hacia atrás con imports de componentes antiguos si existen
+export const Ilustracion = IlustracionEditorial
+export function BarraProgreso({ total, colorActivo }: { total: number; colorActivo: string }) {
   return (
-    <svg width={ancho} height={alto} viewBox={`0 0 ${ancho} ${alto}`} aria-hidden="true" style={{ display: 'block' }}>
-      <path d={d} fill="none" stroke={color} strokeWidth={2.5} strokeLinecap="round" strokeDasharray="2 7" opacity={opacidad} />
-      <path d={punta} fill="none" stroke={color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" opacity={opacidad} />
-    </svg>
-  )
-}
-
-// Micro-flecha / breadcrumb para listas largas (refuerza el orden de lectura).
-export function Breadcrumb({ color, size = 14 }: { color: string; size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" style={{ display: 'block' }}>
-      <path d="M6 9l6 6 6-6" fill="none" stroke={color} strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" opacity="0.6" />
-    </svg>
-  )
-}
-
-// Barra de progreso segmentada: comunica "punto N de M" en composiciones largas.
-export function BarraProgreso({
-  total,
-  colorActivo,
-  colorInactivo,
-  etiquetaColor,
-  small,
-}: {
-  total: number
-  colorActivo: string
-  colorInactivo: string
-  etiquetaColor: string
-  small: number
-}) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: Math.round(small * 0.4), width: '100%' }}>
+    <div style={{ display: 'flex', gap: 6, width: '100%' }}>
       {Array.from({ length: total }).map((_, i) => (
-        <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-          <span
-            style={{
-              width: '100%',
-              height: Math.max(4, Math.round(small * 0.32)),
-              borderRadius: 999,
-              background: i < total - 1 ? colorActivo : colorInactivo,
-              opacity: 1 - i * (0.5 / Math.max(1, total)),
-            }}
-          />
-          <span style={{ fontSize: small * 0.72, fontWeight: 800, color: etiquetaColor, letterSpacing: '0.04em' }}>
-            {String(i + 1).padStart(2, '0')}
-          </span>
-        </div>
+        <span key={i} style={{ flex: 1, height: 4, borderRadius: 2, background: colorActivo, opacity: 0.8 }} />
       ))}
     </div>
   )
