@@ -1068,7 +1068,7 @@ export default function Home() {
     // recuadro, de modo que nunca se solapa ni desborda el bloque.
     const quoteBlock = (cita: string, texto: string) => {
       const innerW = contentW - 30;
-      const innerX = margin + 15;
+      const innerX = margin + 25; // Aumentado para evitar solapamiento con la línea azul
       doc.setFont('helvetica', 'italic'); doc.setFontSize(9.8);
       const body: string[] = doc.splitTextToSize(`“${recortarEnOracion(texto, 700)}”`, innerW);
       const padTop = 14;
@@ -1124,7 +1124,7 @@ export default function Home() {
       doc.setFont('helvetica', 'normal'); doc.setFontSize(VALUE_FONT); setText(C.ink);
       if (apilado) doc.text(lines, margin, top + 15);
       else doc.text(lines, margin + anchoEtiqueta, top);
-      y = top + h + 10;
+      y = top + h + 20;
     };
 
     // Etiquetas tipo "chip" con salto de página seguro: se reserva la fila
@@ -1164,9 +1164,18 @@ export default function Home() {
     heading('Desarrollo bíblico', 130);
     if (pdfTextoPasaje) quoteBlock(pdfPasaje, pdfTextoPasaje);
     if (pdfContexto) paragraph(pdfContexto, { max: 700 });
-    if (resultado.contexto_historico) metaRow('Contexto histórico', recortarEnOracion(resultado.contexto_historico, 260));
-    if (resultado.contexto_literario) metaRow('Contexto literario', recortarEnOracion(resultado.contexto_literario, 260));
-    if (resultado.relacion_textos) metaRow('Relación entre textos', recortarEnOracion(resultado.relacion_textos, 300));
+    if (resultado.contexto_historico) {
+      heading('Contexto histórico', 72);
+      paragraph(recortarEnOracion(resultado.contexto_historico, 260), { max: 260 });
+    }
+    if (resultado.contexto_literario) {
+      heading('Contexto literario', 72);
+      paragraph(recortarEnOracion(resultado.contexto_literario, 260), { max: 260 });
+    }
+    if (resultado.relacion_textos) {
+      heading('Relación entre textos', 72);
+      paragraph(recortarEnOracion(resultado.relacion_textos, 300), { max: 300 });
+    }
     if (resultado.interpretacion) paragraph(`Interpretación presentada por el expositor: ${recortarEnOracion(resultado.interpretacion, 620)}`, { italic: true, color: C.ink });
     const referencias = Array.from(new Set([
       ...((resultado.otros_textos || []).map((v) => v.cita)),
