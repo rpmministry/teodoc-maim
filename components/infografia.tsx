@@ -53,8 +53,16 @@ export type InfografiaData = {
 export type InfografiaVariant = 'wide' | 'medium' | 'compact'
 
 export function resumir(texto: string, max: number): string {
-  const t = (texto || '').replace(/\s+/g, ' ').trim()
-  return t.length > max ? `${t.slice(0, max).trimEnd()}…` : t
+  const t = String(texto || '').replace(/\s+/g, ' ').trim()
+  if (t.length <= max) return t
+  const corte = t.slice(0, max)
+  const fin = Math.max(corte.lastIndexOf('. '), corte.lastIndexOf('! '), corte.lastIndexOf('? '))
+  if (fin >= Math.round(max * 0.35)) return corte.slice(0, fin + 1).trim()
+  const punto = Math.max(corte.lastIndexOf('.'), corte.lastIndexOf('!'), corte.lastIndexOf('?'))
+  if (punto >= Math.round(max * 0.35)) return corte.slice(0, punto + 1).trim()
+  const fin2 = Math.max(corte.lastIndexOf(', '), corte.lastIndexOf('; '))
+  if (fin2 >= Math.round(max * 0.5)) return corte.slice(0, fin2).trim()
+  return t
 }
 
 // ---------------------------------------------------------------------------
@@ -599,6 +607,7 @@ export async function exportarInfografiaFile(node: HTMLElement, nombre: string):
 export function ResponsiveInfografia({ data }: { data: InfografiaData }) {
   const hostRef = useRef<HTMLDivElement>(null)
   const [hostW, setHostW] = useState(0)
+  const [pagina, setPagina] = useState(0)
   const plan = planInfografia(data)
   const total = plan.paginas.length
 
@@ -617,17 +626,28 @@ export function ResponsiveInfografia({ data }: { data: InfografiaData }) {
 
   return (
     <div ref={hostRef} style={{ width: '100%' }}>
-      <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: scale ? Math.round(24 * scale) : 0 }}>
-        {Array.from({ length: total }).map((_, i) => (
-          <div key={i} style={{ width: '100%', height: altoEscalado || undefined, overflow: 'hidden' }}>
-            <div style={{ transform: `scale(${scale})`, transformOrigin: 'top left', width: CANVAS_W, height: CANVAS_H }}>
-              <Infografia data={data} pagina={i} />
-            </div>
+      <div style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+        <div style={{ width: '100%', maxWidth: CANVAS_W, height: altoEscalado || undefined, overflow: 'hidden' }}>
+          <div style={{ transform: `scale(${scale})`, transformOrigin: 'top left', width: CANVAS_W, height: CANVAS_H }}>
+            <Infografia data={data} pagina={pagina} />
           </div>
-        ))}
+        </div>
       </div>
+      {total > 1 ? (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 12, marginTop: 12 }}>
+          <button type="button" onClick={() => setPagina((p) => Math.max(0, p - 1))} disabled={pagina === 0}
+            style={{ padding: '6px 16px', fontSize: 13, fontWeight: 600, border: '1px solid #393939', borderRadius: 6, background: '#161616', color: pagina === 0 ? '#555' : '#c6c6c6', cursor: pagina === 0 ? 'default' : 'pointer' }}>
+            Anterior
+          </button>
+          <span style={{ fontSize: 13, color: '#6f6f6f' }}>{pagina + 1} / {total}</span>
+          <button type="button" onClick={() => setPagina((p) => Math.min(total - 1, p + 1))} disabled={pagina === total - 1}
+            style={{ padding: '6px 16px', fontSize: 13, fontWeight: 600, border: '1px solid #393939', borderRadius: 6, background: '#161616', color: pagina === total - 1 ? '#555' : '#c6c6c6', cursor: pagina === total - 1 ? 'default' : 'pointer' }}>
+            Siguiente
+          </button>
+        </div>
+      ) : null}
       <p style={{ marginTop: 8, fontSize: 12, color: '#6f6f6f', textAlign: 'center' }}>
-        {total > 1 ? `Carrusel de ${total} imágenes 9:16 (1080×1920)` : 'Infografía 9:16 (1080×1920)'}
+        Infografía 9:16 (1080×1920)
       </p>
     </div>
   )

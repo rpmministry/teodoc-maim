@@ -2,6 +2,7 @@
 import { useState, useRef, useEffect } from 'react';
 import LiquidOrb, { type LiquidOrbHandle } from '@/components/liquid-orb';
 import Infografia, { ResponsiveInfografia, resumir, exportarInfografiaBlob, planInfografia } from '@/components/infografia';
+import { CANVAS_W, CANVAS_H } from '@/lib/infografia-layout';
 import { extractYouTubeVideoId } from '@/lib/youtube/extract-video-id';
 
 interface Versiculo { cita: string; texto: string; }
@@ -1086,7 +1087,7 @@ export default function Home() {
       }
       doc.setFont('helvetica', 'italic'); doc.setFontSize(9.8); setText(C.sub);
       body.forEach((line) => { doc.text(line, innerX, ty + 4); ty += 13; });
-      y = top + h + 8;
+      y = top + h + 20;
     };
 
     const bullet = (txt: string) => {
@@ -1702,7 +1703,7 @@ export default function Home() {
                           {item.versiculos.length > 0 && (
                             <div className="grid gap-3">
                               {item.versiculos.map((v, vIdx) => (
-                                <div key={vIdx} className="bg-[#1f1f1f] p-4 border-l-2 border-[#0f62fe]">
+                                <div key={vIdx} className="bg-[#1f1f1f] p-4 border-l-2 border-[#0f62fe] mb-5">
                                   <p className="text-xs sm:text-sm font-semibold text-[#78a9ff] mb-1.5">{v.cita}</p>
                                   <p className="text-xs sm:text-sm text-[#a8a8a8] italic font-normal leading-relaxed">"{v.texto}"</p>
                                 </div>
@@ -1780,9 +1781,9 @@ export default function Home() {
 
               {/* Artboard OCULTO para exportar el PNG (una página por nodo). El
                   contenedor conserva tamaño real con max-content. */}
-              <div aria-hidden="true" style={{ position: 'fixed', left: -100000, top: 0, pointerEvents: 'none', opacity: 0 }}>
+              <div aria-hidden="true" style={{ position: 'fixed', left: 0, top: 0, pointerEvents: 'none', opacity: 0.001, width: CANVAS_W, height: CANVAS_H, overflow: 'hidden' }}>
                 {Array.from({ length: totalPaginasInfografia }).map((_, i) => (
-                  <div key={i} ref={(el) => { infografiaRefs.current[i] = el; }} style={{ width: 'max-content' }}>
+                  <div key={i} ref={(el) => { infografiaRefs.current[i] = el; }} style={{ width: CANVAS_W, height: CANVAS_H }}>
                     <Infografia data={resultado} pagina={i} />
                   </div>
                 ))}
