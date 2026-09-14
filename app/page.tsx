@@ -277,6 +277,7 @@ export default function Home() {
     'Identificando las ideas principales...',
     'Organizando el estudio bíblico...',
     'Preparando la aplicación práctica...',
+    'Redactando el análisis final… (puede tardar unos minutos)',
   ];
   const mensajeAnalisis =
     progress < 35 ? mensajesAnalisis[0]
@@ -487,7 +488,7 @@ export default function Home() {
     let ultimoError: unknown = null;
     for (let intento = 0; intento < 2; intento++) {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 260_000);
+      const timeout = setTimeout(() => controller.abort(), 285_000);
       try {
         const res = await fetch('/api/analyze', {
           method: 'POST',
@@ -501,6 +502,10 @@ export default function Home() {
         return normalizarAnalisisCliente(data);
       } catch (e) {
         ultimoError = e;
+        const abortado = (e as { name?: string })?.name === 'AbortError';
+        // Si se agotó el tiempo NO se reintenta: reintentar duplicaría la espera
+        // y dejaría la pantalla "congelada" en el 98%.
+        if (abortado) break;
         if (intento === 0) await new Promise((r) => setTimeout(r, 1500));
       } finally {
         clearTimeout(timeout);
@@ -560,7 +565,12 @@ export default function Home() {
       if (timerAnalyze) clearInterval(timerAnalyze);
       // No se destruye el trabajo: se guarda la transcripción para reintentar.
       setTextoPendiente(textoTranscrito);
-      setError('No se pudo completar el análisis en este momento. Pulsa «Reintentar» para continuar sin volver a subir el audio.');
+      const abortado = err?.name === 'AbortError';
+      setError(
+        abortado
+          ? 'El análisis tardó más de lo permitido (mensaje muy extenso o servidores saturados). Pulsa «Reintentar» para continuar sin volver a subir el audio.'
+          : 'No se pudo completar el análisis en este momento. Pulsa «Reintentar» para continuar sin volver a subir el audio.',
+      );
       setLoading(false);
       setProgress(0);
     }

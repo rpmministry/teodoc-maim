@@ -25,8 +25,21 @@ type OpcionesGemini = {
   responseSchema: any;
   modelos?: string[];
   retryDelayMs?: number;
+  /** Tiempo máximo por intento. Evita que un proveedor saturado bloquee el pipeline. */
+  timeoutMs?: number;
   onError?: (modelo: string, mensaje: string) => void;
 };
+
+function conTiempoLimite<T>(promesa: Promise<T>, ms: number, etiqueta: string): Promise<T> {
+  if (!ms || ms <= 0) return promesa;
+  return new Promise<T>((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error(`${etiqueta}: tiempo de espera agotado`)), ms);
+    promesa.then(
+      (v) => { clearTimeout(t); resolve(v); },
+      (e) => { clearTimeout(t); reject(e); },
+    );
+  });
+}
 
 /**
  * Llama a Gemini con reintento ante 429/503 y fallback entre modelos.
@@ -38,15 +51,19 @@ export async function generarJsonConGemini(opts: OpcionesGemini): Promise<any | 
   for (const modelo of modelos) {
     for (let i = 0; i < 2; i++) {
       try {
-        const response = await ai.models.generateContent({
-          model: modelo,
-          contents: [{ text: opts.contents }],
-          config: {
-            systemInstruction: opts.systemInstruction,
-            responseMimeType: 'application/json',
-            responseSchema: opts.responseSchema,
-          },
-        });
+        const response = await conTiempoLimite(
+          ai.models.generateContent({
+            model: modelo,
+            contents: [{ text: opts.contents }],
+            config: {
+              systemInstruction: opts.systemInstruction,
+              responseMimeType: 'application/json',
+              responseSchema: opts.responseSchema,
+            },
+          }),
+          opts.timeoutMs ?? 0,
+          `Gemini ${modelo}`,
+        );
         if (response && response.text) return extraerJSON(response.text);
       } catch (err: any) {
         const msg = err?.message || '';

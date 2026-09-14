@@ -81,6 +81,12 @@ const REGLA_CONCLUSION = `CAMPO "conclusion":
 - Síntesis final breve (pocas frases) que responde: ¿cuál es el mensaje fundamental que el creyente debería llevarse tras estudiar este mensaje?
 - Si el contenido no permite una conclusión sustentada, devuélvela vacía ("").`;
 
+const REGLA_CONCISION = `CONCISIÓN Y LÍMITES (rendimiento y legibilidad):
+- Escribe con precisión y sin relleno. Respeta estos MÁXIMOS de longitud: "explicacion" ≤ 600 caracteres; "descripcion" de grandes_ensenanzas ≤ 180; "significado" ≤ 160; "contexto_biblico", "contexto_historico", "contexto_literario", "contexto_general", "relacion_textos" e "interpretacion" ≤ 320; "conclusion" y "oracion" ≤ 500.
+- Máximo 12 puntos principales, 4 subtemas y 4 versículos por punto (los más relevantes).
+- Máximo 10 grandes_ensenanzas, 8 conceptos_clave, 8 conceptos_teologicos, 6 palabras_clave, 6 conexiones_biblicas.
+- No repitas el mismo contenido en varios campos.`;
+
 const REGLAS_ANALISIS = `${REGLA_PROFUNDIDAD}
 ${REGLA_NIVELES}
 ${REGLA_PUNTOS}
@@ -91,7 +97,8 @@ ${REGLA_ENSENANZAS}
 ${REGLA_CONCEPTOS}
 ${REGLA_CONCEPTOS_TEOLOGICOS}
 ${REGLA_CONCLUSION}
-${REGLA_INFOGRAFIA}`;
+${REGLA_INFOGRAFIA}
+${REGLA_CONCISION}`;
 
 const SYSTEM_PROMPT = `Eres un analista teológico conservador de tradición cristiana evangélica. Analiza la transcripción de un mensaje, enseñanza o conferencia y devuelve ÚNICAMENTE un objeto JSON válido (sin markdown fuera del JSON) con esta estructura exacta:
     {
@@ -486,27 +493,43 @@ async function analizarConGemini(text: string, contexto: string): Promise<any | 
     systemInstruction: `Eres un analista teológico conservador de tradición cristiana evangélica. Usa Reina-Valera 1960. Responde con un JSON estrictamente estructurado según el esquema. No inventes contenido que el mensaje no sostenga.\nAl referirte a quien comunica el mensaje usa "el expositor" (o "el orador"), nunca "el predicador".\n${contexto}\n${REGLAS_ANALISIS}`,
     responseSchema: SCHEMA_CONFIG,
     retryDelayMs: 1200,
+    // Tope por intento: si un modelo está saturado no debe bloquear el pipeline.
+    timeoutMs: 40_000,
     onError: (modelo, msg) => console.warn(`[Gemini Falló - ${modelo}]:`, msg),
   });
 }
 
 // Respaldo: OpenRouter con modelos gratuitos.
+const OPENROUTER_TIMEOUT_MS = 150_000;
+const OPENROUTER_PREFERIDOS = ['google/gemini-2.0-flash-exp:free', 'google/gemini-flash-1.5:free', 'meta-llama/llama-3.3-70b-instruct:free', 'qwen/qwen-2.5-72b-instruct:free'];
+
 async function analizarConOpenRouter(text: string, contexto: string): Promise<any | null> {
   let modelos = MODELOS_OPENROUTER_DEFAULT;
   try {
     const resModels = await fetch('https://openrouter.ai/api/v1/models');
     if (resModels.ok) {
       const dataModels = await resModels.json();
-      const vigentes = dataModels.data
+      const vigentes: string[] = dataModels.data
         .filter((m: any) => m.id.endsWith(':free') && m.context_length >= 40000)
         .map((m: any) => m.id);
-      if (vigentes.length > 0) modelos = vigentes.slice(0, 2);
+      if (vigentes.length > 0) {
+        // Prioriza modelos rápidos conocidos y añade el resto después.
+        const preferidos = OPENROUTER_PREFERIDOS.filter((m) => vigentes.includes(m));
+        const otros = vigentes.filter((m) => !preferidos.includes(m));
+        modelos = [...preferidos, ...otros].slice(0, 3);
+      }
     }
   } catch {
     console.warn('No se pudo obtener la lista dinámica, usando defaults.');
   }
 
+  // Presupuesto global de OpenRouter: no encadenar modelos más allá del tope,
+  // para que el pipeline completo quede dentro del límite del servidor.
+  const inicio = Date.now();
   for (const modelo of modelos) {
+    if (Date.now() - inicio > OPENROUTER_TIMEOUT_MS) break;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), OPENROUTER_TIMEOUT_MS - (Date.now() - inicio));
     try {
       const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
@@ -521,6 +544,7 @@ async function analizarConOpenRouter(text: string, contexto: string): Promise<an
           messages: [{ role: 'system', content: `${SYSTEM_PROMPT}\n${contexto}` }, { role: 'user', content: `Transcripción:\n\n${text}` }],
           temperature: 0.3,
         }),
+        signal: controller.signal,
       });
       if (!response.ok) {
         if (response.status === 429 || response.status === 503) await delay(1200);
@@ -530,7 +554,9 @@ async function analizarConOpenRouter(text: string, contexto: string): Promise<an
       const content = data.choices?.[0]?.message?.content;
       if (content) return extraerJSON(content);
     } catch (orErr: any) {
-      console.warn(`[OpenRouter Falló - ${modelo}]:`, orErr?.message || orErr);
+      console.warn(`[OpenRouter Falló - ${modelo}]:`, orErr?.name === 'AbortError' ? 'timeout' : orErr?.message || orErr);
+    } finally {
+      clearTimeout(timeout);
     }
   }
   return null;
