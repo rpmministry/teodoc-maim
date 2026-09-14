@@ -16,6 +16,7 @@ import {
   indiceContenido,
   elegirNivelPorIndice,
   estimarAltoPagina,
+  estimarAltoCabecera,
   planificarInfografia,
   metricasCanvas,
   type EntradaInfografia,
@@ -189,6 +190,46 @@ comprobar('El estimador crece con más contenido', () => {
   const hGrande = estimarAltoPagina(grande, p, m.anchoEsen, m.spineW, 300);
   assert.ok(hGrande > hChico);
 });
+
+comprobar('Ninguna página excede el alto disponible (sin recortes)', () => {
+  const casos: EntradaInfografia[] = [
+    {
+      // Caso real del PNG: 6 títulos largos, sin detalle.
+      titulo: 'Rendidos a su Presencia',
+      mensajeCentral: 'No se trata de tus fuerzas ni de tu terquedad; se trata de rendirte a la presencia de Dios.',
+      pasaje: 'Éxodo 33:12-14',
+      textoClave: 'Mi presencia irá contigo y yo te daré descanso.',
+      verdadPrincipal: 'La presencia de Dios es nuestro centro.',
+      fraseRecordar: 'No se trata de tus fuerzas: se trata de rendirte a su presencia.',
+      palabras: palabras(6),
+      conexiones: conexiones(3, 100),
+      puntos: Array.from({ length: 6 }, (_, i) => ({ titulo: `La presencia de Dios es nuestra tierra prometida y nuestro centro ${i + 1}`, detalle: '' })),
+    },
+    {
+      titulo: 'Mensaje extenso de 50 minutos',
+      mensajeCentral: 'Dios nos llama a cuidar de nuestro hermano.',
+      pasaje: 'Génesis 4:9',
+      textoClave: '¿Dónde está tu hermano?',
+      verdadPrincipal: 'Somos guardianes de nuestro hermano.',
+      contextoBreve: 'contexto del pasaje y su trasfondo histórico.',
+      puntos: Array.from({ length: 10 }, (_, i) => ({ titulo: `Punto principal número ${i + 1}`, detalle: 'desarrollo breve del punto con su argumento teológico central. '.repeat(3) })),
+      palabras: palabras(8),
+      conexiones: conexiones(6, 150),
+      fraseRecordar: 'Cuida de tu hermano.',
+    },
+  ]
+  for (const e of casos) {
+    const r = plan(e)
+    const p = PRESETS[r.nivel]
+    const mostrarProgreso = construirUnidades(e).length >= 5
+    const cab = estimarAltoCabecera(e.titulo || '', p, m.anchoEsen) + (mostrarProgreso ? PRESETS[2].caption * 2.6 : 0)
+    for (const page of r.paginas) {
+      const alto = estimarAltoPagina(page, p, m.anchoEsen, m.spineW, cab)
+      assert.ok(alto <= (m.altoBanda - 24) * 0.99, `página excede el alto disponible: ${alto}`)
+    }
+    assert.ok(r.paginas.every((pg) => pg.length > 0), 'página vacía')
+  }
+})
 
 console.log('Verificación del motor de infografía (canvas fijo 9:16)');
 console.log(pruebas.join('\n'));

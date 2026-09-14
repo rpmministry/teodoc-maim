@@ -70,6 +70,10 @@ export type UnidadContenido = {
   etiqueta: string
   tipo: TipoUnidad
   chars: number
+  /** Caracteres de los títulos (para medir líneas reales de la lista). */
+  charsTitulo?: number
+  /** Caracteres de las descripciones/desarrollos de la lista. */
+  charsDetalle?: number
   /** Número de ítems que se muestran en esta unidad (o porción). */
   items: number
   /** Índice del primer ítem cuando la unidad se dividió entre páginas. */
@@ -132,11 +136,13 @@ export function construirUnidades(e: EntradaInfografia): UnidadContenido[] {
   const puntos = (e.puntos || []).filter((p) => p?.titulo || p?.detalle)
   const grandes = (e.grandes || []).filter((g) => g?.titulo || g?.descripcion)
   if (puntos.length) {
-    const chars = puntos.reduce((a, p) => a + (p.titulo || '').length + (p.detalle || '').length, 0)
-    u.push({ id: 'puntos', etiqueta: 'Puntos principales', tipo: 'lista', chars, items: puntos.length, esencial: true, peso: 'pesado', semilla: puntos.map((p) => `${p.titulo} ${p.detalle}`).join(' ') })
+    const charsTitulo = puntos.reduce((a, p) => a + (p.titulo || '').length, 0)
+    const charsDetalle = puntos.reduce((a, p) => a + (p.detalle || '').length, 0)
+    u.push({ id: 'puntos', etiqueta: 'Puntos principales', tipo: 'lista', chars: charsTitulo + charsDetalle, charsTitulo, charsDetalle, items: puntos.length, esencial: true, peso: 'pesado', semilla: puntos.map((p) => `${p.titulo} ${p.detalle}`).join(' ') })
   } else if (grandes.length) {
-    const chars = grandes.reduce((a, g) => a + (g.titulo || '').length + (g.descripcion || '').length, 0)
-    u.push({ id: 'puntos', etiqueta: 'Grandes enseñanzas', tipo: 'lista', chars, items: grandes.length, esencial: true, peso: 'pesado', semilla: grandes.map((g) => `${g.titulo} ${g.descripcion}`).join(' ') })
+    const charsTitulo = grandes.reduce((a, g) => a + (g.titulo || '').length, 0)
+    const charsDetalle = grandes.reduce((a, g) => a + (g.descripcion || '').length, 0)
+    u.push({ id: 'puntos', etiqueta: 'Grandes enseñanzas', tipo: 'lista', chars: charsTitulo + charsDetalle, charsTitulo, charsDetalle, items: grandes.length, esencial: true, peso: 'pesado', semilla: grandes.map((g) => `${g.titulo} ${g.descripcion}`).join(' ') })
   }
 
   const palabras = e.palabras || []
@@ -145,8 +151,9 @@ export function construirUnidades(e: EntradaInfografia): UnidadContenido[] {
   }
   const conexiones = (e.conexiones || []).filter((c) => c?.cita)
   if (conexiones.length) {
-    const chars = conexiones.reduce((a, c) => a + (c.cita || '').length + (c.texto || '').length, 0)
-    u.push({ id: 'conexiones', etiqueta: 'Conexiones bíblicas', tipo: 'lista', chars, items: conexiones.length, esencial: false, peso: pesar(masaUnidad('lista', chars, conexiones.length)), semilla: conexiones.map((c) => `${c.cita} ${c.texto}`).join(' ') })
+    const charsTitulo = conexiones.reduce((a, c) => a + (c.cita || '').length, 0)
+    const charsDetalle = conexiones.reduce((a, c) => a + (c.texto || '').length, 0)
+    u.push({ id: 'conexiones', etiqueta: 'Conexiones bíblicas', tipo: 'lista', chars: charsTitulo + charsDetalle, charsTitulo, charsDetalle, items: conexiones.length, esencial: false, peso: pesar(masaUnidad('lista', charsTitulo + charsDetalle, conexiones.length)), semilla: conexiones.map((c) => `${c.cita} ${c.texto}`).join(' ') })
   }
   if (e.fraseRecordar) u.push(unidadTexto('frase', 'Frase para recordar', e.fraseRecordar, true))
   return u
@@ -205,12 +212,17 @@ export function estimarAltoUnidad(u: UnidadContenido, p: Preset, anchoContenido:
     const l = numLineas(u.chars, p.caption, interior)
     return Math.round(base + l * p.caption * p.lineHeight + p.caption * 1.2 * u.items)
   }
-  // lista (puntos / conexiones)
-  const porItemChars = Math.max(1, Math.round(u.chars / Math.max(1, u.items)))
-  const lineasTitulo = numLineas(porItemChars * 0.55, p.cuerpo, interior - p.caption * 3)
-  const lineasDesc = p.detallePuntos ? numLineas(porItemChars * 0.45, p.caption, interior - p.caption * 3) : 0
-  const altoItem = lineasTitulo * p.cuerpo * 1.25 + lineasDesc * p.caption * 1.45 + p.caption * 1.1
-  return Math.round(base + u.items * altoItem)
+  // lista (puntos / conexiones). Se miden por separado títulos y descripciones
+  // para no subestimar las líneas reales (causa del recorte de contenido).
+  const items = Math.max(1, u.items)
+  const porItemTitulo = (u.charsTitulo ?? u.chars * 0.6) / items
+  const porItemDetalle = (u.charsDetalle ?? u.chars * 0.4) / items
+  const interiorItems = Math.max(160, interior - p.caption * 3)
+  const lineasTitulo = numLineas(porItemTitulo, p.cuerpo, interiorItems)
+  const lineasDesc = p.detallePuntos && porItemDetalle > 1 ? numLineas(porItemDetalle, p.caption, interiorItems) : 0
+  const altoItem = lineasTitulo * p.cuerpo * 1.3 + lineasDesc * p.caption * 1.5 + p.caption * 1.2
+  // Margen de seguridad: el estimador nunca debe quedar por debajo del render.
+  return Math.round((base + u.items * altoItem) * 1.06)
 }
 
 export function estimarAltoPagina(unidades: UnidadContenido[], p: Preset, anchoContenido: number, spineW: number, altoCabecera: number): number {
@@ -236,14 +248,16 @@ function dividirUnidad(u: UnidadContenido, p: Preset, anchoContenido: number, sp
 }
 
 export function empaquetarEnPaginas(unidades: UnidadContenido[], p: Preset, anchoContenido: number, spineW: number, altoCabecera: number, altoDisponible: number): UnidadContenido[][] {
-  const disponible = altoDisponible - altoCabecera
+  // Margen del 6%: garantiza que nada quede recortado al renderizar.
+  const limite = altoDisponible * 0.94
+  const disponible = limite - altoCabecera
   const expandidas = unidades.flatMap((u) => dividirUnidad(u, p, anchoContenido, spineW, disponible))
   const paginas: UnidadContenido[][] = []
   let actual: UnidadContenido[] = []
   let alto = altoCabecera
   for (const u of expandidas) {
     const h = estimarAltoUnidad(u, p, anchoContenido, spineW)
-    if (actual.length && alto + h > altoDisponible) {
+    if (actual.length && alto + h > limite) {
       paginas.push(actual)
       actual = []
       alto = altoCabecera
@@ -290,17 +304,18 @@ export function planificarInfografia(unidades: UnidadContenido[], opciones: Opci
   const indice = indiceContenido(unidades)
 
   const altoCab = (p: Preset) => extra + estimarAltoCabecera(titulo, p, anchoContenido)
+  const cabe = (alto: number) => alto <= altoDisponible * 0.94
 
   // Escalada de densidad: se parte del nivel por índice y se sube hasta que
   // quepa en una sola página (sin cruzar nunca el piso de legibilidad).
   let nivel = elegirNivelPorIndice(indice)
-  while (nivel < 4 && estimarAltoPagina(unidades, PRESETS[nivel], anchoContenido, spineW, altoCab(PRESETS[nivel])) > altoDisponible) {
+  while (nivel < 4 && !cabe(estimarAltoPagina(unidades, PRESETS[nivel], anchoContenido, spineW, altoCab(PRESETS[nivel])))) {
     nivel = (nivel + 1) as NivelDensidad
   }
 
   const preset = PRESETS[nivel]
   const cab = altoCab(preset)
-  if (estimarAltoPagina(unidades, preset, anchoContenido, spineW, cab) <= altoDisponible) {
+  if (cabe(estimarAltoPagina(unidades, preset, anchoContenido, spineW, cab))) {
     return { modo: 'unico', nivel, indice, paginas: [unidades] }
   }
 
@@ -314,7 +329,7 @@ export function planificarInfografia(unidades: UnidadContenido[], opciones: Opci
   // Demasiadas páginas: modo resumen (recorta lo no esencial, nunca el piso ni
   // los puntos principales).
   let resumen = recortarParaResumen(unidades)
-  if (estimarAltoPagina(resumen, PRESETS[4], anchoContenido, spineW, cab4) > altoDisponible) {
+  if (!cabe(estimarAltoPagina(resumen, PRESETS[4], anchoContenido, spineW, cab4))) {
     resumen = resumen
       .filter((u) => u.id === 'mensaje' || u.id === 'texto-clave' || u.id === 'puntos' || u.id === 'frase')
       .map((u) => (u.tipo === 'lista' ? { ...u, items: Math.min(u.items, 6), chars: Math.min(u.chars, 600) } : u))

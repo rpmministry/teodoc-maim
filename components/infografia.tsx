@@ -12,7 +12,6 @@ import {
   CANVAS_W,
   CANVAS_H,
   PRESETS,
-  PISO_LEGIBILIDAD,
   metricasCanvas,
   construirUnidades,
   planificarInfografia,
@@ -121,23 +120,24 @@ const ICONO_POR_UNIDAD: Record<string, (s: number, c: string) => React.ReactNode
   frase: G.quote,
 }
 
-function TeoLogo(width: number, colorSecundario = '#78a9ff') {
+// Icono de marca TeoDoc (SIN wordmark: se eliminó el texto "TeoDoc" y su
+// relleno, que dañaba la legibilidad). Trazo claro y limpio.
+function TeoIcono(size: number) {
+  const w = size
+  const h = (size * 180) / 320
   return (
-    <svg width={width} height={(width * 180) / 640} viewBox="0 0 640 180" aria-label="TeoDoc">
-      <g transform="translate(90,90)">
-        <rect x="-58" y="-40" width="116" height="80" fill="none" stroke="#ffffff" strokeWidth="4" />
-        <circle cx="-58" cy="0" r="12" fill="none" stroke="#ffffff" strokeWidth="4" />
-        <circle cx="58" cy="0" r="12" fill="none" stroke="#ffffff" strokeWidth="4" />
-        <rect x="-44" y="-20" width="58" height="6" fill="#ffffff" />
-        <rect x="-44" y="-4" width="58" height="6" fill="#ffffff" />
-        <rect x="-44" y="12" width="34" height="6" fill="#ffffff" />
-        <rect x="22" y="-24" width="5" height="12" fill="#ffffff" />
-        <rect x="32" y="-30" width="5" height="24" fill="#ffffff" />
-        <rect x="42" y="-20" width="5" height="12" fill="#ffffff" />
+    <svg width={w} height={h} viewBox="0 0 320 180" aria-label="TeoDoc">
+      <g transform="translate(160,90)">
+        <rect x="-108" y="-62" width="216" height="124" rx="14" fill="none" stroke="#ffffff" strokeWidth="9" />
+        <circle cx="-108" cy="0" r="20" fill="none" stroke="#ffffff" strokeWidth="9" />
+        <circle cx="108" cy="0" r="20" fill="none" stroke="#ffffff" strokeWidth="9" />
+        <rect x="-78" y="-32" width="96" height="11" rx="5" fill="#ffffff" />
+        <rect x="-78" y="-6" width="96" height="11" rx="5" fill="#ffffff" />
+        <rect x="-78" y="20" width="58" height="11" rx="5" fill="#ffffff" />
+        <rect x="34" y="-38" width="9" height="20" rx="4" fill="#ffffff" />
+        <rect x="52" y="-50" width="9" height="44" rx="4" fill="#ffffff" />
+        <rect x="70" y="-32" width="9" height="20" rx="4" fill="#ffffff" />
       </g>
-      <text x="185" y="105" fontSize="56" fontWeight="600" fill="#ffffff" fontFamily="var(--font-plex), sans-serif">
-        Teo<tspan fill={colorSecundario}>Doc</tspan>
-      </text>
     </svg>
   )
 }
@@ -375,22 +375,22 @@ export default function Infografia({ data, pagina = 0 }: { data: InfografiaData;
       <div
         style={{
           position: 'absolute', top: 0, left: 0, width: '100%', height: m.safeTop, boxSizing: 'border-box',
-          background: `linear-gradient(135deg, ${tema.dark} 0%, ${C.navyDeep} 45%, ${tema.base} 130%)`,
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          background: `linear-gradient(135deg, ${tema.dark} 0%, ${C.navyDeep} 45%, ${tema.base} 135%)`,
+          display: 'flex', alignItems: 'center', gap: Math.round(preset.caption * 1.2),
           padding: `0 ${m.safeLateral}px`, overflow: 'hidden',
         }}
       >
-        <div aria-hidden="true" style={{ position: 'absolute', right: -40, top: -30, opacity: 0.3 }}>
-          <Ilustracion id={ilustracionId} size={Math.round(m.safeTop * 1.5)} pal={{ base: '#ffffff', dark: '#cfe0ff', soft: 'transparent' }} />
+        <div style={{ position: 'relative', flexShrink: 0, display: 'flex', alignItems: 'center' }}>
+          {TeoIcono(preset.caption * 5.4)}
         </div>
-        <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: Math.round(preset.caption * 1.1) }}>
-          {TeoLogo(preset.caption * 8.5)}
-        </div>
-        <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: Math.round(preset.caption * 0.35) }}>
-          <span style={{ fontSize: preset.caption, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#ffffff', background: 'rgba(255,255,255,0.16)', border: '1px solid rgba(255,255,255,0.4)', borderRadius: 999, padding: `${Math.round(preset.caption * 0.24)}px ${Math.round(preset.caption * 0.7)}px` }}>
-            {resumir(temaNombre, 42)}
+        <div style={{ position: 'relative', flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: Math.round(preset.caption * 0.25) }}>
+          <span style={{ fontSize: preset.caption * 0.98, fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#ffffff', lineHeight: 1.24, overflowWrap: 'anywhere' }}>
+            {temaNombre}
           </span>
-          <span style={{ fontSize: preset.caption * 0.92, color: '#cfe0ff', letterSpacing: '0.05em' }}>{fecha}</span>
+          <span style={{ fontSize: preset.caption * 0.9, color: '#cfe0ff', letterSpacing: '0.05em' }}>{fecha}</span>
+        </div>
+        <div aria-hidden="true" style={{ position: 'relative', flexShrink: 0, opacity: 0.95 }}>
+          <Ilustracion id={ilustracionId} size={Math.round(m.safeTop * 0.66)} pal={{ base: '#ffffff', dark: '#d6e4ff', soft: 'rgba(255,255,255,0.18)' }} />
         </div>
       </div>
 
@@ -410,9 +410,6 @@ export default function Infografia({ data, pagina = 0 }: { data: InfografiaData;
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginTop: Math.round(preset.caption * 0.6) }}>
             {entrada.pasaje ? (
               <span style={{ fontSize: preset.caption, fontWeight: 700, letterSpacing: '0.03em', borderRadius: 999, padding: `${Math.round(preset.caption * 0.3)}px ${Math.round(preset.caption * 0.8)}px`, background: tema.base, color: '#ffffff' }}>{entrada.pasaje}</span>
-            ) : null}
-            {entrada.fraseRecordar ? (
-              <span style={{ fontSize: preset.caption, fontWeight: 600, letterSpacing: '0.03em', borderRadius: 999, padding: `${Math.round(preset.caption * 0.3)}px ${Math.round(preset.caption * 0.8)}px`, border: `1.5px solid ${tema.base}`, color: tema.dark }}>{resumir(entrada.fraseRecordar, 60)}</span>
             ) : null}
           </div>
           {mostrarProgreso ? (
@@ -492,23 +489,19 @@ export default function Infografia({ data, pagina = 0 }: { data: InfografiaData;
       <div
         style={{
           position: 'absolute', bottom: 0, left: 0, width: '100%', height: m.safeBottom, boxSizing: 'border-box',
-          background: `linear-gradient(0deg, ${C.navyDeep} 0%, ${tema.dark} 60%, ${tema.base} 170%)`,
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: `0 ${m.safeLateral}px`, overflow: 'hidden',
+          background: `linear-gradient(0deg, ${C.navyDeep} 0%, ${tema.dark} 60%, ${tema.base} 175%)`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: `0 ${m.safeLateral}px`, overflow: 'hidden',
         }}
       >
-        <div aria-hidden="true" style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%,-50%)', opacity: 0.22, display: 'flex', gap: Math.round(preset.caption * 1.4) }}>
-          <Ilustracion id={ilustracionId} size={Math.round(m.safeBottom * 0.5)} pal={{ base: '#ffffff', dark: '#cfe0ff', soft: 'transparent' }} />
-          <Ilustracion id={elegirIlustracion(`${entrada.titulo} ${entrada.mensajeCentral} comunidad manos`)} size={Math.round(m.safeBottom * 0.5)} pal={{ base: '#ffffff', dark: '#cfe0ff', soft: 'transparent' }} />
+        <div aria-hidden="true" style={{ display: 'flex', alignItems: 'center', gap: Math.round(preset.caption * 1.8), opacity: 0.95 }}>
+          <Ilustracion id={ilustracionId} size={Math.round(m.safeBottom * 0.46)} pal={{ base: '#ffffff', dark: '#d6e4ff', soft: 'rgba(255,255,255,0.16)' }} />
+          <Ilustracion id={elegirIlustracion(`${entrada.titulo} ${entrada.mensajeCentral} comunidad manosSostienen`)} size={Math.round(m.safeBottom * 0.46)} pal={{ base: '#ffffff', dark: '#d6e4ff', soft: 'rgba(255,255,255,0.16)' }} />
         </div>
-        <div style={{ position: 'relative', display: 'flex', alignItems: 'center', gap: Math.round(preset.caption * 0.8) }}>
-          {TeoLogo(preset.caption * 6)}
-        </div>
-        <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
-          <span style={{ fontSize: preset.caption, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#a6c8ff' }}>
-            {total > 1 ? `Lámina ${idx + 1} de ${total}` : 'RPM Ministry'}
-          </span>
-          <span style={{ fontSize: preset.caption * 0.85, color: '#8fb2e8' }}>Nivel {preset.nombre} · piso legible {PISO_LEGIBILIDAD.cuerpo}px</span>
-        </div>
+        {total > 1 ? (
+          <div style={{ position: 'absolute', right: m.safeLateral, background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.45)', color: '#ffffff', fontWeight: 800, fontSize: preset.caption, borderRadius: 999, padding: `${Math.round(preset.caption * 0.28)}px ${Math.round(preset.caption * 0.75)}px` }}>
+            {idx + 1}/{total}
+          </div>
+        ) : null}
       </div>
     </div>
   )
@@ -609,7 +602,7 @@ export function ResponsiveInfografia({ data }: { data: InfografiaData }) {
         ))}
       </div>
       <p style={{ marginTop: 8, fontSize: 12, color: '#6f6f6f', textAlign: 'center' }}>
-        {total > 1 ? `Carrusel de ${total} imágenes 9:16 (1080×1920)` : 'Infografía 9:16 (1080×1920)'} · Nivel de densidad {PRESETS[plan.nivel].nombre} · piso legible {PISO_LEGIBILIDAD.cuerpo}px
+        {total > 1 ? `Carrusel de ${total} imágenes 9:16 (1080×1920)` : 'Infografía 9:16 (1080×1920)'}
       </p>
     </div>
   )

@@ -95,9 +95,26 @@ comprobar('Franjas superior/inferior funcionales y ≤15% (sin color vacío)', (
   assert.ok(layout.includes('SAFE_ZONE_STORY_TOP = 0.12'), 'franja superior mayor al 12%');
   assert.ok(layout.includes('SAFE_ZONE_STORY_BOTTOM = 0.14'), 'franja inferior mayor al 14%');
   assert.ok(infografia.includes('FRANJA SUPERIOR (funcional'), 'la franja superior no declara contenido funcional');
-  assert.ok(infografia.includes('TeoLogo(preset.caption * 8.5)'), 'la franja superior no lleva logo');
+  assert.ok(infografia.includes('TeoIcono('), 'la franja superior no lleva icono de marca');
   assert.ok(infografia.includes('fecha'), 'la franja superior no lleva fecha');
   assert.ok(infografia.includes('FRANJA INFERIOR (funcional'), 'la franja inferior no declara contenido funcional');
+});
+
+comprobar('Textos eliminados y sin truncado en la infografía', () => {
+  assert.ok(!infografia.includes('RPM Ministry'), 'aún aparece "RPM Ministry"');
+  assert.ok(!infografia.includes('piso legible'), 'aún aparece "piso legible"');
+  assert.ok(!infografia.includes('Nivel {preset.nombre}'), 'aún aparece el nivel de densidad');
+  // El tema superior no se trunca con "…".
+  assert.ok(!infografia.includes('resumir(temaNombre'), 'el tema superior sigue truncándose');
+  assert.ok(!infografia.includes('resumir(entrada.fraseRecordar, 60)'), 'la frase del encabezado sigue truncándose');
+  // El wordmark de texto se eliminó (icono sin la palabra "TeoDoc").
+  assert.ok(!/<text/.test(infografia.slice(infografia.indexOf('function TeoIcono'), infografia.indexOf('function TeoIcono') + 1600)), 'el logo conserva el wordmark de texto');
+});
+
+comprobar('PDF: sin recorte a mitad de idea y sin solape de etiquetas', () => {
+  assert.ok(page.includes('recortarEnOracion'), 'sin recorte por oración (aparecería "…")');
+  assert.ok(page.includes('labelTextW'), 'las etiquetas no miden su ancho real');
+  assert.ok(page.includes('const apilado'), 'las etiquetas anchas no pasan a su propia línea');
 });
 
 comprobar('Infografía: relleno útil de holgura (nunca color plano)', () => {

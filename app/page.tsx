@@ -990,6 +990,20 @@ export default function Home() {
       if (y + needed > bottomY) nuevaPagina();
     };
 
+    // Nunca corta a mitad de idea: si el texto excede el máximo, recorta en el
+    // último cierre de oración; si no lo hay, muestra el texto completo. Evita
+    // el "…" que dejaba frases a medias en DESARROLLO BÍBLICO.
+    const recortarEnOracion = (texto: string, max: number): string => {
+      const t = String(texto || '').replace(/\s+/g, ' ').trim();
+      if (t.length <= max) return t;
+      const corte = t.slice(0, max);
+      const fin = Math.max(corte.lastIndexOf('. '), corte.lastIndexOf('! '), corte.lastIndexOf('? '));
+      if (fin >= max * 0.4) return corte.slice(0, fin + 1).trim();
+      const punto = Math.max(corte.lastIndexOf('.'), corte.lastIndexOf('!'), corte.lastIndexOf('?'));
+      if (punto >= max * 0.4) return corte.slice(0, punto + 1).trim();
+      return t;
+    };
+
     // ------------------ ENCABEZADO COMPACTO (masthead, mismo flujo) ------------------
     setFill(C.accent); doc.rect(0, 0, pageW, headerBandY, 'F');
     doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); setText(C.sub);
@@ -1006,7 +1020,7 @@ export default function Home() {
 
     if (resultado.idea_principal) {
       doc.setFont('helvetica', 'italic'); doc.setFontSize(12.5); setText(C.sub);
-      const ideaLines = doc.splitTextToSize(`“${resumir(resultado.idea_principal, 260)}”`, contentW);
+      const ideaLines = doc.splitTextToSize(`“${recortarEnOracion(resultado.idea_principal, 420)}”`, contentW);
       doc.text(ideaLines, margin, y);
       y += ideaLines.length * 17 + 10;
     }
@@ -1039,7 +1053,7 @@ export default function Home() {
       const font = opts?.italic ? 'italic' : opts?.bold ? 'bold' : 'normal';
       const indent = opts?.indent ?? 0;
       doc.setFont('helvetica', font); doc.setFontSize(size); setText(opts?.color ?? C.sub);
-      const lines = doc.splitTextToSize(resumir(txt, opts?.max ?? 900), contentW - indent);
+      const lines = doc.splitTextToSize(recortarEnOracion(txt, opts?.max ?? 900), contentW - indent);
       // Evita dejar una sola línea colgando al final de la página.
       if (lines.length > 1) ensure(lead * 2);
       for (const line of lines) {
@@ -1056,7 +1070,7 @@ export default function Home() {
       const innerW = contentW - 30;
       const innerX = margin + 15;
       doc.setFont('helvetica', 'italic'); doc.setFontSize(9.8);
-      const body: string[] = doc.splitTextToSize(`“${resumir(texto, 240)}”`, innerW);
+      const body: string[] = doc.splitTextToSize(`“${recortarEnOracion(texto, 700)}”`, innerW);
       const padTop = 14;
       const citaH = cita ? 15 : 0;
       const h = padTop + citaH + body.length * 13 + 12;
@@ -1086,16 +1100,31 @@ export default function Home() {
     };
 
     const metaRow = (label: string, value: string) => {
-      const labelW = 98;
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(10.5);
-      const lines = doc.splitTextToSize(value, contentW - labelW - 6);
-      const h = Math.max(lines.length, 1) * 14;
-      ensure(h + 8);
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(9); setText(C.sub);
-      doc.text(label.toUpperCase(), margin, y);
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(10.5); setText(C.ink);
-      doc.text(lines, margin + labelW, y);
-      y += h + 8;
+      const LABEL_FONT = 9;
+      const VALUE_FONT = 10.5;
+      const labelUpper = label.toUpperCase();
+      // Ancho REAL de la etiqueta. Si es ancha (p. ej. "RELACIÓN ENTRE TEXTOS"),
+      // pasa a su propia línea para no invadir nunca el texto de la derecha.
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(LABEL_FONT);
+      const labelTextW = doc.getTextWidth(labelUpper);
+      const anchoEtiqueta = Math.min(contentW * 0.42, Math.max(94, labelTextW + 12));
+      const apilado = labelTextW > anchoEtiqueta - 6;
+
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(VALUE_FONT);
+      const anchoValor = apilado ? contentW : contentW - anchoEtiqueta - 8;
+      const lines: string[] = doc.splitTextToSize(value, anchoValor);
+      const hValor = Math.max(lines.length, 1) * 14;
+      const h = (apilado ? 15 : 0) + hValor;
+
+      ensure(h + 10);
+      const top = y;
+
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(LABEL_FONT); setText(C.sub);
+      doc.text(labelUpper, margin, top);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(VALUE_FONT); setText(C.ink);
+      if (apilado) doc.text(lines, margin, top + 15);
+      else doc.text(lines, margin + anchoEtiqueta, top);
+      y = top + h + 10;
     };
 
     // Etiquetas tipo "chip" con salto de página seguro: se reserva la fila
@@ -1134,11 +1163,11 @@ export default function Home() {
     // 3. Desarrollo bíblico
     heading('Desarrollo bíblico', 130);
     if (pdfTextoPasaje) quoteBlock(pdfPasaje, pdfTextoPasaje);
-    if (pdfContexto) paragraph(pdfContexto, { max: 320 });
-    if (resultado.contexto_historico) metaRow('Contexto histórico', resumir(resultado.contexto_historico, 240));
-    if (resultado.contexto_literario) metaRow('Contexto literario', resumir(resultado.contexto_literario, 240));
-    if (resultado.relacion_textos) metaRow('Relación entre textos', resumir(resultado.relacion_textos, 260));
-    if (resultado.interpretacion) paragraph(`Interpretación presentada por el expositor: ${resumir(resultado.interpretacion, 360)}`, { italic: true, color: C.ink });
+    if (pdfContexto) paragraph(pdfContexto, { max: 700 });
+    if (resultado.contexto_historico) metaRow('Contexto histórico', recortarEnOracion(resultado.contexto_historico, 260));
+    if (resultado.contexto_literario) metaRow('Contexto literario', recortarEnOracion(resultado.contexto_literario, 260));
+    if (resultado.relacion_textos) metaRow('Relación entre textos', recortarEnOracion(resultado.relacion_textos, 300));
+    if (resultado.interpretacion) paragraph(`Interpretación presentada por el expositor: ${recortarEnOracion(resultado.interpretacion, 620)}`, { italic: true, color: C.ink });
     const referencias = Array.from(new Set([
       ...((resultado.otros_textos || []).map((v) => v.cita)),
       ...listaPuntos.flatMap((p) => (p.versiculos || []).map((v) => v.cita)),

@@ -281,12 +281,11 @@ function figura(id: IlustracionId, base: string, dark: string, soft: string): Re
     default:
       return (
         <>
-          <path d="M60 40c-12-9-28-9-38-4v50c10-5 26-5 38 4z" fill={soft} stroke={base} strokeWidth="5" />
-          <path d="M60 40c12-9 28-9 38-4v50c-10-5-26-5-38 4z" fill={soft} stroke={base} strokeWidth="5" />
-          <path {...trazo} d="M60 40v50" />
-          <g stroke={base} strokeWidth="4" strokeLinecap="round" opacity="0.6">
-            <path d="M34 54h14M34 66h14M72 54h14M72 66h14" />
-          </g>
+          <path d="M60 34c-10-7-24-8-36-4v54c12-4 26-3 36 4z" fill="#ffffff" stroke={base} strokeWidth="6" strokeLinejoin="round" />
+          <path d="M60 34c10-7 24-8 36-4v54c-12-4-26-3-36 4z" fill={soft} stroke={base} strokeWidth="6" strokeLinejoin="round" />
+          <path d="M60 34v58" stroke={dark} strokeWidth="5" strokeLinecap="round" />
+          <path d="M32 48h16M32 60h16M72 48h16M72 60h16" stroke={base} strokeWidth="5" strokeLinecap="round" />
+          <path d="M60 16v10" stroke={dark} strokeWidth="5" strokeLinecap="round" />
         </>
       )
   }
