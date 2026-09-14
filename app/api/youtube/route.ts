@@ -11,9 +11,9 @@ export const dynamic = 'force-dynamic';
 const MENSAJES: Record<TranscriptErrorCode, string> = {
   url_invalida: 'El enlace no parece ser de YouTube. Revisa que sea un enlace válido del video.',
   sin_subtitulos:
-    'No encontramos una transcripción disponible para este video. Puedes intentar con otra prédica o subir directamente el audio a TeoDoc.',
+    'No encontramos una transcripción disponible para este video. Puedes intentar con otro mensaje o subir directamente el audio a TeoDoc.',
   sin_transcripcion:
-    'No encontramos una transcripción disponible para este video. Puedes intentar con otra prédica o subir directamente el audio a TeoDoc.',
+    'No encontramos una transcripción disponible para este video. Puedes intentar con otro mensaje o subir directamente el audio a TeoDoc.',
   bloqueado:
     'No pudimos obtener la transcripción de este video en este momento. Puedes probar con otro video o subir directamente el audio.',
   video_no_disponible: 'Este video no está disponible o es privado. Prueba con otro enlace.',

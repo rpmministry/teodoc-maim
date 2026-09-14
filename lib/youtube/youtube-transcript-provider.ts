@@ -17,7 +17,7 @@ import {
 import { fetchYouTubeOembed } from './oembed';
 
 // Prioridad de idioma: español y sus variantes; luego el primer track disponible
-// (si la prédica está en otro idioma, el análisis actual igual puede procesarla).
+// (si el mensaje está en otro idioma, el análisis actual igual puede procesarlo).
 const LANGUAGES = ['es', 'es-419', 'es-ES', 'es-MX', 'es-US'];
 
 // Cabeceras tipo navegador: reducen bloqueos de YouTube en entornos cloud.

@@ -8,7 +8,7 @@ export const maxDuration = 30;
 export const dynamic = 'force-dynamic';
 
 // Filtro duro MUY bajo: solo atrapa audios accidentales/silencio/palabras
-// aisladas. No rechaza prédicas cortas o con pausas (eso lo decide la IA).
+// aisladas. No rechaza mensajes cortos o con pausas (eso lo decide la IA).
 const MIN_PALABRAS = 12;
 const MAX_CHARS_VALIDACION = 40_000;
 const MAX_CONTENT_LENGTH = 1_000_000;
@@ -33,8 +33,8 @@ const SCHEMA = {
   required: ['valido', 'motivo'],
 };
 
-const SYSTEM_PROMPT = `Eres un filtro de admisión amable y LENIENTE para TeoDoc, una app que analiza prédicas y enseñanzas cristianas evangélicas.
-Decide si la transcripción recibida puede analizarse como una prédica/enseñanza cristiana.
+const SYSTEM_PROMPT = `Eres un filtro de admisión amable y LENIENTE para TeoDoc, una app que analiza mensajes y enseñanzas cristianas evangélicas.
+Decide si la transcripción recibida puede analizarse como un mensaje/enseñanza cristiana.
 
 Marca valido=false SOLO en estos dos casos:
 1) motivo="corto": casi no hay contenido útil. Ruido, silencio, audio accidental, frases inconexas o palabras aisladas sin un mensaje comprensible.
@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ valido: true, motivo: 'valido' as MotivoValidacion });
     }
 
-    // Cuerpo desmesurado: no lo procesamos (fail-open, no bloquea prédicas).
+    // Cuerpo desmesurado: no lo procesamos (fail-open, no bloquea mensajes).
     const len = Number(req.headers.get('content-length') || 0);
     if (Number.isFinite(len) && len > MAX_CONTENT_LENGTH) {
       return NextResponse.json({ valido: true, motivo: 'valido' as MotivoValidacion });
@@ -90,7 +90,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Evaluación de contenido (leniente). Si la IA falla, NO bloqueamos:
-    // la prioridad es no rechazar una prédica válida.
+    // la prioridad es no rechazar un mensaje válido.
     const resultado = await clasificarConGemini(text.slice(0, 8000));
     if (!resultado) return NextResponse.json({ valido: true, motivo: 'valido' as MotivoValidacion });
 

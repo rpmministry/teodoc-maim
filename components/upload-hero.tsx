@@ -44,7 +44,7 @@ export function UploadHero({ onAnalyze, status, error }: UploadHeroProps) {
           TeoDoc
         </h1>
         <p className="mt-2 text-balance text-base font-medium tracking-tight text-accent-foreground sm:mt-3 sm:text-xl md:text-2xl">
-          Analizador de Prédicas
+          Analizador de Mensajes
         </p>
         <p className="mt-4 max-w-2xl text-pretty text-sm leading-relaxed text-muted-foreground sm:mt-5 sm:text-lg">
           Sube el audio de una enseñanza y recibe un reporte infográfico claro: la idea principal, el desarrollo con sus

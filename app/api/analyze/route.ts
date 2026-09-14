@@ -2,6 +2,7 @@
 import { Type } from '@google/genai';
 import { NextRequest, NextResponse } from 'next/server';
 import { delay, extraerJSON, generarJsonConGemini } from '@/lib/ai-gemini';
+import { contextoRiqueza } from '@/lib/riqueza-contenido';
 
 // Margen amplio para encadenar todos los respaldos (gratuitos y de pago).
 export const maxDuration = 300;
@@ -12,32 +13,48 @@ export const dynamic = 'force-dynamic';
 // extensión de las secciones dependen del contenido real, nunca de una
 // plantilla fija ni de relleno artificial.
 // ---------------------------------------------------------------------------
-const REGLA_PROFUNDIDAD = `PROFUNDIDAD DINÁMICA (regla central):
-- La profundidad la determina el CONTENIDO REAL: duración, cantidad de información, número de ideas, complejidad del desarrollo y cantidad de referencias bíblicas.
-- Una enseñanza breve produce un análisis breve; una conferencia extensa y densa produce un análisis amplio.
+const REGLA_PROFUNDIDAD = `PROFUNDIDAD PROPORCIONAL AL CONTENIDO (regla central):
+- La profundidad la determina el CONTENIDO REAL: extensión, cantidad de información, número de ideas, densidad teológica, diversidad temática y cantidad de referencias bíblicas. La duración es un indicador SECUNDARIO, nunca el único.
+- Relación a buscar: extensión + densidad + diversidad de ideas + importancia teológica = profundidad del análisis.
+- Mensaje breve → análisis breve pero completo; mensaje medio → análisis medio; mensaje extenso → análisis amplio; mensaje teológicamente denso → análisis más profundo.
+- El contenido repetitivo NO se duplica: si una idea se repite, se sintetiza una sola vez.
 - NUNCA rellenes secciones para alargar el resultado ni recortes contenido real para acortarlo.
-- Si una categoría NO está realmente presente en la enseñanza, devuélvela vacía ("" o []) y NO la inventes.`;
+- Si una categoría NO está realmente presente en el mensaje, devuélvela vacía ("" o []) y NO la inventes.`;
 
 const REGLA_PUNTOS = `CAMPO "desarrollo_progresivo" (temas principales):
-- La cantidad de puntos debe surgir del CONTENIDO REAL. Puede haber 2, 3, 4, 5, 6, 7 o más según lo que verdaderamente enseñe la prédica.
+- La cantidad de puntos debe surgir del CONTENIDO REAL. Puede haber 2, 3, 4, 5, 6, 7, 8, 10 o más según lo que verdaderamente enseñe el mensaje.
 - NO asumas 3, NO fuerces una cantidad fija, NO agregues puntos para completar.
 - Cada punto es un gran bloque de enseñanza, sustantivo y distinto. "punto" es el TÍTULO del tema; "explicacion" es su desarrollo fiel a lo enseñado.
-- La duración del audio NO determina el número de puntos; lo determina la cantidad de ideas principales.`;
+- La duración del audio NO determina el número de puntos; lo determina la cantidad de ideas principales y argumentos reales.
+- Cuando el contenido lo justifique, cada punto puede incluir varios "subtemas" que desglosen subpuntos o argumentos.`;
+
+const REGLA_NIVELES = `NIVELES DE PROFUNDIDAD (guía orientativa, NO plantilla):
+- Mensaje breve: 2 a 3 puntos principales; sin subtemas forzados.
+- Mensaje medio: 3 a 6 puntos; subtemas cuando existan realmente.
+- Enseñanza extensa: 5 a 9 puntos con subtemas y más referencias bíblicas.
+- Conferencia densa o muy extensa: 7 a 12 o más puntos si el contenido realmente los sostiene.
+- Estos rangos son orientativos: si el contenido sostiene menos, devuelve menos; si sostiene más, devuelve más. Nunca inventes puntos para alcanzar un rango.`;
+
+const REGLA_GENERAL = `CAMPOS "proposito" y "contexto_general":
+- "proposito": para qué se dio el mensaje (edificación, exhortación, enseñanza, evangelización, consuelo, corrección, etc.), según lo que el propio contenido revela.
+- "contexto_general": situación, ocasión o marco en que se presenta el mensaje, si el contenido lo permite.
+- Si no hay evidencia suficiente, devuélvelos vacíos ("").`;
 
 const REGLA_SUBTEMAS = `CAMPO "subtemas" (dentro de cada punto):
 - Incluye subtemas SOLO cuando el contenido realmente los desarrolle dentro de ese tema.
 - Cada subtema tiene "titulo" y "desarrollo" breve. Si el tema no tiene subtemas reales, devuelve [] (no inventes para llenar).`;
 
 const REGLA_BIBLICA = `ANÁLISIS BÍBLICO:
-- Cuando la enseñanza use pasajes, identifica libro, capítulo y versículos en "cita" (por ejemplo "Romanos 8:28").
-- El "texto" de cada versículo debe ser fiel a la Reina-Valera 1960.
-- "texto_biblico_principal" es el pasaje central que sostiene la enseñanza; si no hay uno claro, devuélvelo vacío.
-- Diferencia lo que la enseñanza AFIRMA de lo que solo se puede inferir del contenido. Nunca presentes interpretaciones externas como si el predicador las hubiera dicho.`;
+- "texto_biblico_principal" es el pasaje central que sostiene el mensaje; si no hay uno claro, devuélvelo vacío.
+- "otros_textos" reúne los demás pasajes realmente usados, con su "cita" (libro, capítulo y versículo) y su "texto" fiel a la Reina-Valera 1960.
+- Registra SOLO si el mensaje lo permite: "contexto_historico", "contexto_literario", "contexto_biblico" y "relacion_textos" (cómo se conectan los pasajes entre sí).
+- "interpretacion" es la lectura o explicación que EL EXPOSITOR presenta del pasaje. Nunca presentes interpretaciones externas como si el expositor las hubiera dicho.
+- Diferencia lo que el mensaje AFIRMA de lo que solo se puede inferir del contenido.`;
 
-const REGLA_ENSENANZAS = `CAMPO "ensenanzas" (enseñanzas fundamentales):
-- Registra QUÉ enseña el contenido acerca de: Dios, Cristo, el Espíritu Santo, la salvación, la fe, la iglesia, el creyente o la vida cristiana.
+const REGLA_ENSENANZAS = `CAMPO "ensenanzas" (enseñanza y doctrina):
+- Registra QUÉ enseña el contenido acerca de: Dios, Cristo (cristología), el Espíritu Santo (pneumatología), la salvación, el pecado, la gracia, la fe, el arrepentimiento, la santificación, la iglesia, el evangelio, el Reino de Dios, la escatología, la vida cristiana, el discipulado, la misión y cualquier otra doctrina realmente presente.
 - Incluye SOLO las categorías realmente presentes. "sobre" es una etiqueta corta (por ejemplo "Dios", "Cristo", "la fe"); "ensenanza" es una frase clara y fiel al contenido.
-- Si ninguna categoría está presente, devuelve [].`;
+- No inventes doctrina que el mensaje no sustente. Si ninguna categoría está presente, devuelve [].`;
 
 const REGLA_CONCEPTOS = `CAMPO "conceptos_clave":
 - Devuelve de 5 a 8 conceptos teológicos o temas REALES que aparezcan en el contenido.
@@ -50,21 +67,24 @@ const REGLA_CONCEPTOS_TEOLOGICOS = `CAMPO "conceptos_teologicos":
 - No conviertas esto en una lista automática: si no hay conceptos sustentados, devuelve [].`;
 
 const REGLA_INFOGRAFIA = `CAMPO "infografia" (resumen visual para redes sociales, NO es el PDF):
-- Debe ser una síntesis MUY condensada y visual, resultado de una segunda selección editorial.
+- Debe ser una síntesis condensada y visual, resultado de una segunda selección editorial del mensaje.
 - "mensaje_central": la idea principal en una sola frase.
 - "verdad_principal": la enseñanza fundamental que resume el mensaje.
-- "grandes_ensenanzas": SOLO las 3 a 6 más importantes; cada una con "titulo" breve y "descripcion" de 1 a 2 líneas. No traslades el desarrollo completo del PDF.
+- "grandes_ensenanzas": entre 2 y 10 según la riqueza REAL del mensaje (breve: 2-3; medio: 4-6; extenso o denso: 6-10). Cada una con "titulo" breve y "descripcion" de 1 a 2 líneas. No traslades el desarrollo completo del PDF.
 - "palabras_clave": los conceptos más representativos para comunicación visual (no tienen que ser los mismos del PDF).
-- "frase_recordar": una frase breve derivada de la enseñanza, apta como mensaje para redes.
+- "conexiones_biblicas": pares de referencias (cita y texto) que el mensaje relaciona entre sí, SOLO si existen realmente.
+- "frase_recordar": una frase breve derivada del mensaje, apta como mensaje para redes.
 - "frase_corta": un titular impactante y corto. "texto_clave": el pasaje bíblico clave. "contexto_breve": una línea de contexto.
 - NO incluyas oración, motivos de oración ni aplicación devocional en la infografía.`;
 
 const REGLA_CONCLUSION = `CAMPO "conclusion":
-- Síntesis final breve (pocas frases) que responde: ¿cuál es el mensaje fundamental que el creyente debería llevarse tras estudiar esta enseñanza?
+- Síntesis final breve (pocas frases) que responde: ¿cuál es el mensaje fundamental que el creyente debería llevarse tras estudiar este mensaje?
 - Si el contenido no permite una conclusión sustentada, devuélvela vacía ("").`;
 
 const REGLAS_ANALISIS = `${REGLA_PROFUNDIDAD}
+${REGLA_NIVELES}
 ${REGLA_PUNTOS}
+${REGLA_GENERAL}
 ${REGLA_SUBTEMAS}
 ${REGLA_BIBLICA}
 ${REGLA_ENSENANZAS}
@@ -73,13 +93,20 @@ ${REGLA_CONCEPTOS_TEOLOGICOS}
 ${REGLA_CONCLUSION}
 ${REGLA_INFOGRAFIA}`;
 
-const SYSTEM_PROMPT = `Eres un analista teológico conservador de tradición cristiana evangélica. Analiza la transcripción de la prédica, enseñanza o conferencia y devuelve ÚNICAMENTE un objeto JSON válido (sin markdown fuera del JSON) con esta estructura exacta:
+const SYSTEM_PROMPT = `Eres un analista teológico conservador de tradición cristiana evangélica. Analiza la transcripción de un mensaje, enseñanza o conferencia y devuelve ÚNICAMENTE un objeto JSON válido (sin markdown fuera del JSON) con esta estructura exacta:
     {
       "titulo": "...",
       "idea_principal": "...",
       "tema_principal": "...",
+      "proposito": "...",
+      "contexto_general": "...",
       "texto_biblico_principal": { "cita": "...", "texto": "..." },
+      "otros_textos": [ { "cita": "...", "texto": "..." } ],
       "contexto_biblico": "...",
+      "contexto_historico": "...",
+      "contexto_literario": "...",
+      "relacion_textos": "...",
+      "interpretacion": "...",
       "desarrollo_progresivo": [
         {
           "punto": "...",
@@ -102,9 +129,11 @@ const SYSTEM_PROMPT = `Eres un analista teológico conservador de tradición cri
         "verdad_principal": "...",
         "grandes_ensenanzas": [ { "titulo": "...", "descripcion": "..." } ],
         "palabras_clave": ["fe", "gracia"],
+        "conexiones_biblicas": [ { "cita": "...", "texto": "..." } ],
         "frase_recordar": "..."
       }
     }
+    Al referirte a quien comunica el mensaje usa "el expositor" (o "el orador"); nunca "el predicador".
     Usa Reina-Valera 1960 para todos los versículos bíblicos.
     ${REGLAS_ANALISIS}`;
 
@@ -116,12 +145,26 @@ const SCHEMA_CONFIG = {
     titulo: { type: Type.STRING },
     idea_principal: { type: Type.STRING },
     tema_principal: { type: Type.STRING },
+    proposito: { type: Type.STRING },
+    contexto_general: { type: Type.STRING },
     texto_biblico_principal: {
       type: Type.OBJECT,
       properties: { cita: { type: Type.STRING }, texto: { type: Type.STRING } },
       required: ['cita', 'texto'],
     },
+    otros_textos: {
+      type: Type.ARRAY,
+      items: {
+        type: Type.OBJECT,
+        properties: { cita: { type: Type.STRING }, texto: { type: Type.STRING } },
+        required: ['cita', 'texto'],
+      },
+    },
     contexto_biblico: { type: Type.STRING },
+    contexto_historico: { type: Type.STRING },
+    contexto_literario: { type: Type.STRING },
+    relacion_textos: { type: Type.STRING },
+    interpretacion: { type: Type.STRING },
     desarrollo_progresivo: {
       type: Type.ARRAY,
       items: {
@@ -186,6 +229,14 @@ const SCHEMA_CONFIG = {
           },
         },
         palabras_clave: { type: Type.ARRAY, items: { type: Type.STRING } },
+        conexiones_biblicas: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: { cita: { type: Type.STRING }, texto: { type: Type.STRING } },
+            required: ['cita', 'texto'],
+          },
+        },
         frase_recordar: { type: Type.STRING },
       },
       required: [
@@ -296,7 +347,7 @@ function normalizarEnsenanzas(valor: unknown): Array<{ sobre: string; ensenanza:
   return valor
     .map((e: any) => ({ sobre: texto(e?.sobre), ensenanza: texto(e?.ensenanza) }))
     .filter((e) => e.ensenanza)
-    .slice(0, 10);
+    .slice(0, 12);
 }
 
 function normalizarConceptosTeologicos(valor: unknown): Array<{ concepto: string; significado: string }> {
@@ -344,7 +395,7 @@ function primeraFrase(entrada: string, max: number): string {
 function derivarGrandesEnsenanzas(puntos: Array<{ punto: string; explicacion: string }>): Array<{ titulo: string; descripcion: string }> {
   return puntos
     .filter((p) => p.punto || p.explicacion)
-    .slice(0, 6)
+    .slice(0, 10)
     .map((p) => {
       const tituloBase = p.punto.split(/[.:;—–-]/)[0].trim() || p.punto;
       return {
@@ -363,7 +414,7 @@ function normalizarGrandesEnsenanzas(
     const lista = valor
       .map((g: any) => ({ titulo: texto(g?.titulo), descripcion: texto(g?.descripcion) }))
       .filter((g) => g.titulo || g.descripcion)
-      .slice(0, 6);
+      .slice(0, 10);
     if (lista.length) return lista;
   }
   return fallback;
@@ -392,11 +443,18 @@ function normalizarAnalisis(datos: any) {
   const textoBiblicoFinal = textoBiblico.cita || textoBiblico.texto ? textoBiblico : pasajeFallback;
 
   return {
-    titulo: texto(datos?.titulo) || 'Análisis de la prédica',
+    titulo: texto(datos?.titulo) || 'Análisis del mensaje',
     idea_principal: texto(datos?.idea_principal),
     tema_principal: texto(datos?.tema_principal),
+    proposito: texto(datos?.proposito),
+    contexto_general: texto(datos?.contexto_general),
     texto_biblico_principal: textoBiblicoFinal,
+    otros_textos: normalizarVersiculos(datos?.otros_textos),
     contexto_biblico: texto(datos?.contexto_biblico),
+    contexto_historico: texto(datos?.contexto_historico),
+    contexto_literario: texto(datos?.contexto_literario),
+    relacion_textos: texto(datos?.relacion_textos),
+    interpretacion: texto(datos?.interpretacion),
     desarrollo_progresivo: puntos,
     ensenanzas: normalizarEnsenanzas(datos?.ensenanzas),
     conceptos_clave: conceptoFinal,
@@ -413,15 +471,19 @@ function normalizarAnalisis(datos: any) {
       grandes_ensenanzas: grandesEnsenanzas,
       palabras_clave: palabrasClave.length ? palabrasClave : conceptoFinal.slice(0, 6),
       frase_recordar: fraseRecordar,
+      conexiones_biblicas: normalizarVersiculos(infografia?.conexiones_biblicas),
     },
   };
 }
 
+// Clasificación de riqueza: ver lib/riqueza-contenido.ts (lógica pura y
+// verificable). El contenido real siempre manda sobre estas métricas.
+
 // Motor principal: Gemini (contexto amplio y respuesta rápida con salida JSON).
-async function analizarConGemini(text: string): Promise<any | null> {
+async function analizarConGemini(text: string, contexto: string): Promise<any | null> {
   return generarJsonConGemini({
-    contents: `Analiza esta transcripción de prédica y extrae el desglose teológico completo en JSON:\n\n${text}`,
-    systemInstruction: `Eres un analista teológico conservador de tradición cristiana evangélica. Usa Reina-Valera 1960. Responde con un JSON estrictamente estructurado según el esquema. No inventes contenido que la prédica no sostenga.\n${REGLAS_ANALISIS}`,
+    contents: `Analiza esta transcripción y extrae el desglose teológico completo en JSON:\n\n${text}`,
+    systemInstruction: `Eres un analista teológico conservador de tradición cristiana evangélica. Usa Reina-Valera 1960. Responde con un JSON estrictamente estructurado según el esquema. No inventes contenido que el mensaje no sostenga.\nAl referirte a quien comunica el mensaje usa "el expositor" (o "el orador"), nunca "el predicador".\n${contexto}\n${REGLAS_ANALISIS}`,
     responseSchema: SCHEMA_CONFIG,
     retryDelayMs: 1200,
     onError: (modelo, msg) => console.warn(`[Gemini Falló - ${modelo}]:`, msg),
@@ -429,7 +491,7 @@ async function analizarConGemini(text: string): Promise<any | null> {
 }
 
 // Respaldo: OpenRouter con modelos gratuitos.
-async function analizarConOpenRouter(text: string): Promise<any | null> {
+async function analizarConOpenRouter(text: string, contexto: string): Promise<any | null> {
   let modelos = MODELOS_OPENROUTER_DEFAULT;
   try {
     const resModels = await fetch('https://openrouter.ai/api/v1/models');
@@ -456,7 +518,7 @@ async function analizarConOpenRouter(text: string): Promise<any | null> {
         },
         body: JSON.stringify({
           model: modelo,
-          messages: [{ role: 'system', content: SYSTEM_PROMPT }, { role: 'user', content: `Transcripción:\n\n${text}` }],
+          messages: [{ role: 'system', content: `${SYSTEM_PROMPT}\n${contexto}` }, { role: 'user', content: `Transcripción:\n\n${text}` }],
           temperature: 0.3,
         }),
       });
@@ -480,7 +542,7 @@ const DEEPSEEK_TIMEOUT_MS = 90_000;
 
 // Último recurso: DeepSeek (de pago). Solo se usa cuando TODOS los modelos
 // gratuitos fallaron, para que el análisis nunca se quede sin respuesta.
-async function analizarConDeepSeek(text: string): Promise<any | null> {
+async function analizarConDeepSeek(text: string, contexto: string): Promise<any | null> {
   const apiKey = process.env.DEEPSEEK_API_KEY;
   if (!apiKey) {
     console.warn('[DeepSeek] Sin DEEPSEEK_API_KEY: se omite el respaldo de pago.');
@@ -499,7 +561,7 @@ async function analizarConDeepSeek(text: string): Promise<any | null> {
       body: JSON.stringify({
         model: DEEPSEEK_MODEL,
         messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
+          { role: 'system', content: `${SYSTEM_PROMPT}\n${contexto}` },
           { role: 'user', content: `Transcripción:\n\n${text}` },
         ],
         temperature: 0.3,
@@ -537,12 +599,13 @@ export async function POST(req: NextRequest) {
     }
 
     console.log(`[Análisis] Texto recibido (${text.length} caracteres)`);
+    const contexto = contextoRiqueza(text);
 
     // 1) Gemini (gratuito, motor principal). 2) OpenRouter (gratuito).
     // 3) DeepSeek (de pago, solo si todo lo gratuito falla).
-    let jsonResult = await analizarConGemini(text);
-    if (!jsonResult) jsonResult = await analizarConOpenRouter(text);
-    if (!jsonResult) jsonResult = await analizarConDeepSeek(text);
+    let jsonResult = await analizarConGemini(text, contexto);
+    if (!jsonResult) jsonResult = await analizarConOpenRouter(text, contexto);
+    if (!jsonResult) jsonResult = await analizarConDeepSeek(text, contexto);
 
     if (!jsonResult) {
       // 503 = transitorio: la app lo traduce a un mensaje amigable y permite reintentar.

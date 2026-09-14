@@ -17,6 +17,7 @@ interface DatosInfografia {
   grandes_ensenanzas: GranEnsenanza[];
   palabras_clave: string[];
   frase_recordar: string;
+  conexiones_biblicas?: Versiculo[];
 }
 type AvisoAudio = 'corto' | 'no_relacionado';
 
@@ -50,7 +51,7 @@ function primeraFraseCliente(entrada: string, max: number): string {
 function derivarGrandesEnsenanzasCliente(puntos: PuntoDesarrollo[]): GranEnsenanza[] {
   return puntos
     .filter((p) => p.punto || p.explicacion)
-    .slice(0, 6)
+    .slice(0, 10)
     .map((p) => ({
       titulo: primeraFraseCliente(p.punto.split(/[.:;—–-]/)[0].trim() || p.punto, 60),
       descripcion: primeraFraseCliente(p.explicacion, 170),
@@ -108,17 +109,33 @@ function normalizarAnalisisCliente(d: any): PredicaAnalisis {
     ? info.grandes_ensenanzas
         .map((g: any) => ({ titulo: String(g?.titulo || '').trim(), descripcion: String(g?.descripcion || '').trim() }))
         .filter((g: any) => g.titulo || g.descripcion)
-        .slice(0, 6)
+        .slice(0, 10)
     : [];
   const grandes = grandesBase.length ? grandesBase : derivarGrandesEnsenanzasCliente(puntos);
   const palabrasClave = normalizarConceptosCliente(info?.palabras_clave, 6);
+  const normalizarVersiculosCliente = (valor: unknown): Versiculo[] =>
+    Array.isArray(valor)
+      ? valor
+          .map((item) => {
+            const v = item as { cita?: unknown; texto?: unknown };
+            return { cita: String(v?.cita || '').trim(), texto: String(v?.texto || '').trim() };
+          })
+          .filter((v) => v.cita || v.texto)
+      : [];
 
   return {
-    titulo: String(d?.titulo || 'Análisis de la prédica').trim(),
+    titulo: String(d?.titulo || 'Análisis del mensaje').trim(),
     idea_principal: String(d?.idea_principal || '').trim(),
     tema_principal: String(d?.tema_principal || '').trim(),
+    proposito: String(d?.proposito || '').trim(),
+    contexto_general: String(d?.contexto_general || '').trim(),
     texto_biblico_principal: textoBiblico,
+    otros_textos: normalizarVersiculosCliente(d?.otros_textos),
     contexto_biblico: String(d?.contexto_biblico || '').trim(),
+    contexto_historico: String(d?.contexto_historico || '').trim(),
+    contexto_literario: String(d?.contexto_literario || '').trim(),
+    relacion_textos: String(d?.relacion_textos || '').trim(),
+    interpretacion: String(d?.interpretacion || '').trim(),
     infografia: {
       frase_corta: fraseCorta,
       texto_clave: String(info?.texto_clave || '').trim() || textoBiblico.texto,
@@ -128,6 +145,7 @@ function normalizarAnalisisCliente(d: any): PredicaAnalisis {
       grandes_ensenanzas: grandes,
       palabras_clave: palabrasClave.length ? palabrasClave : conceptos.slice(0, 6),
       frase_recordar: String(info?.frase_recordar || '').trim() || fraseCorta || String(d?.conclusion || '').trim(),
+      conexiones_biblicas: normalizarVersiculosCliente(info?.conexiones_biblicas),
     },
     desarrollo_progresivo: puntos,
     ensenanzas,
@@ -141,8 +159,15 @@ function normalizarAnalisisCliente(d: any): PredicaAnalisis {
 interface PredicaAnalisis {
   titulo: string; idea_principal: string;
   tema_principal?: string;
+  proposito?: string;
+  contexto_general?: string;
   texto_biblico_principal?: TextoBiblico;
+  otros_textos?: Versiculo[];
   contexto_biblico?: string;
+  contexto_historico?: string;
+  contexto_literario?: string;
+  relacion_textos?: string;
+  interpretacion?: string;
   infografia?: DatosInfografia;
   desarrollo_progresivo: PuntoDesarrollo[];
   ensenanzas?: Ensenanza[];
@@ -229,6 +254,9 @@ export default function Home() {
   const [avisoYoutube, setAvisoYoutube] = useState<string | null>(null);
 
   const infografiaRef = useRef<HTMLDivElement>(null);
+  // Pestaña de iOS abierta dentro del gesto del usuario para exportar sin
+  // reemplazar la página de TeoDoc.
+  const ventanaIOSRef = useRef<Window | null>(null);
   const orbRef = useRef<LiquidOrbHandle>(null);
   // jsPDF precargado: permite que el clic descargue dentro del gesto del usuario.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -641,26 +669,88 @@ export default function Home() {
     setTimeout(() => orbRef.current?.abrirSelector(), 50);
   };
 
-  // Descarga estándar del navegador: Blob -> enlace temporal -> clic. Sin
-  // ventanas ni pantallas intermedias; el navegador muestra su propio aviso.
-  // Descarga y DEVUELVE la URL del Blob para poder ofrecer "Abrir" en el aviso.
-  const descargarBlob = (blob: Blob, nombre: string): string => {
+  // iOS/Safari y WebKit: detección. El iPadOS moderno se reporta como MacIntel.
+  const esIOS = () => {
+    if (typeof navigator === 'undefined') return false;
+    const ua = navigator.userAgent || '';
+    const plataforma = (navigator as Navigator & { platform?: string }).platform || '';
+    const maxTouch = (navigator as Navigator & { maxTouchPoints?: number }).maxTouchPoints || 0;
+    const iPadOS = plataforma === 'MacIntel' && maxTouch > 1;
+    return /iPad|iPhone|iPod/.test(ua) || iPadOS;
+  };
+
+  // En iOS se abre una pestaña en blanco DENTRO del gesto del usuario. Así,
+  // cuando el archivo esté listo, se navega ESA pestaña (nunca la de TeoDoc).
+  const abrirVentanaIOS = () => {
+    if (!esIOS()) return;
+    if (ventanaIOSRef.current && !ventanaIOSRef.current.closed) return;
+    // Sin 'noopener': necesitamos la referencia para navegarla después.
+    ventanaIOSRef.current = window.open('', '_blank');
+  };
+
+  // Entrega un archivo como EXPORTACIÓN, nunca como navegación que reemplace
+  // la página actual:
+  //  - iOS: panel nativo (guardar/compartir) o pestaña nueva.
+  //  - Escritorio/Android: descarga clásica con <a download>.
+  // Devuelve la URL del Blob (para el enlace "Abrir" del aviso) o null.
+  const entregarArchivo = async (
+    blob: Blob,
+    nombre: string,
+    ventanaIOS: Window | null,
+  ): Promise<{ url: string | null }> => {
+    const nav = navigator as Navigator & {
+      canShare?: (d: ShareData) => boolean;
+      share?: (d: ShareData) => Promise<void>;
+    };
+
+    // 1) Panel nativo de iOS/WebKit (Guardar en Archivos, compartir, etc.).
+    if (esIOS() && typeof nav.share === 'function' && typeof nav.canShare === 'function') {
+      const file = new File([blob], nombre, { type: blob.type || 'application/octet-stream' });
+      if (nav.canShare({ files: [file] })) {
+        try {
+          await nav.share({ files: [file], title: nombre });
+          try { ventanaIOS?.close(); } catch { /* ignorar */ }
+          return { url: null };
+        } catch (e) {
+          if ((e as { name?: string })?.name === 'AbortError') {
+            try { ventanaIOS?.close(); } catch { /* ignorar */ }
+            return { url: null };
+          }
+          // Otro error: se intenta la pestaña nueva más abajo.
+        }
+      }
+    }
+
     const url = URL.createObjectURL(blob);
+
+    // 2) iOS sin Web Share: pestaña nueva (Safari muestra el documento y
+    //    permite guardarlo/compartirlo) sin tocar la página de TeoDoc.
+    if (esIOS()) {
+      const destino = ventanaIOS && !ventanaIOS.closed ? ventanaIOS : window.open(url, '_blank');
+      if (destino && !destino.closed) {
+        destino.location.href = url;
+        return { url };
+      }
+      const a = document.createElement('a');
+      a.href = url; a.target = '_blank'; a.rel = 'noopener';
+      document.body.appendChild(a); a.click(); a.remove();
+      return { url };
+    }
+
+    // 3) Escritorio/Android: descarga clásica. Fuera de pantalla en lugar de
+    //    display:none (algunos navegadores ignoran el clic en enlaces ocultos).
     const a = document.createElement('a');
     a.href = url;
     a.download = nombre;
     a.rel = 'noopener';
-    // Fuera de pantalla en lugar de display:none (algunos navegadores ignoran
-    // el clic en enlaces no visibles).
     a.style.position = 'fixed';
     a.style.left = '-9999px';
     a.style.top = '0';
     document.body.appendChild(a);
     a.click();
-    // Retirar el enlace de inmediato puede cancelar la descarga en algunos
-    // navegadores, por eso se retira después.
+    // Retirar de inmediato puede cancelar la descarga en algunos navegadores.
     setTimeout(() => a.remove(), 1500);
-    return url;
+    return { url };
   };
 
   const iniciarDescarga = (tipo: 'pdf' | 'png') => {
@@ -689,8 +779,8 @@ export default function Home() {
   };
 
   const nombreArchivoPDF = () => {
-    const safe = (resultado?.titulo || 'analisis').replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 60);
-    return `TeoDoc_${safe || 'analisis'}.pdf`;
+    const safe = (resultado?.titulo || 'mensaje').replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 60);
+    return `TeoDoc_${safe || 'mensaje'}.pdf`;
   };
 
   // Respaldo móvil: guardar/compartir con el panel nativo (iOS/Android). Es una
@@ -716,20 +806,29 @@ export default function Home() {
   // infografía completa: sin hoja A4, sin recortes y sin fondo blanco extra.
   const descargarInfografia = async () => {
     if (descargando) return;
-    const safe = (resultado?.titulo || 'predica').replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 60);
-    const nombre = `Infografia_${safe || 'predica'}.png`;
+    const safe = (resultado?.titulo || 'mensaje').replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 60);
+    const nombre = `TeoDoc_Infografia_${safe || 'mensaje'}.png`;
     setDescargando(true);
     iniciarDescarga('png');
+    abrirVentanaIOS();
     try {
       const node = infografiaRef.current;
       if (!node) throw new Error('Sin artboard');
       const blob = await exportarInfografiaBlob(node);
-      const url = descargarBlob(blob, nombre);
-      if (ultimoUrlRef.current) URL.revokeObjectURL(ultimoUrlRef.current);
-      ultimoUrlRef.current = url;
-      setUltimoArchivo({ url, nombre, tipo: 'png' });
+      // Garantiza un PNG real: MIME correcto y nombre terminado en .png.
+      const png = blob.type === 'image/png' ? blob : new Blob([blob], { type: 'image/png' });
+      const { url } = await entregarArchivo(png, nombre, ventanaIOSRef.current);
+      ventanaIOSRef.current = null;
+      if (url) {
+        if (ultimoUrlRef.current) URL.revokeObjectURL(ultimoUrlRef.current);
+        ultimoUrlRef.current = url;
+        setUltimoArchivo({ url, nombre, tipo: 'png' });
+      } else {
+        setUltimoArchivo(null);
+      }
       finalizarDescarga(true);
     } catch {
+      if (ventanaIOSRef.current) { try { ventanaIOSRef.current.close(); } catch { /* ignorar */ } ventanaIOSRef.current = null; }
       finalizarDescarga(false, 'No se pudo generar la imagen. Inténtalo de nuevo.');
     } finally {
       setDescargando(false);
@@ -741,6 +840,7 @@ export default function Home() {
     const nombre = nombreArchivoPDF();
     setGenerandoPDF(true);
     iniciarDescarga('pdf');
+    abrirVentanaIOS();
     try {
       // jsPDF viene precargado: la descarga se dispara dentro del gesto del
       // usuario (el navegador muestra su aviso nativo y no se duplica).
@@ -751,12 +851,20 @@ export default function Home() {
         JsPDF = mod.jsPDF;
         jsPDFRef.current = JsPDF;
       }
-      const url = descargarBlob(construirPDFBlob(JsPDF, resultado), nombre);
-      if (ultimoUrlRef.current) URL.revokeObjectURL(ultimoUrlRef.current);
-      ultimoUrlRef.current = url;
-      setUltimoArchivo({ url, nombre, tipo: 'pdf' });
+      const pdfBlob = construirPDFBlob(JsPDF, resultado);
+      const seguro = pdfBlob.type === 'application/pdf' ? pdfBlob : new Blob([pdfBlob], { type: 'application/pdf' });
+      const { url } = await entregarArchivo(seguro, nombre, ventanaIOSRef.current);
+      ventanaIOSRef.current = null;
+      if (url) {
+        if (ultimoUrlRef.current) URL.revokeObjectURL(ultimoUrlRef.current);
+        ultimoUrlRef.current = url;
+        setUltimoArchivo({ url, nombre, tipo: 'pdf' });
+      } else {
+        setUltimoArchivo(null);
+      }
       finalizarDescarga(true);
     } catch {
+      if (ventanaIOSRef.current) { try { ventanaIOSRef.current.close(); } catch { /* ignorar */ } ventanaIOSRef.current = null; }
       finalizarDescarga(false, 'No se pudo generar el PDF. Inténtalo de nuevo.');
     } finally {
       setGenerandoPDF(false);
@@ -768,9 +876,17 @@ export default function Home() {
     const doc = new jsPDF({ unit: 'pt', format: 'a4' });
     const pageW = doc.internal.pageSize.getWidth();
     const pageH = doc.internal.pageSize.getHeight();
-    const margin = 54; // ~19 mm
-    const contentW = pageW - margin * 2;
-    const bottomY = pageH - margin - 26;
+    // Márgenes de impresión y argollado:
+    //  - margin  = interior (lado izquierdo destinado al anillado/perforación).
+    //  - marginR = exterior.  - marginT/B = superior e inferior.
+    // Ningún texto, número de página ni elemento esencial invade la zona segura.
+    const margin = 74;
+    const marginR = 52;
+    const marginT = 58;
+    const marginB = 62;
+    const contentW = pageW - margin - marginR;
+    const bottomY = pageH - marginB;
+    const headerBandY = 6;
 
     type RGB = readonly [number, number, number];
     const C = {
@@ -821,20 +937,21 @@ export default function Home() {
     const fechaTxt = new Date().toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' });
 
     let y = 0;
+    const nuevaPagina = () => { doc.addPage(); y = marginT + 6; };
     const ensure = (needed: number) => {
-      if (y + needed > bottomY) { doc.addPage(); y = margin + 6; }
+      if (y + needed > bottomY) nuevaPagina();
     };
 
     // ------------------ ENCABEZADO COMPACTO (masthead, mismo flujo) ------------------
-    setFill(C.accent); doc.rect(0, 0, pageW, 6, 'F');
+    setFill(C.accent); doc.rect(0, 0, pageW, headerBandY, 'F');
     doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); setText(C.sub);
-    doc.text('ANÁLISIS DE PRÉDICA', margin, margin + 2);
-    dibujarLogoPDF(pageW - margin - 82, margin - 16, 1);
+    doc.text('ANÁLISIS DEL MENSAJE', margin, marginT + 2);
+    dibujarLogoPDF(pageW - marginR - 82, marginT - 16, 1);
 
     doc.setFont('helvetica', 'bold'); doc.setFontSize(26); setText(C.ink);
-    const mastTitle = doc.splitTextToSize(resultado.titulo || 'Prédica', contentW);
-    doc.text(mastTitle, margin, margin + 34);
-    y = margin + 34 + mastTitle.length * 30;
+    const mastTitle = doc.splitTextToSize(resultado.titulo || 'Mensaje', contentW);
+    doc.text(mastTitle, margin, marginT + 34);
+    y = marginT + 34 + mastTitle.length * 30;
 
     setStroke(C.accent); doc.setLineWidth(4); doc.line(margin, y, margin + 80, y);
     y += 20;
@@ -853,14 +970,16 @@ export default function Home() {
     }
     y += 8;
 
-    // Título de sección que se mantiene junto al inicio de su contenido (sin huérfanos).
-    const heading = (label: string, keep = 64) => {
-      ensure(keep);
-      setFill(C.accent); doc.rect(margin, y - 10, 3.5, 14, 'F');
+    // Encabezado de sección con "keep-with-next": se reserva el título MÁS el
+    // inicio de su contenido, así nunca queda huérfano al pie de la página.
+    const heading = (label: string, keep = 96) => {
+      const headerH = 32;
+      ensure(headerH + keep);
+      setFill(C.accent); doc.rect(margin, y, 3.5, 14, 'F');
       doc.setFont('helvetica', 'bold'); doc.setFontSize(12.5); setText(C.ink);
-      doc.text(label.toUpperCase(), margin + 11, y + 1);
+      doc.text(label.toUpperCase(), margin + 11, y + 11);
       y += 20;
-      setStroke(C.rule); doc.setLineWidth(0.6); doc.line(margin, y, pageW - margin, y);
+      setStroke(C.rule); doc.setLineWidth(0.6); doc.line(margin, y, pageW - marginR, y);
       y += 12;
     };
 
@@ -873,82 +992,109 @@ export default function Home() {
       const indent = opts?.indent ?? 0;
       doc.setFont('helvetica', font); doc.setFontSize(size); setText(opts?.color ?? C.sub);
       const lines = doc.splitTextToSize(resumir(txt, opts?.max ?? 900), contentW - indent);
+      // Evita dejar una sola línea colgando al final de la página.
+      if (lines.length > 1) ensure(lead * 2);
       for (const line of lines) {
-        if (y + lead > bottomY) { doc.addPage(); y = margin + 6; }
+        if (y + lead > bottomY) nuevaPagina();
         doc.text(line, margin + indent, y);
         y += lead;
       }
       y += 5;
     };
 
+    // Cita bíblica: la altura se calcula EXACTA y el texto se dibuja dentro del
+    // recuadro, de modo que nunca se solapa ni desborda el bloque.
     const quoteBlock = (cita: string, texto: string) => {
+      const innerW = contentW - 30;
+      const innerX = margin + 15;
       doc.setFont('helvetica', 'italic'); doc.setFontSize(9.8);
-      const body = doc.splitTextToSize(`“${resumir(texto, 240)}”`, contentW - 30);
-      const h = 12 + 15 + body.length * 13 + 10;
-      ensure(h + 6);
-      setFill(C.surface); doc.rect(margin, y - 11, contentW, h, 'F');
-      setFill(C.accent); doc.rect(margin, y - 11, 3, h, 'F');
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); setText(C.accent);
-      doc.text(cita || '', margin + 15, y); y += 16;
+      const body: string[] = doc.splitTextToSize(`“${resumir(texto, 240)}”`, innerW);
+      const padTop = 14;
+      const citaH = cita ? 15 : 0;
+      const h = padTop + citaH + body.length * 13 + 12;
+      ensure(h + 8);
+      const top = y;
+      setFill(C.surface); doc.rect(margin, top, contentW, h, 'F');
+      setFill(C.accent); doc.rect(margin, top, 3, h, 'F');
+      let ty = top + padTop;
+      if (cita) {
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(9.5); setText(C.accent);
+        doc.text(cita, innerX, ty + 4);
+        ty += citaH;
+      }
       doc.setFont('helvetica', 'italic'); doc.setFontSize(9.8); setText(C.sub);
-      doc.text(body, margin + 15, y); y += body.length * 13 + 10;
+      body.forEach((line) => { doc.text(line, innerX, ty + 4); ty += 13; });
+      y = top + h + 8;
     };
 
     const bullet = (txt: string) => {
       doc.setFont('helvetica', 'normal'); doc.setFontSize(10.5);
-      const lines = doc.splitTextToSize(txt, contentW - 16);
-      ensure(lines.length * 15 + 5);
+      const lines = doc.splitTextToSize(txt, contentW - 18);
+      const h = lines.length * 15;
+      ensure(h + 7);
       setFill(C.accent); doc.circle(margin + 3, y - 3, 1.7, 'F');
-      setText(C.sub); doc.text(lines, margin + 14, y);
-      y += lines.length * 15 + 6;
+      setText(C.sub); doc.text(lines, margin + 16, y);
+      y += h + 6;
     };
 
     const metaRow = (label: string, value: string) => {
+      const labelW = 98;
       doc.setFont('helvetica', 'normal'); doc.setFontSize(10.5);
-      const lines = doc.splitTextToSize(value, contentW - 110);
-      ensure(lines.length * 14 + 7);
+      const lines = doc.splitTextToSize(value, contentW - labelW - 6);
+      const h = Math.max(lines.length, 1) * 14;
+      ensure(h + 8);
       doc.setFont('helvetica', 'bold'); doc.setFontSize(9); setText(C.sub);
       doc.text(label.toUpperCase(), margin, y);
       doc.setFont('helvetica', 'normal'); doc.setFontSize(10.5); setText(C.ink);
-      doc.text(lines, margin + 100, y);
-      y += lines.length * 14 + 7;
+      doc.text(lines, margin + labelW, y);
+      y += h + 8;
     };
 
+    // Etiquetas tipo "chip" con salto de página seguro: se reserva la fila
+    // completa antes de dibujar y nunca se solapa con el margen exterior.
     const chips = (items: string[]) => {
+      const h = 20; const padX = 10; const gap = 8;
       doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
-      const h = 20; const padX = 10; const gap = 8; let x = margin;
+      let x = margin;
       ensure(h + 6);
-      items.forEach((label) => {
+      for (const label of items) {
         const txt = label.toUpperCase();
         const w = doc.getTextWidth(txt) + padX * 2;
-        if (x + w > pageW - margin) { x = margin; y += h + 6; ensure(h + 6); }
-        setStroke(C.accent); doc.setLineWidth(1); doc.roundedRect(x, y - 13, w, h, 10, 10, 'S');
-        setText(C.accent); doc.text(txt, x + padX, y + 1);
+        if (x + w > pageW - marginR) { x = margin; y += h + 8; ensure(h + 8); }
+        setStroke(C.accent); doc.setLineWidth(1);
+        doc.roundedRect(x, y, w, h, 10, 10, 'S');
+        setText(C.accent); doc.text(txt, x + padX, y + 14);
         x += w + gap;
-      });
+      }
       y += h + 12;
     };
 
-    // 1. Información de la prédica
-    heading('Información de la prédica');
+    // 1. Información del mensaje
+    heading('Información del mensaje');
     metaRow('Título', resultado.titulo || '—');
     if (pdfPasaje) metaRow('Texto bíblico', pdfPasaje);
     if (resultado.tema_principal) metaRow('Tema principal', resumir(resultado.tema_principal, 160));
+    if (resultado.proposito) metaRow('Propósito', resumir(resultado.proposito, 200));
     if (resultado.idea_principal) metaRow('Idea central', resumir(resultado.idea_principal, 200));
+    if (resultado.contexto_general) metaRow('Contexto general', resumir(resultado.contexto_general, 220));
     metaRow('Fecha de análisis', fechaTxt);
 
     // 2. Resumen
-    heading('Resumen de la prédica');
+    heading('Resumen del mensaje');
     paragraph(resumir(resultado.idea_principal, 420), { size: 11, lead: 16, color: C.ink });
 
     // 3. Desarrollo bíblico
     heading('Desarrollo bíblico', 130);
     if (pdfTextoPasaje) quoteBlock(pdfPasaje, pdfTextoPasaje);
     if (pdfContexto) paragraph(pdfContexto, { max: 320 });
-    if (resultado.idea_principal) paragraph(resumir(resultado.idea_principal, 280), { italic: true, color: C.ink });
-    const referencias = Array.from(new Set(
-      listaPuntos.flatMap((p) => (p.versiculos || []).map((v) => v.cita)).filter(Boolean),
-    )).slice(0, 12);
+    if (resultado.contexto_historico) metaRow('Contexto histórico', resumir(resultado.contexto_historico, 240));
+    if (resultado.contexto_literario) metaRow('Contexto literario', resumir(resultado.contexto_literario, 240));
+    if (resultado.relacion_textos) metaRow('Relación entre textos', resumir(resultado.relacion_textos, 260));
+    if (resultado.interpretacion) paragraph(`Interpretación presentada por el expositor: ${resumir(resultado.interpretacion, 360)}`, { italic: true, color: C.ink });
+    const referencias = Array.from(new Set([
+      ...((resultado.otros_textos || []).map((v) => v.cita)),
+      ...listaPuntos.flatMap((p) => (p.versiculos || []).map((v) => v.cita)),
+    ].filter(Boolean))).slice(0, 20);
     if (referencias.length) {
       paragraph('Referencias bíblicas', { size: 9, color: C.sub });
       chips(referencias);
@@ -960,40 +1106,35 @@ export default function Home() {
     listaPuntos.forEach((p, idx) => {
       const num = String(idx + 1).padStart(2, '0');
       doc.setFont('helvetica', 'bold'); doc.setFontSize(14);
-      const titleLines = doc.splitTextToSize(resumir(p.punto || '', 90), contentW - 48);
+      const titleLines = doc.splitTextToSize(resumir(p.punto || '', 120), contentW - 48);
       const headerH = Math.max(28, titleLines.length * 17);
-      ensure(headerH + 40);
-      setFill(C.accent); doc.rect(margin, y - 16, 28, 28, 'F');
+      // Reserva el título MÁS el inicio del desarrollo: evita títulos huérfanos.
+      ensure(headerH + 46);
+      const top = y;
+      setFill(C.accent); doc.rect(margin, top, 28, 28, 'F');
       doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.setTextColor(255, 255, 255);
-      doc.text(num, margin + 14, y + 2, { align: 'center' });
+      doc.text(num, margin + 14, top + 19, { align: 'center' });
       doc.setFont('helvetica', 'bold'); doc.setFontSize(14); setText(C.ink);
-      doc.text(titleLines, margin + 44, y - 2);
-      y += headerH + 6;
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(10.5);
-      const expl = doc.splitTextToSize(resumir(p.explicacion || '', 700), contentW);
-      ensure(expl.length * 14 + 8);
-      setText(C.sub); doc.text(expl, margin, y); y += expl.length * 14 + 8;
+      doc.text(titleLines, margin + 44, top + 19);
+      y = top + headerH + 6;
+      if (p.explicacion) paragraph(resumir(p.explicacion, 700), { size: 10.5, lead: 14.5, color: C.sub });
 
       // Subtemas reales dentro del tema (solo si el contenido los contiene).
       (p.subtemas || []).forEach((s) => {
         doc.setFont('helvetica', 'bold'); doc.setFontSize(10.5); setText(C.ink);
-        const subTitle = doc.splitTextToSize(resumir(s.titulo || '', 120), contentW - 20);
-        ensure(subTitle.length * 14 + 6);
+        const subTitle = doc.splitTextToSize(resumir(s.titulo || '', 120), contentW - 24);
+        ensure(subTitle.length * 14 + 22);
         doc.text(subTitle, margin + 14, y); y += subTitle.length * 14 + 3;
         if (s.desarrollo) {
-          doc.setFont('helvetica', 'normal'); doc.setFontSize(10); setText(C.sub);
-          const subBody = doc.splitTextToSize(resumir(s.desarrollo, 420), contentW - 14);
-          for (const line of subBody) {
-            if (y + 14 > bottomY) { doc.addPage(); y = margin + 6; }
-            doc.text(line, margin + 14, y); y += 14;
-          }
+          paragraph(resumir(s.desarrollo, 420), { size: 10, lead: 13.5, color: C.sub, indent: 14 });
         }
-        y += 5;
+        y += 3;
       });
 
-      (p.versiculos || []).slice(0, 3).forEach((v) => quoteBlock(v.cita || '', v.texto || ''));
+      (p.versiculos || []).slice(0, 6).forEach((v) => quoteBlock(v.cita || '', v.texto || ''));
       y += 6;
-      setStroke(C.rule); doc.setLineWidth(0.5); doc.line(margin, y, pageW - margin, y); y += 14;
+      ensure(20);
+      setStroke(C.rule); doc.setLineWidth(0.5); doc.line(margin, y, pageW - marginR, y); y += 14;
     });
 
     // 4b. Enseñanzas principales (solo las categorías realmente presentes)
@@ -1002,15 +1143,16 @@ export default function Home() {
       heading('Enseñanzas principales', 84);
       ensenanzas.forEach((e) => {
         const etiqueta = e.sobre ? `SOBRE ${e.sobre.toUpperCase()}` : 'ENSEÑANZA';
+        const labelW = 100;
         doc.setFont('helvetica', 'bold'); doc.setFontSize(9); setText(C.sub);
-        const labelLines = doc.splitTextToSize(etiqueta, contentW - 120);
+        const labelLines = doc.splitTextToSize(etiqueta, labelW - 8);
         doc.setFont('helvetica', 'normal'); doc.setFontSize(10.5); setText(C.ink);
-        const body = doc.splitTextToSize(resumir(e.ensenanza, 300), contentW - 116);
+        const body = doc.splitTextToSize(resumir(e.ensenanza, 300), contentW - labelW - 6);
         ensure(Math.max(labelLines.length, body.length) * 14 + 8);
         doc.setFont('helvetica', 'bold'); doc.setFontSize(9); setText(C.sub);
         doc.text(labelLines, margin, y);
         doc.setFont('helvetica', 'normal'); doc.setFontSize(10.5); setText(C.ink);
-        doc.text(body, margin + 104, y);
+        doc.text(body, margin + labelW, y);
         y += Math.max(labelLines.length, body.length) * 14 + 8;
       });
       y += 4;
@@ -1096,31 +1238,33 @@ export default function Home() {
       });
     }
     if (resultado.oracion) {
-      const body = doc.splitTextToSize(`“${resumir(resultado.oracion, 420)}”`, contentW - 30);
-      const h = body.length * 14 + 26;
+      const body: string[] = doc.splitTextToSize(`“${resumir(resultado.oracion, 420)}”`, contentW - 30);
+      const h = body.length * 14 + 24;
       ensure(h + 8);
-      setFill(C.surface); doc.rect(margin, y - 10, contentW, h, 'F');
-      setFill(C.accent); doc.rect(margin, y - 10, 3, h, 'F');
+      const top = y;
+      setFill(C.surface); doc.rect(margin, top, contentW, h, 'F');
+      setFill(C.accent); doc.rect(margin, top, 3, h, 'F');
       doc.setFont('helvetica', 'italic'); doc.setFontSize(10.5); setText(C.ink);
-      doc.text(body, margin + 15, y + 8);
-      y += h + 6;
+      body.forEach((line: string, i: number) => doc.text(line, margin + 15, top + 16 + i * 14));
+      y = top + h + 8;
     }
 
     // -------------------- ENCABEZADO Y PIE (dos pasadas) --------------------
+    // Todo se dibuja DENTRO de la zona segura de impresión/argollado.
     const total = doc.getNumberOfPages();
     for (let i = 1; i <= total; i++) {
       doc.setPage(i);
       setStroke(C.rule); doc.setLineWidth(0.7);
       if (i > 1) {
-        doc.line(margin, margin - 20, pageW - margin, margin - 20);
+        doc.line(margin, marginT - 18, pageW - marginR, marginT - 18);
         doc.setFont('helvetica', 'normal'); doc.setFontSize(8); setText(C.sub);
-        doc.text(resumir(resultado.titulo || 'Análisis de prédica', 64), margin, margin - 28);
-        dibujarLogoPDF(pageW - margin - 50, margin - 44, 0.6);
+        doc.text(resumir(resultado.titulo || 'Análisis del mensaje', 64), margin, marginT - 26);
+        dibujarLogoPDF(pageW - marginR - 50, marginT - 44, 0.6);
       }
-      doc.line(margin, pageH - margin + 14, pageW - margin, pageH - margin + 14);
+      doc.line(margin, pageH - marginB + 10, pageW - marginR, pageH - marginB + 10);
       doc.setFont('helvetica', 'normal'); doc.setFontSize(8); setText(C.sub);
-      doc.text('TeoDoc · Análisis Ministerial', margin, pageH - margin + 25);
-      doc.text(`Página ${i} de ${total}`, pageW - margin, pageH - margin + 25, { align: 'right' });
+      doc.text('TeoDoc · Análisis Ministerial', margin, pageH - marginB + 22);
+      doc.text(`Página ${i} de ${total}`, pageW - marginR, pageH - marginB + 22, { align: 'right' });
     }
 
     return doc.output('blob') as Blob;
@@ -1181,7 +1325,7 @@ export default function Home() {
         {!loading && !resultado && (
           <div className="text-center mb-5 sm:mb-8">
             <h1 className="text-fluid-hero font-light text-[#f4f4f4]">TeoDoc</h1>
-            <h2 className="text-fluid-sub mt-3 font-normal text-[#c6c6c6]">Analiza tus prédicas.</h2>
+            <h2 className="text-fluid-sub mt-3 font-normal text-[#c6c6c6]">Analiza tus mensajes.</h2>
             <p className="text-fluid-body mt-4 text-[#a8a8a8] max-w-xl mx-auto">
               Transcripción y extracción de estructura teológica impulsada por IA.
             </p>
@@ -1234,7 +1378,7 @@ export default function Home() {
             className="z-20 relative w-full max-w-lg flex flex-col items-center gap-3 animate-fade-in"
           >
             <label htmlFor="yt-url" className="text-sm text-[#c6c6c6] text-center">
-              Pega el enlace de la prédica o enseñanza de YouTube
+              Pega el enlace del mensaje o enseñanza de YouTube
             </label>
             <input
               id="yt-url"
@@ -1313,7 +1457,7 @@ export default function Home() {
                 : 'Parece que este contenido no tiene suficiente información para realizar un análisis significativo. Puede ser muy corto, silencio o audio accidental.'}
             </p>
             <p className="text-[#c6c6c6] leading-relaxed mt-2">
-              Te invitamos a subir una prédica, enseñanza, conferencia o contenido relacionado con la fe cristiana evangélica para poder ayudarte con el análisis.
+              Te invitamos a subir un mensaje, enseñanza, conferencia o contenido relacionado con la fe cristiana evangélica para poder ayudarte con el análisis.
             </p>
             <button
               onClick={reintentarAudio}
@@ -1473,7 +1617,7 @@ export default function Home() {
               <div className="text-center mb-5 sm:mb-7 px-4">
                 <h3 className="text-sm font-semibold text-[#f4f4f4] tracking-wider uppercase">Infografía del análisis</h3>
                 <p className="text-xs sm:text-sm text-[#a8a8a8] mt-2 max-w-md mx-auto">
-                  El mapa visual de la prédica. Se adapta a tu pantalla y se descarga como una sola imagen PNG con la composición completa.
+                  El mapa visual del mensaje. Se adapta a tu pantalla y se descarga como una sola imagen PNG con la composición completa.
                 </p>
                 <div className="flex justify-center mt-4">
                   <button

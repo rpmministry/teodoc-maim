@@ -24,6 +24,7 @@ export type InfografiaData = {
     verdad_principal?: string
     grandes_ensenanzas?: { titulo?: string; descripcion?: string }[]
     palabras_clave?: string[]
+    conexiones_biblicas?: { cita?: string; texto?: string }[]
     frase_recordar?: string
   }
   conceptos_clave?: string[]
@@ -124,7 +125,11 @@ export default function Infografia({ data }: { data: InfografiaData; variant?: I
   const [naturalH, setNaturalH] = useState(0)
   const medido = naturalH > 0
 
-  const pad = Math.round(canvasW * 0.05)
+  // Zona segura (safe area): margen interno proporcional al lienzo. Ningún
+  // título, texto, número, icono o imagen esencial se pega al borde, de modo
+  // que la pieza sobrevive a recortes y compresión de redes sociales.
+  const safe = Math.max(48, Math.round(canvasW * 0.055))
+  const pad = safe
   const footerH = Math.round(canvasW * 0.06)
   const spineW = Math.round(canvasW * 0.11)
   const nodeSize = Math.round(canvasW * 0.056)
@@ -163,6 +168,13 @@ export default function Infografia({ data }: { data: InfografiaData; variant?: I
     if (Math.abs(neededW - canvasW) >= 8) setCanvasW(neededW)
   }, [medido, canvasH, canvasW])
 
+  // Holgura = espacio sobrante del lienzo 9:16. Se usa de forma editorial:
+  // primero distribuyendo los bloques y, si sobra mucho, con una ilustración
+  // temática vectorial derivada del propio contenido (sin red, sin taint).
+  const slack = medido ? Math.max(0, canvasH - naturalH) : 0
+  const usarIlustracion = slack > 260
+  const altoIlustracion = usarIlustracion ? Math.max(180, slack - 90) : 0
+
   // -------- Selección de contenido de la infografía --------
   const info = data.infografia || {}
   const pasaje = data.texto_biblico_principal?.cita
@@ -172,15 +184,20 @@ export default function Infografia({ data }: { data: InfografiaData; variant?: I
   const mensajeCentral = info.mensaje_central || data.idea_principal || ''
   const verdadPrincipal = info.verdad_principal || data.tema_principal || ''
   const fraseRecordar = info.frase_recordar || info.frase_corta || ''
+  const contextoBreve = info.contexto_breve || data.contexto_biblico || ''
   const grandes = (info.grandes_ensenanzas || [])
     .map((g) => ({ titulo: (g.titulo || '').trim(), descripcion: (g.descripcion || '').trim() }))
     .filter((g) => g.titulo || g.descripcion)
-    .slice(0, 6)
+    .slice(0, 10)
+  const conexiones = (info.conexiones_biblicas || [])
+    .map((c) => ({ cita: (c?.cita || '').trim(), texto: (c?.texto || '').trim() }))
+    .filter((c) => c.cita)
+    .slice(0, 4)
   const palabras = (info.palabras_clave?.length ? info.palabras_clave : data.conceptos_clave || [])
     .map((p) => String(p || '').replace(/\s+/g, ' ').trim())
     .filter(Boolean)
     .filter((p, i, arr) => arr.findIndex((x) => x.toLowerCase() === p.toLowerCase()) === i)
-    .slice(0, 6)
+    .slice(0, 8)
   const fecha = new Date().toLocaleDateString('es-CO', { day: '2-digit', month: 'long', year: 'numeric' })
 
   // Tipografía fluida según el ancho del lienzo.
@@ -218,6 +235,13 @@ export default function Infografia({ data }: { data: InfografiaData; variant?: I
       etiqueta: 'Verdad principal',
       icono: G.spark,
       body: <p style={{ margin: 0, fontSize: body, lineHeight: 1.5, color: C.ink }}>{resumir(verdadPrincipal, 320)}</p>,
+    })
+  }
+  if (contextoBreve && contextoBreve !== mensajeCentral) {
+    bloques.push({
+      etiqueta: 'Contexto',
+      icono: G.bible,
+      body: <p style={{ margin: 0, fontSize: body, lineHeight: 1.5, color: C.sub }}>{resumir(contextoBreve, 300)}</p>,
     })
   }
   if (grandes.length) {
@@ -258,6 +282,22 @@ export default function Infografia({ data }: { data: InfografiaData; variant?: I
               </span>
             )
           })}
+        </div>
+      ),
+    })
+  }
+  if (conexiones.length) {
+    bloques.push({
+      etiqueta: 'Conexiones bíblicas',
+      icono: G.list,
+      body: (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: Math.round(small * 0.5) }}>
+          {conexiones.map((c, i) => (
+            <div key={i} style={{ display: 'flex', gap: Math.round(small * 0.6), alignItems: 'baseline' }}>
+              <span style={{ flexShrink: 0, fontSize: small * 1.02, fontWeight: 800, color: PALETA[i % PALETA.length].dark }}>{c.cita}</span>
+              {c.texto ? <span style={{ fontSize: small, color: C.sub, lineHeight: 1.4 }}>{resumir(c.texto, 120)}</span> : null}
+            </div>
+          ))}
         </div>
       ),
     })
@@ -318,7 +358,7 @@ export default function Infografia({ data }: { data: InfografiaData; variant?: I
           </div>
 
           <h1 style={{ margin: 0, lineHeight: 1.04, fontWeight: 800, letterSpacing: '-0.01em', fontSize: h1, overflowWrap: 'anywhere' }}>
-            {data.titulo || 'Análisis de la prédica'}
+            {data.titulo || 'Análisis del mensaje'}
           </h1>
 
           {info.frase_corta ? (
@@ -352,14 +392,15 @@ export default function Infografia({ data }: { data: InfografiaData; variant?: I
           }}
         />
 
-        <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', justifyContent: 'center', height: '100%' }}>
+        <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', justifyContent: medido ? (usarIlustracion ? 'flex-start' : 'space-between') : 'center', height: '100%' }}>
           {bloques.map((b, i) => {
             const lado: 'left' | 'right' = i % 2 === 0 ? 'left' : 'right'
             const pal = PALETA[(i + (i % 2 === 0 ? 0 : 1)) % PALETA.length]
             const numero = String(i + 1).padStart(2, '0')
             const esIzq = lado === 'left'
+            const ultimo = i === bloques.length - 1
             return (
-              <div key={b.etiqueta} style={{ display: 'flex', alignItems: 'stretch', marginBottom: i < bloques.length - 1 ? rowGap : 0 }}>
+              <div key={b.etiqueta} style={{ display: 'flex', alignItems: 'stretch', marginBottom: ultimo ? (usarIlustracion ? rowGap : 0) : rowGap }}>
                 <div style={{ flex: 1, minWidth: 0, display: 'flex', justifyContent: 'flex-end' }}>
                   {esIzq ? (
                     <Tarjeta numero={numero} etiqueta={b.etiqueta} icono={b.icono} pal={pal} small={small} h2={h2} side="right" gap={sideGap}>
@@ -400,6 +441,14 @@ export default function Infografia({ data }: { data: InfografiaData; variant?: I
               </div>
             )
           })}
+
+          {usarIlustracion ? (
+            <IlustracionTema
+              alto={altoIlustracion}
+              semilla={`${data.titulo || ''} ${mensajeCentral} ${pasaje} ${palabras.join(' ')}`.toLowerCase()}
+              tema={tema}
+            />
+          ) : null}
         </div>
       </div>
 
@@ -421,6 +470,139 @@ export default function Infografia({ data }: { data: InfografiaData; variant?: I
         {TeoLogo(small * 8)}
         <span>RPM Ministry</span>
       </footer>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Ilustración temática: rellena la holgura del lienzo 9:16 con arte vectorial
+// relacionado con el contenido (agua, montes, camino, luz, ciudad, cruz,
+// pastor, Biblia). Se elige por palabras reales del análisis; nunca es
+// decoración aleatoria y no usa red (evita taint del canvas en iOS).
+// ---------------------------------------------------------------------------
+type Motivo = 'agua' | 'montes' | 'camino' | 'luz' | 'ciudad' | 'cruz' | 'pastor' | 'biblia'
+
+function elegirMotivo(semilla: string): Motivo {
+  const s = semilla || ''
+  if (/(agua|mar|río|rio|fuente|bautis|pozo|lluvia|océano|oceano)/.test(s)) return 'agua'
+  if (/(monte|montaña|montana|sinaí|sinai|sion|calvario|cima|colina)/.test(s)) return 'montes'
+  if (/(camino|sendero|desierto|éxodo|exodo|viaje|peregrin|ruta)/.test(s)) return 'camino'
+  if (/(luz|gloria|estrella|fuego|espíritu|espiritu|alba|amanecer|fuego)/.test(s)) return 'luz'
+  if (/(ciudad|jerusalén|jerusalen|templo|muro|sion|reino)/.test(s)) return 'ciudad'
+  if (/(cruz|sacrificio|sangre|reden|expiaci)/.test(s)) return 'cruz'
+  if (/(pastor|oveja|rebaño|rebano|cordero)/.test(s)) return 'pastor'
+  return 'biblia'
+}
+
+function IlustracionTema({ alto, semilla, tema }: { alto: number; semilla: string; tema: Paleta }) {
+  const gradId = `cielo-${React.useId().replace(/[^a-zA-Z0-9]/g, '')}`
+  const motivo = elegirMotivo(semilla)
+  const base = tema.base
+  const dark = tema.dark
+  const soft = tema.soft
+
+  let figura: React.ReactNode = null
+  if (motivo === 'agua') {
+    figura = (
+      <>
+        <path d="M0 330c120-26 240-26 360 0s240 26 360 0 240-26 360 0v170H0z" fill={base} opacity="0.3" />
+        <path d="M0 390c120-26 240-26 360 0s240 26 360 0 240-26 360 0v110H0z" fill={dark} opacity="0.35" />
+      </>
+    )
+  } else if (motivo === 'montes') {
+    figura = (
+      <>
+        <path d="M0 430 300 190 520 430z" fill={base} opacity="0.45" />
+        <path d="M330 430 640 130 980 430z" fill={dark} opacity="0.4" />
+        <path d="M760 430 1000 230 1200 430z" fill={base} opacity="0.3" />
+      </>
+    )
+  } else if (motivo === 'camino') {
+    figura = (
+      <>
+        <path d="M-20 440c180-20 300-90 420-150s300-90 480-120" fill="none" stroke={base} strokeWidth="26" opacity="0.35" strokeLinecap="round" />
+        <path d="M60 480c200-30 320-110 450-170s330-90 520-120" fill="none" stroke={dark} strokeWidth="14" opacity="0.35" strokeDasharray="2 26" strokeLinecap="round" />
+      </>
+    )
+  } else if (motivo === 'luz') {
+    figura = (
+      <>
+        <g stroke={base} strokeWidth="10" strokeLinecap="round" opacity="0.5">
+          {Array.from({ length: 12 }).map((_, i) => {
+            const a = (i / 12) * Math.PI * 2
+            return <line key={i} x1={600 + Math.cos(a) * 150} y1={250 + Math.sin(a) * 150} x2={600 + Math.cos(a) * 245} y2={250 + Math.sin(a) * 245} />
+          })}
+        </g>
+        <circle cx="600" cy="250" r="112" fill="#ffffff" stroke={base} strokeWidth="8" />
+        <circle cx="600" cy="250" r="70" fill={base} opacity="0.25" />
+      </>
+    )
+  } else if (motivo === 'ciudad') {
+    figura = (
+      <g fill={base} opacity="0.4">
+        <rect x="330" y="240" width="90" height="200" />
+        <rect x="440" y="170" width="120" height="270" />
+        <rect x="580" y="215" width="80" height="225" />
+        <rect x="680" y="150" width="110" height="290" />
+        <path d="M700 150a45 45 0 0 1 70 0z" fill={dark} opacity="0.6" />
+        <rect x="840" y="255" width="90" height="185" />
+      </g>
+    )
+  } else if (motivo === 'cruz') {
+    figura = (
+      <>
+        <path d="M0 400q300-40 600 0t600 0v110H0z" fill={base} opacity="0.22" />
+        <rect x="578" y="115" width="44" height="305" rx="8" fill={dark} opacity="0.55" />
+        <rect x="470" y="200" width="260" height="44" rx="8" fill={dark} opacity="0.55" />
+      </>
+    )
+  } else if (motivo === 'pastor') {
+    figura = (
+      <>
+        <g fill={base} opacity="0.32">
+          <ellipse cx="720" cy="385" rx="92" ry="56" />
+          <circle cx="812" cy="352" r="34" />
+          <ellipse cx="902" cy="398" rx="72" ry="44" />
+          <circle cx="970" cy="374" r="26" />
+        </g>
+        <path d="M360 150v280" stroke={dark} strokeWidth="14" strokeLinecap="round" />
+        <path d="M360 150c-42-30-84 12-40 46" fill="none" stroke={dark} strokeWidth="14" strokeLinecap="round" />
+        <path d="M0 440q300-30 600 0t600 0v60H0z" fill={base} opacity="0.18" />
+      </>
+    )
+  } else {
+    figura = (
+      <>
+        <path d="M600 205c-72-54-172-54-242-22v212c70-32 170-32 242 22z" fill="#ffffff" stroke={base} strokeWidth="6" />
+        <path d="M600 205c72-54 172-54 242-22v212c-70-32-170-32-242 22z" fill="#ffffff" stroke={base} strokeWidth="6" />
+        <line x1="600" y1="205" x2="600" y2="417" stroke={dark} strokeWidth="5" />
+        {[252, 288, 324, 360].map((yy, i) => (
+          <g key={i}>
+            <line x1="402" y1={yy} x2="560" y2={yy} stroke={base} strokeWidth="6" opacity="0.5" />
+            <line x1="640" y1={yy} x2="798" y2={yy} stroke={base} strokeWidth="6" opacity="0.5" />
+          </g>
+        ))}
+      </>
+    )
+  }
+
+  return (
+    <div
+      aria-hidden="true"
+      style={{ width: '100%', height: alto, borderRadius: 20, overflow: 'hidden', background: soft, border: `1.5px solid ${base}33`, boxSizing: 'border-box' }}
+    >
+      <svg viewBox="0 0 1200 500" preserveAspectRatio="xMidYMid slice" style={{ width: '100%', height: '100%', display: 'block' }}>
+        <defs>
+          <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={soft} />
+            <stop offset="100%" stopColor="#ffffff" />
+          </linearGradient>
+        </defs>
+        <rect width="1200" height="500" fill={`url(#${gradId})`} />
+        <circle cx="880" cy="145" r="98" fill={base} opacity="0.16" />
+        <circle cx="880" cy="145" r="62" fill={base} opacity="0.26" />
+        {figura}
+      </svg>
     </div>
   )
 }
@@ -554,6 +736,14 @@ export async function exportarInfografiaPng(node: HTMLElement): Promise<string> 
   }
 }
 
+// Garantiza que el Blob sea un PNG real (MIME correcto) aunque la librería
+// devuelva un tipo distinto. Evita que el archivo llegue como octet-stream.
+function asegurarPng(blob: Blob | null | undefined): Blob {
+  if (!blob) throw new Error('La exportación no devolvió imagen')
+  if (blob.type === 'image/png') return blob
+  return new Blob([blob], { type: 'image/png' })
+}
+
 // Variante que devuelve un Blob (descarga directa, sin data URL/base64): más
 // fiable y ligera en móvil. Es la que usa el botón "Descargar infografía PNG".
 export async function exportarInfografiaBlob(node: HTMLElement): Promise<Blob> {
@@ -578,11 +768,22 @@ export async function exportarInfografiaBlob(node: HTMLElement): Promise<Blob> {
     bgcolor: '#FFFFFF',
   })
 
+  let blob: Blob
   try {
-    return await domtoimage.toBlob(node, opciones(escala))
+    blob = await domtoimage.toBlob(node, opciones(escala))
   } catch {
-    return await domtoimage.toBlob(node, opciones(Math.max(0.35, escala * 0.6)))
+    blob = await domtoimage.toBlob(node, opciones(Math.max(0.35, escala * 0.6)))
   }
+  return asegurarPng(blob)
+}
+
+// Devuelve un File PNG con nombre garantizado terminado en ".png" y MIME
+// image/png. Es la forma correcta de entregarlo por el panel nativo en iOS.
+export async function exportarInfografiaFile(node: HTMLElement, nombre: string): Promise<File> {
+  const blob = await exportarInfografiaBlob(node)
+  const base = (nombre || 'teodoc-infografia').replace(/[.]+$/, '')
+  const conExtension = base.toLowerCase().endsWith('.png') ? base : `${base}.png`
+  return new File([blob], conExtension, { type: 'image/png' })
 }
 
 // ---------------------------------------------------------------------------
