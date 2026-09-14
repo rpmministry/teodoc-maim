@@ -150,18 +150,13 @@ function IconoMiniPunto({ color }: { color: string }) {
 }
 
 // Badge de Marca TeoDoc con Icono Oficial
-function TeoDocBadge({ color }: { color: string }) {
+function TeoDocBadge({ color }: { color?: string }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-      <TeoDocOficialIcon size={44} bg="#0f62fe" />
-      <div style={{ display: 'flex', flexDirection: 'column' }}>
-        <span style={{ fontSize: 18, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#ffffff', lineHeight: 1.1 }}>
-          TEO<span style={{ color: '#38bdf8' }}>DOC</span>
-        </span>
-        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: color, lineHeight: 1.2, marginTop: 2 }}>
-          ANÁLISIS EDITORIAL
-        </span>
-      </div>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <TeoDocOficialIcon size={42} bg="#0f62fe" />
+      <span style={{ fontSize: 20, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#ffffff', lineHeight: 1 }}>
+        TEO<span style={{ color: '#38bdf8' }}>DOC</span>
+      </span>
     </div>
   )
 }
@@ -386,10 +381,10 @@ export default function Infografia({ data }: { data: InfografiaData; pagina?: nu
               style={{
                 fontSize: 11,
                 fontFamily: 'monospace',
-                fontWeight: 700,
-                color: pal.accent,
-                background: 'rgba(255, 255, 255, 0.05)',
-                border: `1px solid ${pal.accent}44`,
+                fontWeight: 800,
+                color: '#ffffff',
+                background: 'rgba(255, 255, 255, 0.12)',
+                border: '1px solid rgba(255, 255, 255, 0.22)',
                 borderRadius: 999,
                 padding: '3px 12px',
                 letterSpacing: '0.08em',
@@ -398,20 +393,28 @@ export default function Infografia({ data }: { data: InfografiaData; pagina?: nu
             >
               {categoriaTema}
             </span>
-            <span style={{ fontSize: 12, color: '#94a3b8', fontFamily: 'monospace', letterSpacing: '0.04em' }}>
+            <span style={{ fontSize: 12, color: '#cbd5e1', fontFamily: 'monospace', letterSpacing: '0.04em' }}>
               {fechaHoy}
-            </span>
-            <span style={{ fontSize: 11, color: '#64748b', fontFamily: 'monospace' }}>
-              [ 1080×1920 ]
             </span>
           </div>
         </header>
 
         {/* ---------------- 2. HERO: TÍTULO & IDEA CENTRAL (PROTAGONISTA Y CERCANO) ---------------- */}
         <section style={{ flexShrink: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-            <div style={{ width: 26, height: 3, backgroundColor: pal.accent, borderRadius: 2 }} />
-            <span style={{ fontSize: 12, fontFamily: 'monospace', fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: pal.accent }}>
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 8,
+              marginBottom: 6,
+              background: 'rgba(255, 255, 255, 0.08)',
+              border: '1px solid rgba(255, 255, 255, 0.16)',
+              borderRadius: 6,
+              padding: '3px 10px',
+            }}
+          >
+            <div style={{ width: 8, height: 8, backgroundColor: pal.accent, borderRadius: 999 }} />
+            <span style={{ fontSize: 12, fontFamily: 'monospace', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#ffffff' }}>
               {entrada.tema}
             </span>
           </div>
@@ -440,8 +443,21 @@ export default function Infografia({ data }: { data: InfografiaData; pagina?: nu
                 padding: '12px 18px',
               }}
             >
-              <div style={{ fontSize: 10, fontFamily: 'monospace', fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: pal.accent, marginBottom: 3 }}>
-                IDEA CENTRAL DEL EXPOSITOR
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  background: 'rgba(255, 255, 255, 0.08)',
+                  border: '1px solid rgba(255, 255, 255, 0.16)',
+                  borderRadius: 4,
+                  padding: '2px 8px',
+                  marginBottom: 6,
+                }}
+              >
+                <span style={{ fontSize: 10, fontFamily: 'monospace', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#ffffff' }}>
+                  IDEA CENTRAL DEL EXPOSITOR
+                </span>
               </div>
               <p
                 style={{
@@ -472,17 +488,26 @@ export default function Infografia({ data }: { data: InfografiaData; pagina?: nu
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  background: 'rgba(255, 255, 255, 0.08)',
+                  border: '1px solid rgba(255, 255, 255, 0.16)',
+                  borderRadius: 4,
+                  padding: '2px 8px',
+                }}
+              >
                 <span
                   style={{
-                    width: 8,
-                    height: 8,
+                    width: 6,
+                    height: 6,
                     borderRadius: '50%',
                     backgroundColor: pal.accent,
-                    boxShadow: `0 0 10px ${pal.accent}`,
                   }}
                 />
-                <span style={{ fontSize: 11, fontFamily: 'monospace', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: pal.accent }}>
+                <span style={{ fontSize: 10.5, fontFamily: 'monospace', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#ffffff' }}>
                   TEXTO BÍBLICO CLAVE
                 </span>
               </div>
@@ -543,11 +568,22 @@ export default function Infografia({ data }: { data: InfografiaData; pagina?: nu
                     padding: '8px 12px',
                   }}
                 >
-                  <div style={{ fontSize: 11, fontWeight: 800, color: pal.accent, fontFamily: 'monospace', marginBottom: 2 }}>
-                    {v.cita}
+                  <div
+                    style={{
+                      display: 'inline-block',
+                      background: 'rgba(255, 255, 255, 0.1)',
+                      border: '1px solid rgba(255, 255, 255, 0.18)',
+                      borderRadius: 4,
+                      padding: '2px 8px',
+                      marginBottom: 4,
+                    }}
+                  >
+                    <span style={{ fontSize: 11, fontWeight: 800, color: '#ffffff', fontFamily: 'monospace' }}>
+                      {v.cita}
+                    </span>
                   </div>
                   {v.texto ? (
-                    <p style={{ margin: 0, fontSize: 12.5, color: '#94a3b8', fontStyle: 'italic', lineHeight: 1.3 }}>
+                    <p style={{ margin: 0, fontSize: 12.5, color: '#cbd5e1', fontStyle: 'italic', lineHeight: 1.3 }}>
                       “{v.texto}”
                     </p>
                   ) : null}
@@ -560,9 +596,21 @@ export default function Infografia({ data }: { data: InfografiaData; pagina?: nu
         {/* ---------------- 5. DESARROLLO TEOLÓGICO (OCUPA Y LLENA EL CUERPO PRINCIPAL) ---------------- */}
         <section style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, flexShrink: 0 }}>
-            <span style={{ fontSize: 11, fontFamily: 'monospace', fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: pal.accent }}>
-              // ENSEÑANZAS Y ESTRUCTURA TEOLÓGICA ({puntos.length} PUNTOS)
-            </span>
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                background: 'rgba(255, 255, 255, 0.08)',
+                border: '1px solid rgba(255, 255, 255, 0.16)',
+                borderRadius: 4,
+                padding: '3px 8px',
+              }}
+            >
+              <span style={{ fontSize: 10.5, fontFamily: 'monospace', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#ffffff' }}>
+                ENSEÑANZAS Y ESTRUCTURA TEOLÓGICA ({puntos.length} PUNTOS)
+              </span>
+            </div>
           </div>
 
           {arquetipo === 'breve' ? (
@@ -593,8 +641,8 @@ export default function Infografia({ data }: { data: InfografiaData; pagina?: nu
                         <IconoMiniPunto color={pal.accent} />
                       </div>
                       {p.versiculo ? (
-                        <span style={{ fontSize: 11, fontFamily: 'monospace', fontWeight: 700, color: pal.glow, background: 'rgba(255,255,255,0.06)', padding: '2px 8px', borderRadius: 4 }}>
-                          [{p.versiculo}]
+                        <span style={{ fontSize: 11, fontFamily: 'monospace', fontWeight: 700, color: '#ffffff', background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.2)', padding: '2px 8px', borderRadius: 4 }}>
+                          {p.versiculo}
                         </span>
                       ) : null}
                     </div>
@@ -626,12 +674,26 @@ export default function Infografia({ data }: { data: InfografiaData; pagina?: nu
                   position: 'relative',
                 }}
               >
-                <div style={{ position: 'absolute', top: 14, left: 16, fontSize: 10, fontFamily: 'monospace', fontWeight: 800, letterSpacing: '0.14em', color: pal.accent, textTransform: 'uppercase' }}>
-                  // SIMBOLOGÍA BÍBLICA
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: 14,
+                    left: 16,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    background: 'rgba(0, 0, 0, 0.45)',
+                    border: '1px solid rgba(255, 255, 255, 0.16)',
+                    borderRadius: 4,
+                    padding: '3px 8px',
+                  }}
+                >
+                  <span style={{ fontSize: 9.5, fontFamily: 'monospace', fontWeight: 800, letterSpacing: '0.12em', color: '#ffffff', textTransform: 'uppercase' }}>
+                    SIMBOLOGÍA BÍBLICA
+                  </span>
                 </div>
                 <IlustracionEditorial id={ilustracionId} size={250} pal={pal} modo="hero" />
                 <div style={{ marginTop: 10, textAlign: 'center' }}>
-                  <span style={{ fontSize: 12, fontWeight: 800, fontFamily: 'monospace', color: '#ffffff', letterSpacing: '0.08em', textTransform: 'uppercase', background: 'rgba(255,255,255,0.06)', border: `1px solid ${pal.accent}44`, padding: '4px 12px', borderRadius: 999 }}>
+                  <span style={{ fontSize: 12, fontWeight: 800, fontFamily: 'monospace', color: '#ffffff', letterSpacing: '0.08em', textTransform: 'uppercase', background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.22)', padding: '4px 12px', borderRadius: 999 }}>
                     {categoriaTema}
                   </span>
                 </div>
@@ -672,8 +734,21 @@ export default function Infografia({ data }: { data: InfografiaData; pagina?: nu
                       ) : null}
                     </div>
                     {p.versiculo ? (
-                      <span style={{ marginTop: 4, fontSize: 10.5, fontFamily: 'monospace', fontWeight: 700, color: pal.glow }}>
-                        [{p.versiculo}]
+                      <span
+                        style={{
+                          alignSelf: 'flex-start',
+                          marginTop: 4,
+                          fontSize: 10.5,
+                          fontFamily: 'monospace',
+                          fontWeight: 700,
+                          color: '#ffffff',
+                          background: 'rgba(255,255,255,0.12)',
+                          border: '1px solid rgba(255,255,255,0.2)',
+                          padding: '2px 8px',
+                          borderRadius: 4,
+                        }}
+                      >
+                        {p.versiculo}
                       </span>
                     ) : null}
                   </div>
@@ -751,7 +826,7 @@ export default function Infografia({ data }: { data: InfografiaData; pagina?: nu
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-                    <span style={{ fontSize: escala.numeral, fontWeight: 800, fontFamily: 'monospace', color: pal.accent, lineHeight: 1 }}>
+                    <span style={{ fontSize: 11, fontWeight: 800, fontFamily: 'monospace', color: '#ffffff', background: pal.primary, padding: '2px 7px', borderRadius: 4, lineHeight: 1 }}>
                       {p.numeral}
                     </span>
                     <h3 style={{ margin: 0, fontSize: escala.tituloPunto, fontWeight: 700, color: '#ffffff', lineHeight: 1.18 }}>
@@ -781,9 +856,20 @@ export default function Infografia({ data }: { data: InfografiaData; pagina?: nu
               padding: '10px 14px',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-              <span style={{ fontSize: 10, fontFamily: 'monospace', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: pal.accent }}>
-                // ENSEÑANZA DOCTRINAL: {doctrinas[0].sobre}
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                background: 'rgba(255, 255, 255, 0.08)',
+                border: '1px solid rgba(255, 255, 255, 0.16)',
+                borderRadius: 4,
+                padding: '2px 8px',
+                marginBottom: 4,
+              }}
+            >
+              <span style={{ fontSize: 10, fontFamily: 'monospace', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#ffffff' }}>
+                ENSEÑANZA DOCTRINAL: {doctrinas[0].sobre}
               </span>
             </div>
             <p style={{ margin: 0, fontSize: 13, color: '#e2e8f0', lineHeight: 1.34 }}>
@@ -803,7 +889,20 @@ export default function Infografia({ data }: { data: InfografiaData; pagina?: nu
               alignItems: 'center',
             }}
           >
-            <span style={{ fontSize: 11, fontFamily: 'monospace', fontWeight: 800, color: '#64748b', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+            <span
+              style={{
+                fontSize: 10.5,
+                fontFamily: 'monospace',
+                fontWeight: 800,
+                color: '#ffffff',
+                background: 'rgba(255, 255, 255, 0.08)',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                borderRadius: 4,
+                padding: '2px 7px',
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+              }}
+            >
               CONCEPTOS:
             </span>
             {entrada.conceptos.map((c, i) => (
@@ -842,9 +941,22 @@ export default function Infografia({ data }: { data: InfografiaData; pagina?: nu
           }}
         >
           <div style={{ flex: 1, minWidth: 0 }}>
-            <span style={{ fontSize: 10, fontFamily: 'monospace', fontWeight: 800, letterSpacing: '0.16em', textTransform: 'uppercase', color: pal.accent }}>
-              VERDAD PARA RECORDAR // CONCLUSIÓN
-            </span>
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                background: 'rgba(255, 255, 255, 0.08)',
+                border: '1px solid rgba(255, 255, 255, 0.16)',
+                borderRadius: 4,
+                padding: '2px 8px',
+                marginBottom: 4,
+              }}
+            >
+              <span style={{ fontSize: 9.5, fontFamily: 'monospace', fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#ffffff' }}>
+                VERDAD PARA RECORDAR // CONCLUSIÓN
+              </span>
+            </div>
             <p
               style={{
                 margin: '3px 0 0',
@@ -988,9 +1100,6 @@ export function ResponsiveInfografia({ data }: { data: InfografiaData }) {
           <Infografia data={data} />
         </div>
       </div>
-      <p style={{ marginTop: 12, fontSize: 13, color: '#8d8d8d', textAlign: 'center', fontFamily: 'monospace' }}>
-        INFOGRAFÍA EDITORIAL 9:16 (1080×1920) · SISTEMA DE DISEÑO CARBON · ALTA DEFINICIÓN
-      </p>
     </div>
   )
 }
