@@ -99,9 +99,9 @@ comprobar('Infografía con canvas FIJO 9:16 (nunca crece dinámicamente por cont
 
 comprobar('Retícula base 8 px y safe areas respetadas', () => {
   assert.ok(layout.includes('export const GRID_BASE = 8'), 'sin GRID_BASE 8');
-  assert.ok(layout.includes('export const SAFE_TOP = 96'), 'sin SAFE_TOP 96');
-  assert.ok(layout.includes('export const SAFE_BOTTOM = 104'), 'sin SAFE_BOTTOM 104');
-  assert.ok(layout.includes('export const SAFE_LATERAL = 72'), 'sin SAFE_LATERAL 72');
+  assert.ok(layout.includes('export const SAFE_TOP = 64'), 'sin SAFE_TOP 64');
+  assert.ok(layout.includes('export const SAFE_BOTTOM = 64'), 'sin SAFE_BOTTOM 64');
+  assert.ok(layout.includes('export const SAFE_LATERAL = 48'), 'sin SAFE_LATERAL 48');
   assert.ok(infografia.includes('SAFE_TOP'), 'infografia no aplica SAFE_TOP');
   assert.ok(infografia.includes('SAFE_BOTTOM'), 'infografia no aplica SAFE_BOTTOM');
   assert.ok(infografia.includes('SAFE_LATERAL'), 'infografia no aplica SAFE_LATERAL');

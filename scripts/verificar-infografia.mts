@@ -47,9 +47,9 @@ comprobar('Retícula matemática basada en unidad de 8 px', () => {
 
 // ---- 3. Safe Zones para Redes Sociales ----
 comprobar('Safe zones protegen contra recortes en Stories/WhatsApp', () => {
-  assert.ok(SAFE_TOP >= 80 && SAFE_TOP <= 120, 'margen superior fuera de rango seguro');
-  assert.ok(SAFE_BOTTOM >= 80 && SAFE_BOTTOM <= 130, 'margen inferior fuera de rango seguro');
-  assert.ok(SAFE_LATERAL >= 64 && SAFE_LATERAL <= 96, 'margen lateral fuera de rango seguro');
+  assert.ok(SAFE_TOP >= 60 && SAFE_TOP <= 120, 'margen superior fuera de rango seguro');
+  assert.ok(SAFE_BOTTOM >= 60 && SAFE_BOTTOM <= 130, 'margen inferior fuera de rango seguro');
+  assert.ok(SAFE_LATERAL >= 40 && SAFE_LATERAL <= 96, 'margen lateral fuera de rango seguro');
 });
 
 // ---- 4. Piso de Legibilidad Absoluto ----

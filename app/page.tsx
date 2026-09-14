@@ -1005,25 +1005,35 @@ export default function Home() {
       return t;
     };
 
-    // ------------------ ENCABEZADO COMPACTO (masthead, mismo flujo) ------------------
+    // ------------------ ENCABEZADO COMPACTO (masthead preponderante estilo Carbon) ------------------
     setFill(C.accent); doc.rect(0, 0, pageW, headerBandY, 'F');
-    doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); setText(C.sub);
-    doc.text('ANÁLISIS DEL MENSAJE', margin, marginT + 2);
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(9); setText(C.accent);
+    doc.text('// ESTUDIO BÍBLICO EXPOSITIVO · TEODOC', margin, marginT);
     dibujarLogoPDF(pageW - marginR - 82, marginT - 16, 1);
 
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(26); setText(C.ink);
-    const mastTitle = doc.splitTextToSize(resultado.titulo || 'Mensaje', contentW);
-    doc.text(mastTitle, margin, marginT + 34);
-    y = marginT + 34 + mastTitle.length * 30;
+    doc.setFont('helvetica', 'bold'); doc.setFontSize(28); setText(C.ink);
+    const mastTitle = doc.splitTextToSize(resultado.titulo || 'Mensaje', contentW - 20);
+    const mastTitleH = mastTitle.length * 32;
+    setFill(C.accent); doc.rect(margin, marginT + 12, 4.5, mastTitleH, 'F');
+    doc.text(mastTitle, margin + 14, marginT + 34);
+    y = marginT + 22 + mastTitleH;
 
-    setStroke(C.accent); doc.setLineWidth(4); doc.line(margin, y, margin + 80, y);
-    y += 20;
+    // Regla divisoria técnica Carbon: acento + regla estructural fina
+    setStroke(C.accent); doc.setLineWidth(2.5); doc.line(margin, y, margin + 100, y);
+    setStroke(C.rule); doc.setLineWidth(0.6); doc.line(margin + 100, y, pageW - marginR, y);
+    y += 18;
 
     if (resultado.idea_principal) {
-      doc.setFont('helvetica', 'italic'); doc.setFontSize(12.5); setText(C.sub);
-      const ideaLines = doc.splitTextToSize(`“${recortarEnOracion(resultado.idea_principal, 420)}”`, contentW);
-      doc.text(ideaLines, margin, y);
-      y += ideaLines.length * 17 + 10;
+      doc.setFont('helvetica', 'italic'); doc.setFontSize(12); setText(C.sub);
+      const ideaLines = doc.splitTextToSize(`“${recortarEnOracion(resultado.idea_principal, 420)}”`, contentW - 24);
+      const ideaH = ideaLines.length * 16 + 18;
+      setFill(C.surface); doc.rect(margin, y, contentW, ideaH, 'F');
+      setFill(C.accent); doc.rect(margin, y, 3, ideaH, 'F');
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); setText(C.accent);
+      doc.text('IDEA CENTRAL DEL EXPOSITOR', margin + 14, y + 12);
+      doc.setFont('helvetica', 'italic'); doc.setFontSize(11); setText(C.ink);
+      doc.text(ideaLines, margin + 14, y + 26);
+      y += ideaH + 16;
     }
 
     if (pdfPasaje) {

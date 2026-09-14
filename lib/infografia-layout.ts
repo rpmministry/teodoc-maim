@@ -5,8 +5,7 @@
 // - Escala tipográfica deliberada con jerarquía visual estricta
 // - Composición continua en una sola lámina vertical 9:16 (1080×1920 px)
 // - Densidad adaptativa según volumen real (Breve, Medio, Extenso)
-// - Integración de versículos relevantes y bloques doctrinales para ocupar
-//   el lienzo de forma equilibrada sin inventar contenido
+// - Distribución armónica sin vacíos ni elementos apiñados
 // ---------------------------------------------------------------------------
 
 export const CANVAS_W = 1080;
@@ -16,13 +15,13 @@ export const CANVAS_H = 1920;
 export const GRID_BASE = 8;
 export const g = (n: number) => n * GRID_BASE;
 
-// Zonas seguras (Safe Areas para Instagram Stories, WhatsApp Status y redes)
-// Margen funcional: garantiza que los bordes respeten las barras móviles
-export const SAFE_TOP = 96;       // 12 * 8 = 96 px (~5% superior para stories)
-export const SAFE_BOTTOM = 104;   // 13 * 8 = 104 px (~5.4% inferior para barra de interacción)
-export const SAFE_LATERAL = 72;   // 9 * 8 = 72 px (~6.6% a cada lado)
-export const ANCHO_UTIL = CANVAS_W - SAFE_LATERAL * 2; // 936 px
-export const ALTO_UTIL = CANVAS_H - SAFE_TOP - SAFE_BOTTOM; // 1720 px
+// Zonas seguras optimizadas: márgenes limpios y calibrados para dar máxima
+// presencia y amplitud al contenido editorial sin invadir controles de redes
+export const SAFE_TOP = 64;       // 8 * 8 = 64 px
+export const SAFE_BOTTOM = 64;    // 8 * 8 = 64 px
+export const SAFE_LATERAL = 48;   // 6 * 8 = 48 px
+export const ANCHO_UTIL = CANVAS_W - SAFE_LATERAL * 2; // 984 px
+export const ALTO_UTIL = CANVAS_H - SAFE_TOP - SAFE_BOTTOM; // 1792 px
 
 // Piso de legibilidad absoluto en px (canvas 1080 px).
 export const PISO_LEGIBILIDAD = {
@@ -121,9 +120,8 @@ export function resumirEditorial(texto: string, maxChars: number): string {
 }
 
 /**
- * Clasifica el contenido disponible y planifica la composición editorial
- * para que el lienzo de 1080×1920 px quede armónico, sin huecos vacíos
- * y con información teológica real y estructurada al estilo Carbon.
+ * Planifica la composición editorial con proporciones armónicas y fluidas
+ * en el lienzo de 1080×1920 px, evitando tanto vacíos como aglomeraciones.
  */
 export function planificarComposicion(e: EntradaInfografia): PlanEditorial {
   const numPuntos = Math.min(e.puntos.length, 10);
@@ -138,12 +136,12 @@ export function planificarComposicion(e: EntradaInfografia): PlanEditorial {
   // Escalas tipográficas adaptativas basadas en Carbon Design System
   const escalas = {
     breve: {
-      display: 60,
+      display: 62,
       subtitulo: 24,
       biblia: 24,
       tituloPunto: 24,
       cuerpoPunto: 18,
-      numeral: 44,
+      numeral: 48,
       caption: 14,
     },
     medio: {
@@ -152,14 +150,14 @@ export function planificarComposicion(e: EntradaInfografia): PlanEditorial {
       biblia: 22,
       tituloPunto: 21,
       cuerpoPunto: 17,
-      numeral: 38,
+      numeral: 40,
       caption: 13,
     },
     extenso: {
       display: 48, // Respeta PISO_LEGIBILIDAD.display
       subtitulo: 22,
       biblia: 20,
-      tituloPunto: 19,
+      tituloPunto: 20, // Respeta PISO_LEGIBILIDAD.tituloModulo
       cuerpoPunto: 16, // Respeta PISO_LEGIBILIDAD.cuerpo
       numeral: 34,    // Respeta PISO_LEGIBILIDAD.numeral
       caption: 12,
@@ -171,36 +169,32 @@ export function planificarComposicion(e: EntradaInfografia): PlanEditorial {
   const ilustracionTamano: 'hero' | 'medio' | 'banner' =
     arquetipo === 'breve' ? 'hero' : arquetipo === 'medio' ? 'medio' : 'banner';
 
-  // Extraer versículos de apoyo reales (hasta 2) para enriquecer el lienzo
   const versiculosApoyo = (e.otrosVersiculos || [])
     .filter((v) => v.cita && v.cita !== e.pasaje)
-    .slice(0, arquetipo === 'extenso' ? 1 : 2)
+    .slice(0, 2)
     .map((v) => ({
       cita: v.cita,
-      texto: resumirEditorial(v.texto, 140),
+      texto: resumirEditorial(v.texto, 150),
     }));
 
-  const doctrinas = (e.doctrinas || []).slice(0, arquetipo === 'breve' ? 2 : 1);
-
-  // Activación inteligente de bloques para rellenar espacios vacíos
+  const doctrinas = (e.doctrinas || []).slice(0, 1);
   const mostrarVersiculosApoyo = versiculosApoyo.length > 0;
   const mostrarDoctrina = doctrinas.length > 0;
 
-  // Preparación de puntos editoriales
-  const maxDetalle = arquetipo === 'breve' ? 180 : arquetipo === 'medio' ? 130 : 95;
+  const maxDetalle = arquetipo === 'breve' ? 200 : arquetipo === 'medio' ? 140 : 100;
   const puntos: PuntoEditorial[] = e.puntos.slice(0, numPuntos).map((p, i) => ({
     indice: i + 1,
     numeral: String(i + 1).padStart(2, '0'),
-    titulo: resumirEditorial(p.titulo || '', 75),
+    titulo: resumirEditorial(p.titulo || '', 80),
     detalle: resumirEditorial(p.detalle || '', maxDetalle),
     versiculo: p.versiculo,
   }));
 
   const altHeader = 80;
-  const altHero = arquetipo === 'breve' ? 230 : arquetipo === 'medio' ? 210 : 190;
-  const altBiblico = arquetipo === 'breve' ? 170 : arquetipo === 'medio' ? 150 : 130;
-  const altCierre = 110;
-  const altDoctrina = mostrarDoctrina ? 90 : 0;
+  const altHero = arquetipo === 'breve' ? 240 : arquetipo === 'medio' ? 220 : 200;
+  const altBiblico = arquetipo === 'breve' ? 180 : arquetipo === 'medio' ? 160 : 140;
+  const altCierre = 120;
+  const altDoctrina = mostrarDoctrina ? 80 : 0;
   const altDesarrollo = ALTO_UTIL - altHeader - altHero - altBiblico - altDoctrina - altCierre;
 
   return {
