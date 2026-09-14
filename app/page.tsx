@@ -1,7 +1,7 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
 import LiquidOrb, { type LiquidOrbHandle } from '@/components/liquid-orb';
-import Infografia, { ResponsiveInfografia, resumir, exportarInfografiaBlob } from '@/components/infografia';
+import Infografia, { ResponsiveInfografia, resumir, exportarInfografiaBlob, planInfografia } from '@/components/infografia';
 import { extractYouTubeVideoId } from '@/lib/youtube/extract-video-id';
 
 interface Versiculo { cita: string; texto: string; }
@@ -253,7 +253,10 @@ export default function Home() {
   const [youtubeUrl, setYoutubeUrl] = useState('');
   const [avisoYoutube, setAvisoYoutube] = useState<string | null>(null);
 
-  const infografiaRef = useRef<HTMLDivElement>(null);
+  // Referencias por página: la infografía puede ser un carrusel de 1..N páginas.
+  const infografiaRefs = useRef<(HTMLDivElement | null)[]>([]);
+  // Número de páginas del plan (carrusel) para el resultado actual.
+  const totalPaginasInfografia = resultado ? Math.max(1, planInfografia(resultado).paginas.length) : 1;
   // Pestaña de iOS abierta dentro del gesto del usuario para exportar sin
   // reemplazar la página de TeoDoc.
   const ventanaIOSRef = useRef<Window | null>(null);
@@ -801,28 +804,62 @@ export default function Home() {
     }
   };
 
-  // C. Export PNG: parte del artboard FIJO de 900px (independiente del
-  // contenedor visible y del viewport). El resultado es EXACTAMENTE la
-  // infografía completa: sin hoja A4, sin recortes y sin fondo blanco extra.
+  // Export PNG: cada página es un lienzo FIJO 9:16 (1080×1920). Si el plan es
+  // carrusel, se exportan todas las páginas numeradas (1deN).
   const descargarInfografia = async () => {
     if (descargando) return;
-    const safe = (resultado?.titulo || 'mensaje').replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 60);
-    const nombre = `TeoDoc_Infografia_${safe || 'mensaje'}.png`;
+    const safe = (resultado?.titulo || 'mensaje').replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 60) || 'mensaje';
+    const total = totalPaginasInfografia;
     setDescargando(true);
     iniciarDescarga('png');
     abrirVentanaIOS();
     try {
-      const node = infografiaRef.current;
-      if (!node) throw new Error('Sin artboard');
-      const blob = await exportarInfografiaBlob(node);
-      // Garantiza un PNG real: MIME correcto y nombre terminado en .png.
-      const png = blob.type === 'image/png' ? blob : new Blob([blob], { type: 'image/png' });
-      const { url } = await entregarArchivo(png, nombre, ventanaIOSRef.current);
-      ventanaIOSRef.current = null;
-      if (url) {
+      const paginas: { blob: Blob; nombre: string }[] = [];
+      for (let i = 0; i < total; i++) {
+        const node = infografiaRefs.current[i];
+        if (!node) continue;
+        const blob = await exportarInfografiaBlob(node);
+        const png = blob.type === 'image/png' ? blob : new Blob([blob], { type: 'image/png' });
+        const nombre = total > 1
+          ? `TeoDoc_Infografia_${safe}_${i + 1}de${total}.png`
+          : `TeoDoc_Infografia_${safe}.png`;
+        paginas.push({ blob: png, nombre });
+      }
+      if (!paginas.length) throw new Error('Sin artboard');
+
+      const nav = navigator as Navigator & { canShare?: (d: ShareData) => boolean; share?: (d: ShareData) => Promise<void> };
+      const files = paginas.map((p) => new File([p.blob], p.nombre, { type: 'image/png' }));
+
+      // iOS: compartir el carrusel completo de una sola vez si es posible.
+      if (esIOS() && typeof nav.share === 'function' && typeof nav.canShare === 'function' && nav.canShare({ files })) {
+        try {
+          await nav.share({ files, title: 'Infografía TeoDoc' });
+          try { ventanaIOSRef.current?.close(); } catch { /* ignorar */ }
+          ventanaIOSRef.current = null;
+          setUltimoArchivo(null);
+          finalizarDescarga(true);
+          return;
+        } catch (e) {
+          if ((e as { name?: string })?.name === 'AbortError') {
+            try { ventanaIOSRef.current?.close(); } catch { /* ignorar */ }
+            ventanaIOSRef.current = null;
+            setUltimoArchivo(null);
+            finalizarDescarga(true);
+            return;
+          }
+        }
+      }
+
+      let primeraUrl: string | null = null;
+      for (const p of paginas) {
+        const { url } = await entregarArchivo(p.blob, p.nombre, ventanaIOSRef.current);
+        ventanaIOSRef.current = null;
+        if (url && !primeraUrl) primeraUrl = url;
+      }
+      if (primeraUrl) {
         if (ultimoUrlRef.current) URL.revokeObjectURL(ultimoUrlRef.current);
-        ultimoUrlRef.current = url;
-        setUltimoArchivo({ url, nombre, tipo: 'png' });
+        ultimoUrlRef.current = primeraUrl;
+        setUltimoArchivo({ url: primeraUrl, nombre: paginas[0].nombre, tipo: 'png' });
       } else {
         setUltimoArchivo(null);
       }
@@ -877,13 +914,14 @@ export default function Home() {
     const pageW = doc.internal.pageSize.getWidth();
     const pageH = doc.internal.pageSize.getHeight();
     // Márgenes de impresión y argollado:
-    //  - margin  = interior (lado izquierdo destinado al anillado/perforación).
+    //  - margin  = interior (lado izquierdo destinado al anillado/perforación):
+    //    ~35 mm, es decir ~15 mm MÁS que el resto (zona de perforación segura).
     //  - marginR = exterior.  - marginT/B = superior e inferior.
-    // Ningún texto, número de página ni elemento esencial invade la zona segura.
-    const margin = 74;
-    const marginR = 52;
-    const marginT = 58;
-    const marginB = 62;
+    // Ningún texto, numeral, encabezado ni número de página invade la zona segura.
+    const margin = 98;
+    const marginR = 54;
+    const marginT = 60;
+    const marginB = 64;
     const contentW = pageW - margin - marginR;
     const bottomY = pageH - marginB;
     const headerBandY = 6;
@@ -1100,41 +1138,82 @@ export default function Home() {
       chips(referencias);
     }
 
-    // 4. Puntos principales (cantidad dinámica)
-    const nPuntos = listaPuntos.length;
+    // 4. Puntos principales (cantidad dinámica).
+    //    Un ÚNICO objeto por punto alimenta numeral, título y cuerpo. No hay
+    //    arrays paralelos, así que es imposible que se desincronicen.
+    type PuntoPDF = {
+      numero: string;
+      titulo: string;
+      explicacion: string;
+      subtemas: { titulo: string; desarrollo: string }[];
+      versiculos: { cita: string; texto: string }[];
+    };
+    const puntosPDF: PuntoPDF[] = listaPuntos.map((p, idx) => ({
+      numero: String(idx + 1).padStart(2, '0'),
+      titulo: p.punto || '',
+      explicacion: p.explicacion || '',
+      subtemas: p.subtemas || [],
+      versiculos: p.versiculos || [],
+    }));
+
+    // Validación 1:1 numeral ↔ contenido (nunca debe fallar; avisa si falla).
+    puntosPDF.forEach((pt, idx) => {
+      const esperado = String(idx + 1).padStart(2, '0');
+      if (pt.numero !== esperado) {
+        console.warn(`[PDF] Desfase de numeral en el punto ${idx + 1}: ${pt.numero} ≠ ${esperado}`);
+      }
+    });
+    if (puntosPDF.length !== listaPuntos.length) {
+      console.warn(`[PDF] Puntos renderizados (${puntosPDF.length}) ≠ puntos del análisis (${listaPuntos.length}).`);
+    }
+
+    const nPuntos = puntosPDF.length;
     heading(`${nPuntos} ${nPuntos === 1 ? 'punto principal' : 'puntos principales'}`, 96);
-    listaPuntos.forEach((p, idx) => {
-      const num = String(idx + 1).padStart(2, '0');
+    puntosPDF.forEach((pt) => {
+      // Alturas MEDIDAS con las métricas reales de fuente (no estimaciones fijas).
       doc.setFont('helvetica', 'bold'); doc.setFontSize(14);
-      const titleLines = doc.splitTextToSize(resumir(p.punto || '', 120), contentW - 48);
-      const headerH = Math.max(28, titleLines.length * 17);
-      // Reserva el título MÁS el inicio del desarrollo: evita títulos huérfanos.
+      const titleLines: string[] = doc.splitTextToSize(resumir(pt.titulo, 120), contentW - 52);
+      const titleH = Math.max(20, titleLines.length * 18);
+      const numSize = Math.max(30, Math.min(34, titleH + 10));
+      const headerH = Math.max(numSize, titleH);
+
+      // Reserva numeral + título + al menos dos líneas de cuerpo (sin huérfanos).
       ensure(headerH + 46);
       const top = y;
-      setFill(C.accent); doc.rect(margin, top, 28, 28, 'F');
+
+      // Numeral en su propio bloque; nunca comparte línea base con el título.
+      setFill(C.accent); doc.roundedRect(margin, top, numSize, numSize, 4, 4, 'F');
       doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.setTextColor(255, 255, 255);
-      doc.text(num, margin + 14, top + 19, { align: 'center' });
+      doc.text(pt.numero, margin + numSize / 2, top + numSize / 2 + 5, { align: 'center' });
+
+      // Título centrado verticalmente respecto al numeral, con separación real.
+      const titleX = margin + numSize + 14;
+      const titleBaseline = top + (numSize - titleH) / 2 + titleH * 0.78;
       doc.setFont('helvetica', 'bold'); doc.setFontSize(14); setText(C.ink);
-      doc.text(titleLines, margin + 44, top + 19);
-      y = top + headerH + 6;
-      if (p.explicacion) paragraph(resumir(p.explicacion, 700), { size: 10.5, lead: 14.5, color: C.sub });
+      doc.text(titleLines, titleX, titleBaseline);
+
+      // El cuerpo arranca SIEMPRE debajo del bloque numeral+título.
+      y = top + headerH + 14;
+
+      if (pt.explicacion) paragraph(resumir(pt.explicacion, 700), { size: 10.5, lead: 15, color: C.sub });
 
       // Subtemas reales dentro del tema (solo si el contenido los contiene).
-      (p.subtemas || []).forEach((s) => {
+      pt.subtemas.forEach((s) => {
         doc.setFont('helvetica', 'bold'); doc.setFontSize(10.5); setText(C.ink);
-        const subTitle = doc.splitTextToSize(resumir(s.titulo || '', 120), contentW - 24);
-        ensure(subTitle.length * 14 + 22);
-        doc.text(subTitle, margin + 14, y); y += subTitle.length * 14 + 3;
+        const subTitle: string[] = doc.splitTextToSize(resumir(s.titulo || '', 120), contentW - 24);
+        // El subtítulo viaja con las primeras líneas de su desarrollo.
+        ensure(subTitle.length * 15 + 26);
+        doc.text(subTitle, margin + 16, y); y += subTitle.length * 15 + 4;
         if (s.desarrollo) {
-          paragraph(resumir(s.desarrollo, 420), { size: 10, lead: 13.5, color: C.sub, indent: 14 });
+          paragraph(resumir(s.desarrollo, 420), { size: 10, lead: 14, color: C.sub, indent: 16 });
         }
-        y += 3;
+        y += 4;
       });
 
-      (p.versiculos || []).slice(0, 6).forEach((v) => quoteBlock(v.cita || '', v.texto || ''));
+      pt.versiculos.slice(0, 6).forEach((v) => quoteBlock(v.cita || '', v.texto || ''));
       y += 6;
       ensure(20);
-      setStroke(C.rule); doc.setLineWidth(0.5); doc.line(margin, y, pageW - marginR, y); y += 14;
+      setStroke(C.rule); doc.setLineWidth(0.5); doc.line(margin, y, pageW - marginR, y); y += 16;
     });
 
     // 4b. Enseñanzas principales (solo las categorías realmente presentes)
@@ -1641,14 +1720,14 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Artboard OCULTO para exportar el PNG. IMPORTANTE: el contenedor
-                  no debe tener width/height 0, porque el nodo de referencia
-                  colapsaría a ancho 0 ("artboard vacío"). Se oculta fuera de
-                  pantalla con max-content para conservar el tamaño real. */}
+              {/* Artboard OCULTO para exportar el PNG (una página por nodo). El
+                  contenedor conserva tamaño real con max-content. */}
               <div aria-hidden="true" style={{ position: 'fixed', left: -100000, top: 0, pointerEvents: 'none', opacity: 0 }}>
-                <div ref={infografiaRef} style={{ width: 'max-content' }}>
-                  <Infografia data={resultado} />
-                </div>
+                {Array.from({ length: totalPaginasInfografia }).map((_, i) => (
+                  <div key={i} ref={(el) => { infografiaRefs.current[i] = el; }} style={{ width: 'max-content' }}>
+                    <Infografia data={resultado} pagina={i} />
+                  </div>
+                ))}
               </div>
             </div>
           </div>

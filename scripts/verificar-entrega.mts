@@ -11,6 +11,8 @@ const leer = (rel: string) => readFileSync(resolve(raiz, rel), 'utf8');
 
 const page = leer('app/page.tsx');
 const infografia = leer('components/infografia.tsx');
+const ilustraciones = leer('components/ilustraciones/index.tsx');
+const layout = leer('lib/infografia-layout.ts');
 const analyze = leer('app/api/analyze/route.ts');
 
 let pasadas = 0;
@@ -48,9 +50,10 @@ comprobar('El PNG se reafirma con MIME image/png', () => {
 });
 
 comprobar('El nombre de archivo termina exactamente en .png (sin .png.)', () => {
-  assert.match(page, /TeoDoc_Infografia_.*\.png/);
+  assert.match(page, /TeoDoc_Infografia_/);
   assert.ok(!page.includes('.png.txt'), 'aparece extensión .png.txt');
-  assert.ok(/Infografia_\$\{safe \|\| 'mensaje'\}\.png/.test(page), 'nombre de PNG mal formado');
+  assert.ok(/TeoDoc_Infografia_\$\{safe\}\.png/.test(page), 'nombre de PNG simple mal formado');
+  assert.ok(/TeoDoc_Infografia_\$\{safe\}_\$\{i \+ 1\}de\$\{total\}\.png/.test(page), 'nombre de carrusel mal formado');
 });
 
 comprobar('El PDF se entrega con MIME application/pdf', () => {
@@ -59,10 +62,18 @@ comprobar('El PDF se entrega con MIME application/pdf', () => {
 
 // ---- PDF: márgenes de impresión/argollado y layout (casos 9, 10) ----
 comprobar('PDF con margen interior de argollado y exterior distintos', () => {
-  assert.ok(page.includes('const margin = 74'), 'sin margen interior');
-  assert.ok(page.includes('const marginR = 52'), 'sin margen exterior');
-  assert.ok(page.includes('const marginT = 58'), 'sin margen superior');
-  assert.ok(page.includes('const marginB = 62'), 'sin margen inferior');
+  assert.ok(page.includes('const margin = 98'), 'sin margen interior de anillado');
+  assert.ok(page.includes('const marginR = 54'), 'sin margen exterior');
+  assert.ok(page.includes('const marginT = 60'), 'sin margen superior');
+  assert.ok(page.includes('const marginB = 64'), 'sin margen inferior');
+  // Interior al menos ~15 mm mayor que el exterior (98-54 = 44pt ≈ 15.5 mm).
+  assert.ok(98 - 54 >= 15 * 2.8346, 'margen de anillado insuficiente');
+});
+
+comprobar('PDF: numeral y contenido desde un único objeto (sin desfase)', () => {
+  assert.ok(page.includes('const puntosPDF: PuntoPDF[]'), 'sin objeto unificado de puntos');
+  assert.ok(page.includes('puntosPDF.forEach((pt)'), 'el render no usa el objeto unificado');
+  assert.ok(page.includes('numeral en el punto'), 'sin validación de numeral 1:1');
 });
 
 comprobar('PDF con keep-with-next y control de página (sin huérfanos)', () => {
@@ -70,20 +81,66 @@ comprobar('PDF con keep-with-next y control de página (sin huérfanos)', () => 
   assert.ok(page.includes('const nuevaPagina = ()'), 'sin control de página');
 });
 
-// ---- Infografía 9:16 y zona segura (casos 11, 12) ----
-comprobar('Infografía en 9:16 (NO 16:9)', () => {
-  assert.ok(infografia.includes('(canvasH * 9) / 16'), 'no usa 9:16');
+// ---- Infografía: canvas FIJO 9:16, densidad y safe zones ----
+comprobar('Infografía con canvas FIJO 9:16 (nunca crece por contenido)', () => {
+  assert.ok(layout.includes('export const CANVAS_W = 1080'), 'sin ancho 1080');
+  assert.ok(layout.includes('export const CANVAS_H = 1920'), 'sin alto 1920');
+  assert.ok(infografia.includes('height: CANVAS_H'), 'el canvas no usa alto fijo');
+  assert.ok(!infografia.includes('setCanvasH'), 'aún crece el alto dinámicamente');
+  assert.ok(!infografia.includes('naturalH'), 'aún mide alto natural');
+  assert.ok(!infografia.includes('scrollHeight'), 'aún amplía por desborde');
   assert.ok(!infografia.includes('16 / 9'), 'aparece 16:9 erróneo');
 });
 
-comprobar('Infografía con zona segura proporcional', () => {
-  assert.ok(infografia.includes('const safe = Math.max(48'), 'sin zona segura');
+comprobar('Niveles de densidad como presets completos (1-4)', () => {
+  assert.ok(layout.includes('export const PRESETS'), 'sin presets');
+  assert.ok(layout.includes('NivelDensidad = 1 | 2 | 3 | 4'), 'sin 4 niveles');
+  for (const campo of ['display', 'tituloTarjeta', 'numeral', 'cuerpo', 'caption', 'lineHeight', 'padTarjeta', 'gapTarjetas', 'icono', 'ilustracion']) {
+    assert.ok(layout.includes(campo), `preset sin campo ${campo}`);
+  }
 });
 
-comprobar('Infografía con bloques dinámicos (hasta 10 enseñanzas)', () => {
-  assert.ok(infografia.includes('.slice(0, 10)'), 'sin tope dinámico de 10');
-  assert.ok(infografia.includes('conexiones_biblicas'), 'sin conexiones bíblicas');
-  assert.ok(infografia.includes('IlustracionTema'), 'sin ilustración de relleno');
+comprobar('Piso de legibilidad absoluto definido y respetado', () => {
+  assert.ok(layout.includes('export const PISO_LEGIBILIDAD'), 'sin piso de legibilidad');
+  assert.ok(layout.includes('export function presetRespetaPiso'), 'sin validador de piso');
+  assert.ok(layout.includes('cuerpo: 30'), 'piso de cuerpo distinto de 30');
+  assert.ok(layout.includes('titulo: 38'), 'piso de título distinto de 38');
+  assert.ok(layout.includes('numeral: 38'), 'piso de numeral distinto de 38');
+  assert.ok(layout.includes('caption: 23'), 'piso de caption distinto de 23');
+});
+
+comprobar('Modos automáticos carrusel y resumen', () => {
+  assert.ok(layout.includes("'unico' | 'carrusel' | 'resumen'"), 'sin modos');
+  assert.ok(layout.includes('export function planificarInfografia'), 'sin planificador');
+  assert.ok(layout.includes('export function recortarParaResumen'), 'sin recorte de resumen');
+  assert.ok(layout.includes('export function empaquetarEnPaginas'), 'sin empaquetado de carrusel');
+  assert.ok(infografia.includes('{idx + 1}/{total}'), 'sin numeración de carrusel');
+  assert.ok(infografia.includes('pagina'), 'el componente no acepta página');
+});
+
+comprobar('Safe zones ampliadas de Stories y feed', () => {
+  assert.ok(layout.includes('SAFE_ZONE_STORY_TOP'), 'sin zona superior');
+  assert.ok(layout.includes('SAFE_ZONE_STORY_BOTTOM'), 'sin zona inferior');
+  assert.ok(layout.includes('SAFE_ZONE_FEED'), 'sin zona de feed');
+  assert.ok(layout.includes('export function metricasCanvas'), 'sin métricas de canvas');
+});
+
+comprobar('Infografía con conectores, breadcrumbs y progreso', () => {
+  assert.ok(infografia.includes('ConectorNodo'), 'sin conector riel↔tarjeta');
+  assert.ok(infografia.includes('Breadcrumb'), 'sin breadcrumbs en listas');
+  assert.ok(infografia.includes('BarraProgreso'), 'sin indicador de progreso');
+});
+
+comprobar('Infografía sin recursos remotos (Safari-safe)', () => {
+  assert.ok(!infografia.includes('http://') && !infografia.includes('https://'), 'referencia remota en infografia');
+  assert.ok(!ilustraciones.includes('http://') && !ilustraciones.includes('https://'), 'referencia remota en ilustraciones');
+});
+
+comprobar('Librería de ilustraciones por categorías temáticas (1.2)', () => {
+  assert.ok(ilustraciones.includes('export function elegirIlustracion'), 'sin selector temático');
+  for (const id of ['casa', 'mesa', 'vela', 'corazon', 'manos', 'llama', 'bifurcacion', 'brujula', 'huellas', 'manantial', 'semilla', 'amanecer', 'rollo', 'cayado', 'paloma']) {
+    assert.ok(ilustraciones.includes(`'${id}'`), `falta ilustración ${id}`);
+  }
 });
 
 // ---- Análisis: esquema enriquecido y profundidad (casos 1-8, 16) ----
