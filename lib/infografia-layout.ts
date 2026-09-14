@@ -5,7 +5,8 @@
 // - Escala tipográfica deliberada con jerarquía visual estricta
 // - Composición continua en una sola lámina vertical 9:16 (1080×1920 px)
 // - Densidad adaptativa según volumen real (Breve, Medio, Extenso)
-// - Cero invención de contenidos y cero carrusel
+// - Integración de versículos relevantes y bloques doctrinales para ocupar
+//   el lienzo de forma equilibrada sin inventar contenido
 // ---------------------------------------------------------------------------
 
 export const CANVAS_W = 1080;
@@ -16,7 +17,7 @@ export const GRID_BASE = 8;
 export const g = (n: number) => n * GRID_BASE;
 
 // Zonas seguras (Safe Areas para Instagram Stories, WhatsApp Status y redes)
-// Nada crítico toca los bordes: margen funcional para controles de interfaz móvil
+// Margen funcional: garantiza que los bordes respeten las barras móviles
 export const SAFE_TOP = 96;       // 12 * 8 = 96 px (~5% superior para stories)
 export const SAFE_BOTTOM = 104;   // 13 * 8 = 104 px (~5.4% inferior para barra de interacción)
 export const SAFE_LATERAL = 72;   // 9 * 8 = 72 px (~6.6% a cada lado)
@@ -24,14 +25,13 @@ export const ANCHO_UTIL = CANVAS_W - SAFE_LATERAL * 2; // 936 px
 export const ALTO_UTIL = CANVAS_H - SAFE_TOP - SAFE_BOTTOM; // 1720 px
 
 // Piso de legibilidad absoluto en px (canvas 1080 px).
-// Ningún texto de la infografía puede caer por debajo de estos mínimos:
 export const PISO_LEGIBILIDAD = {
   display: 48,
-  subtitulo: 24,
+  subtitulo: 22,
   tituloModulo: 20,
   cuerpo: 16,
   numeral: 32,
-  caption: 13,
+  caption: 12,
 } as const;
 
 export type ArquetipoEditorial = 'breve' | 'medio' | 'extenso';
@@ -58,6 +58,8 @@ export type EntradaInfografia = {
   verdadPrincipal?: string;
   contextoBreve?: string;
   puntos: { titulo: string; detalle: string; versiculo?: string }[];
+  otrosVersiculos?: { cita: string; texto: string }[];
+  doctrinas?: { sobre: string; ensenanza: string }[];
   conceptos: string[];
   conexiones?: { cita?: string; texto?: string }[];
   fraseRecordar?: string;
@@ -67,6 +69,10 @@ export type PlanEditorial = {
   arquetipo: ArquetipoEditorial;
   columnasPuntos: 1 | 2;
   puntos: PuntoEditorial[];
+  versiculosApoyo: { cita: string; texto: string }[];
+  doctrinas: { sobre: string; ensenanza: string }[];
+  mostrarVersiculosApoyo: boolean;
+  mostrarDoctrina: boolean;
   ilustracionTamano: 'hero' | 'medio' | 'banner';
   escala: {
     display: number;
@@ -94,7 +100,6 @@ export function resumirEditorial(texto: string, maxChars: number): string {
   if (!t || t.length <= maxChars) return t;
 
   const corte = t.slice(0, maxChars);
-  // Buscar fin de oración dentro del 40% final del corte
   const minPos = Math.round(maxChars * 0.4);
   const finOracion = Math.max(
     corte.lastIndexOf('. '),
@@ -106,11 +111,9 @@ export function resumirEditorial(texto: string, maxChars: number): string {
   const puntoDirecto = Math.max(corte.lastIndexOf('.'), corte.lastIndexOf('!'), corte.lastIndexOf('?'));
   if (puntoDirecto >= minPos) return corte.slice(0, puntoDirecto + 1).trim();
 
-  // Buscar coma o punto y coma
   const finFrase = Math.max(corte.lastIndexOf(', '), corte.lastIndexOf('; '));
   if (finFrase >= minPos) return corte.slice(0, finFrase).trim();
 
-  // Si no hay puntuación, cortar en último espacio
   const ultimoEspacio = corte.lastIndexOf(' ');
   if (ultimoEspacio >= minPos) return corte.slice(0, ultimoEspacio).trim();
 
@@ -119,15 +122,12 @@ export function resumirEditorial(texto: string, maxChars: number): string {
 
 /**
  * Clasifica el contenido disponible y planifica la composición editorial
- * adaptada para encajar perfectamente en el lienzo de 1080×1920 px.
+ * para que el lienzo de 1080×1920 px quede armónico, sin huecos vacíos
+ * y con información teológica real y estructurada al estilo Carbon.
  */
 export function planificarComposicion(e: EntradaInfografia): PlanEditorial {
   const numPuntos = Math.min(e.puntos.length, 10);
 
-  // Arquetipo según riqueza de puntos reales:
-  // Breve: 1 a 3 puntos -> Gran presencia visual, héroe amplio, ilustración hero
-  // Medio: 4 a 5 puntos -> Grid de 2 columnas o módulos escalonados, ilustración media
-  // Extenso: 6 a 10 puntos -> Grid de 2 columnas compacto, números 01-10, ilustración banner
   let arquetipo: ArquetipoEditorial = 'medio';
   if (numPuntos <= 3) {
     arquetipo = 'breve';
@@ -135,34 +135,34 @@ export function planificarComposicion(e: EntradaInfografia): PlanEditorial {
     arquetipo = 'extenso';
   }
 
-  // Configuración de escalas tipográficas deliberadas (Carbon type scale)
+  // Escalas tipográficas adaptativas basadas en Carbon Design System
   const escalas = {
     breve: {
-      display: 64,
-      subtitulo: 28,
-      biblia: 26,
-      tituloPunto: 26,
-      cuerpoPunto: 20,
-      numeral: 52,
-      caption: 16,
-    },
-    medio: {
-      display: 58,
+      display: 60,
       subtitulo: 24,
       biblia: 24,
-      tituloPunto: 22,
+      tituloPunto: 24,
       cuerpoPunto: 18,
       numeral: 44,
       caption: 14,
     },
-    extenso: {
-      display: 52,
+    medio: {
+      display: 54,
       subtitulo: 22,
       biblia: 22,
-      tituloPunto: 20,
-      cuerpoPunto: 16, // respeta PISO_LEGIBILIDAD.cuerpo
-      numeral: 38,    // respeta PISO_LEGIBILIDAD.numeral
+      tituloPunto: 21,
+      cuerpoPunto: 17,
+      numeral: 38,
       caption: 13,
+    },
+    extenso: {
+      display: 48, // Respeta PISO_LEGIBILIDAD.display
+      subtitulo: 22,
+      biblia: 20,
+      tituloPunto: 19,
+      cuerpoPunto: 16, // Respeta PISO_LEGIBILIDAD.cuerpo
+      numeral: 34,    // Respeta PISO_LEGIBILIDAD.numeral
+      caption: 12,
     },
   };
 
@@ -171,28 +171,46 @@ export function planificarComposicion(e: EntradaInfografia): PlanEditorial {
   const ilustracionTamano: 'hero' | 'medio' | 'banner' =
     arquetipo === 'breve' ? 'hero' : arquetipo === 'medio' ? 'medio' : 'banner';
 
-  // Preparar puntos con numeración editorial 01, 02, 03...
-  const maxDetalle = arquetipo === 'breve' ? 220 : arquetipo === 'medio' ? 140 : 100;
+  // Extraer versículos de apoyo reales (hasta 2) para enriquecer el lienzo
+  const versiculosApoyo = (e.otrosVersiculos || [])
+    .filter((v) => v.cita && v.cita !== e.pasaje)
+    .slice(0, arquetipo === 'extenso' ? 1 : 2)
+    .map((v) => ({
+      cita: v.cita,
+      texto: resumirEditorial(v.texto, 140),
+    }));
+
+  const doctrinas = (e.doctrinas || []).slice(0, arquetipo === 'breve' ? 2 : 1);
+
+  // Activación inteligente de bloques para rellenar espacios vacíos
+  const mostrarVersiculosApoyo = versiculosApoyo.length > 0;
+  const mostrarDoctrina = doctrinas.length > 0;
+
+  // Preparación de puntos editoriales
+  const maxDetalle = arquetipo === 'breve' ? 180 : arquetipo === 'medio' ? 130 : 95;
   const puntos: PuntoEditorial[] = e.puntos.slice(0, numPuntos).map((p, i) => ({
     indice: i + 1,
     numeral: String(i + 1).padStart(2, '0'),
-    titulo: resumirEditorial(p.titulo || '', 80),
+    titulo: resumirEditorial(p.titulo || '', 75),
     detalle: resumirEditorial(p.detalle || '', maxDetalle),
     versiculo: p.versiculo,
   }));
 
-  // Estimación de alturas para balance visual de la lámina completa
-  const altHeader = 88;
-  const altHero = arquetipo === 'breve' ? 260 : arquetipo === 'medio' ? 240 : 210;
-  const altBiblico = arquetipo === 'breve' ? 220 : arquetipo === 'medio' ? 180 : 160;
-  const altCierre = 130;
-  const altDoctrina = e.conceptos.length > 0 ? 80 : 0;
+  const altHeader = 80;
+  const altHero = arquetipo === 'breve' ? 230 : arquetipo === 'medio' ? 210 : 190;
+  const altBiblico = arquetipo === 'breve' ? 170 : arquetipo === 'medio' ? 150 : 130;
+  const altCierre = 110;
+  const altDoctrina = mostrarDoctrina ? 90 : 0;
   const altDesarrollo = ALTO_UTIL - altHeader - altHero - altBiblico - altDoctrina - altCierre;
 
   return {
     arquetipo,
     columnasPuntos,
     puntos,
+    versiculosApoyo,
+    doctrinas,
+    mostrarVersiculosApoyo,
+    mostrarDoctrina,
     ilustracionTamano,
     escala,
     alturasEstimadas: {

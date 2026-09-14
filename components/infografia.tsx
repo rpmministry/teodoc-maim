@@ -11,16 +11,12 @@ import {
 import {
   CANVAS_W,
   CANVAS_H,
-  GRID_BASE,
   SAFE_TOP,
   SAFE_BOTTOM,
   SAFE_LATERAL,
-  ANCHO_UTIL,
   planificarComposicion,
   resumirEditorial,
-  metricasCanvas,
   type EntradaInfografia,
-  type PlanEditorial,
   type PuntoEditorial,
 } from '@/lib/infografia-layout'
 
@@ -39,8 +35,15 @@ export type InfografiaData = {
   titulo?: string
   idea_principal?: string
   tema_principal?: string
+  proposito?: string
+  contexto_general?: string
   texto_biblico_principal?: { cita?: string; texto?: string }
+  otros_textos?: Versiculo[]
   contexto_biblico?: string
+  contexto_historico?: string
+  contexto_literario?: string
+  relacion_textos?: string
+  interpretacion?: string
   infografia?: {
     frase_corta?: string
     texto_clave?: string
@@ -55,6 +58,7 @@ export type InfografiaData = {
   conceptos_clave?: string[]
   conceptos_teologicos?: { concepto?: string; significado?: string }[]
   desarrollo_progresivo?: Punto[]
+  ensenanzas?: { sobre?: string; ensenanza?: string }[]
   aplicacion?: string[]
   oracion?: string
   conclusion?: string
@@ -65,21 +69,21 @@ export function resumir(texto: string, max: number): string {
 }
 
 // ---------------------------------------------------------------------------
-// Paletas de Color TeoDoc (Identidad propia: Tecnológica + Bíblica + Premium)
+// Paletas Carbon / TeoDoc (Semánticas, contraste alto, inspiradas en IBM Carbon)
 // ---------------------------------------------------------------------------
 const PALETAS: PaletaIlustracion[] = [
-  // 0: Azul Celestial & Cian
-  { primary: '#1d4ed8', secondary: '#0284c7', accent: '#38bdf8', glow: '#60a5fa' },
-  // 1: Ámbar & Oro del Templo
-  { primary: '#b45309', secondary: '#d97706', accent: '#fbbf24', glow: '#fef08a' },
-  // 2: Púrpura Real & Gracia
-  { primary: '#6d28d9', secondary: '#7c3aed', accent: '#c084fc', glow: '#e9d5ff' },
-  // 3: Esmeralda & Esperanza
-  { primary: '#047857', secondary: '#059669', accent: '#34d399', glow: '#a7f3d0' },
-  // 4: Coral Cálido & Avivamiento
-  { primary: '#c2410c', secondary: '#ea580c', accent: '#fb923c', glow: '#ffedd5' },
-  // 5: Zafiro & Índigo
-  { primary: '#4338ca', secondary: '#4f46e5', accent: '#818cf8', glow: '#c7d2fe' },
+  // 0: Carbon Blue 60 + Cyan 40 (Clásico tecnológico y doctrinal)
+  { primary: '#0f62fe', secondary: '#0043ce', accent: '#33b1ff', glow: '#78a9ff' },
+  // 1: Amber 50 + Gold (Templo, gloria y sabiduría)
+  { primary: '#d25f00', secondary: '#8a3800', accent: '#f1c21b', glow: '#fddc69' },
+  // 2: Purple 60 + Magenta (Majestad, realeza y pacto)
+  { primary: '#8a3ffc', secondary: '#6929c4', accent: '#d12771', glow: '#d4bbff' },
+  // 3: Teal 50 + Green (Vida, provisión y esperanza)
+  { primary: '#007d79', secondary: '#005d5d', accent: '#24a148', glow: '#6fdc8c' },
+  // 4: Coral 50 + Flame (Avivamiento, celo y redención)
+  { primary: '#da1e28', secondary: '#a2191f', accent: '#ff8389', glow: '#ffd7d9' },
+  // 5: Cool Gray / Slate Tech (Precisión exegética)
+  { primary: '#1192e8', secondary: '#00539a', accent: '#00bcd4', glow: '#a6c8ff' },
 ]
 
 function hashColor(texto: string, max: number): number {
@@ -89,22 +93,22 @@ function hashColor(texto: string, max: number): number {
   return max > 0 ? h % max : 0
 }
 
-// Isotipo TeoDoc: minimalista, nítido y geométrico (sin wordmark borroso)
+// Badge Isotipo Carbon / TeoDoc
 function TeoDocBadge({ color }: { color: string }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-      <svg width={28} height={28} viewBox="0 0 100 100" aria-label="TeoDoc">
-        <rect x="8" y="8" width="84" height="84" rx="20" fill="none" stroke={color} strokeWidth="7" />
-        <rect x="24" y="26" width="52" height="8" rx="4" fill="#ffffff" />
-        <rect x="24" y="44" width="36" height="8" rx="4" fill="#ffffff" />
-        <rect x="24" y="62" width="46" height="8" rx="4" fill={color} />
+      <svg width={26} height={26} viewBox="0 0 100 100" aria-label="TeoDoc">
+        <rect x="6" y="6" width="88" height="88" rx="14" fill="#161616" stroke={color} strokeWidth="6" />
+        <line x1="24" y1="30" x2="76" y2="30" stroke="#ffffff" strokeWidth="8" strokeLinecap="round" />
+        <line x1="24" y1="50" x2="58" y2="50" stroke="#ffffff" strokeWidth="8" strokeLinecap="round" />
+        <line x1="24" y1="70" x2="68" y2="70" stroke={color} strokeWidth="8" strokeLinecap="round" />
       </svg>
       <div style={{ display: 'flex', flexDirection: 'column' }}>
-        <span style={{ fontSize: 13, fontWeight: 800, letterSpacing: '0.22em', textTransform: 'uppercase', color: '#ffffff' }}>
+        <span style={{ fontSize: 13, fontWeight: 800, letterSpacing: '0.18em', textTransform: 'uppercase', color: '#f4f4f4' }}>
           TEODOC
         </span>
-        <span style={{ fontSize: 9, fontWeight: 600, letterSpacing: '0.14em', textTransform: 'uppercase', color: color }}>
-          ESTUDIO MINISTERIAL
+        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color }}>
+          ANÁLISIS EDITORIAL
         </span>
       </div>
     </div>
@@ -112,10 +116,11 @@ function TeoDocBadge({ color }: { color: string }) {
 }
 
 // ---------------------------------------------------------------------------
-// Extracción Normalizada de Entrada
+// Extracción Completa de Datos Reales (Sin inventar nada)
 // ---------------------------------------------------------------------------
 export function construirEntrada(data: InfografiaData): EntradaInfografia {
   const info = data.infografia || {}
+
   const pasaje =
     data.texto_biblico_principal?.cita ||
     (data.desarrollo_progresivo || []).flatMap((p) => p.versiculos || []).find((v) => v.cita)?.cita ||
@@ -127,6 +132,7 @@ export function construirEntrada(data: InfografiaData): EntradaInfografia {
     (data.desarrollo_progresivo || []).flatMap((p) => p.versiculos || []).find((v) => v.texto)?.texto ||
     ''
 
+  // Puntos principales del sermón
   const puntosRaw = (data.desarrollo_progresivo && data.desarrollo_progresivo.length > 0)
     ? data.desarrollo_progresivo.map((p) => ({
         titulo: p.punto || '',
@@ -141,6 +147,52 @@ export function construirEntrada(data: InfografiaData): EntradaInfografia {
 
   const puntos = puntosRaw.filter((p) => p.titulo || p.detalle)
 
+  // Extraer versículos relevantes secundarios REALES del análisis (otros_textos, puntos, conexiones)
+  const citaPrincipal = pasaje.trim().toLowerCase()
+  const otrosVersiculosRaw: { cita: string; texto: string }[] = []
+
+  if (Array.isArray(data.otros_textos)) {
+    for (const v of data.otros_textos) {
+      if (v?.cita && v.cita.trim().toLowerCase() !== citaPrincipal && !otrosVersiculosRaw.some((x) => x.cita === v.cita)) {
+        otrosVersiculosRaw.push({ cita: v.cita.trim(), texto: v.texto ? v.texto.trim() : '' })
+      }
+    }
+  }
+  if (Array.isArray(data.desarrollo_progresivo)) {
+    for (const p of data.desarrollo_progresivo) {
+      for (const v of p.versiculos || []) {
+        if (v?.cita && v.cita.trim().toLowerCase() !== citaPrincipal && !otrosVersiculosRaw.some((x) => x.cita === v.cita)) {
+          otrosVersiculosRaw.push({ cita: v.cita.trim(), texto: v.texto ? v.texto.trim() : '' })
+        }
+      }
+    }
+  }
+  if (Array.isArray(info.conexiones_biblicas)) {
+    for (const c of info.conexiones_biblicas) {
+      if (c?.cita && c.cita.trim().toLowerCase() !== citaPrincipal && !otrosVersiculosRaw.some((x) => x.cita === c.cita)) {
+        otrosVersiculosRaw.push({ cita: c.cita.trim(), texto: c.texto ? c.texto.trim() : '' })
+      }
+    }
+  }
+  const otrosVersiculos = otrosVersiculosRaw.filter((v) => v.cita).slice(0, 2)
+
+  // Extraer enseñanzas doctrinales reales
+  const doctrinasRaw: { sobre: string; ensenanza: string }[] = []
+  if (Array.isArray(data.ensenanzas)) {
+    for (const e of data.ensenanzas) {
+      if (e?.ensenanza) {
+        doctrinasRaw.push({ sobre: e.sobre || 'Doctrina', ensenanza: e.ensenanza.trim() })
+      }
+    }
+  }
+  if (doctrinasRaw.length === 0 && Array.isArray(data.conceptos_teologicos)) {
+    for (const c of data.conceptos_teologicos) {
+      if (c?.concepto && c?.significado) {
+        doctrinasRaw.push({ sobre: c.concepto.trim(), ensenanza: c.significado.trim() })
+      }
+    }
+  }
+
   const conceptos = (info.palabras_clave?.length
     ? info.palabras_clave
     : (data.conceptos_clave || []).slice(0, 6)
@@ -153,8 +205,10 @@ export function construirEntrada(data: InfografiaData): EntradaInfografia {
     pasaje,
     textoClave,
     verdadPrincipal: info.verdad_principal || data.tema_principal || '',
-    contextoBreve: info.contexto_breve || data.contexto_biblico || '',
+    contextoBreve: info.contexto_breve || data.contexto_biblico || data.contexto_historico || '',
     puntos,
+    otrosVersiculos,
+    doctrinas: doctrinasRaw.slice(0, 2),
     conceptos,
     conexiones: (info.conexiones_biblicas || []).slice(0, 4),
     fraseRecordar: info.frase_recordar || info.frase_corta || data.conclusion || '',
@@ -166,13 +220,14 @@ export function planInfografia(data: InfografiaData) {
   const plan = planificarComposicion(entrada)
   return {
     ...plan,
-    paginas: [plan.puntos], // compatibilidad con pruebas e invariantes
+    paginas: [plan.puntos],
     modo: 'unico' as const,
   }
 }
 
 // ---------------------------------------------------------------------------
 // Componente de Infografía Editorial 9:16 (1080×1920)
+// Con retícula estructurada estilo Carbon, balance completo sin vacíos
 // ---------------------------------------------------------------------------
 export default function Infografia({ data }: { data: InfografiaData; pagina?: number }) {
   const entrada = construirEntrada(data)
@@ -180,13 +235,12 @@ export default function Infografia({ data }: { data: InfografiaData; pagina?: nu
   const palIndex = hashColor(entrada.titulo + entrada.tema, PALETAS.length)
   const pal = PALETAS[palIndex]
 
-  // Búsqueda temática de ilustración
   const semillaIlustracion = `${entrada.titulo} ${entrada.tema} ${entrada.mensajeCentral} ${entrada.pasaje} ${entrada.conceptos.join(' ')}`
   const ilustracionId: IlustracionId = elegirIlustracion(semillaIlustracion)
   const categoriaTema = categoriaIlustracion(ilustracionId)
   const fechaHoy = new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
 
-  const { arquetipo, puntos, escala } = plan
+  const { arquetipo, puntos, escala, versiculosApoyo, doctrinas, mostrarVersiculosApoyo, mostrarDoctrina } = plan
 
   return (
     <div
@@ -194,9 +248,9 @@ export default function Infografia({ data }: { data: InfografiaData; pagina?: nu
         width: CANVAS_W,
         height: CANVAS_H,
         boxSizing: 'border-box',
-        backgroundColor: '#070b14',
-        backgroundImage: 'radial-gradient(ellipse 90% 70% at 50% -10%, #172554 0%, #070b14 70%)',
-        color: '#f8fafc',
+        backgroundColor: '#161616', // Carbon Gray 100 base
+        backgroundImage: 'radial-gradient(circle at 80% 10%, #1f293d 0%, #161616 60%), radial-gradient(circle at 20% 90%, #1a2233 0%, #161616 55%)',
+        color: '#f4f4f4',
         fontFamily: 'var(--font-plex), system-ui, -apple-system, sans-serif',
         position: 'relative',
         overflow: 'hidden',
@@ -204,33 +258,35 @@ export default function Infografia({ data }: { data: InfografiaData; pagina?: nu
         flexDirection: 'column',
       }}
     >
-      {/* ================= FONDO EDITORIAL RETICULADO ================= */}
+      {/* ================= RETÍCULA ESTRUCTURADA CARBON ================= */}
       <div aria-hidden="true" style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 0 }}>
-        {/* Retícula matemática sutil de 64 px (Carbon blueprint) */}
         <svg width="100%" height="100%" viewBox="0 0 1080 1920" preserveAspectRatio="none">
           <defs>
-            <pattern id="grid-pattern" width="64" height="64" patternUnits="userSpaceOnUse">
-              <path d="M 64 0 L 0 0 0 64" fill="none" stroke="rgba(255, 255, 255, 0.024)" strokeWidth="1" />
+            {/* Grid Carbon de 64 px con líneas delgadas */}
+            <pattern id="carbon-grid" width="64" height="64" patternUnits="userSpaceOnUse">
+              <path d="M 64 0 L 0 0 0 64" fill="none" stroke="rgba(255, 255, 255, 0.03)" strokeWidth="1" />
             </pattern>
-            <radialGradient id="glow-hero" cx="50%" cy="20%" r="45%">
-              <stop offset="0%" stopColor={pal.glow} stopOpacity="0.18" />
-              <stop offset="100%" stopColor="#070b14" stopOpacity="0" />
-            </radialGradient>
-            <radialGradient id="glow-bottom" cx="80%" cy="85%" r="40%">
-              <stop offset="0%" stopColor={pal.accent} stopOpacity="0.12" />
-              <stop offset="100%" stopColor="#070b14" stopOpacity="0" />
+            <radialGradient id="glow-ambient" cx="50%" cy="25%" r="45%">
+              <stop offset="0%" stopColor={pal.accent} stopOpacity="0.14" />
+              <stop offset="100%" stopColor="#161616" stopOpacity="0" />
             </radialGradient>
           </defs>
-          <rect width="100%" height="100%" fill="url(#grid-pattern)" />
-          <circle cx="540" cy="400" r="450" fill="url(#glow-hero)" />
-          <circle cx="850" cy="1500" r="400" fill="url(#glow-bottom)" />
-          {/* Líneas geométricas de acento */}
-          <line x1={SAFE_LATERAL} y1={SAFE_TOP} x2={CANVAS_W - SAFE_LATERAL} y2={SAFE_TOP} stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
-          <line x1={SAFE_LATERAL} y1={CANVAS_H - SAFE_BOTTOM} x2={CANVAS_W - SAFE_LATERAL} y2={CANVAS_H - SAFE_BOTTOM} stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
+          <rect width="100%" height="100%" fill="url(#carbon-grid)" />
+          <circle cx="540" cy="500" r="500" fill="url(#glow-ambient)" />
+
+          {/* Guías estructurales Carbon (reglas de acento precisas) */}
+          <line x1={SAFE_LATERAL} y1={SAFE_TOP} x2={CANVAS_W - SAFE_LATERAL} y2={SAFE_TOP} stroke={pal.accent} strokeWidth="2" strokeOpacity="0.4" />
+          <line x1={SAFE_LATERAL} y1={CANVAS_H - SAFE_BOTTOM} x2={CANVAS_W - SAFE_LATERAL} y2={CANVAS_H - SAFE_BOTTOM} stroke="rgba(255,255,255,0.15)" strokeWidth="1" />
+          
+          {/* Marcadores de cruce en esquinas estilo Carbon (+) */}
+          <path d={`M ${SAFE_LATERAL - 8} ${SAFE_TOP} H ${SAFE_LATERAL + 8} M ${SAFE_LATERAL} ${SAFE_TOP - 8} V ${SAFE_TOP + 8}`} stroke={pal.accent} strokeWidth="1.5" />
+          <path d={`M ${CANVAS_W - SAFE_LATERAL - 8} ${SAFE_TOP} H ${CANVAS_W - SAFE_LATERAL + 8} M ${CANVAS_W - SAFE_LATERAL} ${SAFE_TOP - 8} V ${SAFE_TOP + 8}`} stroke={pal.accent} strokeWidth="1.5" />
+          <path d={`M ${SAFE_LATERAL - 8} ${CANVAS_H - SAFE_BOTTOM} H ${SAFE_LATERAL + 8} M ${SAFE_LATERAL} ${CANVAS_H - SAFE_BOTTOM - 8} V ${CANVAS_H - SAFE_BOTTOM + 8}`} stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" />
+          <path d={`M ${CANVAS_W - SAFE_LATERAL - 8} ${CANVAS_H - SAFE_BOTTOM} H ${CANVAS_W - SAFE_LATERAL + 8} M ${CANVAS_W - SAFE_LATERAL} ${CANVAS_H - SAFE_BOTTOM - 8} V ${CANVAS_H - SAFE_BOTTOM + 8}`} stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" />
         </svg>
       </div>
 
-      {/* ================= CONTENEDOR PRINCIPAL (DENTRO DE SAFE AREA) ================= */}
+      {/* ================= CONTENIDO ESTRUCTURADO CONTINUO ================= */}
       <div
         style={{
           position: 'relative',
@@ -241,48 +297,55 @@ export default function Infografia({ data }: { data: InfografiaData; pagina?: nu
           padding: `${SAFE_TOP}px ${SAFE_LATERAL}px ${SAFE_BOTTOM}px`,
           display: 'flex',
           flexDirection: 'column',
-          justifyContent: 'space-between',
+          gap: 14, // Ritmo visual continuo, sin espacios vacíos
         }}
       >
-        {/* ---------------- 1. HEADER EDITORIAL ---------------- */}
+        {/* ---------------- 1. HEADER SHELL CARBON ---------------- */}
         <header
           style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            paddingBottom: 16,
-            borderBottom: '1px solid rgba(255, 255, 255, 0.12)',
+            paddingBottom: 12,
+            borderBottom: '1px solid #393939',
             flexShrink: 0,
           }}
         >
           <TeoDocBadge color={pal.accent} />
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <span
               style={{
-                fontSize: 12,
+                fontSize: 11,
+                fontFamily: 'monospace',
                 fontWeight: 700,
-                letterSpacing: '0.12em',
-                textTransform: 'uppercase',
                 color: pal.accent,
-                background: 'rgba(255, 255, 255, 0.05)',
-                border: `1px solid ${pal.accent}44`,
-                borderRadius: 999,
-                padding: '4px 14px',
+                background: '#262626',
+                border: `1px solid ${pal.accent}66`,
+                borderRadius: 2,
+                padding: '3px 10px',
+                letterSpacing: '0.08em',
+                textTransform: 'uppercase',
               }}
             >
               {categoriaTema}
             </span>
-            <span style={{ fontSize: 13, color: '#94a3b8', fontWeight: 500, letterSpacing: '0.04em' }}>
+            <span style={{ fontSize: 12, color: '#a8a8a8', fontFamily: 'monospace', letterSpacing: '0.05em' }}>
               {fechaHoy}
+            </span>
+            <span style={{ fontSize: 11, color: '#6f6f6f', fontFamily: 'monospace' }}>
+              [ 1080×1920 ]
             </span>
           </div>
         </header>
 
-        {/* ---------------- 2. HERO: TÍTULO & MENSAJE CENTRAL ---------------- */}
-        <section style={{ marginTop: 20, marginBottom: 16, flexShrink: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-            <div style={{ width: 28, height: 3, backgroundColor: pal.accent, borderRadius: 2 }} />
-            <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: pal.accent }}>
+        {/* ---------------- 2. HERO: TÍTULO & IDEA PRINCIPAL ---------------- */}
+        <section style={{ flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+            <span style={{ fontSize: 11, fontFamily: 'monospace', fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: pal.accent }}>
+              // TEMA PRINCIPAL
+            </span>
+            <span style={{ fontSize: 11, color: '#6f6f6f' }}>•</span>
+            <span style={{ fontSize: 12, fontWeight: 600, color: '#c6c6c6' }}>
               {entrada.tema}
             </span>
           </div>
@@ -292,7 +355,7 @@ export default function Infografia({ data }: { data: InfografiaData; pagina?: nu
               margin: 0,
               fontSize: escala.display,
               fontWeight: 800,
-              lineHeight: 1.06,
+              lineHeight: 1.08,
               letterSpacing: '-0.02em',
               color: '#ffffff',
               overflowWrap: 'break-word',
@@ -304,57 +367,67 @@ export default function Infografia({ data }: { data: InfografiaData; pagina?: nu
           {entrada.mensajeCentral ? (
             <div
               style={{
-                marginTop: 14,
-                paddingLeft: 18,
-                borderLeft: `3px solid ${pal.accent}`,
+                marginTop: 10,
+                background: '#262626',
+                borderLeft: `4px solid ${pal.accent}`,
+                borderTop: '1px solid #393939',
+                borderRight: '1px solid #393939',
+                borderBottom: '1px solid #393939',
+                borderRadius: 2,
+                padding: '12px 18px',
               }}
             >
+              <div style={{ fontSize: 10, fontFamily: 'monospace', fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', color: pal.accent, marginBottom: 3 }}>
+                IDEA CENTRAL DEL EXPOSITOR
+              </div>
               <p
                 style={{
                   margin: 0,
                   fontSize: escala.subtitulo,
                   fontWeight: 500,
-                  lineHeight: 1.35,
-                  color: '#cbd5e1',
+                  lineHeight: 1.34,
+                  color: '#e0e0e0',
                 }}
               >
-                {resumirEditorial(entrada.mensajeCentral, 260)}
+                {resumirEditorial(entrada.mensajeCentral, 240)}
               </p>
             </div>
           ) : null}
         </section>
 
-        {/* ---------------- 3. BLOQUE BÍBLICO PROTAGONISTA ---------------- */}
+        {/* ---------------- 3. SPOTLIGHT BÍBLICO PRINCIPAL ---------------- */}
         {entrada.textoClave || entrada.pasaje ? (
           <section
             style={{
               flexShrink: 0,
-              marginBottom: 18,
-              background: 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%)',
-              border: '1px solid rgba(255, 255, 255, 0.14)',
-              borderRadius: 16,
-              padding: '16px 22px',
+              background: '#1f1f1f',
+              border: '1px solid #393939',
+              borderTop: `2px solid ${pal.accent}`,
+              borderRadius: 2,
+              padding: '14px 18px',
               position: 'relative',
-              overflow: 'hidden',
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span
-                  style={{
-                    width: 8,
-                    height: 8,
-                    borderRadius: '50%',
-                    backgroundColor: pal.accent,
-                    boxShadow: `0 0 10px ${pal.accent}`,
-                  }}
-                />
-                <span style={{ fontSize: 12, fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: pal.accent }}>
-                  TEXTO BÍBLICO CLAVE
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 10, fontFamily: 'monospace', fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: pal.accent }}>
+                  PASO BÍBLICO FUNDAMENTAL
                 </span>
               </div>
               {entrada.pasaje ? (
-                <span style={{ fontSize: 15, fontWeight: 800, color: '#ffffff', letterSpacing: '0.04em' }}>
+                <span
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 800,
+                    fontFamily: 'monospace',
+                    letterSpacing: '0.06em',
+                    color: '#ffffff',
+                    background: '#262626',
+                    border: '1px solid #525252',
+                    padding: '2px 8px',
+                    borderRadius: 2,
+                  }}
+                >
                   {entrada.pasaje}
                 </span>
               ) : null}
@@ -368,34 +441,84 @@ export default function Infografia({ data }: { data: InfografiaData; pagina?: nu
                   fontStyle: 'italic',
                   fontWeight: 400,
                   lineHeight: 1.38,
-                  color: '#f1f5f9',
+                  color: '#f4f4f4',
                 }}
               >
-                “{resumirEditorial(entrada.textoClave, 320)}”
+                “{resumirEditorial(entrada.textoClave, 280)}”
               </p>
             ) : null}
           </section>
         ) : null}
 
-        {/* ---------------- 4. DESARROLLO EDITORIAL (ARQUETIPOS BREVE / MEDIO / EXTENSO) ---------------- */}
-        <section style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+        {/* ---------------- 4. NUEVO: PASAJES BÍBLICOS DE APOYO (RELLENO REAL) ---------------- */}
+        {mostrarVersiculosApoyo && versiculosApoyo.length > 0 ? (
+          <section style={{ flexShrink: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+              <span style={{ fontSize: 10, fontFamily: 'monospace', fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#a8a8a8' }}>
+                // PASAJES BÍBLICOS RELACIONADOS
+              </span>
+            </div>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: versiculosApoyo.length > 1 ? '1fr 1fr' : '1fr',
+                gap: 10,
+              }}
+            >
+              {versiculosApoyo.map((v, i) => (
+                <div
+                  key={i}
+                  style={{
+                    background: '#262626',
+                    border: '1px solid #393939',
+                    borderLeft: `3px solid ${pal.secondary}`,
+                    borderRadius: 2,
+                    padding: '8px 12px',
+                  }}
+                >
+                  <div style={{ fontSize: 11, fontWeight: 800, color: pal.accent, fontFamily: 'monospace', marginBottom: 2 }}>
+                    {v.cita}
+                  </div>
+                  {v.texto ? (
+                    <p style={{ margin: 0, fontSize: 13, color: '#c6c6c6', fontStyle: 'italic', lineHeight: 1.3 }}>
+                      “{v.texto}”
+                    </p>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
+        {/* ---------------- 5. DESARROLLO: GRANDES ENSEÑANZAS (ESTILO CARBON TILE) ---------------- */}
+        <section style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, flexShrink: 0 }}>
+            <span style={{ fontSize: 10, fontFamily: 'monospace', fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: pal.accent }}>
+              // ENSEÑANZAS Y ESTRUCTURA TEOLÓGICA ({puntos.length} PUNTOS)
+            </span>
+            <span style={{ fontSize: 10, fontFamily: 'monospace', color: '#6f6f6f' }}>
+              CARBON GRID 2-COL
+            </span>
+          </div>
+
           {arquetipo === 'breve' ? (
-            /* ===== ARQUETIPO BREVE (1-3 PUNTOS): HERO VISUAL + PUNTOS AMPLIOS ===== */
-            <div style={{ display: 'flex', gap: 24, alignItems: 'center', height: '100%' }}>
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 16, justifyContent: 'center' }}>
+            /* ===== ARQUETIPO BREVE: PUNTOS AMPLIOS + ILUSTRACIÓN HERO LATERAL ===== */
+            <div style={{ display: 'flex', gap: 14, height: '100%', alignItems: 'stretch' }}>
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 10, justifyContent: 'center' }}>
                 {puntos.map((p) => (
                   <div
                     key={p.numeral}
                     style={{
-                      background: 'rgba(255, 255, 255, 0.03)',
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
-                      borderRadius: 14,
-                      padding: '16px 20px',
+                      background: '#262626',
+                      border: '1px solid #393939',
+                      borderTop: `2px solid ${pal.accent}`,
+                      borderRadius: 2,
+                      padding: '12px 16px',
                       position: 'relative',
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: 4 }}>
-                      <span style={{ fontSize: escala.numeral, fontWeight: 800, color: pal.accent, lineHeight: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 4 }}>
+                      <span style={{ fontSize: escala.numeral, fontWeight: 800, fontFamily: 'monospace', color: pal.accent, lineHeight: 1 }}>
                         {p.numeral}
                       </span>
                       <h3 style={{ margin: 0, fontSize: escala.tituloPunto, fontWeight: 700, color: '#ffffff', lineHeight: 1.25 }}>
@@ -403,51 +526,66 @@ export default function Infografia({ data }: { data: InfografiaData; pagina?: nu
                       </h3>
                     </div>
                     {p.detalle ? (
-                      <p style={{ margin: 0, fontSize: escala.cuerpoPunto, color: '#94a3b8', lineHeight: 1.45, paddingLeft: 4 }}>
+                      <p style={{ margin: 0, fontSize: escala.cuerpoPunto, color: '#c6c6c6', lineHeight: 1.4 }}>
                         {p.detalle}
                       </p>
+                    ) : null}
+                    {p.versiculo ? (
+                      <span style={{ display: 'inline-block', marginTop: 6, fontSize: 11, fontFamily: 'monospace', fontWeight: 700, color: pal.glow }}>
+                        [{p.versiculo}]
+                      </span>
                     ) : null}
                   </div>
                 ))}
               </div>
 
-              {/* Gran ilustración protagonista integrada */}
+              {/* Marco técnico Carbon para la ilustración */}
               <div
                 style={{
-                  width: 290,
-                  height: '100%',
+                  width: 280,
                   display: 'flex',
+                  flexDirection: 'column',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  background: 'radial-gradient(circle at center, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.01) 70%)',
-                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                  borderRadius: 20,
+                  background: '#1f1f1f',
+                  border: '1px solid #393939',
+                  borderRadius: 2,
+                  padding: 12,
                   boxSizing: 'border-box',
-                  padding: 16,
+                  position: 'relative',
                 }}
               >
-                <IlustracionEditorial id={ilustracionId} size={250} pal={pal} modo="hero" />
+                <div style={{ position: 'absolute', top: 8, left: 10, fontSize: 9, fontFamily: 'monospace', color: '#6f6f6f' }}>
+                  SIMBOLOGÍA BÍBLICA
+                </div>
+                <IlustracionEditorial id={ilustracionId} size={220} pal={pal} modo="hero" />
+                <div style={{ marginTop: 8, textAlign: 'center' }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, fontFamily: 'monospace', color: pal.accent, textTransform: 'uppercase' }}>
+                    {categoriaTema}
+                  </span>
+                </div>
               </div>
             </div>
           ) : arquetipo === 'medio' ? (
-            /* ===== ARQUETIPO MEDIO (4-5 PUNTOS): GRID 2 COLUMNAS + ILUSTRACIÓN CENTRAL ===== */
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14, height: '100%', justifyContent: 'center' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            /* ===== ARQUETIPO MEDIO: GRID 2 COLUMNAS + ILUSTRACIÓN COMPACTA ===== */
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, height: '100%', justifyContent: 'center' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                 {puntos.slice(0, 4).map((p) => (
                   <div
                     key={p.numeral}
                     style={{
-                      background: 'rgba(255, 255, 255, 0.03)',
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
-                      borderRadius: 14,
-                      padding: '14px 16px',
+                      background: '#262626',
+                      border: '1px solid #393939',
+                      borderTop: `2px solid ${pal.accent}`,
+                      borderRadius: 2,
+                      padding: '10px 14px',
                       display: 'flex',
                       flexDirection: 'column',
                       justifyContent: 'flex-start',
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                      <span style={{ fontSize: escala.numeral, fontWeight: 800, color: pal.accent, lineHeight: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
+                      <span style={{ fontSize: escala.numeral, fontWeight: 800, fontFamily: 'monospace', color: pal.accent, lineHeight: 1 }}>
                         {p.numeral}
                       </span>
                       <h3 style={{ margin: 0, fontSize: escala.tituloPunto, fontWeight: 700, color: '#ffffff', lineHeight: 1.2 }}>
@@ -455,27 +593,33 @@ export default function Infografia({ data }: { data: InfografiaData; pagina?: nu
                       </h3>
                     </div>
                     {p.detalle ? (
-                      <p style={{ margin: 0, fontSize: escala.cuerpoPunto, color: '#94a3b8', lineHeight: 1.4 }}>
+                      <p style={{ margin: 0, fontSize: escala.cuerpoPunto, color: '#c6c6c6', lineHeight: 1.35 }}>
                         {p.detalle}
                       </p>
+                    ) : null}
+                    {p.versiculo ? (
+                      <span style={{ marginTop: 4, fontSize: 10, fontFamily: 'monospace', fontWeight: 700, color: pal.glow }}>
+                        [{p.versiculo}]
+                      </span>
                     ) : null}
                   </div>
                 ))}
               </div>
 
-              {/* Fila inferior con el 5to punto + ilustración integrada */}
-              <div style={{ display: 'grid', gridTemplateColumns: puntos[4] ? '1.4fr 1fr' : '1fr', gap: 14, alignItems: 'center' }}>
+              {/* Fila con el 5to punto + ilustración Carbon */}
+              <div style={{ display: 'grid', gridTemplateColumns: puntos[4] ? '1.4fr 1fr' : '1fr', gap: 10, alignItems: 'center' }}>
                 {puntos[4] ? (
                   <div
                     style={{
-                      background: 'rgba(255, 255, 255, 0.03)',
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
-                      borderRadius: 14,
-                      padding: '14px 16px',
+                      background: '#262626',
+                      border: '1px solid #393939',
+                      borderTop: `2px solid ${pal.accent}`,
+                      borderRadius: 2,
+                      padding: '10px 14px',
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                      <span style={{ fontSize: escala.numeral, fontWeight: 800, color: pal.accent, lineHeight: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
+                      <span style={{ fontSize: escala.numeral, fontWeight: 800, fontFamily: 'monospace', color: pal.accent, lineHeight: 1 }}>
                         {puntos[4].numeral}
                       </span>
                       <h3 style={{ margin: 0, fontSize: escala.tituloPunto, fontWeight: 700, color: '#ffffff', lineHeight: 1.2 }}>
@@ -483,7 +627,7 @@ export default function Infografia({ data }: { data: InfografiaData; pagina?: nu
                       </h3>
                     </div>
                     {puntos[4].detalle ? (
-                      <p style={{ margin: 0, fontSize: escala.cuerpoPunto, color: '#94a3b8', lineHeight: 1.4 }}>
+                      <p style={{ margin: 0, fontSize: escala.cuerpoPunto, color: '#c6c6c6', lineHeight: 1.35 }}>
                         {puntos[4].detalle}
                       </p>
                     ) : null}
@@ -492,26 +636,27 @@ export default function Infografia({ data }: { data: InfografiaData; pagina?: nu
 
                 <div
                   style={{
-                    height: 110,
-                    borderRadius: 14,
-                    background: 'rgba(255,255,255,0.02)',
-                    border: '1px solid rgba(255,255,255,0.08)',
+                    height: 100,
+                    borderRadius: 2,
+                    background: '#1f1f1f',
+                    border: '1px solid #393939',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
+                    position: 'relative',
                   }}
                 >
-                  <IlustracionEditorial id={ilustracionId} size={130} pal={pal} modo="medio" />
+                  <IlustracionEditorial id={ilustracionId} size={110} pal={pal} modo="medio" />
                 </div>
               </div>
             </div>
           ) : (
-            /* ===== ARQUETIPO EXTENSO (6-10 PUNTOS): GRID EDITORIAL DENSO 2 COLUMNAS ===== */
+            /* ===== ARQUETIPO EXTENSO: GRID DENSO DE 2 COLUMNAS (HASTA 10 PUNTOS) ===== */
             <div
               style={{
                 display: 'grid',
                 gridTemplateColumns: '1fr 1fr',
-                gap: 12,
+                gap: 8,
                 height: '100%',
                 alignContent: 'center',
               }}
@@ -520,17 +665,18 @@ export default function Infografia({ data }: { data: InfografiaData; pagina?: nu
                 <div
                   key={p.numeral}
                   style={{
-                    background: 'rgba(255, 255, 255, 0.025)',
-                    border: '1px solid rgba(255, 255, 255, 0.09)',
-                    borderRadius: 12,
-                    padding: '10px 14px',
+                    background: '#262626',
+                    border: '1px solid #393939',
+                    borderLeft: `3px solid ${pal.accent}`,
+                    borderRadius: 2,
+                    padding: '8px 12px',
                     display: 'flex',
                     flexDirection: 'column',
                     justifyContent: 'center',
                   }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
-                    <span style={{ fontSize: escala.numeral, fontWeight: 800, color: pal.accent, lineHeight: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                    <span style={{ fontSize: escala.numeral, fontWeight: 800, fontFamily: 'monospace', color: pal.accent, lineHeight: 1 }}>
                       {p.numeral}
                     </span>
                     <h3 style={{ margin: 0, fontSize: escala.tituloPunto, fontWeight: 700, color: '#ffffff', lineHeight: 1.18 }}>
@@ -538,7 +684,7 @@ export default function Infografia({ data }: { data: InfografiaData; pagina?: nu
                     </h3>
                   </div>
                   {p.detalle ? (
-                    <p style={{ margin: 0, fontSize: escala.cuerpoPunto, color: '#94a3b8', lineHeight: 1.35 }}>
+                    <p style={{ margin: 0, fontSize: escala.cuerpoPunto, color: '#a8a8a8', lineHeight: 1.3 }}>
                       {p.detalle}
                     </p>
                   ) : null}
@@ -548,50 +694,72 @@ export default function Infografia({ data }: { data: InfografiaData; pagina?: nu
           )}
         </section>
 
-        {/* ---------------- 5. CONCEPTOS TEOLÓGICOS / TAGS ---------------- */}
+        {/* ---------------- 6. NUEVO: BLOQUE DOCTRINAL / TEOLÓGICO (CARBON TILE) ---------------- */}
+        {mostrarDoctrina && doctrinas.length > 0 ? (
+          <section
+            style={{
+              flexShrink: 0,
+              background: '#262626',
+              border: '1px solid #393939',
+              borderLeft: `4px solid ${pal.glow}`,
+              borderRadius: 2,
+              padding: '10px 16px',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+              <span style={{ fontSize: 10, fontFamily: 'monospace', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: pal.accent }}>
+                // ENSEÑANZA DOCTRINAL: {doctrinas[0].sobre}
+              </span>
+            </div>
+            <p style={{ margin: 0, fontSize: 14, color: '#e0e0e0', lineHeight: 1.35 }}>
+              {resumirEditorial(doctrinas[0].ensenanza, 190)}
+            </p>
+          </section>
+        ) : null}
+
+        {/* ---------------- 7. CONCEPTOS CLAVE (TAGS CARBON) ---------------- */}
         {entrada.conceptos.length > 0 ? (
           <section
             style={{
               flexShrink: 0,
-              marginTop: 14,
-              marginBottom: 14,
               display: 'flex',
               flexWrap: 'wrap',
-              gap: 8,
+              gap: 6,
               alignItems: 'center',
             }}
           >
-            <span style={{ fontSize: 12, fontWeight: 800, color: '#64748b', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-              CONCEPTOS:
+            <span style={{ fontSize: 11, fontFamily: 'monospace', fontWeight: 800, color: '#8d8d8d', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+              CONCEPTOS CLAVE:
             </span>
             {entrada.conceptos.map((c, i) => (
               <span
                 key={i}
                 style={{
-                  fontSize: 13,
+                  fontSize: 12,
+                  fontFamily: 'monospace',
                   fontWeight: 600,
-                  color: '#e2e8f0',
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  border: '1px solid rgba(255, 255, 255, 0.12)',
-                  borderRadius: 6,
-                  padding: '3px 10px',
+                  color: '#f4f4f4',
+                  background: '#262626',
+                  border: '1px solid #525252',
+                  borderRadius: 2,
+                  padding: '2px 8px',
                 }}
               >
-                {c}
+                #{c}
               </span>
             ))}
           </section>
         ) : null}
 
-        {/* ---------------- 6. CIERRE / FRASE PARA RECORDAR ---------------- */}
+        {/* ---------------- 8. CIERRE / VERDAD PARA RECORDAR ---------------- */}
         <footer
           style={{
             flexShrink: 0,
-            background: `linear-gradient(90deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%)`,
-            border: `1px solid ${pal.accent}33`,
+            background: '#1f1f1f',
+            border: '1px solid #393939',
             borderLeft: `5px solid ${pal.accent}`,
-            borderRadius: 14,
-            padding: '14px 20px',
+            borderRadius: 2,
+            padding: '12px 18px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -599,13 +767,13 @@ export default function Infografia({ data }: { data: InfografiaData; pagina?: nu
           }}
         >
           <div style={{ flex: 1, minWidth: 0 }}>
-            <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: pal.accent }}>
-              VERDAD PARA RECORDAR
+            <span style={{ fontSize: 10, fontFamily: 'monospace', fontWeight: 800, letterSpacing: '0.16em', textTransform: 'uppercase', color: pal.accent }}>
+              VERDAD PARA RECORDAR // CONCLUSIÓN
             </span>
             <p
               style={{
-                margin: '2px 0 0',
-                fontSize: arquetipo === 'extenso' ? 18 : 21,
+                margin: '3px 0 0',
+                fontSize: arquetipo === 'extenso' ? 17 : 20,
                 fontWeight: 600,
                 fontStyle: 'italic',
                 color: '#ffffff',
@@ -616,7 +784,7 @@ export default function Infografia({ data }: { data: InfografiaData; pagina?: nu
             </p>
           </div>
 
-          <div style={{ flexShrink: 0, opacity: 0.9 }}>
+          <div style={{ flexShrink: 0 }}>
             <TeoDocBadge color={pal.accent} />
           </div>
         </footer>
@@ -653,14 +821,13 @@ export async function exportarInfografiaBlob(node: HTMLElement): Promise<Blob> {
       transform: `scale(${s})`,
       transformOrigin: 'top left',
     },
-    bgcolor: '#070b14',
+    bgcolor: '#161616',
   })
 
   let blob: Blob
   try {
     blob = await domtoimage.toBlob(node, opciones(escala))
   } catch {
-    // Respaldo de escala segura para dispositivos con menor RAM (Safari iOS)
     blob = await domtoimage.toBlob(node, opciones(Math.max(0.4, escala * 0.65)))
   }
   return asegurarPng(blob)
@@ -685,7 +852,7 @@ export async function exportarInfografiaPng(node: HTMLElement): Promise<string> 
       transform: `scale(${s})`,
       transformOrigin: 'top left',
     },
-    bgcolor: '#070b14',
+    bgcolor: '#161616',
   })
 
   try {
@@ -730,9 +897,9 @@ export function ResponsiveInfografia({ data }: { data: InfografiaData }) {
           maxWidth: CANVAS_W,
           height: altoEscalado || undefined,
           overflow: 'hidden',
-          borderRadius: 16,
-          boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
-          border: '1px solid rgba(255,255,255,0.1)',
+          borderRadius: 4,
+          boxShadow: '0 24px 60px rgba(0,0,0,0.65)',
+          border: '1px solid #393939',
         }}
       >
         <div
@@ -746,8 +913,8 @@ export function ResponsiveInfografia({ data }: { data: InfografiaData }) {
           <Infografia data={data} />
         </div>
       </div>
-      <p style={{ marginTop: 12, fontSize: 13, color: '#94a3b8', textAlign: 'center', fontWeight: 500 }}>
-        Infografía Editorial 9:16 (1080×1920 px) · Composición Única en Alta Definición
+      <p style={{ marginTop: 12, fontSize: 13, color: '#8d8d8d', textAlign: 'center', fontFamily: 'monospace' }}>
+        INFOGRAFÍA EDITORIAL 9:16 (1080×1920) · SISTEMA DE DISEÑO CARBON · ALTA DEFINICIÓN
       </p>
     </div>
   )
