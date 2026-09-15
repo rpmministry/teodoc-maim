@@ -693,18 +693,18 @@ export default function Home() {
   };
 
   const nuevoAnalisis = () => {
-    if (avisoAutoCerrarTimerRef.current) {
-      clearTimeout(avisoAutoCerrarTimerRef.current);
-      avisoAutoCerrarTimerRef.current = null;
-    }
-    setAvisoDescarga(null);
-    setUltimoArchivo(null);
     setResultado(null);
     setError(null);
     setAvisoAudio(null);
     setAvisoYoutube(null);
     setProgress(0);
     setLoading(false);
+    setAvisoDescarga(null);
+    setUltimoArchivo(null);
+    if (avisoAutoCerrarTimerRef.current) {
+      clearTimeout(avisoAutoCerrarTimerRef.current);
+      avisoAutoCerrarTimerRef.current = null;
+    }
   };
 
   // El aviso se limpia, se vuelve al modo audio y se abre el selector.
@@ -737,26 +737,126 @@ export default function Home() {
     return /iPad|iPhone|iPod/.test(ua) || iPadOS;
   };
 
-  // En iOS moderno no abrimos pestaña en blanco antes de tiempo para no desviar al usuario a about:blank.
-  // Referencia conservada para el validador: window.open('', '_blank');
+  // En iOS se abre una pestaña DENTRO del gesto del usuario con pantalla de carga. Así,
+  // cuando el archivo esté listo, se renderiza en ESA pestaña sin pantallas en blanco
+  // y nunca se reemplaza la página de TeoDoc.
   const abrirVentanaIOS = () => {
-    // No-op intencional: evita pantalla en blanco en iOS mientras se procesa la descarga
+    if (!esIOS()) return;
+    if (ventanaIOSRef.current && !ventanaIOSRef.current.closed) return;
+    try {
+      const w = window.open('', '_blank');
+      if (w && !w.closed) {
+        ventanaIOSRef.current = w;
+        w.document.title = 'TeoDoc · Preparando descarga';
+        w.document.body.style.margin = '0';
+        w.document.body.style.backgroundColor = '#0b0f19';
+        w.document.body.style.color = '#ffffff';
+        w.document.body.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        w.document.body.style.display = 'flex';
+        w.document.body.style.flexDirection = 'column';
+        w.document.body.style.alignItems = 'center';
+        w.document.body.style.justifyContent = 'center';
+        w.document.body.style.minHeight = '100vh';
+        w.document.body.innerHTML = `
+          <div style="text-align:center;padding:24px;">
+            <div style="width:40px;height:40px;border:3px solid #1e293b;border-top-color:#0f62fe;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 16px;"></div>
+            <h2 style="font-size:17px;font-weight:600;margin:0 0 8px;color:#f8fafc;">Preparando tu documento</h2>
+            <p style="font-size:13px;color:#94a3b8;margin:0;">Generando en alta definición...</p>
+          </div>
+          <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+        `;
+      }
+    } catch {
+      // Ignorar si el navegador bloquea ventanas emergentes
+    }
   };
 
-  // Entrega un archivo como EXPORTACIÓN directa sin abrir pestañas en blanco ni desviar la pantalla actual:
-  // Funciona de manera idéntica y limpia en iOS Safari (iOS 13+), Android y Escritorio con <a download>.
+  // Entrega un archivo como EXPORTACIÓN, nunca como navegación que reemplace
+  // la página actual:
+  //  - iOS: visor interactivo en pestaña pre-abierta o panel nativo (Web Share).
+  //  - Escritorio/Android: descarga clásica con <a download>.
+  // Devuelve la URL del Blob (para el enlace "Abrir" del aviso) o null.
   const entregarArchivo = async (
     blob: Blob,
     nombre: string,
-    ventanaIOS: Window | null = null,
+    ventanaIOS: Window | null,
   ): Promise<{ url: string | null }> => {
-    if (ventanaIOS && !ventanaIOS.closed) {
-      try { ventanaIOS.close(); } catch { /* ignorar */ }
+    const url = URL.createObjectURL(blob);
+    const nav = navigator as Navigator & {
+      canShare?: (d: ShareData) => boolean;
+      share?: (d: ShareData) => Promise<void>;
+    };
+
+    // 1) En iOS con pestaña pre-abierta: renderizar visor interactivo sin pantalla en blanco
+    if (esIOS() && ventanaIOS && !ventanaIOS.closed) {
+      try {
+        const doc = ventanaIOS.document;
+        doc.title = `${nombre} · TeoDoc`;
+        doc.body.style.margin = '0';
+        doc.body.style.backgroundColor = '#0b0f19';
+        doc.body.style.color = '#ffffff';
+        doc.body.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        doc.body.style.display = 'block';
+        doc.body.style.minHeight = '100vh';
+
+        const esImg = nombre.endsWith('.png') || blob.type.startsWith('image/');
+        doc.body.innerHTML = `
+          <div style="min-height:100vh;background:#0b0f19;color:#fff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;padding:16px;display:flex;flex-direction:column;align-items:center;box-sizing:border-box;">
+            <div style="width:100%;max-width:540px;display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:12px;flex-wrap:wrap;">
+              <a id="btn-descarga" href="${url}" download="${nombre}" style="background:#0f62fe;color:#fff;text-decoration:none;padding:10px 20px;border-radius:8px;font-weight:600;font-size:14px;display:inline-flex;align-items:center;gap:6px;">
+                Guardar archivo
+              </a>
+              <span style="color:#94a3b8;font-size:12px;">${esImg ? 'Mantén presionada la imagen para Guardar en Fotos' : 'Documento listo para guardar o imprimir'}</span>
+            </div>
+            <div style="width:100%;max-width:540px;display:flex;justify-content:center;">
+              ${esImg
+                ? `<img src="${url}" alt="${nombre}" style="max-width:100%;height:auto;border-radius:10px;box-shadow:0 12px 40px rgba(0,0,0,0.6);" />`
+                : `<iframe src="${url}" style="width:100%;height:80vh;border:none;border-radius:8px;background:#ffffff;" title="${nombre}"></iframe>`
+              }
+            </div>
+          </div>
+        `;
+        try {
+          const btn = doc.getElementById('btn-descarga');
+          if (btn) btn.click();
+        } catch { /* si WebKit requiere tap manual, el botón visible ya está renderizado */ }
+
+        return { url };
+      } catch {
+        // Si hay error accediendo al documento, continuar con las alternativas
+      }
     }
 
-    const url = URL.createObjectURL(blob);
+    // 2) iOS sin pestaña o con ventana cerrada: panel nativo de Web Share
+    if (esIOS() && typeof nav.share === 'function' && typeof nav.canShare === 'function') {
+      const file = new File([blob], nombre, { type: blob.type || 'application/octet-stream' });
+      if (nav.canShare({ files: [file] })) {
+        try {
+          await nav.share({ files: [file], title: nombre });
+          try { ventanaIOS?.close(); } catch { /* ignorar */ }
+          return { url };
+        } catch (e) {
+          if ((e as { name?: string })?.name === 'AbortError') {
+            try { ventanaIOS?.close(); } catch { /* ignorar */ }
+            return { url };
+          }
+        }
+      }
+    }
 
-    // Descarga limpia sin abrir páginas en blanco en el navegador.
+    // 3) Fallback para iOS si no hay pestaña ni Web Share
+    if (esIOS()) {
+      const destino = window.open(url, '_blank');
+      if (!destino || destino.closed) {
+        const a = document.createElement('a');
+        a.href = url; a.target = '_blank'; a.rel = 'noopener';
+        document.body.appendChild(a); a.click(); a.remove();
+      }
+      return { url };
+    }
+
+    // 4) Escritorio/Android: descarga clásica. Fuera de pantalla en lugar de
+    //    display:none (algunos navegadores ignoran el clic en enlaces ocultos).
     const a = document.createElement('a');
     a.href = url;
     a.download = nombre;
@@ -764,11 +864,10 @@ export default function Home() {
     a.style.position = 'fixed';
     a.style.left = '-9999px';
     a.style.top = '0';
-    // Fallback de compatibilidad: a.target = '_blank';
     document.body.appendChild(a);
     a.click();
+    // Retirar de inmediato puede cancelar la descarga en algunos navegadores.
     setTimeout(() => a.remove(), 1500);
-
     return { url };
   };
 
@@ -827,6 +926,7 @@ export default function Home() {
     setDescargando(true);
     setDescargandoTema(temaSeleccionado);
     iniciarDescarga('png');
+    abrirVentanaIOS();
     try {
       const paginas: { blob: Blob; nombre: string }[] = [];
 
@@ -852,7 +952,8 @@ export default function Home() {
 
       let primeraUrl: string | null = null;
       for (const p of paginas) {
-        const { url } = await entregarArchivo(p.blob, p.nombre);
+        const { url } = await entregarArchivo(p.blob, p.nombre, ventanaIOSRef.current);
+        ventanaIOSRef.current = null;
         if (url && !primeraUrl) primeraUrl = url;
       }
       if (primeraUrl) {
@@ -864,6 +965,7 @@ export default function Home() {
       }
       finalizarDescarga(true);
     } catch {
+      if (ventanaIOSRef.current) { try { ventanaIOSRef.current.close(); } catch { /* ignorar */ } ventanaIOSRef.current = null; }
       finalizarDescarga(false, 'No se pudo generar la imagen. Inténtalo de nuevo.');
     } finally {
       setDescargando(false);
@@ -876,6 +978,7 @@ export default function Home() {
     const nombre = nombreArchivoPDF();
     setGenerandoPDF(true);
     iniciarDescarga('pdf');
+    abrirVentanaIOS();
     try {
       // jsPDF viene precargado: la descarga se dispara dentro del gesto del
       // usuario (el navegador muestra su aviso nativo y no se duplica).
@@ -888,7 +991,8 @@ export default function Home() {
       }
       const pdfBlob = construirPDFBlob(JsPDF, resultado);
       const seguro = pdfBlob.type === 'application/pdf' ? pdfBlob : new Blob([pdfBlob], { type: 'application/pdf' });
-      const { url } = await entregarArchivo(seguro, nombre);
+      const { url } = await entregarArchivo(seguro, nombre, ventanaIOSRef.current);
+      ventanaIOSRef.current = null;
       if (url) {
         if (ultimoUrlRef.current) URL.revokeObjectURL(ultimoUrlRef.current);
         ultimoUrlRef.current = url;
@@ -898,6 +1002,7 @@ export default function Home() {
       }
       finalizarDescarga(true);
     } catch {
+      if (ventanaIOSRef.current) { try { ventanaIOSRef.current.close(); } catch { /* ignorar */ } ventanaIOSRef.current = null; }
       finalizarDescarga(false, 'No se pudo generar el PDF. Inténtalo de nuevo.');
     } finally {
       setGenerandoPDF(false);
