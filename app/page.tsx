@@ -746,10 +746,13 @@ export default function Home() {
         const a = document.createElement('a');
         a.href = url;
         a.target = '_blank';
-        a.rel = 'noopener';
+        // En Safari/WebKit no se debe usar rel="noopener" con blob: URLs porque abre about:blank
+        if (!url.startsWith('blob:')) {
+          a.rel = 'noopener';
+        }
         document.body.appendChild(a);
         a.click();
-        a.remove();
+        setTimeout(() => a.remove(), 500);
       }
     } catch {
       window.open('', '_blank');
@@ -1644,7 +1647,7 @@ export default function Home() {
                   <div className="flex flex-col items-center md:items-start text-center md:text-left">
                     <span className="inline-flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-white bg-[#002d9c] px-3 py-1.5 mb-1.5">
                       <span className="w-2 h-2 rounded-full bg-[#a6c8ff]" aria-hidden="true" />
-                      Análisis completado
+                      Análisis completo
                     </span>
                     <span className="text-[#a8a8a8] text-sm font-normal">Estructura teológica extraída.</span>
                   </div>
@@ -1676,9 +1679,6 @@ export default function Home() {
                 </div>
 
                 <div className="text-center relative z-10 max-w-4xl mx-auto">
-                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#0f62fe]/10 border border-[#0f62fe]/30 rounded text-xs font-mono font-semibold tracking-widest text-[#78a9ff] uppercase mb-4">
-                    // ANÁLISIS TEOLÓGICO & EXEGÉTICO
-                  </div>
                   <h2 className="text-3xl sm:text-5xl md:text-6xl font-extrabold text-[#ffffff] mb-5 leading-[1.08] tracking-tight">
                     {resultado.titulo}
                   </h2>
@@ -1931,10 +1931,10 @@ export default function Home() {
 
       {/* VISOR MODAL EN PANTALLA (PREVIEW IN-APP SIN ABRIR NUEVAS PESTAÑAS) */}
       {previewArchivo && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/85 backdrop-blur-sm p-4">
-          <div className="bg-[#1e1e1e] border border-[#393939] rounded-xl w-full max-w-2xl max-h-[92dvh] flex flex-col overflow-hidden shadow-2xl">
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/85 backdrop-blur-sm p-2 sm:p-4">
+          <div className="bg-[#1e1e1e] border border-[#393939] rounded-xl w-full max-w-2xl max-h-[94dvh] flex flex-col overflow-hidden shadow-2xl">
             {/* Barra superior */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-[#333333] bg-[#161616]">
+            <div className="flex items-center justify-between px-3.5 py-2.5 sm:px-4 sm:py-3 border-b border-[#333333] bg-[#161616] shrink-0">
               <div className="flex items-center gap-2 min-w-0 pr-2">
                 <span className="shrink-0 px-2 py-0.5 text-[10px] font-bold rounded bg-[#0f62fe] text-white uppercase tracking-wider">
                   {previewArchivo.tipo === 'pdf' ? 'PDF' : 'Infografía 9:16'}
@@ -1952,54 +1952,115 @@ export default function Home() {
             </div>
 
             {/* Contenido visor */}
-            <div className="flex-1 overflow-y-auto p-4 flex flex-col items-center justify-center bg-[#0d1117] min-h-[300px]">
+            <div className="flex-1 min-h-0 min-w-0 overflow-y-auto p-2 sm:p-4 flex flex-col items-center justify-center bg-[#0d1117]">
               {previewArchivo.tipo === 'png' ? (
-                <div className="flex flex-col items-center max-w-full">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={previewArchivo.url}
-                    alt={previewArchivo.nombre}
-                    className="max-h-[66vh] w-auto max-w-full rounded-lg shadow-[0_12px_36px_rgba(0,0,0,0.8)] border border-[#30363d] object-contain"
-                  />
-                  <p className="mt-3 text-[11px] text-[#8b949e] text-center px-2">
-                    💡 Tip en iPhone: Puedes mantener presionada la imagen para seleccionar &quot;Guardar en Fotos&quot;.
+                <div className="w-full flex-1 flex flex-col items-center justify-center min-h-0 min-w-0 py-1">
+                  <div className="relative flex items-center justify-center w-full max-w-[340px] sm:max-w-[420px]">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={previewArchivo.url}
+                      alt={previewArchivo.nombre}
+                      style={{
+                        maxHeight: 'min(58dvh, 520px)',
+                        maxWidth: '100%',
+                        width: 'auto',
+                        height: 'auto',
+                        objectFit: 'contain',
+                      }}
+                      className="rounded-lg shadow-[0_12px_36px_rgba(0,0,0,0.8)] border border-[#30363d] select-none pointer-events-auto"
+                    />
+                  </div>
+                  <p className="mt-2.5 text-[11px] text-[#8b949e] text-center px-2">
+                    💡 Tip: Mantén presionada la imagen para guardarla en tu galería de Fotos.
                   </p>
                 </div>
               ) : (
-                <iframe
-                  src={previewArchivo.url}
-                  className="w-full h-[66vh] rounded-lg bg-white border-0"
-                  title={previewArchivo.nombre}
-                />
+                <div className="w-full flex-1 flex flex-col items-center justify-center min-h-0 min-w-0 py-2 sm:py-3 text-center">
+                  {/* Tarjeta interactiva y accesible de PDF para todos los dispositivos */}
+                  <div className="w-full max-w-md bg-[#161616] border border-[#393939] rounded-xl p-4 sm:p-6 flex flex-col items-center shadow-lg">
+                    <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-[#0f62fe]/10 border border-[#0f62fe]/30 flex items-center justify-center text-[#78a9ff] mb-3">
+                      <svg className="w-6 h-6 sm:w-7 sm:h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M14 3v5a1 1 0 001 1h5" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 15h6M9 11h6" />
+                      </svg>
+                    </div>
+
+                    <span className="px-2.5 py-0.5 rounded text-[10px] sm:text-[11px] font-bold tracking-wider uppercase bg-[#002d9c] text-white mb-2">
+                      Documento PDF · Formato A4
+                    </span>
+
+                    <h4 className="text-sm sm:text-base font-semibold text-[#f4f4f4] max-w-xs truncate mb-1">
+                      {previewArchivo.nombre}
+                    </h4>
+
+                    <p className="text-xs text-[#a8a8a8] max-w-xs mb-4">
+                      Optimizado para lectura, impresión y anillado con márgenes de seguridad.
+                    </p>
+
+                    <button
+                      type="button"
+                      onClick={() => abrirEnPestanaExterna(previewArchivo.url)}
+                      className="w-full sm:w-auto min-w-[210px] h-10 px-4 rounded-lg bg-[#0f62fe] hover:bg-[#0353e9] active:bg-[#0043ce] text-white font-semibold text-xs sm:text-sm transition-colors flex items-center justify-center gap-2 shadow-md"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                      Abrir PDF en pantalla completa
+                    </button>
+                  </div>
+
+                  {/* Previsualización embebida en pantallas de escritorio o tabletas */}
+                  <div className="hidden sm:block w-full flex-1 max-h-[36dvh] min-h-[180px] rounded-lg overflow-hidden border border-[#393939] bg-white mt-3">
+                    <iframe
+                      src={`${previewArchivo.url}#toolbar=0&navpanes=0&view=FitH`}
+                      style={{ width: '1px', minWidth: '100%', height: '100%', minHeight: '100%' }}
+                      className="w-full h-full border-0"
+                      title={previewArchivo.nombre}
+                    />
+                  </div>
+                </div>
               )}
             </div>
 
             {/* Barra de acciones inferior */}
-            <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 bg-[#161616] border-t border-[#333333]">
+            <div className="flex flex-wrap items-center justify-between gap-2 px-3.5 py-2.5 sm:px-4 sm:py-3 bg-[#161616] border-t border-[#333333] shrink-0">
               <div className="flex flex-wrap items-center gap-2">
+                {previewArchivo.tipo === 'pdf' ? (
+                  <button
+                    type="button"
+                    onClick={() => abrirEnPestanaExterna(previewArchivo.url)}
+                    className="inline-flex items-center gap-1.5 h-8 sm:h-9 rounded-lg bg-[#0f62fe] px-3 text-xs font-semibold text-white transition-colors hover:bg-[#0353e9]"
+                  >
+                    <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                    Abrir
+                  </button>
+                ) : null}
                 {puedeCompartir ? (
                   <button
                     type="button"
                     onClick={() => compartirArchivo(previewArchivo)}
-                    className="inline-flex items-center gap-1.5 h-9 rounded-lg bg-[#0f62fe] px-3.5 text-xs font-semibold text-white transition-colors hover:bg-[#0353e9]"
+                    className="inline-flex items-center gap-1.5 h-8 sm:h-9 rounded-lg border border-[#0f62fe] bg-[#0f62fe]/10 px-3 text-xs font-semibold text-[#78a9ff] transition-colors hover:bg-[#0f62fe]/20"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
+                    <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
                     Guardar / Compartir
                   </button>
                 ) : null}
                 <a
                   href={previewArchivo.url}
                   download={previewArchivo.nombre}
-                  className="inline-flex items-center gap-1.5 h-9 rounded-lg border border-[#525252] px-3.5 text-xs font-semibold text-[#f4f4f4] transition-colors hover:bg-[#262626]"
+                  className="inline-flex items-center gap-1.5 h-8 sm:h-9 rounded-lg border border-[#525252] px-3 text-xs font-semibold text-[#f4f4f4] transition-colors hover:bg-[#262626]"
                 >
-                  <svg className="w-4 h-4 text-[#78a9ff]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4-4m0 0l-4-4m4 4V4" /></svg>
-                  Descargar archivo
+                  <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[#78a9ff]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4-4m0 0l-4-4m4 4V4" /></svg>
+                  Descargar
                 </a>
               </div>
               <button
                 type="button"
                 onClick={() => setPreviewArchivo(null)}
-                className="h-9 px-3 text-xs font-medium text-[#c6c6c6] hover:text-white transition-colors"
+                className="h-8 sm:h-9 px-3 text-xs font-medium text-[#c6c6c6] hover:text-white transition-colors"
               >
                 Cerrar
               </button>
@@ -2090,6 +2151,14 @@ export default function Home() {
                     >
                       <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
                       Ver
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => abrirEnPestanaExterna(ultimoArchivo.url)}
+                      className="inline-flex h-8 items-center gap-1.5 rounded-md border border-[#8d8d8d] px-3 text-xs font-semibold text-[#161616] transition-colors hover:bg-[#f4f4f4]"
+                    >
+                      <svg className="w-3.5 h-3.5 text-[#0f62fe]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                      Abrir
                     </button>
                     {puedeCompartir ? (
                       <button
