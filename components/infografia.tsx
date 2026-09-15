@@ -149,13 +149,25 @@ function IconoMiniPunto({ color }: { color: string }) {
   )
 }
 
+export type TemaInfografia = 'oscuro' | 'claro'
+
 // Badge de Marca TeoDoc con Icono Oficial
-function TeoDocBadge({ color }: { color?: string }) {
+function TeoDocBadge({ color, tema = 'oscuro' }: { color?: string; tema?: TemaInfografia }) {
+  const esClaro = tema === 'claro'
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
       <TeoDocOficialIcon size={42} bg="#0f62fe" />
-      <span style={{ fontSize: 20, fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#ffffff', lineHeight: 1 }}>
-        TEO<span style={{ color: '#38bdf8' }}>DOC</span>
+      <span
+        style={{
+          fontSize: 20,
+          fontWeight: 800,
+          letterSpacing: '0.14em',
+          textTransform: 'uppercase',
+          color: esClaro ? '#111827' : '#ffffff',
+          lineHeight: 1,
+        }}
+      >
+        TEO<span style={{ color: esClaro ? '#0f62fe' : '#38bdf8' }}>DOC</span>
       </span>
     </div>
   )
@@ -275,11 +287,22 @@ export function planInfografia(data: InfografiaData) {
 // Componente de Infografía Editorial 9:16 (1080×1920)
 // Con retícula estructurada estilo Carbon, balance completo sin vacíos
 // ---------------------------------------------------------------------------
-export default function Infografia({ data }: { data: InfografiaData; pagina?: number }) {
+export default function Infografia({
+  data,
+  pagina = 0,
+  tema = 'oscuro',
+}: {
+  data: InfografiaData
+  pagina?: number
+  tema?: TemaInfografia
+}) {
   const entrada = construirEntrada(data)
   const plan = planificarComposicion(entrada)
   const palIndex = hashColor(entrada.titulo + entrada.tema, PALETAS.length)
-  const pal = PALETAS[palIndex]
+  const esClaro = tema === 'claro'
+  const pal = esClaro
+    ? { primary: '#0f62fe', secondary: '#0043ce', accent: '#0f62fe', glow: '#d0e2ff' }
+    : PALETAS[palIndex]
 
   const semillaIlustracion = `${entrada.titulo} ${entrada.tema} ${entrada.mensajeCentral} ${entrada.pasaje} ${entrada.conceptos.join(' ')}`
   const ilustracionId: IlustracionId = elegirIlustracion(semillaIlustracion)
@@ -288,15 +311,56 @@ export default function Infografia({ data }: { data: InfografiaData; pagina?: nu
 
   const { arquetipo, puntos, escala, versiculosApoyo, doctrinas, mostrarVersiculosApoyo, mostrarDoctrina } = plan
 
+  // Tokens de estilo según el tema (Oscuro Obsidiana vs Claro Editorial)
+  const theme = {
+    bgLienzo: esClaro ? '#ffffff' : '#070b14',
+    bgGradiente: esClaro
+      ? 'radial-gradient(circle at 85% 8%, rgba(15, 98, 254, 0.05) 0%, #ffffff 65%), radial-gradient(circle at 15% 92%, rgba(0, 67, 206, 0.03) 0%, #ffffff 60%)'
+      : `radial-gradient(circle at 85% 8%, ${pal.primary}24 0%, #070b14 65%), radial-gradient(circle at 15% 92%, ${pal.secondary}20 0%, #070b14 60%)`,
+    colorTextoPrincipal: esClaro ? '#111827' : '#ffffff',
+    colorTextoCuerpo: esClaro ? '#374151' : '#cbd5e1',
+    colorTextoMuted: esClaro ? '#64748b' : '#94a3b8',
+    bordeSutil: esClaro ? '#e2e8f0' : 'rgba(255, 255, 255, 0.1)',
+    cardBg: esClaro
+      ? 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)'
+      : 'linear-gradient(135deg, rgba(255,255,255,0.045) 0%, rgba(255,255,255,0.015) 100%)',
+    cardBoxShadow: esClaro ? '0 2px 8px rgba(15, 98, 254, 0.04)' : 'none',
+    tagBg: esClaro ? 'rgba(15, 98, 254, 0.07)' : 'rgba(255, 255, 255, 0.08)',
+    tagBorde: esClaro ? 'rgba(15, 98, 254, 0.2)' : 'rgba(255, 255, 255, 0.16)',
+    tagColor: esClaro ? '#0043ce' : '#ffffff',
+    vitrinaBg: esClaro
+      ? 'radial-gradient(circle at center, rgba(15,98,254,0.07) 0%, rgba(15,98,254,0.01) 75%)'
+      : 'radial-gradient(circle at center, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.015) 75%)',
+    vitrinaBorde: esClaro ? '#e2e8f0' : 'rgba(255, 255, 255, 0.12)',
+    footerBg: esClaro
+      ? 'linear-gradient(90deg, #f8fafc 0%, #ffffff 100%)'
+      : 'linear-gradient(90deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%)',
+    gridPatternStroke: esClaro ? 'rgba(15, 98, 254, 0.035)' : 'rgba(255, 255, 255, 0.024)',
+    glowStopColor: esClaro ? '#0f62fe' : pal.accent,
+    glowStopOpacity: esClaro ? '0.07' : '0.14',
+    glowEndColor: esClaro ? '#ffffff' : '#070b14',
+    curveGradStop1: esClaro ? '#0f62fe' : pal.accent,
+    curveGradStop2: esClaro ? '#0043ce' : pal.primary,
+    curveGradStop3: esClaro ? '#0f62fe' : pal.accent,
+    curveGradOpacity1: esClaro ? '0.45' : '0.6',
+    curveGradOpacity2: esClaro ? '0.28' : '0.35',
+    curveGradOpacity3: esClaro ? '0.5' : '0.7',
+    curvaOpacity: esClaro ? '0.26' : '0.32',
+    lineaSuperiorStroke: esClaro ? '#0f62fe' : pal.accent,
+    lineaSuperiorOpacity: esClaro ? '0.25' : '0.38',
+    lineaInferiorStroke: esClaro ? 'rgba(0, 0, 0, 0.08)' : 'rgba(255, 255, 255, 0.14)',
+    lineasLateralesStroke: esClaro ? 'rgba(0, 0, 0, 0.04)' : 'rgba(255, 255, 255, 0.06)',
+  }
+
   return (
     <div
       style={{
         width: CANVAS_W,
         height: CANVAS_H,
         boxSizing: 'border-box',
-        backgroundColor: '#070b14', // Carbon Obsidian dark base
-        backgroundImage: `radial-gradient(circle at 85% 8%, ${pal.primary}24 0%, #070b14 65%), radial-gradient(circle at 15% 92%, ${pal.secondary}20 0%, #070b14 60%)`,
-        color: '#f4f4f4',
+        backgroundColor: theme.bgLienzo,
+        backgroundImage: theme.bgGradiente,
+        color: theme.colorTextoPrincipal,
         fontFamily: 'var(--font-plex), system-ui, -apple-system, sans-serif',
         position: 'relative',
         overflow: 'hidden',
@@ -309,44 +373,38 @@ export default function Infografia({ data }: { data: InfografiaData; pagina?: nu
         <svg width="100%" height="100%" viewBox="0 0 1080 1920" preserveAspectRatio="none">
           <defs>
             {/* Grid base de 64 px con líneas muy sutiles */}
-            <pattern id="carbon-grid" width="64" height="64" patternUnits="userSpaceOnUse">
-              <path d="M 64 0 L 0 0 0 64" fill="none" stroke="rgba(255, 255, 255, 0.024)" strokeWidth="1" />
+            <pattern id={esClaro ? "carbon-grid-claro" : "carbon-grid-oscuro"} width="64" height="64" patternUnits="userSpaceOnUse">
+              <path d="M 64 0 L 0 0 0 64" fill="none" stroke={theme.gridPatternStroke} strokeWidth="1" />
             </pattern>
-            <radialGradient id="glow-ambient" cx="50%" cy="26%" r="48%">
-              <stop offset="0%" stopColor={pal.accent} stopOpacity="0.14" />
-              <stop offset="100%" stopColor="#070b14" stopOpacity="0" />
+            <radialGradient id={esClaro ? "glow-ambient-claro" : "glow-ambient-oscuro"} cx="50%" cy="26%" r="48%">
+              <stop offset="0%" stopColor={theme.glowStopColor} stopOpacity={theme.glowStopOpacity} />
+              <stop offset="100%" stopColor={theme.glowEndColor} stopOpacity="0" />
             </radialGradient>
-            <linearGradient id="curve-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stopColor={pal.accent} stopOpacity="0.6" />
-              <stop offset="50%" stopColor={pal.primary} stopOpacity="0.35" />
-              <stop offset="100%" stopColor={pal.accent} stopOpacity="0.7" />
+            <linearGradient id={esClaro ? "curve-gradient-claro" : "curve-gradient-oscuro"} x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor={theme.curveGradStop1} stopOpacity={theme.curveGradOpacity1} />
+              <stop offset="50%" stopColor={theme.curveGradStop2} stopOpacity={theme.curveGradOpacity2} />
+              <stop offset="100%" stopColor={theme.curveGradStop3} stopOpacity={theme.curveGradOpacity3} />
             </linearGradient>
           </defs>
-          <rect width="100%" height="100%" fill="url(#carbon-grid)" />
-          <circle cx="540" cy="500" r="520" fill="url(#glow-ambient)" />
+          <rect width="100%" height="100%" fill={`url(#${esClaro ? "carbon-grid-claro" : "carbon-grid-oscuro"})`} />
+          <circle cx="540" cy="500" r="520" fill={`url(#${esClaro ? "glow-ambient-claro" : "glow-ambient-oscuro"})`} />
 
           {/* Guías estructurales y rieles en los márgenes de seguridad */}
-          <line x1={SAFE_LATERAL} y1={SAFE_TOP} x2={CANVAS_W - SAFE_LATERAL} y2={SAFE_TOP} stroke={pal.accent} strokeWidth="1.5" strokeOpacity="0.38" />
-          <line x1={SAFE_LATERAL} y1={CANVAS_H - SAFE_BOTTOM} x2={CANVAS_W - SAFE_LATERAL} y2={CANVAS_H - SAFE_BOTTOM} stroke="rgba(255,255,255,0.14)" strokeWidth="1" />
-          <line x1={SAFE_LATERAL} y1={SAFE_TOP} x2={SAFE_LATERAL} y2={CANVAS_H - SAFE_BOTTOM} stroke="rgba(255,255,255,0.06)" strokeWidth="1" />
-          <line x1={CANVAS_W - SAFE_LATERAL} y1={SAFE_TOP} x2={CANVAS_W - SAFE_LATERAL} y2={CANVAS_H - SAFE_BOTTOM} stroke="rgba(255,255,255,0.06)" strokeWidth="1" />
+          <line x1={SAFE_LATERAL} y1={SAFE_TOP} x2={CANVAS_W - SAFE_LATERAL} y2={SAFE_TOP} stroke={theme.lineaSuperiorStroke} strokeWidth="1.5" strokeOpacity={theme.lineaSuperiorOpacity} />
+          <line x1={SAFE_LATERAL} y1={CANVAS_H - SAFE_BOTTOM} x2={CANVAS_W - SAFE_LATERAL} y2={CANVAS_H - SAFE_BOTTOM} stroke={theme.lineaInferiorStroke} strokeWidth="1" />
+          <line x1={SAFE_LATERAL} y1={SAFE_TOP} x2={SAFE_LATERAL} y2={CANVAS_H - SAFE_BOTTOM} stroke={theme.lineasLateralesStroke} strokeWidth="1" />
+          <line x1={CANVAS_W - SAFE_LATERAL} y1={SAFE_TOP} x2={CANVAS_W - SAFE_LATERAL} y2={CANVAS_H - SAFE_BOTTOM} stroke={theme.lineasLateralesStroke} strokeWidth="1" />
 
           {/* CURVA CONECTORA EDITORIAL ("HILO CONDUCTOR") QUE VINCULA LA ESTRUCTURA */}
           <path
             d="M 540 500 C 720 580, 880 720, 840 920 C 790 1120, 240 1180, 230 1380 C 220 1560, 480 1700, 540 1780"
             fill="none"
-            stroke="url(#curve-gradient)"
+            stroke={`url(#${esClaro ? "curve-gradient-claro" : "curve-gradient-oscuro"})`}
             strokeWidth="2.5"
             strokeDasharray="6 10"
             strokeLinecap="round"
-            opacity="0.32"
+            opacity={theme.curvaOpacity}
           />
-
-          {/* Marcadores de cruce en esquinas (+) */}
-          <path d={`M ${SAFE_LATERAL - 8} ${SAFE_TOP} H ${SAFE_LATERAL + 8} M ${SAFE_LATERAL} ${SAFE_TOP - 8} V ${SAFE_TOP + 8}`} stroke={pal.accent} strokeWidth="1.5" />
-          <path d={`M ${CANVAS_W - SAFE_LATERAL - 8} ${SAFE_TOP} H ${CANVAS_W - SAFE_LATERAL + 8} M ${CANVAS_W - SAFE_LATERAL} ${SAFE_TOP - 8} V ${SAFE_TOP + 8}`} stroke={pal.accent} strokeWidth="1.5" />
-          <path d={`M ${SAFE_LATERAL - 8} ${CANVAS_H - SAFE_BOTTOM} H ${SAFE_LATERAL + 8} M ${SAFE_LATERAL} ${CANVAS_H - SAFE_BOTTOM - 8} V ${CANVAS_H - SAFE_BOTTOM + 8}`} stroke="rgba(255,255,255,0.25)" strokeWidth="1.5" />
-          <path d={`M ${CANVAS_W - SAFE_LATERAL - 8} ${CANVAS_H - SAFE_BOTTOM} H ${CANVAS_W - SAFE_LATERAL + 8} M ${CANVAS_W - SAFE_LATERAL} ${CANVAS_H - SAFE_BOTTOM - 8} V ${CANVAS_H - SAFE_BOTTOM + 8}`} stroke="rgba(255,255,255,0.25)" strokeWidth="1.5" />
         </svg>
       </div>
 
@@ -371,20 +429,20 @@ export default function Infografia({ data }: { data: InfografiaData; pagina?: nu
             alignItems: 'center',
             justifyContent: 'space-between',
             paddingBottom: 12,
-            borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+            borderBottom: `1px solid ${theme.bordeSutil}`,
             flexShrink: 0,
           }}
         >
-          <TeoDocBadge color={pal.accent} />
+          <TeoDocBadge color={pal.accent} tema={tema} />
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <span
               style={{
                 fontSize: 11,
                 fontFamily: 'monospace',
                 fontWeight: 800,
-                color: '#ffffff',
-                background: 'rgba(255, 255, 255, 0.12)',
-                border: '1px solid rgba(255, 255, 255, 0.22)',
+                color: theme.tagColor,
+                background: theme.tagBg,
+                border: `1px solid ${theme.tagBorde}`,
                 borderRadius: 999,
                 padding: '3px 12px',
                 letterSpacing: '0.08em',
@@ -393,7 +451,7 @@ export default function Infografia({ data }: { data: InfografiaData; pagina?: nu
             >
               {categoriaTema}
             </span>
-            <span style={{ fontSize: 12, color: '#cbd5e1', fontFamily: 'monospace', letterSpacing: '0.04em' }}>
+            <span style={{ fontSize: 12, color: theme.colorTextoMuted, fontFamily: 'monospace', letterSpacing: '0.04em' }}>
               {fechaHoy}
             </span>
           </div>
@@ -407,14 +465,14 @@ export default function Infografia({ data }: { data: InfografiaData; pagina?: nu
               alignItems: 'center',
               gap: 8,
               marginBottom: 6,
-              background: 'rgba(255, 255, 255, 0.08)',
-              border: '1px solid rgba(255, 255, 255, 0.16)',
+              background: theme.tagBg,
+              border: `1px solid ${theme.tagBorde}`,
               borderRadius: 6,
               padding: '3px 10px',
             }}
           >
             <div style={{ width: 8, height: 8, backgroundColor: pal.accent, borderRadius: 999 }} />
-            <span style={{ fontSize: 12, fontFamily: 'monospace', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#ffffff' }}>
+            <span style={{ fontSize: 12, fontFamily: 'monospace', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: theme.tagColor }}>
               {entrada.tema}
             </span>
           </div>
@@ -426,7 +484,7 @@ export default function Infografia({ data }: { data: InfografiaData; pagina?: nu
               fontWeight: 800,
               lineHeight: 1.06,
               letterSpacing: '-0.02em',
-              color: '#ffffff',
+              color: theme.colorTextoPrincipal,
               overflowWrap: 'break-word',
             }}
           >
@@ -436,11 +494,12 @@ export default function Infografia({ data }: { data: InfografiaData; pagina?: nu
           {entrada.mensajeCentral ? (
             <div
               style={{
-                background: 'linear-gradient(135deg, rgba(255,255,255,0.045) 0%, rgba(255,255,255,0.015) 100%)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
+                background: theme.cardBg,
+                border: `1px solid ${theme.bordeSutil}`,
                 borderLeft: `4px solid ${pal.accent}`,
                 borderRadius: 10,
                 padding: '12px 18px',
+                boxShadow: theme.cardBoxShadow,
               }}
             >
               <div
@@ -448,14 +507,14 @@ export default function Infografia({ data }: { data: InfografiaData; pagina?: nu
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: 6,
-                  background: 'rgba(255, 255, 255, 0.08)',
-                  border: '1px solid rgba(255, 255, 255, 0.16)',
+                  background: theme.tagBg,
+                  border: `1px solid ${theme.tagBorde}`,
                   borderRadius: 4,
                   padding: '2px 8px',
                   marginBottom: 6,
                 }}
               >
-                <span style={{ fontSize: 10, fontFamily: 'monospace', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#ffffff' }}>
+                <span style={{ fontSize: 10, fontFamily: 'monospace', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: theme.tagColor }}>
                   IDEA CENTRAL DEL EXPOSITOR
                 </span>
               </div>
@@ -465,7 +524,7 @@ export default function Infografia({ data }: { data: InfografiaData; pagina?: nu
                   fontSize: escala.subtitulo,
                   fontWeight: 500,
                   lineHeight: 1.35,
-                  color: '#e2e8f0',
+                  color: theme.colorTextoCuerpo,
                 }}
               >
                 {resumirEditorial(entrada.mensajeCentral, 280)}
@@ -479,12 +538,13 @@ export default function Infografia({ data }: { data: InfografiaData; pagina?: nu
           <section
             style={{
               flexShrink: 0,
-              background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
-              border: '1px solid rgba(255, 255, 255, 0.12)',
+              background: theme.cardBg,
+              border: `1px solid ${theme.bordeSutil}`,
               borderTop: `3px solid ${pal.accent}`,
               borderRadius: 12,
               padding: '14px 18px',
               position: 'relative',
+              boxShadow: theme.cardBoxShadow,
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
@@ -493,8 +553,8 @@ export default function Infografia({ data }: { data: InfografiaData; pagina?: nu
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: 6,
-                  background: 'rgba(255, 255, 255, 0.08)',
-                  border: '1px solid rgba(255, 255, 255, 0.16)',
+                  background: theme.tagBg,
+                  border: `1px solid ${theme.tagBorde}`,
                   borderRadius: 4,
                   padding: '2px 8px',
                 }}
@@ -507,7 +567,7 @@ export default function Infografia({ data }: { data: InfografiaData; pagina?: nu
                     backgroundColor: pal.accent,
                   }}
                 />
-                <span style={{ fontSize: 10.5, fontFamily: 'monospace', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#ffffff' }}>
+                <span style={{ fontSize: 10.5, fontFamily: 'monospace', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: theme.tagColor }}>
                   TEXTO BÍBLICO CLAVE
                 </span>
               </div>
@@ -519,8 +579,7 @@ export default function Infografia({ data }: { data: InfografiaData; pagina?: nu
                     fontFamily: 'monospace',
                     letterSpacing: '0.06em',
                     color: '#ffffff',
-                    background: 'rgba(255, 255, 255, 0.08)',
-                    border: '1px solid rgba(255, 255, 255, 0.16)',
+                    background: pal.primary,
                     padding: '2px 10px',
                     borderRadius: 4,
                   }}
@@ -538,7 +597,7 @@ export default function Infografia({ data }: { data: InfografiaData; pagina?: nu
                   fontStyle: 'italic',
                   fontWeight: 400,
                   lineHeight: 1.36,
-                  color: '#f8fafc',
+                  color: theme.colorTextoPrincipal,
                 }}
               >
                 “{resumirEditorial(entrada.textoClave, 280)}”
@@ -561,29 +620,30 @@ export default function Infografia({ data }: { data: InfografiaData; pagina?: nu
                 <div
                   key={i}
                   style={{
-                    background: 'rgba(255, 255, 255, 0.028)',
-                    border: '1px solid rgba(255, 255, 255, 0.09)',
+                    background: theme.cardBg,
+                    border: `1px solid ${theme.bordeSutil}`,
                     borderLeft: `3px solid ${pal.secondary}`,
                     borderRadius: 8,
                     padding: '8px 12px',
+                    boxShadow: theme.cardBoxShadow,
                   }}
                 >
                   <div
                     style={{
                       display: 'inline-block',
-                      background: 'rgba(255, 255, 255, 0.1)',
-                      border: '1px solid rgba(255, 255, 255, 0.18)',
+                      background: theme.tagBg,
+                      border: `1px solid ${theme.tagBorde}`,
                       borderRadius: 4,
                       padding: '2px 8px',
                       marginBottom: 4,
                     }}
                   >
-                    <span style={{ fontSize: 11, fontWeight: 800, color: '#ffffff', fontFamily: 'monospace' }}>
+                    <span style={{ fontSize: 11, fontWeight: 800, color: theme.tagColor, fontFamily: 'monospace' }}>
                       {v.cita}
                     </span>
                   </div>
                   {v.texto ? (
-                    <p style={{ margin: 0, fontSize: 12.5, color: '#cbd5e1', fontStyle: 'italic', lineHeight: 1.3 }}>
+                    <p style={{ margin: 0, fontSize: 12.5, color: theme.colorTextoCuerpo, fontStyle: 'italic', lineHeight: 1.3 }}>
                       “{v.texto}”
                     </p>
                   ) : null}
@@ -601,13 +661,13 @@ export default function Infografia({ data }: { data: InfografiaData; pagina?: nu
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 6,
-                background: 'rgba(255, 255, 255, 0.08)',
-                border: '1px solid rgba(255, 255, 255, 0.16)',
+                background: theme.tagBg,
+                border: `1px solid ${theme.tagBorde}`,
                 borderRadius: 4,
                 padding: '3px 8px',
               }}
             >
-              <span style={{ fontSize: 10.5, fontFamily: 'monospace', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#ffffff' }}>
+              <span style={{ fontSize: 10.5, fontFamily: 'monospace', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: theme.tagColor }}>
                 ENSEÑANZAS Y ESTRUCTURA TEOLÓGICA ({puntos.length} PUNTOS)
               </span>
             </div>
@@ -622,8 +682,8 @@ export default function Infografia({ data }: { data: InfografiaData; pagina?: nu
                     key={p.numeral}
                     style={{
                       flex: 1,
-                      background: 'linear-gradient(135deg, rgba(255,255,255,0.045) 0%, rgba(255,255,255,0.015) 100%)',
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      background: theme.cardBg,
+                      border: `1px solid ${theme.bordeSutil}`,
                       borderTop: `3px solid ${pal.accent}`,
                       borderRadius: 12,
                       padding: '14px 18px',
@@ -631,6 +691,7 @@ export default function Infografia({ data }: { data: InfografiaData; pagina?: nu
                       flexDirection: 'column',
                       justifyContent: 'center',
                       gap: 4,
+                      boxShadow: theme.cardBoxShadow,
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -641,16 +702,16 @@ export default function Infografia({ data }: { data: InfografiaData; pagina?: nu
                         <IconoMiniPunto color={pal.accent} />
                       </div>
                       {p.versiculo ? (
-                        <span style={{ fontSize: 11, fontFamily: 'monospace', fontWeight: 700, color: '#ffffff', background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.2)', padding: '2px 8px', borderRadius: 4 }}>
+                        <span style={{ fontSize: 11, fontFamily: 'monospace', fontWeight: 700, color: theme.tagColor, background: theme.tagBg, border: `1px solid ${theme.tagBorde}`, padding: '2px 8px', borderRadius: 4 }}>
                           {p.versiculo}
                         </span>
                       ) : null}
                     </div>
-                    <h3 style={{ margin: 0, fontSize: escala.tituloPunto, fontWeight: 700, color: '#ffffff', lineHeight: 1.22 }}>
+                    <h3 style={{ margin: 0, fontSize: escala.tituloPunto, fontWeight: 700, color: theme.colorTextoPrincipal, lineHeight: 1.22 }}>
                       {p.titulo}
                     </h3>
                     {p.detalle ? (
-                      <p style={{ margin: 0, fontSize: escala.cuerpoPunto, color: '#cbd5e1', lineHeight: 1.4 }}>
+                      <p style={{ margin: 0, fontSize: escala.cuerpoPunto, color: theme.colorTextoCuerpo, lineHeight: 1.4 }}>
                         {p.detalle}
                       </p>
                     ) : null}
@@ -666,8 +727,8 @@ export default function Infografia({ data }: { data: InfografiaData; pagina?: nu
                   flexDirection: 'column',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  background: 'radial-gradient(circle at center, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.015) 75%)',
-                  border: '1px solid rgba(255, 255, 255, 0.12)',
+                  background: theme.vitrinaBg,
+                  border: `1px solid ${theme.vitrinaBorde}`,
                   borderRadius: 16,
                   padding: 16,
                   boxSizing: 'border-box',
@@ -681,19 +742,19 @@ export default function Infografia({ data }: { data: InfografiaData; pagina?: nu
                     left: 16,
                     display: 'inline-flex',
                     alignItems: 'center',
-                    background: 'rgba(0, 0, 0, 0.45)',
-                    border: '1px solid rgba(255, 255, 255, 0.16)',
+                    background: esClaro ? '#ffffff' : 'rgba(0, 0, 0, 0.45)',
+                    border: `1px solid ${theme.bordeSutil}`,
                     borderRadius: 4,
                     padding: '3px 8px',
                   }}
                 >
-                  <span style={{ fontSize: 9.5, fontFamily: 'monospace', fontWeight: 800, letterSpacing: '0.12em', color: '#ffffff', textTransform: 'uppercase' }}>
+                  <span style={{ fontSize: 9.5, fontFamily: 'monospace', fontWeight: 800, letterSpacing: '0.12em', color: theme.tagColor, textTransform: 'uppercase' }}>
                     SIMBOLOGÍA BÍBLICA
                   </span>
                 </div>
                 <IlustracionEditorial id={ilustracionId} size={250} pal={pal} modo="hero" />
                 <div style={{ marginTop: 10, textAlign: 'center' }}>
-                  <span style={{ fontSize: 12, fontWeight: 800, fontFamily: 'monospace', color: '#ffffff', letterSpacing: '0.08em', textTransform: 'uppercase', background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.22)', padding: '4px 12px', borderRadius: 999 }}>
+                  <span style={{ fontSize: 12, fontWeight: 800, fontFamily: 'monospace', color: theme.tagColor, letterSpacing: '0.08em', textTransform: 'uppercase', background: theme.tagBg, border: `1px solid ${theme.tagBorde}`, padding: '4px 12px', borderRadius: 999 }}>
                     {categoriaTema}
                   </span>
                 </div>
@@ -707,14 +768,15 @@ export default function Infografia({ data }: { data: InfografiaData; pagina?: nu
                   <div
                     key={p.numeral}
                     style={{
-                      background: 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.015) 100%)',
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      background: theme.cardBg,
+                      border: `1px solid ${theme.bordeSutil}`,
                       borderTop: `3px solid ${pal.accent}`,
                       borderRadius: 12,
                       padding: '12px 16px',
                       display: 'flex',
                       flexDirection: 'column',
                       justifyContent: 'space-between',
+                      boxShadow: theme.cardBoxShadow,
                     }}
                   >
                     <div>
@@ -724,11 +786,11 @@ export default function Infografia({ data }: { data: InfografiaData; pagina?: nu
                         </span>
                         <IconoMiniPunto color={pal.accent} />
                       </div>
-                      <h3 style={{ margin: '0 0 4px', fontSize: escala.tituloPunto, fontWeight: 700, color: '#ffffff', lineHeight: 1.2 }}>
+                      <h3 style={{ margin: '0 0 4px', fontSize: escala.tituloPunto, fontWeight: 700, color: theme.colorTextoPrincipal, lineHeight: 1.2 }}>
                         {p.titulo}
                       </h3>
                       {p.detalle ? (
-                        <p style={{ margin: 0, fontSize: escala.cuerpoPunto, color: '#cbd5e1', lineHeight: 1.36 }}>
+                        <p style={{ margin: 0, fontSize: escala.cuerpoPunto, color: theme.colorTextoCuerpo, lineHeight: 1.36 }}>
                           {p.detalle}
                         </p>
                       ) : null}
@@ -741,9 +803,9 @@ export default function Infografia({ data }: { data: InfografiaData; pagina?: nu
                           fontSize: 10.5,
                           fontFamily: 'monospace',
                           fontWeight: 700,
-                          color: '#ffffff',
-                          background: 'rgba(255,255,255,0.12)',
-                          border: '1px solid rgba(255,255,255,0.2)',
+                          color: theme.tagColor,
+                          background: theme.tagBg,
+                          border: `1px solid ${theme.tagBorde}`,
                           padding: '2px 8px',
                           borderRadius: 4,
                         }}
@@ -760,26 +822,27 @@ export default function Infografia({ data }: { data: InfografiaData; pagina?: nu
                 {puntos[4] ? (
                   <div
                     style={{
-                      background: 'linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.015) 100%)',
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      background: theme.cardBg,
+                      border: `1px solid ${theme.bordeSutil}`,
                       borderTop: `3px solid ${pal.accent}`,
                       borderRadius: 12,
                       padding: '12px 16px',
                       display: 'flex',
                       flexDirection: 'column',
                       justifyContent: 'center',
+                      boxShadow: theme.cardBoxShadow,
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
                       <span style={{ fontSize: 12, fontWeight: 800, fontFamily: 'monospace', color: '#ffffff', background: pal.primary, padding: '2px 8px', borderRadius: 4 }}>
                         {puntos[4].numeral}
                       </span>
-                      <h3 style={{ margin: 0, fontSize: escala.tituloPunto, fontWeight: 700, color: '#ffffff', lineHeight: 1.2 }}>
+                      <h3 style={{ margin: 0, fontSize: escala.tituloPunto, fontWeight: 700, color: theme.colorTextoPrincipal, lineHeight: 1.2 }}>
                         {puntos[4].titulo}
                       </h3>
                     </div>
                     {puntos[4].detalle ? (
-                      <p style={{ margin: 0, fontSize: escala.cuerpoPunto, color: '#cbd5e1', lineHeight: 1.34 }}>
+                      <p style={{ margin: 0, fontSize: escala.cuerpoPunto, color: theme.colorTextoCuerpo, lineHeight: 1.34 }}>
                         {puntos[4].detalle}
                       </p>
                     ) : null}
@@ -789,8 +852,8 @@ export default function Infografia({ data }: { data: InfografiaData; pagina?: nu
                 <div
                   style={{
                     borderRadius: 12,
-                    background: 'radial-gradient(circle at center, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.01) 70%)',
-                    border: '1px solid rgba(255, 255, 255, 0.09)',
+                    background: theme.vitrinaBg,
+                    border: `1px solid ${theme.vitrinaBorde}`,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -815,26 +878,27 @@ export default function Infografia({ data }: { data: InfografiaData; pagina?: nu
                 <div
                   key={p.numeral}
                   style={{
-                    background: 'linear-gradient(135deg, rgba(255,255,255,0.035) 0%, rgba(255,255,255,0.015) 100%)',
-                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    background: theme.cardBg,
+                    border: `1px solid ${theme.bordeSutil}`,
                     borderLeft: `3px solid ${pal.accent}`,
                     borderRadius: 10,
                     padding: '8px 12px',
                     display: 'flex',
                     flexDirection: 'column',
                     justifyContent: 'center',
+                    boxShadow: theme.cardBoxShadow,
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
                     <span style={{ fontSize: 11, fontWeight: 800, fontFamily: 'monospace', color: '#ffffff', background: pal.primary, padding: '2px 7px', borderRadius: 4, lineHeight: 1 }}>
                       {p.numeral}
                     </span>
-                    <h3 style={{ margin: 0, fontSize: escala.tituloPunto, fontWeight: 700, color: '#ffffff', lineHeight: 1.18 }}>
+                    <h3 style={{ margin: 0, fontSize: escala.tituloPunto, fontWeight: 700, color: theme.colorTextoPrincipal, lineHeight: 1.18 }}>
                       {p.titulo}
                     </h3>
                   </div>
                   {p.detalle ? (
-                    <p style={{ margin: 0, fontSize: escala.cuerpoPunto, color: '#cbd5e1', lineHeight: 1.3 }}>
+                    <p style={{ margin: 0, fontSize: escala.cuerpoPunto, color: theme.colorTextoCuerpo, lineHeight: 1.3 }}>
                       {p.detalle}
                     </p>
                   ) : null}
@@ -849,11 +913,12 @@ export default function Infografia({ data }: { data: InfografiaData; pagina?: nu
           <section
             style={{
               flexShrink: 0,
-              background: 'rgba(255, 255, 255, 0.028)',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-              borderLeft: `4px solid ${pal.glow}`,
+              background: theme.cardBg,
+              border: `1px solid ${theme.bordeSutil}`,
+              borderLeft: `4px solid ${esClaro ? '#0f62fe' : pal.glow}`,
               borderRadius: 10,
               padding: '10px 14px',
+              boxShadow: theme.cardBoxShadow,
             }}
           >
             <div
@@ -861,18 +926,18 @@ export default function Infografia({ data }: { data: InfografiaData; pagina?: nu
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 6,
-                background: 'rgba(255, 255, 255, 0.08)',
-                border: '1px solid rgba(255, 255, 255, 0.16)',
+                background: theme.tagBg,
+                border: `1px solid ${theme.tagBorde}`,
                 borderRadius: 4,
                 padding: '2px 8px',
                 marginBottom: 4,
               }}
             >
-              <span style={{ fontSize: 10, fontFamily: 'monospace', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#ffffff' }}>
+              <span style={{ fontSize: 10, fontFamily: 'monospace', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: theme.tagColor }}>
                 ENSEÑANZA DOCTRINAL: {doctrinas[0].sobre}
               </span>
             </div>
-            <p style={{ margin: 0, fontSize: 13, color: '#e2e8f0', lineHeight: 1.34 }}>
+            <p style={{ margin: 0, fontSize: 13, color: theme.colorTextoCuerpo, lineHeight: 1.34 }}>
               {resumirEditorial(doctrinas[0].ensenanza, 190)}
             </p>
           </section>
@@ -894,9 +959,9 @@ export default function Infografia({ data }: { data: InfografiaData; pagina?: nu
                 fontSize: 10.5,
                 fontFamily: 'monospace',
                 fontWeight: 800,
-                color: '#ffffff',
-                background: 'rgba(255, 255, 255, 0.08)',
-                border: '1px solid rgba(255, 255, 255, 0.15)',
+                color: theme.tagColor,
+                background: theme.tagBg,
+                border: `1px solid ${theme.tagBorde}`,
                 borderRadius: 4,
                 padding: '2px 7px',
                 letterSpacing: '0.1em',
@@ -912,9 +977,9 @@ export default function Infografia({ data }: { data: InfografiaData; pagina?: nu
                   fontSize: 12,
                   fontFamily: 'monospace',
                   fontWeight: 600,
-                  color: '#e2e8f0',
-                  background: 'rgba(255, 255, 255, 0.05)',
-                  border: '1px solid rgba(255, 255, 255, 0.12)',
+                  color: theme.colorTextoPrincipal,
+                  background: esClaro ? '#ffffff' : 'rgba(255, 255, 255, 0.05)',
+                  border: `1px solid ${theme.bordeSutil}`,
                   borderRadius: 4,
                   padding: '2px 8px',
                 }}
@@ -929,8 +994,8 @@ export default function Infografia({ data }: { data: InfografiaData; pagina?: nu
         <footer
           style={{
             flexShrink: 0,
-            background: 'linear-gradient(90deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%)',
-            border: '1px solid rgba(255, 255, 255, 0.12)',
+            background: theme.footerBg,
+            border: `1px solid ${theme.bordeSutil}`,
             borderLeft: `5px solid ${pal.accent}`,
             borderRadius: 12,
             padding: '12px 18px',
@@ -938,6 +1003,7 @@ export default function Infografia({ data }: { data: InfografiaData; pagina?: nu
             alignItems: 'center',
             justifyContent: 'space-between',
             gap: 16,
+            boxShadow: theme.cardBoxShadow,
           }}
         >
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -946,14 +1012,14 @@ export default function Infografia({ data }: { data: InfografiaData; pagina?: nu
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 6,
-                background: 'rgba(255, 255, 255, 0.08)',
-                border: '1px solid rgba(255, 255, 255, 0.16)',
+                background: theme.tagBg,
+                border: `1px solid ${theme.tagBorde}`,
                 borderRadius: 4,
                 padding: '2px 8px',
                 marginBottom: 4,
               }}
             >
-              <span style={{ fontSize: 9.5, fontFamily: 'monospace', fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: '#ffffff' }}>
+              <span style={{ fontSize: 9.5, fontFamily: 'monospace', fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: theme.tagColor }}>
                 VERDAD PARA RECORDAR // CONCLUSIÓN
               </span>
             </div>
@@ -963,7 +1029,7 @@ export default function Infografia({ data }: { data: InfografiaData; pagina?: nu
                 fontSize: arquetipo === 'extenso' ? 16 : 19,
                 fontWeight: 600,
                 fontStyle: 'italic',
-                color: '#ffffff',
+                color: theme.colorTextoPrincipal,
                 lineHeight: 1.3,
               }}
             >
@@ -972,7 +1038,7 @@ export default function Infografia({ data }: { data: InfografiaData; pagina?: nu
           </div>
 
           <div style={{ flexShrink: 0 }}>
-            <TeoDocBadge color={pal.accent} />
+            <TeoDocBadge color={pal.accent} tema={tema} />
           </div>
         </footer>
       </div>
@@ -989,7 +1055,7 @@ function asegurarPng(blob: Blob | null | undefined): Blob {
   return new Blob([blob], { type: 'image/png' })
 }
 
-export async function exportarInfografiaBlob(node: HTMLElement): Promise<Blob> {
+export async function exportarInfografiaBlob(node: HTMLElement, tema: TemaInfografia = 'oscuro'): Promise<Blob> {
   const { default: domtoimage } = await import('dom-to-image-more')
   const ancho = node.offsetWidth || CANVAS_W
   const alto = node.offsetHeight || CANVAS_H
@@ -1008,7 +1074,7 @@ export async function exportarInfografiaBlob(node: HTMLElement): Promise<Blob> {
       transform: `scale(${s})`,
       transformOrigin: 'top left',
     },
-    bgcolor: '#161616',
+    bgcolor: tema === 'claro' ? '#ffffff' : '#070b14',
   })
 
   let blob: Blob
@@ -1020,7 +1086,7 @@ export async function exportarInfografiaBlob(node: HTMLElement): Promise<Blob> {
   return asegurarPng(blob)
 }
 
-export async function exportarInfografiaPng(node: HTMLElement): Promise<string> {
+export async function exportarInfografiaPng(node: HTMLElement, tema: TemaInfografia = 'oscuro'): Promise<string> {
   const { default: domtoimage } = await import('dom-to-image-more')
   const ancho = node.offsetWidth || CANVAS_W
   const alto = node.offsetHeight || CANVAS_H
@@ -1039,7 +1105,7 @@ export async function exportarInfografiaPng(node: HTMLElement): Promise<string> 
       transform: `scale(${s})`,
       transformOrigin: 'top left',
     },
-    bgcolor: '#161616',
+    bgcolor: tema === 'claro' ? '#ffffff' : '#070b14',
   })
 
   try {
@@ -1049,8 +1115,8 @@ export async function exportarInfografiaPng(node: HTMLElement): Promise<string> 
   }
 }
 
-export async function exportarInfografiaFile(node: HTMLElement, nombre: string): Promise<File> {
-  const blob = await exportarInfografiaBlob(node)
+export async function exportarInfografiaFile(node: HTMLElement, nombre: string, tema: TemaInfografia = 'oscuro'): Promise<File> {
+  const blob = await exportarInfografiaBlob(node, tema)
   const base = (nombre || 'teodoc-infografia').replace(/[.]+$/, '')
   const conExtension = base.toLowerCase().endsWith('.png') ? base : `${base}.png`
   return new File([blob], conExtension, { type: 'image/png' })
@@ -1059,9 +1125,10 @@ export async function exportarInfografiaFile(node: HTMLElement, nombre: string):
 // ---------------------------------------------------------------------------
 // Visualización Responsive (Escala limpia del lienzo 1080×1920 en 1 sola lámina)
 // ---------------------------------------------------------------------------
-export function ResponsiveInfografia({ data }: { data: InfografiaData }) {
+export function ResponsiveInfografia({ data, tema = 'oscuro' }: { data: InfografiaData; tema?: TemaInfografia }) {
   const hostRef = useRef<HTMLDivElement>(null)
   const [hostW, setHostW] = useState(0)
+  const esClaro = tema === 'claro'
 
   useEffect(() => {
     const host = hostRef.current
@@ -1085,8 +1152,8 @@ export function ResponsiveInfografia({ data }: { data: InfografiaData }) {
           height: altoEscalado || undefined,
           overflow: 'hidden',
           borderRadius: 4,
-          boxShadow: '0 24px 60px rgba(0,0,0,0.65)',
-          border: '1px solid #393939',
+          boxShadow: esClaro ? '0 16px 40px rgba(0,0,0,0.12)' : '0 24px 60px rgba(0,0,0,0.65)',
+          border: esClaro ? '1px solid #e0e0e0' : '1px solid #393939',
         }}
       >
         <div
@@ -1097,7 +1164,7 @@ export function ResponsiveInfografia({ data }: { data: InfografiaData }) {
             height: CANVAS_H,
           }}
         >
-          <Infografia data={data} />
+          <Infografia data={data} tema={tema} />
         </div>
       </div>
     </div>

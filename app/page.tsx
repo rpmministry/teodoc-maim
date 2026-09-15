@@ -1,7 +1,7 @@
 'use client';
 import { useState, useRef, useEffect } from 'react';
 import LiquidOrb, { type LiquidOrbHandle } from '@/components/liquid-orb';
-import Infografia, { ResponsiveInfografia, resumir, exportarInfografiaBlob, planInfografia } from '@/components/infografia';
+import Infografia, { ResponsiveInfografia, resumir, exportarInfografiaBlob, planInfografia, type TemaInfografia } from '@/components/infografia';
 import { CANVAS_W, CANVAS_H } from '@/lib/infografia-layout';
 import { extractYouTubeVideoId } from '@/lib/youtube/extract-video-id';
 
@@ -254,9 +254,12 @@ export default function Home() {
   const [youtubeUrl, setYoutubeUrl] = useState('');
   const [avisoYoutube, setAvisoYoutube] = useState<string | null>(null);
 
-  // Referencias por página: la infografía puede ser un carrusel de 1..N páginas.
+  // Referencias para la exportación de infografías en alta definición (1080×1920)
+  const infografiaOscuraRef = useRef<HTMLDivElement | null>(null);
+  const infografiaClaraRef = useRef<HTMLDivElement | null>(null);
+  const [descargandoTema, setDescargandoTema] = useState<TemaInfografia | 'ambos' | null>(null);
   const infografiaRefs = useRef<(HTMLDivElement | null)[]>([]);
-  // Número de páginas del plan (carrusel) para el resultado actual.
+  // Número de páginas del plan para el resultado actual.
   const totalPaginasInfografia = resultado ? Math.max(1, planInfografia(resultado).paginas.length) : 1;
   // Pestaña de iOS abierta dentro del gesto del usuario para exportar sin
   // reemplazar la página de TeoDoc.
@@ -815,33 +818,41 @@ export default function Home() {
     }
   };
 
-  // Export PNG: cada página es un lienzo FIJO 9:16 (1080×1920). Si el plan es
-  // carrusel, se exportan todas las páginas numeradas (1deN).
-  const descargarInfografia = async () => {
+  // Export PNG: lienzo FIJO 9:16 (1080×1920) en versión Oscura o Clara
+  const descargarInfografia = async (temaSeleccionado: TemaInfografia | 'ambos' = 'oscuro') => {
     if (descargando) return;
     const safe = (resultado?.titulo || 'mensaje').replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 60) || 'mensaje';
-    const total = totalPaginasInfografia;
     setDescargando(true);
+    setDescargandoTema(temaSeleccionado);
     iniciarDescarga('png');
     abrirVentanaIOS();
     try {
       const paginas: { blob: Blob; nombre: string }[] = [];
-      for (let i = 0; i < total; i++) {
-        const node = infografiaRefs.current[i];
-        if (!node) continue;
-        const blob = await exportarInfografiaBlob(node);
+
+      const agregarExportacion = async (tema: TemaInfografia) => {
+        const node = tema === 'oscuro' ? infografiaOscuraRef.current : infografiaClaraRef.current;
+        if (!node) return;
+        const blob = await exportarInfografiaBlob(node, tema);
         const png = blob.type === 'image/png' ? blob : new Blob([blob], { type: 'image/png' });
-        const nombre = total > 1
-          ? `TeoDoc_Infografia_${safe}_${i + 1}de${total}.png`
+        const nombre = tema === 'claro'
+          ? `TeoDoc_Infografia_Clara_${safe}.png`
           : `TeoDoc_Infografia_${safe}.png`;
         paginas.push({ blob: png, nombre });
+      };
+
+      if (temaSeleccionado === 'ambos') {
+        await agregarExportacion('oscuro');
+        await agregarExportacion('claro');
+      } else {
+        await agregarExportacion(temaSeleccionado);
       }
+
       if (!paginas.length) throw new Error('Sin artboard');
 
       const nav = navigator as Navigator & { canShare?: (d: ShareData) => boolean; share?: (d: ShareData) => Promise<void> };
       const files = paginas.map((p) => new File([p.blob], p.nombre, { type: 'image/png' }));
 
-      // iOS: compartir el carrusel completo de una sola vez si es posible.
+      // iOS: compartir el archivo completo de una sola vez si es posible.
       if (esIOS() && typeof nav.share === 'function' && typeof nav.canShare === 'function' && nav.canShare({ files })) {
         try {
           await nav.share({ files, title: 'Infografía TeoDoc' });
@@ -880,6 +891,7 @@ export default function Home() {
       finalizarDescarga(false, 'No se pudo generar la imagen. Inténtalo de nuevo.');
     } finally {
       setDescargando(false);
+      setDescargandoTema(null);
     }
   };
 
@@ -1679,9 +1691,24 @@ export default function Home() {
                   </div>
                 </div>
 
-                <div className="text-center relative z-10">
-                  <h2 className="text-2xl sm:text-4xl md:text-5xl font-light text-[#f4f4f4] mb-5 leading-tight tracking-tight">{resultado.titulo}</h2>
-                  <p className="text-[#c6c6c6] text-base sm:text-lg md:text-xl italic max-w-3xl mx-auto font-light leading-relaxed">"{resultado.idea_principal}"</p>
+                <div className="text-center relative z-10 max-w-4xl mx-auto">
+                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#0f62fe]/10 border border-[#0f62fe]/30 rounded text-xs font-mono font-semibold tracking-widest text-[#78a9ff] uppercase mb-4">
+                    // ANÁLISIS TEOLÓGICO & EXEGÉTICO
+                  </div>
+                  <h2 className="text-3xl sm:text-5xl md:text-6xl font-extrabold text-[#ffffff] mb-5 leading-[1.08] tracking-tight">
+                    {resultado.titulo}
+                  </h2>
+                  <div className="w-20 h-1 bg-[#0f62fe] mx-auto mb-6 rounded-full" />
+                  {resultado.idea_principal ? (
+                    <div className="text-left bg-[#1f1f1f]/80 border border-[#393939] border-l-4 border-l-[#0f62fe] p-4 sm:p-5 rounded-r shadow-sm">
+                      <p className="text-xs font-mono uppercase tracking-wider text-[#78a9ff] mb-1 font-semibold">
+                        Idea Central del Mensaje
+                      </p>
+                      <p className="text-[#f4f4f4] text-base sm:text-lg md:text-xl italic font-normal leading-relaxed">
+                        "{resultado.idea_principal}"
+                      </p>
+                    </div>
+                  ) : null}
                 </div>
               </div>
               
@@ -1760,43 +1787,119 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Composición narrativa · Visualización responsive · Export PNG único */}
-            <div className="w-full pt-6 sm:pt-10">
-              <div className="text-center mb-5 sm:mb-7 px-4">
-                <h3 className="text-sm font-semibold text-[#f4f4f4] tracking-wider uppercase">Infografía del análisis</h3>
-                <p className="text-xs sm:text-sm text-[#a8a8a8] mt-2 max-w-md mx-auto">
-                  El mapa visual del mensaje. Se adapta a tu pantalla y se descarga como una sola imagen PNG con la composición completa.
+            {/* Composición narrativa · Visualización dual (Oscura y Clara) · Export PNG de alta definición */}
+            <div className="w-full pt-8 sm:pt-12">
+              <div className="text-center mb-8 px-4">
+                <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#0f62fe]/10 border border-[#0f62fe]/30 rounded text-xs font-mono font-semibold tracking-widest text-[#78a9ff] uppercase mb-3">
+                  // INFOGRAFÍA EDITORIAL 9:16 (1080×1920)
+                </div>
+                <h3 className="text-xl sm:text-2xl md:text-3xl font-bold text-[#ffffff] tracking-tight">
+                  Infografías del análisis
+                </h3>
+                <p className="text-xs sm:text-sm text-[#a8a8a8] mt-2 max-w-xl mx-auto">
+                  El mapa visual y teológico del mensaje en dos estilos de diseño: versión oscura y versión clara editorial, optimizadas para redes sociales, proyección y estudio.
                 </p>
-                <div className="flex justify-center mt-4">
+                <div className="flex flex-wrap justify-center gap-3 mt-5">
                   <button
                     type="button"
-                    onClick={descargarInfografia}
+                    onClick={() => descargarInfografia('ambos')}
                     disabled={descargando}
                     style={{ touchAction: 'manipulation' }}
-                    className="h-11 px-6 text-sm font-medium text-white bg-[#0f62fe] hover:bg-[#0353e9] active:bg-[#0043ce] transition-colors disabled:opacity-60 disabled:cursor-wait select-none"
+                    className="h-11 px-6 text-xs sm:text-sm font-semibold text-white bg-[#0f62fe] hover:bg-[#0353e9] active:bg-[#0043ce] transition-colors disabled:opacity-60 disabled:cursor-wait select-none flex items-center gap-2 shadow-md"
                   >
-                    {descargando ? 'Generando PNG…' : 'Descargar infografía PNG'}
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4-4m0 0l-4-4m4 4V4" /></svg>
+                    {descargandoTema === 'ambos' ? 'Generando ambas…' : 'Descargar ambas versiones'}
                   </button>
                 </div>
               </div>
 
-              {/* Visualización responsive real: escritorio y tablet escalan el
-                  artboard de diseño conservando proporciones; móvil reorganiza a
-                  un recorrido vertical de una sola columna. */}
-              <div className="w-full flex justify-center">
-                <div className="w-full max-w-[900px]">
-                  <ResponsiveInfografia data={resultado} />
+              {/* Grid con las 2 imágenes mostradas en pantalla con sus controles directos */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-[1240px] mx-auto px-2 sm:px-4">
+                {/* 1. VERSIÓN OSCURA (OBSIDIANA) */}
+                <div className="flex flex-col items-center bg-[#1c1c1c] border border-[#333333] p-4 sm:p-6 rounded-lg">
+                  <div className="w-full flex items-center justify-between pb-3 mb-4 border-b border-[#333333]">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-[#0f62fe]" />
+                      <h4 className="text-sm sm:text-base font-bold text-[#ffffff] tracking-wide">
+                        Versión Oscura
+                      </h4>
+                      <span className="text-[10px] font-mono uppercase px-2 py-0.5 bg-[#0f62fe]/20 text-[#78a9ff] border border-[#0f62fe]/40 rounded">
+                        Obsidiana
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => descargarInfografia('oscuro')}
+                      disabled={descargando}
+                      style={{ touchAction: 'manipulation' }}
+                      className="h-9 px-4 text-xs font-semibold text-white bg-[#0f62fe] hover:bg-[#0353e9] active:bg-[#0043ce] transition-colors disabled:opacity-60 disabled:cursor-wait select-none flex items-center gap-1.5"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4-4m0 0l-4-4m4 4V4" /></svg>
+                      {descargandoTema === 'oscuro' ? 'Generando…' : 'Descargar PNG'}
+                    </button>
+                  </div>
+                  <div className="w-full max-w-[480px]">
+                    <ResponsiveInfografia data={resultado} tema="oscuro" />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => descargarInfografia('oscuro')}
+                    disabled={descargando}
+                    style={{ touchAction: 'manipulation' }}
+                    className="w-full mt-4 h-10 px-4 text-xs font-semibold text-white bg-[#262626] hover:bg-[#333333] border border-[#444444] transition-colors disabled:opacity-60 disabled:cursor-wait select-none flex items-center justify-center gap-2"
+                  >
+                    <svg className="w-4 h-4 text-[#78a9ff]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4-4m0 0l-4-4m4 4V4" /></svg>
+                    {descargandoTema === 'oscuro' ? 'Generando PNG…' : 'Descargar Infografía Oscura (1080×1920)'}
+                  </button>
+                </div>
+
+                {/* 2. VERSIÓN CLARA (EDITORIAL) */}
+                <div className="flex flex-col items-center bg-[#1c1c1c] border border-[#333333] p-4 sm:p-6 rounded-lg">
+                  <div className="w-full flex items-center justify-between pb-3 mb-4 border-b border-[#333333]">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-[#ffffff]" />
+                      <h4 className="text-sm sm:text-base font-bold text-[#ffffff] tracking-wide">
+                        Versión Clara
+                      </h4>
+                      <span className="text-[10px] font-mono uppercase px-2 py-0.5 bg-white/10 text-white border border-white/20 rounded">
+                        Editorial Blanco
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => descargarInfografia('claro')}
+                      disabled={descargando}
+                      style={{ touchAction: 'manipulation' }}
+                      className="h-9 px-4 text-xs font-semibold text-[#111827] bg-[#ffffff] hover:bg-[#f3f4f6] active:bg-[#e5e7eb] transition-colors disabled:opacity-60 disabled:cursor-wait select-none flex items-center gap-1.5"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4-4m0 0l-4-4m4 4V4" /></svg>
+                      {descargandoTema === 'claro' ? 'Generando…' : 'Descargar PNG'}
+                    </button>
+                  </div>
+                  <div className="w-full max-w-[480px]">
+                    <ResponsiveInfografia data={resultado} tema="claro" />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => descargarInfografia('claro')}
+                    disabled={descargando}
+                    style={{ touchAction: 'manipulation' }}
+                    className="w-full mt-4 h-10 px-4 text-xs font-semibold text-[#111827] bg-[#ffffff] hover:bg-[#f3f4f6] border border-[#e5e7eb] transition-colors disabled:opacity-60 disabled:cursor-wait select-none flex items-center justify-center gap-2"
+                  >
+                    <svg className="w-4 h-4 text-[#0f62fe]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4-4m0 0l-4-4m4 4V4" /></svg>
+                    {descargandoTema === 'claro' ? 'Generando PNG…' : 'Descargar Infografía Clara (1080×1920)'}
+                  </button>
                 </div>
               </div>
 
-              {/* Artboard OCULTO para exportar el PNG (una página por nodo). El
-                  contenedor conserva tamaño real con max-content. */}
-              <div aria-hidden="true" style={{ position: 'fixed', left: -9999, top: 0, width: CANVAS_W, height: CANVAS_H, overflow: 'hidden' }}>
-                {Array.from({ length: totalPaginasInfografia }).map((_, i) => (
-                  <div key={i} ref={(el) => { infografiaRefs.current[i] = el; }} style={{ width: CANVAS_W, height: CANVAS_H }}>
-                    <Infografia data={resultado} pagina={i} />
-                  </div>
-                ))}
+              {/* Artboards OCULTOS para exportar el PNG en resolución real (1080×1920) */}
+              <div aria-hidden="true" style={{ position: 'fixed', left: -9999, top: 0, width: CANVAS_W, height: CANVAS_H * 2, overflow: 'hidden' }}>
+                <div ref={infografiaOscuraRef} style={{ width: CANVAS_W, height: CANVAS_H }}>
+                  <Infografia data={resultado} tema="oscuro" />
+                </div>
+                <div ref={infografiaClaraRef} style={{ width: CANVAS_W, height: CANVAS_H }}>
+                  <Infografia data={resultado} tema="claro" />
+                </div>
               </div>
             </div>
           </div>
