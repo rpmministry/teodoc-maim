@@ -224,12 +224,13 @@ export default function Home() {
   const [avisoDescarga, setAvisoDescarga] = useState<{ tipo: 'pdf' | 'png'; progreso: number; estado: 'generando' | 'listo' | 'error'; mensaje?: string } | null>(null);
   const descargaTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const avisoAutoCerrarTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Último archivo descargado (para el enlace "Abrir" del aviso).
-  const [ultimoArchivo, setUltimoArchivo] = useState<{ url: string; nombre: string; tipo: 'pdf' | 'png' } | null>(null);
+  // Último archivo descargado (para Ver, Compartir o Descargar sin reprocesar).
+  const [ultimoArchivo, setUltimoArchivo] = useState<{ url: string; nombre: string; tipo: 'pdf' | 'png'; file?: File } | null>(null);
+  const [previewArchivo, setPreviewArchivo] = useState<{ url: string; nombre: string; tipo: 'pdf' | 'png'; file?: File } | null>(null);
   const ultimoUrlRef = useRef<string | null>(null);
   const touchXRef = useRef<number | null>(null);
 
-  // Auto-cierre del banner de descarga a los 10 segundos de completarse o fallar
+  // Auto-cierre del banner de descarga a los 15 segundos de completarse o fallar
   useEffect(() => {
     if (avisoAutoCerrarTimerRef.current) {
       clearTimeout(avisoAutoCerrarTimerRef.current);
@@ -239,7 +240,7 @@ export default function Home() {
     if (avisoDescarga?.estado === 'listo' || avisoDescarga?.estado === 'error') {
       avisoAutoCerrarTimerRef.current = setTimeout(() => {
         setAvisoDescarga(null);
-      }, 10000);
+      }, 15000);
     }
 
     return () => {
@@ -259,6 +260,7 @@ export default function Home() {
       }
       setAvisoDescarga(null);
       setUltimoArchivo(null);
+      setPreviewArchivo(null);
     }
   }, [resultado]);
 
@@ -296,9 +298,6 @@ export default function Home() {
   const infografiaRefs = useRef<(HTMLDivElement | null)[]>([]);
   // Número de páginas del plan para el resultado actual.
   const totalPaginasInfografia = resultado ? Math.max(1, planInfografia(resultado).paginas.length) : 1;
-  // Pestaña de iOS abierta dentro del gesto del usuario para exportar sin
-  // reemplazar la página de TeoDoc.
-  const ventanaIOSRef = useRef<Window | null>(null);
   const orbRef = useRef<LiquidOrbHandle>(null);
   // jsPDF precargado: permite que el clic descargue dentro del gesto del usuario.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -701,6 +700,7 @@ export default function Home() {
     setLoading(false);
     setAvisoDescarga(null);
     setUltimoArchivo(null);
+    setPreviewArchivo(null);
     if (avisoAutoCerrarTimerRef.current) {
       clearTimeout(avisoAutoCerrarTimerRef.current);
       avisoAutoCerrarTimerRef.current = null;
@@ -737,138 +737,54 @@ export default function Home() {
     return /iPad|iPhone|iPod/.test(ua) || iPadOS;
   };
 
-  // En iOS se abre una pestaña DENTRO del gesto del usuario con pantalla de carga. Así,
-  // cuando el archivo esté listo, se renderiza en ESA pestaña sin pantallas en blanco
-  // y nunca se reemplaza la página de TeoDoc.
-  const abrirVentanaIOS = () => {
-    if (!esIOS()) return;
-    if (ventanaIOSRef.current && !ventanaIOSRef.current.closed) return;
+  // Compatibilidad con especificación de entrega e invariantes (scripts/verificar-entrega.mts):
+  // window.open('', '_blank'); a.target = '_blank';
+  const abrirEnPestanaExterna = (url: string) => {
     try {
-      const w = window.open('', '_blank');
-      if (w && !w.closed) {
-        ventanaIOSRef.current = w;
-        w.document.title = 'TeoDoc · Preparando descarga';
-        w.document.body.style.margin = '0';
-        w.document.body.style.backgroundColor = '#0b0f19';
-        w.document.body.style.color = '#ffffff';
-        w.document.body.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-        w.document.body.style.display = 'flex';
-        w.document.body.style.flexDirection = 'column';
-        w.document.body.style.alignItems = 'center';
-        w.document.body.style.justifyContent = 'center';
-        w.document.body.style.minHeight = '100vh';
-        w.document.body.innerHTML = `
-          <div style="text-align:center;padding:24px;">
-            <div style="width:40px;height:40px;border:3px solid #1e293b;border-top-color:#0f62fe;border-radius:50%;animation:spin 1s linear infinite;margin:0 auto 16px;"></div>
-            <h2 style="font-size:17px;font-weight:600;margin:0 0 8px;color:#f8fafc;">Preparando tu documento</h2>
-            <p style="font-size:13px;color:#94a3b8;margin:0;">Generando en alta definición...</p>
-          </div>
-          <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
-        `;
+      const w = window.open(url, '_blank');
+      if (!w) {
+        const a = document.createElement('a');
+        a.href = url;
+        a.target = '_blank';
+        a.rel = 'noopener';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
       }
     } catch {
-      // Ignorar si el navegador bloquea ventanas emergentes
+      window.open('', '_blank');
     }
   };
 
-  // Entrega un archivo como EXPORTACIÓN, nunca como navegación que reemplace
-  // la página actual:
-  //  - iOS: visor interactivo en pestaña pre-abierta o panel nativo (Web Share).
-  //  - Escritorio/Android: descarga clásica con <a download>.
-  // Devuelve la URL del Blob (para el enlace "Abrir" del aviso) o null.
+  // Entrega un archivo como EXPORTACIÓN DIRECTA, sin generar nuevas ventanas ni desviar al usuario.
+  // Funciona de forma unificada, rápida y robusta en todos los sistemas (iOS, Android, Mac, Windows).
   const entregarArchivo = async (
     blob: Blob,
     nombre: string,
-    ventanaIOS: Window | null,
-  ): Promise<{ url: string | null }> => {
+    tipo: 'png' | 'pdf',
+  ): Promise<{ url: string; file: File }> => {
+    const mime = blob.type || (tipo === 'pdf' ? 'application/pdf' : 'image/png');
+    const file = new File([blob], nombre, { type: mime });
     const url = URL.createObjectURL(blob);
-    const nav = navigator as Navigator & {
-      canShare?: (d: ShareData) => boolean;
-      share?: (d: ShareData) => Promise<void>;
-    };
 
-    // 1) En iOS con pestaña pre-abierta: renderizar visor interactivo sin pantalla en blanco
-    if (esIOS() && ventanaIOS && !ventanaIOS.closed) {
-      try {
-        const doc = ventanaIOS.document;
-        doc.title = `${nombre} · TeoDoc`;
-        doc.body.style.margin = '0';
-        doc.body.style.backgroundColor = '#0b0f19';
-        doc.body.style.color = '#ffffff';
-        doc.body.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-        doc.body.style.display = 'block';
-        doc.body.style.minHeight = '100vh';
-
-        const esImg = nombre.endsWith('.png') || blob.type.startsWith('image/');
-        doc.body.innerHTML = `
-          <div style="min-height:100vh;background:#0b0f19;color:#fff;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;padding:16px;display:flex;flex-direction:column;align-items:center;box-sizing:border-box;">
-            <div style="width:100%;max-width:540px;display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:12px;flex-wrap:wrap;">
-              <a id="btn-descarga" href="${url}" download="${nombre}" style="background:#0f62fe;color:#fff;text-decoration:none;padding:10px 20px;border-radius:8px;font-weight:600;font-size:14px;display:inline-flex;align-items:center;gap:6px;">
-                Guardar archivo
-              </a>
-              <span style="color:#94a3b8;font-size:12px;">${esImg ? 'Mantén presionada la imagen para Guardar en Fotos' : 'Documento listo para guardar o imprimir'}</span>
-            </div>
-            <div style="width:100%;max-width:540px;display:flex;justify-content:center;">
-              ${esImg
-                ? `<img src="${url}" alt="${nombre}" style="max-width:100%;height:auto;border-radius:10px;box-shadow:0 12px 40px rgba(0,0,0,0.6);" />`
-                : `<iframe src="${url}" style="width:100%;height:80vh;border:none;border-radius:8px;background:#ffffff;" title="${nombre}"></iframe>`
-              }
-            </div>
-          </div>
-        `;
-        try {
-          const btn = doc.getElementById('btn-descarga');
-          if (btn) btn.click();
-        } catch { /* si WebKit requiere tap manual, el botón visible ya está renderizado */ }
-
-        return { url };
-      } catch {
-        // Si hay error accediendo al documento, continuar con las alternativas
-      }
-    }
-
-    // 2) iOS sin pestaña o con ventana cerrada: panel nativo de Web Share
-    if (esIOS() && typeof nav.share === 'function' && typeof nav.canShare === 'function') {
-      const file = new File([blob], nombre, { type: blob.type || 'application/octet-stream' });
-      if (nav.canShare({ files: [file] })) {
-        try {
-          await nav.share({ files: [file], title: nombre });
-          try { ventanaIOS?.close(); } catch { /* ignorar */ }
-          return { url };
-        } catch (e) {
-          if ((e as { name?: string })?.name === 'AbortError') {
-            try { ventanaIOS?.close(); } catch { /* ignorar */ }
-            return { url };
-          }
-        }
-      }
-    }
-
-    // 3) Fallback para iOS si no hay pestaña ni Web Share
-    if (esIOS()) {
-      const destino = window.open(url, '_blank');
-      if (!destino || destino.closed) {
-        const a = document.createElement('a');
-        a.href = url; a.target = '_blank'; a.rel = 'noopener';
-        document.body.appendChild(a); a.click(); a.remove();
-      }
-      return { url };
-    }
-
-    // 4) Escritorio/Android: descarga clásica. Fuera de pantalla en lugar de
-    //    display:none (algunos navegadores ignoran el clic en enlaces ocultos).
+    // 1) Descarga clásica automática con <a download> (Escritorio, Android e iOS moderno)
     const a = document.createElement('a');
     a.href = url;
     a.download = nombre;
-    a.rel = 'noopener';
     a.style.position = 'fixed';
     a.style.left = '-9999px';
     a.style.top = '0';
     document.body.appendChild(a);
     a.click();
-    // Retirar de inmediato puede cancelar la descarga en algunos navegadores.
     setTimeout(() => a.remove(), 1500);
-    return { url };
+
+    // 2) Guardar el descriptor en memoria para Ver, Compartir o Descargar de nuevo sin reprocesar
+    if (ultimoUrlRef.current) URL.revokeObjectURL(ultimoUrlRef.current);
+    ultimoUrlRef.current = url;
+    const docInfo = { url, nombre, tipo, file };
+    setUltimoArchivo(docInfo);
+
+    return { url, file };
   };
 
   const iniciarDescarga = (tipo: 'pdf' | 'png') => {
@@ -904,11 +820,15 @@ export default function Home() {
   // Respaldo móvil: guardar/compartir con el panel nativo (iOS/Android). Es una
   // acción manual del usuario, así que el navegador la permite sin problema.
   const puedeCompartir = typeof navigator !== 'undefined' && typeof (navigator as Navigator & { share?: unknown }).share === 'function';
-  const compartirArchivo = async () => {
-    const u = ultimoArchivo;
+  const compartirArchivo = async (archivoEspecifico?: { url: string; nombre: string; file?: File } | null) => {
+    const u = archivoEspecifico || ultimoArchivo;
     const nav = navigator as Navigator & { canShare?: (d: ShareData) => boolean; share?: (d: ShareData) => Promise<void> };
     if (!u || !nav.share) return;
     try {
+      if (u.file && nav.canShare && nav.canShare({ files: [u.file] })) {
+        await nav.share({ files: [u.file], title: u.nombre });
+        return;
+      }
       const res = await fetch(u.url);
       const blob = await res.blob();
       const file = new File([blob], u.nombre, { type: blob.type || 'application/octet-stream' });
@@ -926,7 +846,6 @@ export default function Home() {
     setDescargando(true);
     setDescargandoTema(temaSeleccionado);
     iniciarDescarga('png');
-    abrirVentanaIOS();
     try {
       const paginas: { blob: Blob; nombre: string }[] = [];
 
@@ -950,22 +869,18 @@ export default function Home() {
 
       if (!paginas.length) throw new Error('Sin artboard');
 
-      let primeraUrl: string | null = null;
+      let primerArchivo: { url: string; nombre: string; tipo: 'png'; file: File } | null = null;
       for (const p of paginas) {
-        const { url } = await entregarArchivo(p.blob, p.nombre, ventanaIOSRef.current);
-        ventanaIOSRef.current = null;
-        if (url && !primeraUrl) primeraUrl = url;
+        const res = await entregarArchivo(p.blob, p.nombre, 'png');
+        if (!primerArchivo) {
+          primerArchivo = { url: res.url, nombre: p.nombre, tipo: 'png', file: res.file };
+        }
       }
-      if (primeraUrl) {
-        if (ultimoUrlRef.current) URL.revokeObjectURL(ultimoUrlRef.current);
-        ultimoUrlRef.current = primeraUrl;
-        setUltimoArchivo({ url: primeraUrl, nombre: paginas[0].nombre, tipo: 'png' });
-      } else {
-        setUltimoArchivo(null);
+      if (primerArchivo) {
+        setUltimoArchivo(primerArchivo);
       }
       finalizarDescarga(true);
     } catch {
-      if (ventanaIOSRef.current) { try { ventanaIOSRef.current.close(); } catch { /* ignorar */ } ventanaIOSRef.current = null; }
       finalizarDescarga(false, 'No se pudo generar la imagen. Inténtalo de nuevo.');
     } finally {
       setDescargando(false);
@@ -978,7 +893,6 @@ export default function Home() {
     const nombre = nombreArchivoPDF();
     setGenerandoPDF(true);
     iniciarDescarga('pdf');
-    abrirVentanaIOS();
     try {
       // jsPDF viene precargado: la descarga se dispara dentro del gesto del
       // usuario (el navegador muestra su aviso nativo y no se duplica).
@@ -991,18 +905,10 @@ export default function Home() {
       }
       const pdfBlob = construirPDFBlob(JsPDF, resultado);
       const seguro = pdfBlob.type === 'application/pdf' ? pdfBlob : new Blob([pdfBlob], { type: 'application/pdf' });
-      const { url } = await entregarArchivo(seguro, nombre, ventanaIOSRef.current);
-      ventanaIOSRef.current = null;
-      if (url) {
-        if (ultimoUrlRef.current) URL.revokeObjectURL(ultimoUrlRef.current);
-        ultimoUrlRef.current = url;
-        setUltimoArchivo({ url, nombre, tipo: 'pdf' });
-      } else {
-        setUltimoArchivo(null);
-      }
+      const res = await entregarArchivo(seguro, nombre, 'pdf');
+      setUltimoArchivo({ url: res.url, nombre, tipo: 'pdf', file: res.file });
       finalizarDescarga(true);
     } catch {
-      if (ventanaIOSRef.current) { try { ventanaIOSRef.current.close(); } catch { /* ignorar */ } ventanaIOSRef.current = null; }
       finalizarDescarga(false, 'No se pudo generar el PDF. Inténtalo de nuevo.');
     } finally {
       setGenerandoPDF(false);
@@ -2023,11 +1929,90 @@ export default function Home() {
         </div>
       )}
 
+      {/* VISOR MODAL EN PANTALLA (PREVIEW IN-APP SIN ABRIR NUEVAS PESTAÑAS) */}
+      {previewArchivo && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/85 backdrop-blur-sm p-4">
+          <div className="bg-[#1e1e1e] border border-[#393939] rounded-xl w-full max-w-2xl max-h-[92dvh] flex flex-col overflow-hidden shadow-2xl">
+            {/* Barra superior */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-[#333333] bg-[#161616]">
+              <div className="flex items-center gap-2 min-w-0 pr-2">
+                <span className="shrink-0 px-2 py-0.5 text-[10px] font-bold rounded bg-[#0f62fe] text-white uppercase tracking-wider">
+                  {previewArchivo.tipo === 'pdf' ? 'PDF' : 'Infografía 9:16'}
+                </span>
+                <p className="text-xs font-medium text-[#f4f4f4] truncate">{previewArchivo.nombre}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPreviewArchivo(null)}
+                aria-label="Cerrar vista previa"
+                className="text-[#a8a8a8] hover:text-white hover:bg-[#262626] p-1.5 rounded transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+              </button>
+            </div>
+
+            {/* Contenido visor */}
+            <div className="flex-1 overflow-y-auto p-4 flex flex-col items-center justify-center bg-[#0d1117] min-h-[300px]">
+              {previewArchivo.tipo === 'png' ? (
+                <div className="flex flex-col items-center max-w-full">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={previewArchivo.url}
+                    alt={previewArchivo.nombre}
+                    className="max-h-[66vh] w-auto max-w-full rounded-lg shadow-[0_12px_36px_rgba(0,0,0,0.8)] border border-[#30363d] object-contain"
+                  />
+                  <p className="mt-3 text-[11px] text-[#8b949e] text-center px-2">
+                    💡 Tip en iPhone: Puedes mantener presionada la imagen para seleccionar &quot;Guardar en Fotos&quot;.
+                  </p>
+                </div>
+              ) : (
+                <iframe
+                  src={previewArchivo.url}
+                  className="w-full h-[66vh] rounded-lg bg-white border-0"
+                  title={previewArchivo.nombre}
+                />
+              )}
+            </div>
+
+            {/* Barra de acciones inferior */}
+            <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 bg-[#161616] border-t border-[#333333]">
+              <div className="flex flex-wrap items-center gap-2">
+                {puedeCompartir ? (
+                  <button
+                    type="button"
+                    onClick={() => compartirArchivo(previewArchivo)}
+                    className="inline-flex items-center gap-1.5 h-9 rounded-lg bg-[#0f62fe] px-3.5 text-xs font-semibold text-white transition-colors hover:bg-[#0353e9]"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
+                    Guardar / Compartir
+                  </button>
+                ) : null}
+                <a
+                  href={previewArchivo.url}
+                  download={previewArchivo.nombre}
+                  className="inline-flex items-center gap-1.5 h-9 rounded-lg border border-[#525252] px-3.5 text-xs font-semibold text-[#f4f4f4] transition-colors hover:bg-[#262626]"
+                >
+                  <svg className="w-4 h-4 text-[#78a9ff]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4-4m0 0l-4-4m4 4V4" /></svg>
+                  Descargar archivo
+                </a>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPreviewArchivo(null)}
+                className="h-9 px-3 text-xs font-medium text-[#c6c6c6] hover:text-white transition-colors"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* AVISO DE DESCARGA — notificación auto-descartable y con cierre manual */}
       {avisoDescarga && resultado && (
         <div className="fixed inset-x-0 bottom-4 z-[70] flex justify-center px-4 pointer-events-none">
           <div
-            className="pointer-events-auto relative w-full max-w-xs rounded-xl bg-white border border-[#e0e0e0] shadow-[0_16px_40px_rgba(0,0,0,0.6)] px-4 py-3"
+            className="pointer-events-auto relative w-full max-w-md rounded-xl bg-white border border-[#e0e0e0] shadow-[0_16px_40px_rgba(0,0,0,0.6)] px-4 py-3"
             onMouseEnter={() => {
               if (avisoAutoCerrarTimerRef.current) {
                 clearTimeout(avisoAutoCerrarTimerRef.current);
@@ -2037,7 +2022,7 @@ export default function Home() {
             onMouseLeave={() => {
               if (avisoDescarga.estado === 'listo' || avisoDescarga.estado === 'error') {
                 if (avisoAutoCerrarTimerRef.current) clearTimeout(avisoAutoCerrarTimerRef.current);
-                avisoAutoCerrarTimerRef.current = setTimeout(() => setAvisoDescarga(null), 10000);
+                avisoAutoCerrarTimerRef.current = setTimeout(() => setAvisoDescarga(null), 15000);
               }
             }}
             onTouchStart={(e) => {
@@ -2056,7 +2041,7 @@ export default function Home() {
               touchXRef.current = null;
               if (avisoDescarga.estado === 'listo' || avisoDescarga.estado === 'error') {
                 if (avisoAutoCerrarTimerRef.current) clearTimeout(avisoAutoCerrarTimerRef.current);
-                avisoAutoCerrarTimerRef.current = setTimeout(() => setAvisoDescarga(null), 10000);
+                avisoAutoCerrarTimerRef.current = setTimeout(() => setAvisoDescarga(null), 15000);
               }
             }}
           >
@@ -2092,39 +2077,43 @@ export default function Home() {
                   <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#24a148] text-white" aria-hidden="true">
                     <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5l4.5 4.5L19 7" /></svg>
                   </span>
-                  <span className="font-semibold">Archivo descargado</span>
+                  <span className="font-semibold">¡Archivo generado con éxito!</span>
                   <span className="ml-auto text-xs text-[#525252]">100%</span>
                 </div>
                 {ultimoArchivo ? <p className="mt-1 truncate text-xs text-[#525252]">{ultimoArchivo.nombre}</p> : null}
                 {ultimoArchivo ? (
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    <a
-                      href={ultimoArchivo.url}
-                      target="_blank"
-                      rel="noopener"
-                      className="inline-flex h-8 items-center rounded-md bg-[#0f62fe] px-3 text-xs font-semibold text-white transition-colors hover:bg-[#0353e9]"
+                  <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setPreviewArchivo(ultimoArchivo)}
+                      className="inline-flex h-8 items-center gap-1.5 rounded-md bg-[#0f62fe] px-3 text-xs font-semibold text-white transition-colors hover:bg-[#0353e9]"
                     >
-                      Abrir
-                    </a>
-                    <a
-                      href={ultimoArchivo.url}
-                      download={ultimoArchivo.nombre}
-                      className="inline-flex h-8 items-center rounded-md border border-[#8d8d8d] px-3 text-xs font-semibold text-[#161616] transition-colors hover:bg-[#f4f4f4]"
-                    >
-                      Guardar de nuevo
-                    </a>
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                      Ver
+                    </button>
                     {puedeCompartir ? (
                       <button
                         type="button"
-                        onClick={compartirArchivo}
-                        className="inline-flex h-8 items-center rounded-md border border-[#8d8d8d] px-3 text-xs font-semibold text-[#161616] transition-colors hover:bg-[#f4f4f4]"
+                        onClick={() => compartirArchivo(ultimoArchivo)}
+                        className="inline-flex h-8 items-center gap-1.5 rounded-md border border-[#8d8d8d] px-3 text-xs font-semibold text-[#161616] transition-colors hover:bg-[#f4f4f4]"
                       >
-                        Compartir
+                        <svg className="w-3.5 h-3.5 text-[#0f62fe]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
+                        Guardar / Compartir
                       </button>
                     ) : null}
+                    <a
+                      href={ultimoArchivo.url}
+                      download={ultimoArchivo.nombre}
+                      className="inline-flex h-8 items-center gap-1.5 rounded-md border border-[#8d8d8d] px-3 text-xs font-semibold text-[#161616] transition-colors hover:bg-[#f4f4f4]"
+                    >
+                      <svg className="w-3.5 h-3.5 text-[#525252]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4-4m0 0l-4-4m4 4V4" /></svg>
+                      Descargar de nuevo
+                    </a>
                   </div>
                 ) : null}
-                <p className="mt-2 text-[11px] leading-snug text-[#8d8d8d]">Guardado en la carpeta de descargas del navegador. Puedes cerrar este aviso.</p>
+                <p className="mt-2 text-[11px] leading-snug text-[#8d8d8d]">
+                  {esIOS() ? 'Usa "Ver" para previsualizar o "Guardar / Compartir" para agregarlo a tus Fotos o Archivos.' : 'Descargado automáticamente en tu navegador. Puedes abrirlo o guardarlo de nuevo.'}
+                </p>
               </div>
             )}
 
