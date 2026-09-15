@@ -223,10 +223,45 @@ export default function Home() {
   // Aviso de descarga (porcentaje + confirmación), visible con resultados en pantalla.
   const [avisoDescarga, setAvisoDescarga] = useState<{ tipo: 'pdf' | 'png'; progreso: number; estado: 'generando' | 'listo' | 'error'; mensaje?: string } | null>(null);
   const descargaTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const avisoAutoCerrarTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Último archivo descargado (para el enlace "Abrir" del aviso).
   const [ultimoArchivo, setUltimoArchivo] = useState<{ url: string; nombre: string; tipo: 'pdf' | 'png' } | null>(null);
   const ultimoUrlRef = useRef<string | null>(null);
   const touchXRef = useRef<number | null>(null);
+
+  // Auto-cierre del banner de descarga a los 5 segundos de completarse o fallar
+  useEffect(() => {
+    if (avisoAutoCerrarTimerRef.current) {
+      clearTimeout(avisoAutoCerrarTimerRef.current);
+      avisoAutoCerrarTimerRef.current = null;
+    }
+
+    if (avisoDescarga?.estado === 'listo' || avisoDescarga?.estado === 'error') {
+      avisoAutoCerrarTimerRef.current = setTimeout(() => {
+        setAvisoDescarga(null);
+      }, 5000);
+    }
+
+    return () => {
+      if (avisoAutoCerrarTimerRef.current) {
+        clearTimeout(avisoAutoCerrarTimerRef.current);
+        avisoAutoCerrarTimerRef.current = null;
+      }
+    };
+  }, [avisoDescarga?.estado]);
+
+  // Al salir a la pantalla principal (resultado null), se descarta de inmediato
+  useEffect(() => {
+    if (!resultado) {
+      if (avisoAutoCerrarTimerRef.current) {
+        clearTimeout(avisoAutoCerrarTimerRef.current);
+        avisoAutoCerrarTimerRef.current = null;
+      }
+      setAvisoDescarga(null);
+      setUltimoArchivo(null);
+    }
+  }, [resultado]);
+
   // Botón "volver arriba" (aparece solo al hacer scroll hacia abajo).
   const [mostrarArriba, setMostrarArriba] = useState(false);
   useEffect(() => {
@@ -658,6 +693,12 @@ export default function Home() {
   };
 
   const nuevoAnalisis = () => {
+    if (avisoAutoCerrarTimerRef.current) {
+      clearTimeout(avisoAutoCerrarTimerRef.current);
+      avisoAutoCerrarTimerRef.current = null;
+    }
+    setAvisoDescarga(null);
+    setUltimoArchivo(null);
     setResultado(null);
     setError(null);
     setAvisoAudio(null);
@@ -1945,8 +1986,8 @@ export default function Home() {
         </div>
       )}
 
-      {/* AVISO DE DESCARGA — notificación descartable (X, "Cerrar" o swipe) */}
-      {avisoDescarga && (
+      {/* AVISO DE DESCARGA — notificación auto-descartable y con cierre manual */}
+      {avisoDescarga && resultado && (
         <div className="fixed inset-x-0 bottom-4 z-[70] flex justify-center px-4 pointer-events-none">
           <div
             className="pointer-events-auto relative w-full max-w-xs rounded-xl bg-white border border-[#e0e0e0] shadow-[0_16px_40px_rgba(0,0,0,0.6)] px-4 py-3"
