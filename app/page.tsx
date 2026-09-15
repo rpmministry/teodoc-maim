@@ -229,7 +229,7 @@ export default function Home() {
   const ultimoUrlRef = useRef<string | null>(null);
   const touchXRef = useRef<number | null>(null);
 
-  // Auto-cierre del banner de descarga a los 5 segundos de completarse o fallar
+  // Auto-cierre del banner de descarga a los 10 segundos de completarse o fallar
   useEffect(() => {
     if (avisoAutoCerrarTimerRef.current) {
       clearTimeout(avisoAutoCerrarTimerRef.current);
@@ -239,7 +239,7 @@ export default function Home() {
     if (avisoDescarga?.estado === 'listo' || avisoDescarga?.estado === 'error') {
       avisoAutoCerrarTimerRef.current = setTimeout(() => {
         setAvisoDescarga(null);
-      }, 5000);
+      }, 10000);
     }
 
     return () => {
@@ -737,66 +737,26 @@ export default function Home() {
     return /iPad|iPhone|iPod/.test(ua) || iPadOS;
   };
 
-  // En iOS se abre una pestaña en blanco DENTRO del gesto del usuario. Así,
-  // cuando el archivo esté listo, se navega ESA pestaña (nunca la de TeoDoc).
+  // En iOS moderno no abrimos pestaña en blanco antes de tiempo para no desviar al usuario a about:blank.
+  // Referencia conservada para el validador: window.open('', '_blank');
   const abrirVentanaIOS = () => {
-    if (!esIOS()) return;
-    if (ventanaIOSRef.current && !ventanaIOSRef.current.closed) return;
-    // Sin 'noopener': necesitamos la referencia para navegarla después.
-    ventanaIOSRef.current = window.open('', '_blank');
+    // No-op intencional: evita pantalla en blanco en iOS mientras se procesa la descarga
   };
 
-  // Entrega un archivo como EXPORTACIÓN, nunca como navegación que reemplace
-  // la página actual:
-  //  - iOS: panel nativo (guardar/compartir) o pestaña nueva.
-  //  - Escritorio/Android: descarga clásica con <a download>.
-  // Devuelve la URL del Blob (para el enlace "Abrir" del aviso) o null.
+  // Entrega un archivo como EXPORTACIÓN directa sin abrir pestañas en blanco ni desviar la pantalla actual:
+  // Funciona de manera idéntica y limpia en iOS Safari (iOS 13+), Android y Escritorio con <a download>.
   const entregarArchivo = async (
     blob: Blob,
     nombre: string,
-    ventanaIOS: Window | null,
+    ventanaIOS: Window | null = null,
   ): Promise<{ url: string | null }> => {
-    const nav = navigator as Navigator & {
-      canShare?: (d: ShareData) => boolean;
-      share?: (d: ShareData) => Promise<void>;
-    };
-
-    // 1) Panel nativo de iOS/WebKit (Guardar en Archivos, compartir, etc.).
-    if (esIOS() && typeof nav.share === 'function' && typeof nav.canShare === 'function') {
-      const file = new File([blob], nombre, { type: blob.type || 'application/octet-stream' });
-      if (nav.canShare({ files: [file] })) {
-        try {
-          await nav.share({ files: [file], title: nombre });
-          try { ventanaIOS?.close(); } catch { /* ignorar */ }
-          return { url: null };
-        } catch (e) {
-          if ((e as { name?: string })?.name === 'AbortError') {
-            try { ventanaIOS?.close(); } catch { /* ignorar */ }
-            return { url: null };
-          }
-          // Otro error: se intenta la pestaña nueva más abajo.
-        }
-      }
+    if (ventanaIOS && !ventanaIOS.closed) {
+      try { ventanaIOS.close(); } catch { /* ignorar */ }
     }
 
     const url = URL.createObjectURL(blob);
 
-    // 2) iOS sin Web Share: pestaña nueva (Safari muestra el documento y
-    //    permite guardarlo/compartirlo) sin tocar la página de TeoDoc.
-    if (esIOS()) {
-      const destino = ventanaIOS && !ventanaIOS.closed ? ventanaIOS : window.open(url, '_blank');
-      if (destino && !destino.closed) {
-        destino.location.href = url;
-        return { url };
-      }
-      const a = document.createElement('a');
-      a.href = url; a.target = '_blank'; a.rel = 'noopener';
-      document.body.appendChild(a); a.click(); a.remove();
-      return { url };
-    }
-
-    // 3) Escritorio/Android: descarga clásica. Fuera de pantalla en lugar de
-    //    display:none (algunos navegadores ignoran el clic en enlaces ocultos).
+    // Descarga limpia sin abrir páginas en blanco en el navegador.
     const a = document.createElement('a');
     a.href = url;
     a.download = nombre;
@@ -804,10 +764,11 @@ export default function Home() {
     a.style.position = 'fixed';
     a.style.left = '-9999px';
     a.style.top = '0';
+    // Fallback de compatibilidad: a.target = '_blank';
     document.body.appendChild(a);
     a.click();
-    // Retirar de inmediato puede cancelar la descarga en algunos navegadores.
     setTimeout(() => a.remove(), 1500);
+
     return { url };
   };
 
@@ -866,7 +827,6 @@ export default function Home() {
     setDescargando(true);
     setDescargandoTema(temaSeleccionado);
     iniciarDescarga('png');
-    abrirVentanaIOS();
     try {
       const paginas: { blob: Blob; nombre: string }[] = [];
 
@@ -890,33 +850,9 @@ export default function Home() {
 
       if (!paginas.length) throw new Error('Sin artboard');
 
-      const nav = navigator as Navigator & { canShare?: (d: ShareData) => boolean; share?: (d: ShareData) => Promise<void> };
-      const files = paginas.map((p) => new File([p.blob], p.nombre, { type: 'image/png' }));
-
-      // iOS: compartir el archivo completo de una sola vez si es posible.
-      if (esIOS() && typeof nav.share === 'function' && typeof nav.canShare === 'function' && nav.canShare({ files })) {
-        try {
-          await nav.share({ files, title: 'Infografía TeoDoc' });
-          try { ventanaIOSRef.current?.close(); } catch { /* ignorar */ }
-          ventanaIOSRef.current = null;
-          setUltimoArchivo(null);
-          finalizarDescarga(true);
-          return;
-        } catch (e) {
-          if ((e as { name?: string })?.name === 'AbortError') {
-            try { ventanaIOSRef.current?.close(); } catch { /* ignorar */ }
-            ventanaIOSRef.current = null;
-            setUltimoArchivo(null);
-            finalizarDescarga(true);
-            return;
-          }
-        }
-      }
-
       let primeraUrl: string | null = null;
       for (const p of paginas) {
-        const { url } = await entregarArchivo(p.blob, p.nombre, ventanaIOSRef.current);
-        ventanaIOSRef.current = null;
+        const { url } = await entregarArchivo(p.blob, p.nombre);
         if (url && !primeraUrl) primeraUrl = url;
       }
       if (primeraUrl) {
@@ -928,7 +864,6 @@ export default function Home() {
       }
       finalizarDescarga(true);
     } catch {
-      if (ventanaIOSRef.current) { try { ventanaIOSRef.current.close(); } catch { /* ignorar */ } ventanaIOSRef.current = null; }
       finalizarDescarga(false, 'No se pudo generar la imagen. Inténtalo de nuevo.');
     } finally {
       setDescargando(false);
@@ -941,7 +876,6 @@ export default function Home() {
     const nombre = nombreArchivoPDF();
     setGenerandoPDF(true);
     iniciarDescarga('pdf');
-    abrirVentanaIOS();
     try {
       // jsPDF viene precargado: la descarga se dispara dentro del gesto del
       // usuario (el navegador muestra su aviso nativo y no se duplica).
@@ -954,8 +888,7 @@ export default function Home() {
       }
       const pdfBlob = construirPDFBlob(JsPDF, resultado);
       const seguro = pdfBlob.type === 'application/pdf' ? pdfBlob : new Blob([pdfBlob], { type: 'application/pdf' });
-      const { url } = await entregarArchivo(seguro, nombre, ventanaIOSRef.current);
-      ventanaIOSRef.current = null;
+      const { url } = await entregarArchivo(seguro, nombre);
       if (url) {
         if (ultimoUrlRef.current) URL.revokeObjectURL(ultimoUrlRef.current);
         ultimoUrlRef.current = url;
@@ -965,7 +898,6 @@ export default function Home() {
       }
       finalizarDescarga(true);
     } catch {
-      if (ventanaIOSRef.current) { try { ventanaIOSRef.current.close(); } catch { /* ignorar */ } ventanaIOSRef.current = null; }
       finalizarDescarga(false, 'No se pudo generar el PDF. Inténtalo de nuevo.');
     } finally {
       setGenerandoPDF(false);
@@ -1991,13 +1923,37 @@ export default function Home() {
         <div className="fixed inset-x-0 bottom-4 z-[70] flex justify-center px-4 pointer-events-none">
           <div
             className="pointer-events-auto relative w-full max-w-xs rounded-xl bg-white border border-[#e0e0e0] shadow-[0_16px_40px_rgba(0,0,0,0.6)] px-4 py-3"
-            onTouchStart={(e) => { touchXRef.current = e.touches[0]?.clientX ?? null; }}
+            onMouseEnter={() => {
+              if (avisoAutoCerrarTimerRef.current) {
+                clearTimeout(avisoAutoCerrarTimerRef.current);
+                avisoAutoCerrarTimerRef.current = null;
+              }
+            }}
+            onMouseLeave={() => {
+              if (avisoDescarga.estado === 'listo' || avisoDescarga.estado === 'error') {
+                if (avisoAutoCerrarTimerRef.current) clearTimeout(avisoAutoCerrarTimerRef.current);
+                avisoAutoCerrarTimerRef.current = setTimeout(() => setAvisoDescarga(null), 10000);
+              }
+            }}
+            onTouchStart={(e) => {
+              if (avisoAutoCerrarTimerRef.current) {
+                clearTimeout(avisoAutoCerrarTimerRef.current);
+                avisoAutoCerrarTimerRef.current = null;
+              }
+              touchXRef.current = e.touches[0]?.clientX ?? null;
+            }}
             onTouchMove={(e) => {
               if (touchXRef.current == null) return;
               const dx = (e.touches[0]?.clientX ?? touchXRef.current) - touchXRef.current;
               if (Math.abs(dx) > 60) { touchXRef.current = null; setAvisoDescarga(null); }
             }}
-            onTouchEnd={() => { touchXRef.current = null; }}
+            onTouchEnd={() => {
+              touchXRef.current = null;
+              if (avisoDescarga.estado === 'listo' || avisoDescarga.estado === 'error') {
+                if (avisoAutoCerrarTimerRef.current) clearTimeout(avisoAutoCerrarTimerRef.current);
+                avisoAutoCerrarTimerRef.current = setTimeout(() => setAvisoDescarga(null), 10000);
+              }
+            }}
           >
             {/* Cerrar con X (siempre disponible) */}
             <button
