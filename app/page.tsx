@@ -4,6 +4,15 @@ import LiquidOrb, { type LiquidOrbHandle } from '@/components/liquid-orb';
 import Infografia, { ResponsiveInfografia, resumir, exportarInfografiaBlob, planInfografia, type TemaInfografia } from '@/components/infografia';
 import { CANVAS_W, CANVAS_H } from '@/lib/infografia-layout';
 import { extractYouTubeVideoId } from '@/lib/youtube/extract-video-id';
+import { adquirirPantallaActiva, liberarPantallaActiva } from '@/lib/wake-lock';
+import {
+  guardarUltimoAnalisis,
+  obtenerUltimoAnalisis,
+  limpiarUltimoAnalisis,
+  guardarTranscripcionPendiente,
+  obtenerTranscripcionPendiente,
+  limpiarTranscripcionPendiente,
+} from '@/lib/analisis-storage';
 
 interface Versiculo { cita: string; texto: string; }
 interface Subtema { titulo: string; desarrollo: string; }
@@ -230,6 +239,22 @@ export default function Home() {
   const ultimoUrlRef = useRef<string | null>(null);
   const touchXRef = useRef<number | null>(null);
 
+  // Restauración automática ante recarga o bloqueo de pantalla en iOS/Android
+  useEffect(() => {
+    try {
+      const previo = obtenerUltimoAnalisis<PredicaAnalisis>();
+      if (previo && !resultado) {
+        setResultado(previo);
+      }
+      const pendiente = obtenerTranscripcionPendiente();
+      if (pendiente && !textoPendiente) {
+        setTextoPendiente(pendiente);
+      }
+    } catch {
+      // Ignorar restricciones en entornos con storage bloqueado
+    }
+  }, []);
+
   // Auto-cierre del banner de descarga a los 15 segundos de completarse o fallar
   useEffect(() => {
     if (avisoAutoCerrarTimerRef.current) {
@@ -414,10 +439,12 @@ export default function Home() {
     setResultado(null);
     setLoading(true);
     setProgress(5);
+    void adquirirPantallaActiva();
 
     try {
       await uploadFileToCloudinary(file);
     } catch (err: any) {
+      void liberarPantallaActiva();
       setLoading(false);
       setProgress(0);
       setError(err?.message || 'No fue posible procesar el archivo. Revisa tu conexión a internet o intenta con un archivo MP3 más ligero.');
@@ -559,6 +586,7 @@ export default function Home() {
     try {
       setProgress(48);
       setTextoPendiente(null);
+      guardarTranscripcionPendiente(textoTranscrito);
 
       // Validación previa: ¿hay contenido suficiente y afín al propósito de
       // TeoDoc? Filtro leniente; si la validación falla, NO bloqueamos.
@@ -580,6 +608,7 @@ export default function Home() {
       }
 
       if (!contenidoValido) {
+        void liberarPantallaActiva();
         setAvisoAudio(motivo);
         setLoading(false);
         setProgress(0);
@@ -594,6 +623,16 @@ export default function Home() {
       const analisis = await analizarConReintentos(textoTranscrito);
       clearInterval(timerAnalyze); timerAnalyze = undefined;
 
+      // Guardar en almacenamiento persistente y liberar el bloqueo de pantalla
+      guardarUltimoAnalisis(analisis);
+      void liberarPantallaActiva();
+
+      // Notificación si el usuario tenía la pantalla apagada o estaba en otra pestaña
+      if (typeof document !== 'undefined' && document.hidden) {
+        document.title = '✓ Análisis Listo · TeoDoc';
+        try { navigator.vibrate?.([100, 50, 100]); } catch { /* Ignorar */ }
+      }
+
       setProgress(100);
       setTimeout(() => {
         setResultado(analisis);
@@ -601,6 +640,7 @@ export default function Home() {
       }, 500);
     } catch (err: any) {
       if (timerAnalyze) clearInterval(timerAnalyze);
+      void liberarPantallaActiva();
       // No se destruye el trabajo: se guarda la transcripción para reintentar.
       setTextoPendiente(textoTranscrito);
       const abortado = err?.name === 'AbortError';
@@ -631,6 +671,7 @@ export default function Home() {
       await continuarConTranscripcion(dataTranscribe.text);
     } catch (err: any) {
       if (timerTranscribe) clearInterval(timerTranscribe);
+      void liberarPantallaActiva();
       setError(err?.message || 'La IA tiene muchas solicitudes en este momento. Vuelve a intentarlo en unos segundos.');
       setLoading(false);
       setProgress(0);
@@ -652,6 +693,7 @@ export default function Home() {
     setResultado(null);
     setLoading(true);
     setProgress(8);
+    void adquirirPantallaActiva();
 
     // Timeout del lado del cliente: si el servidor no responde, se libera la
     // interfaz con un mensaje amigable en vez de dejar el orbe girando.
@@ -667,6 +709,7 @@ export default function Home() {
       });
       const data = await res.json().catch(() => null);
       if (!res.ok || !data?.ok || !data?.text) {
+        void liberarPantallaActiva();
         setAvisoYoutube(
           data?.message ||
             'No pudimos obtener la transcripción de este video en este momento. Puedes probar con otro video o subir directamente el audio.',
@@ -681,6 +724,7 @@ export default function Home() {
       setProgress(38);
       await continuarConTranscripcion(data.text);
     } catch {
+      void liberarPantallaActiva();
       setAvisoYoutube(
         'No pudimos obtener la transcripción de este video en este momento. Puedes probar con otro video o subir directamente el audio.',
       );
@@ -692,6 +736,9 @@ export default function Home() {
   };
 
   const nuevoAnalisis = () => {
+    limpiarUltimoAnalisis();
+    limpiarTranscripcionPendiente();
+    void liberarPantallaActiva();
     setResultado(null);
     setError(null);
     setAvisoAudio(null);
@@ -711,6 +758,7 @@ export default function Home() {
   // Reintenta el análisis con la transcripción ya obtenida (no vuelve a subir).
   const reintentarAnalisis = () => {
     if (!textoPendiente) return;
+    void adquirirPantallaActiva();
     setError(null);
     setLoading(true);
     setProgress(50);
@@ -1558,9 +1606,15 @@ export default function Home() {
         {/* BARRA DE PROGRESO — IBM Carbon */}
         {loading && (
           <div className="mt-5 sm:mt-6 w-full max-w-md">
-            <div className="mb-2 flex items-center gap-2" aria-live="polite">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#0f62fe] animate-pulse" aria-hidden="true" />
-              <span className="text-xs text-[#c6c6c6]">{mensajeAnalisis}</span>
+            <div className="mb-2 flex items-center justify-between gap-2" aria-live="polite">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#0f62fe] animate-pulse shrink-0" aria-hidden="true" />
+                <span className="text-xs text-[#c6c6c6] truncate">{mensajeAnalisis}</span>
+              </div>
+              <span className="shrink-0 text-[10px] text-[#78a9ff] bg-[#0f62fe]/10 border border-[#0f62fe]/25 px-2 py-0.5 rounded flex items-center gap-1.5 font-mono" title="La pantalla se mantendrá encendida durante el análisis">
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#24a148] animate-pulse" aria-hidden="true" />
+                Pantalla activa
+              </span>
             </div>
             <div
               className="cds-progressbar__track"
