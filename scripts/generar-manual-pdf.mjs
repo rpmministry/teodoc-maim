@@ -645,7 +645,41 @@ callout(
   'Metodología de Entrega In-App Multiplataforma'
 );
 
-encabezadoSeccion('09', 'Certificación QA, Blindaje y Resiliencia (58/58 Invariantes)');
+encabezadoSeccion('09', 'Resiliencia ante Pantalla Apagada y Persistencia');
+
+parrafo(
+  'Para resolver la suspensión prematura del navegador en móviles cuando la pantalla se apaga automáticamente por inactividad, TeoDoc implementa una arquitectura de doble nivel:'
+);
+
+callout(
+  '• Screen Wake Lock API (lib/wake-lock.ts): Solicita al sistema operativo mantener la pantalla activa durante la subida y el análisis. Compatible nativamente con iOS Safari 16.4+ y Android Chrome.\n' +
+  '• Re-adquisición Reactiva: Escucha el evento visibilitychange para reconectar el bloqueo si el usuario alternó de aplicación y regresó a TeoDoc.\n' +
+  '• Persistencia en Cliente con TTL (lib/analisis-storage.ts): Guarda el análisis en localStorage con TTL de 48 horas y la transcripción en sessionStorage. Si el sistema operativo recarga la pestaña, el análisis se recupera de inmediato.\n' +
+  '• Feedback IBM Carbon: Badge interactivo "Pantalla activa" en la barra de progreso y vibración háptica al finalizar en segundo plano.',
+  'info',
+  'Mecanismo de Prevención de Suspensión y Persistencia'
+);
+
+// ======================= PÁGINA 6: BLINDAJE Y CERTIFICACIÓN QA =======================
+saltarPagina();
+
+encabezadoSeccion('10', 'Blindaje de Seguridad Integral en 5 Capas', true);
+
+parrafo(
+  'Para resguardar la propiedad intelectual del software, las directrices doctrinales y la infraestructura backend contra abusos o intrusiones, TeoDoc implementa una arquitectura de Defensa en Profundidad:'
+);
+
+callout(
+  '• Capa 1: Compilación Ofuscada (next.config.mjs): productionBrowserSourceMaps en false suprime los archivos .map. poweredByHeader en false elimina huellas del framework.\n' +
+  '• Capa 2: Cabeceras Perimetrales Estrictas: Inyección de CSP estricto, HSTS de 2 años, X-Frame-Options: DENY (anti-clickjacking) y X-Content-Type-Options: nosniff.\n' +
+  '• Capa 3: Gateway Perimetral (proxy.ts): Interceptor Next.js 16 para rutas /api/* que exige validación Same-Origin en métodos mutantes, bloqueando CSRF y scraping no autorizado.\n' +
+  '• Capa 4: Endurecimiento de Rutas API: Rate limiting aislado por IP y endpoint (lib/rate-limit.ts con recolección de basura), filtro anti-SSRF de audioUrl y techos estrictos (150 MB / 250k chars).\n' +
+  '• Capa 5: Blindaje Doctrinal LLM (lib/ai-gemini.ts): Delimitadores herméticos, cláusula anti-prompt injection y preservación inalterada de gemini-3.7-flash y gemini-3.6-flash.',
+  'info',
+  'Arquitectura de Blindaje en Profundidad (5 Capas)'
+);
+
+encabezadoSeccion('11', 'Certificación QA y Suite de Invariantes (58/58)');
 
 parrafo(
   'Para garantizar que ninguna actualización altere los flujos ministeriales, exponga el código fuente ni pierda análisis al suspenderse la pantalla en móviles, el sistema ejecuta 58 pruebas automatizadas:'
