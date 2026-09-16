@@ -14,7 +14,8 @@
     "test:logica": "node scripts/verificar-riqueza.mts",
     "test:infografia": "node scripts/verificar-infografia.mts",
     "test:entrega": "node scripts/verificar-entrega.mts",
-    "verificar": "npm run test:logica && npm run test:infografia && npm run test:entrega"
+    "test:seguridad": "node scripts/verificar-seguridad.mts",
+    "verificar": "npm run test:logica && npm run test:infografia && npm run test:entrega && npm run test:seguridad"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.121.0",

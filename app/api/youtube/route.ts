@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { extractYouTubeVideoId } from '@/lib/youtube/extract-video-id';
 import { resolveTranscriptProvider } from '@/lib/youtube';
 import { TranscriptError, type TranscriptErrorCode } from '@/lib/youtube/transcript-provider';
+import { verificarRateLimit } from '@/lib/rate-limit';
 
 // Margen para la generación por IA de videos sin subtítulos (jobs).
 export const maxDuration = 180;
@@ -23,6 +24,15 @@ const MENSAJES: Record<TranscriptErrorCode, string> = {
 
 export async function POST(req: NextRequest) {
   try {
+    const rate = verificarRateLimit(req, 'youtube', 15, 60_000);
+    if (!rate.permitido) {
+      console.warn('[Seguridad] Límite de tasa excedido en /api/youtube');
+      return NextResponse.json(
+        { ok: false, code: 'desconocido', message: 'Demasiadas solicitudes. Por favor espera un momento.' },
+        { status: 429, headers: { 'Retry-After': String(Math.ceil(rate.resetMs / 1000)) } }
+      );
+    }
+
     const body = await req.json().catch(() => null);
     const url = typeof body?.url === 'string' ? body.url : '';
     const videoId = extractYouTubeVideoId(url);
