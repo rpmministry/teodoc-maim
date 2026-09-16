@@ -1050,22 +1050,24 @@ export default function Home() {
     // inicio de su contenido, así nunca queda huérfano al pie de la página.
     const heading = (label: string, keep = 96) => {
       const headerH = 32;
-      ensure(headerH + keep);
+      ensure(headerH + keep + 14);
+      y += 14;
       setFill(C.accent); doc.rect(margin, y, 3.5, 14, 'F');
       doc.setFont('helvetica', 'bold'); doc.setFontSize(12.5); setText(C.ink);
       doc.text(label.toUpperCase(), margin + 11, y + 11);
       y += 20;
       setStroke(C.rule); doc.setLineWidth(0.6); doc.line(margin, y, pageW - marginR, y);
-      y += 12;
+      y += 14;
     };
 
     // Párrafos que FLUYEN entre páginas: llenan el espacio disponible y evitan
     // fragmentos aislados en una página nueva.
-    const paragraph = (txt: string, opts?: { size?: number; lead?: number; color?: RGB; italic?: boolean; bold?: boolean; max?: number; indent?: number }) => {
+    const paragraph = (txt: string, opts?: { size?: number; lead?: number; color?: RGB; italic?: boolean; bold?: boolean; max?: number; indent?: number; after?: number }) => {
       const size = opts?.size ?? 10.5;
       const lead = opts?.lead ?? 15;
       const font = opts?.italic ? 'italic' : opts?.bold ? 'bold' : 'normal';
       const indent = opts?.indent ?? 0;
+      const after = opts?.after ?? 10;
       doc.setFont('helvetica', font); doc.setFontSize(size); setText(opts?.color ?? C.sub);
       const lines = doc.splitTextToSize(recortarEnOracion(txt, opts?.max ?? 900), contentW - indent);
       // Evita dejar una sola línea colgando al final de la página.
@@ -1075,7 +1077,7 @@ export default function Home() {
         doc.text(line, margin + indent, y);
         y += lead;
       }
-      y += 5;
+      y += after;
     };
 
     // Cita bíblica: la altura se calcula EXACTA y el texto se dibuja dentro del
@@ -1273,13 +1275,14 @@ export default function Home() {
         const subTitle: string[] = doc.splitTextToSize(resumir(s.titulo || '', 120), contentW - 24);
         // El subtítulo viaja con las primeras líneas de su desarrollo y con
         // separación medida según cuántas líneas ocupe.
-        ensure(subTitle.length * SUB_LINE_H + 26);
+        ensure(subTitle.length * SUB_LINE_H + 34);
+        y += 10;
         subTitle.forEach((linea, li) => doc.text(linea, margin + 16, y + 12 + li * SUB_LINE_H));
-        y += subTitle.length * SUB_LINE_H + 8;
+        y += subTitle.length * SUB_LINE_H + 14;
         if (s.desarrollo) {
           paragraph(resumir(s.desarrollo, 420), { size: 10, lead: 14, color: C.sub, indent: 16 });
         }
-        y += 4;
+        y += 6;
       });
 
       pt.versiculos.slice(0, 6).forEach((v) => quoteBlock(v.cita || '', v.texto || ''));

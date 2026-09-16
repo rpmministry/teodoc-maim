@@ -22,8 +22,8 @@ const pageH = doc.internal.pageSize.getHeight(); // ~841.89 pt
 // Geometría canónica TeoDoc (Márgenes de Argollado y Encuadernación de Libros)
 const margin = 98;  // Margen interior izquierdo (~35 mm para perforación / anillado seguro)
 const marginR = 54; // Margen exterior derecho
-const marginT = 52; // Margen superior
-const marginB = 58; // Margen inferior
+const marginT = 50; // Margen superior
+const marginB = 56; // Margen inferior
 const contentW = pageW - margin - marginR; // ~443.28 pt
 const bottomY = pageH - marginB;
 
@@ -31,13 +31,13 @@ const bottomY = pageH - marginB;
 const C = {
   ink: [22, 22, 22],            // #161616 Carbon Gray 100
   secondary: [60, 60, 60],      // #3C3C3C Carbon Gray 80
-  muted: [100, 100, 100],       // #646464 Carbon Gray 60
+  muted: [110, 110, 110],       // #6E6E6E Carbon Gray 60
   accent: [15, 98, 254],        // #0F62FE Carbon Blue 60
   accentLight: [120, 169, 255], // #78A9FF Carbon Blue 40
   surface: [246, 246, 248],     // #F6F6F8 Carbon Cool Gray 10
   cardBorder: [220, 224, 230],  // #DCE0E6 Carbon Gray 20
   success: [36, 161, 72],       // #24A148 Green 60
-  warning: [180, 120, 0],       // Ámbar equilibrado
+  warning: [180, 115, 0],       // Ámbar equilibrado
   white: [255, 255, 255],
 };
 
@@ -54,7 +54,7 @@ function dibujarBandaSuperior() {
 
 function iniciarPagina() {
   dibujarBandaSuperior();
-  y = marginT + 10;
+  y = marginT + 12;
 }
 
 function saltarPagina() {
@@ -62,16 +62,23 @@ function saltarPagina() {
   iniciarPagina();
 }
 
+function ensure(needed) {
+  if (y + needed > bottomY) {
+    saltarPagina();
+  }
+}
+
 /**
- * Renderizado de párrafos con espaciado editorial estricto y sin saltos huérfanos.
+ * Renderizado de párrafos con espaciado editorial Impeccable.
+ * Interlineado proporcional y respiración inferior generosa.
  */
 function parrafo(texto, opts = {}) {
-  const size = opts.size ?? 9.2;
-  const lead = opts.lead ?? 13.8;
+  const size = opts.size ?? 9.5;
+  const lead = opts.lead ?? 14.6;
   const color = opts.color ?? C.secondary;
   const font = opts.font ?? 'normal';
   const indent = opts.indent ?? 0;
-  const after = opts.after ?? 8;
+  const after = opts.after ?? 12;
   const maxW = contentW - indent;
 
   doc.setFont('helvetica', font);
@@ -89,53 +96,59 @@ function parrafo(texto, opts = {}) {
 
 /**
  * Encabezado de sección con arquitectura Carbon:
- * Barra lateral de acento de 28 pt, badge superior // SECCIÓN XX y título
- * espaciado sin riesgo de solapamiento tipográfico.
+ * Separación vertical generosa previa (26 pt), acento lateral,
+ * jerarquía nítida con badge y línea divisoria con resguardo de 18 pt.
  */
-function encabezadoSeccion(numero, titulo) {
-  y += 8;
+function encabezadoSeccion(numero, titulo, esInicioDePagina = false) {
+  if (!esInicioDePagina) {
+    ensure(78);
+    y += 24; // Separación generosa del bloque precedente
+  }
   const top = y;
 
   // Barra de acento vertical Carbon
   setFill(C.accent);
-  doc.rect(margin, top, 3.5, 28, 'F');
+  doc.rect(margin, top, 3.5, 30, 'F');
 
-  // Badge superior
+  // Badge superior de metadato técnico
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8);
   setText(C.accent);
-  doc.text(`// SECCIÓN ${numero}`, margin + 11, top + 9);
+  doc.text(`// SECCIÓN ${numero}`, margin + 12, top + 10);
 
-  // Título de la sección
+  // Título principal de la sección
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12);
+  doc.setFontSize(13);
   setText(C.ink);
-  doc.text(titulo.toUpperCase(), margin + 11, top + 23);
+  doc.text(titulo.toUpperCase(), margin + 12, top + 25);
 
   // Línea divisoria estructural
-  const lineY = top + 32;
+  const lineY = top + 36;
   setStroke(C.cardBorder);
   doc.setLineWidth(0.6);
   doc.line(margin, lineY, pageW - marginR, lineY);
 
-  y = lineY + 12;
+  // Distancia limpia y amplia antes del primer elemento de contenido
+  y = lineY + 18;
 }
 
 /**
- * Subtítulos secundarios con resguardo superior y respiración inferior garantizada.
+ * Subtítulos de nivel 2 (H3) con separación superior e inferior calibrada según Impeccable.
+ * Prohíbe solapamientos y otorga 8 pt de aire visible entre descenders y ascenders.
  */
 function subtitulo(titulo) {
-  y += 6;
+  ensure(45);
+  y += 20; // Aire superior distintivo frente al texto previo
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(10);
+  doc.setFontSize(10.5);
   setText(C.ink);
   doc.text(titulo, margin, y);
-  y += 14; // Distancia segura entre subtítulo y el texto siguiente
+  y += 18; // Distancia amplia hasta el primer renglón del cuerpo
 }
 
 /**
- * Cajas de llamada (Callout) con cálculo exacto de altura, espaciado entre viñetas
- * y separación perimetral generosa.
+ * Cajas de llamada (Callouts) de alta precisión editorial.
+ * Padding perimetral generoso, interlineado cómodo y margen exterior de 18 pt.
  */
 function callout(texto, tipo = 'info', titulo = '') {
   doc.setFont('helvetica', 'normal');
@@ -143,32 +156,33 @@ function callout(texto, tipo = 'info', titulo = '') {
 
   const bloques = texto.split('\n').filter((b) => b.trim().length > 0);
   const itemsProcesados = [];
-  const leadLine = 12.8;
-  const gapItem = 4;
+  const leadLine = 13.5;
+  const gapItem = 6;
   let altoContenido = 0;
 
   bloques.forEach((bloque) => {
     const esBullet = bloque.startsWith('•') || /^\d+\./.test(bloque);
-    const lineas = doc.splitTextToSize(bloque, contentW - 30);
+    const lineas = doc.splitTextToSize(bloque, contentW - 32);
     itemsProcesados.push({ lineas, esBullet });
     altoContenido += lineas.length * leadLine + (esBullet ? gapItem : gapItem / 2);
   });
 
-  const padTop = 11;
-  const padBottom = 10;
-  const altoTitulo = titulo ? 14 : 0;
+  const padTop = 13;
+  const padBottom = 12;
+  const altoTitulo = titulo ? 16 : 0;
   const h = padTop + altoTitulo + altoContenido + padBottom;
 
+  ensure(h + 12);
   const top = y;
 
-  // Fondo y borde
+  // Fondo y borde perimetral sutil
   setFill(C.surface);
   doc.roundedRect(margin, top, contentW, h, 3, 3, 'F');
   setStroke(C.cardBorder);
   doc.setLineWidth(0.6);
   doc.roundedRect(margin, top, contentW, h, 3, 3, 'S');
 
-  // Acento lateral
+  // Acento lateral cromático
   const accentColor = tipo === 'success' ? C.success : tipo === 'warning' ? C.warning : C.accent;
   setFill(accentColor);
   doc.rect(margin, top, 3.5, h, 'F');
@@ -178,39 +192,39 @@ function callout(texto, tipo = 'info', titulo = '') {
   // Título del callout
   if (titulo) {
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8.2);
+    doc.setFontSize(8.5);
     setText(accentColor);
-    doc.text(titulo.toUpperCase(), margin + 14, curY);
-    curY += 13;
+    doc.text(titulo.toUpperCase(), margin + 15, curY);
+    curY += 15;
   }
 
-  // Contenido
+  // Contenido de párrafos / viñetas
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8.8);
   setText(C.ink);
 
   itemsProcesados.forEach((item) => {
     item.lineas.forEach((l) => {
-      doc.text(l, margin + 14, curY);
+      doc.text(l, margin + 15, curY);
       curY += leadLine;
     });
     curY += item.esBullet ? gapItem : gapItem / 2;
   });
 
-  y = top + h + 11;
+  y = top + h + 18; // Resguardo generoso tras la caja
 }
 
 /**
- * Tablas clave-valor compactas con envoltura de texto y separación clara.
+ * Tablas clave-valor con altura de celda ampliada y ritmo de lectura holgado.
  */
 function tablaKeyValue(pares) {
-  const wClave = 138;
+  const wClave = 142;
   const wValor = contentW - wClave;
-  const padX = 8;
-  const padY = 5.5;
-  const lineH = 11.5;
+  const padX = 10;
+  const padY = 7.5;
+  const lineH = 12.5;
 
-  doc.setFontSize(8.2);
+  doc.setFontSize(8.5);
   const filas = pares.map((p) => {
     doc.setFont('helvetica', 'bold');
     const lClave = doc.splitTextToSize(p.clave, wClave - padX * 2);
@@ -222,7 +236,9 @@ function tablaKeyValue(pares) {
   });
 
   const hTotal = filas.reduce((acc, f) => acc + f.h, 0);
-  let curY = y;
+  ensure(hTotal + 15);
+  const top = y;
+  let curY = top;
 
   filas.forEach((f, idx) => {
     setFill(idx % 2 === 0 ? C.surface : C.white);
@@ -234,9 +250,9 @@ function tablaKeyValue(pares) {
 
     // Clave
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8.2);
+    doc.setFontSize(8.4);
     setText(C.ink);
-    let ty = curY + padY + 8.5;
+    let ty = curY + padY + 9;
     f.lClave.forEach((l) => {
       doc.text(l, margin + padX, ty);
       ty += lineH;
@@ -244,9 +260,9 @@ function tablaKeyValue(pares) {
 
     // Valor
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8.2);
+    doc.setFontSize(8.4);
     setText(C.secondary);
-    ty = curY + padY + 8.5;
+    ty = curY + padY + 9;
     f.lValor.forEach((l) => {
       doc.text(l, margin + wClave + padX, ty);
       ty += lineH;
@@ -257,16 +273,17 @@ function tablaKeyValue(pares) {
 
   setStroke(C.cardBorder);
   doc.setLineWidth(0.6);
-  doc.rect(margin, y, contentW, hTotal, 'S');
+  doc.rect(margin, top, contentW, hTotal, 'S');
 
-  y = curY + 11;
+  y = curY + 20; // Resguardo amplio tras la tabla
 }
 
 // -------------------------------------------------------------
-// DIBUJOS VECTORIALES DE ARQUITECTURA (CON ESPACIADO SEGURO)
+// DIBUJOS VECTORIALES DE ARQUITECTURA
 // -------------------------------------------------------------
 function dibujarDiagramaFlujoPrincipal() {
   const hDiagrama = 142;
+  ensure(hDiagrama + 16);
   const top = y;
 
   setFill(C.surface);
@@ -369,11 +386,12 @@ function dibujarDiagramaFlujoPrincipal() {
   doc.line(nodosSalida[0].x + wSalida / 2, top + 77, nodosSalida[0].x + wSalida / 2, top + 86);
   doc.line(nodosSalida[1].x + wSalida / 2, top + 77, nodosSalida[1].x + wSalida / 2, top + 86);
 
-  y = top + hDiagrama + 12;
+  y = top + hDiagrama + 20;
 }
 
 function dibujarDiagramaResilienciaLLM() {
   const h = 100;
+  ensure(h + 16);
   const top = y;
 
   setFill(C.surface);
@@ -441,11 +459,11 @@ function dibujarDiagramaResilienciaLLM() {
     }
   });
 
-  y = top + h + 13;
+  y = top + h + 20;
 }
 
 // =========================================================================
-// CONSTRUCCIÓN EXACTA DE 4 PÁGINAS DE ALTA FIDELIDAD EDITORIAL
+// CONSTRUCCIÓN EXACTA DE 5 PÁGINAS DE ALTA FIDELIDAD EDITORIAL
 // =========================================================================
 
 // ======================= PÁGINA 1: PORTADA & ARQUITECTURA GENERAL =======================
@@ -454,32 +472,32 @@ iniciarPagina();
 // Logo Oficial TeoDoc Embebido
 if (logoBase64) {
   doc.addImage(logoBase64, 'PNG', margin, marginT + 2, 138, 39);
-  y = marginT + 56;
+  y = marginT + 58;
 } else {
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(22);
   setText(C.accent);
   doc.text('TeoDoc', margin, marginT + 26);
-  y = marginT + 42;
+  y = marginT + 44;
 }
 
 // Eyebrow / Metadato superior
 doc.setFont('helvetica', 'bold');
 doc.setFontSize(8.2);
 setText(C.accent);
-doc.text('// MANUAL TÉCNICO DE ARQUITECTURA, METODOLOGÍAS Y OPERACIÓN', margin, y);
-y += 18;
+doc.text('// ESPECIFICACIÓN DE INGENIERÍA · v2.1 PRODUCCIÓN', margin, y);
+y += 20;
 
-// Título Principal (2 líneas con espacio vertical calibrado)
+// Título Principal
 doc.setFont('helvetica', 'bold');
 doc.setFontSize(20);
 setText(C.ink);
 const mastTitle = doc.splitTextToSize('Arquitectura Integral del Sistema y Pipeline Homilético', contentW);
 mastTitle.forEach((line) => {
   doc.text(line, margin, y);
-  y += 24;
+  y += 25;
 });
-y += 2;
+y += 4;
 
 // Regla técnica Carbon
 setStroke(C.accent);
@@ -488,19 +506,19 @@ doc.line(margin, y, margin + 75, y);
 setStroke(C.cardBorder);
 doc.setLineWidth(0.6);
 doc.line(margin + 75, y, pageW - marginR, y);
-y += 16;
+y += 18;
 
 callout(
   'Este documento constituye la especificación de ingeniería definitiva de TeoDoc (v2.1). Describe la totalidad de flujos de datos, heurísticas algorítmicas, motores gráficos vectoriales y directrices de aseguramiento de calidad (QA) que permiten transformar audios orales en estudios teológicos rigurosos, respetando los estándares de diseño de IBM Carbon y el margen seguro de argollado de 98 pt.',
   'info',
-  'Propósito del Documento'
+  'Propósito del Documento y Rigor Exegético'
 );
 
 encabezadoSeccion('01', 'Visión y Flujo Global de Datos');
 
 parrafo(
   'TeoDoc opera como un orquestador híbrido entre cliente y servidor. El objetivo primordial de su arquitectura es la soberanía del contenido y la resiliencia absoluta bajo una premisa de "Costo Cero": se maximiza el aprovechamiento de cuotas gratuitas con transiciones imperceptibles para el usuario.',
-  { font: 'normal', after: 10 }
+  { font: 'normal', after: 12 }
 );
 
 dibujarDiagramaFlujoPrincipal();
@@ -516,14 +534,14 @@ tablaKeyValue([
 // ======================= PÁGINA 2: INGESTA, STT Y FAST-PATH =======================
 saltarPagina();
 
-encabezadoSeccion('02', 'Ingesta de Medios y Speech-to-Text');
+encabezadoSeccion('02', 'Ingesta de Medios y Speech-to-Text', true);
 
 subtitulo('2.1 Subida Fragmentada (Chunked Upload) a Cloudinary');
 parrafo(
-  'Para asegurar tolerancia ante cortes en redes móviles y respetar los estrictos presupuestos de memoria de Safari en iOS, el frontend no carga el archivo completo en RAM. El archivo se segmenta mediante file.slice() en bloques atómicos de 20 MB y se despacha a Cloudinary con cabeceras de rango (Content-Range). El navegador solo procesa el bloque activo.'
+  'Para asegurar tolerancia ante cortes en redes móviles y respetar los estrictos presupuestos de memoria de Safari en iOS, el frontend no carga el archivo completo en RAM. El archivo se segmenta mediante file.slice() en bloques atómicos de 20 MB y se despacha a Cloudinary con cabeceras de rango (Content-Range). El navegador solo procesa el bloque activo en cada instante.'
 );
 
-subtitulo('2.2 Pipeline de Transcripción con Failover');
+subtitulo('2.2 Pipeline de Transcripción con Failover Automático');
 parrafo(
   'El endpoint /api/transcribe recibe la URL segura generada. Invoca de forma primaria a AssemblyAI en idioma español. Si el proveedor experimenta saturación o cuota agotada, el proxy conmuta en tiempo de ejecución hacia Deepgram nova-2 con smart_format=true, retornando la transcripción puntuada sin intervención humana.'
 );
@@ -531,7 +549,7 @@ parrafo(
 encabezadoSeccion('03', 'Fast-Path de Validación y Clasificación');
 
 parrafo(
-  'En la versión 2.1 se introdujo un algoritmo determinista en /api/validate que elimina 2 a 4 segundos de latencia de red antes del análisis:'
+  'En la versión 2.1 se introdujo un algoritmo determinista en /api/validate que elimina 2 a 4 segundos de latencia de red antes del análisis homilético:'
 );
 
 callout(
@@ -540,23 +558,24 @@ callout(
   '• Evaluación Amable con IA: Para reflexiones devocionales breves o ambiguas, delega en Gemini Flash con JSON Schema estricto.\n' +
   '• Tolerancia a Fallos (Fail-Open): Ante cualquier error del validador, la plataforma aprueba la continuación para no bloquear al expositor.',
   'success',
-  'Reglas Operativas del Fast-Path Heurístico'
+  'Reglas Operativas del Fast-Path Heurístico (<1ms)'
 );
 
-encabezadoSeccion('04', 'Clasificador de Riqueza Homilética');
+// ======================= PÁGINA 3: RIQUEZA HOMILÉTICA Y LLM MULTI-TIER =======================
+saltarPagina();
+
+encabezadoSeccion('04', 'Clasificador de Riqueza Homilética', true);
+
 parrafo(
   'La función evaluarRiqueza() en lib/riqueza-contenido.ts analiza matemáticamente la relación entre volumen de palabras, duración estimada (~130 palabras por minuto) y densidad de referencias bíblicas explícitas para sugerir dinámicamente la profundidad del análisis:'
 );
 
 tablaKeyValue([
-  { clave: 'Nivel BREVE (<1,800 palabras)', valor: '2 a 3 puntos principales · Ilustración Hero' },
-  { clave: 'Nivel MEDIA (1,800 - 4,500 palabras)', valor: '3 a 6 puntos principales · Cuadrícula 2 columnas' },
-  { clave: 'Nivel AMPLIA (4,500 - 9,000 palabras)', valor: '5 a 9 puntos principales · Versículos secundarios' },
-  { clave: 'Nivel PROFUNDA (>9,000 palabras)', valor: '7 a 12 puntos principales · Alta densidad doctrinal' },
+  { clave: 'Nivel BREVE (<1,800 palabras)', valor: '2 a 3 puntos principales · Arquetipo Hero con ilustración' },
+  { clave: 'Nivel MEDIA (1,800 - 4,500 palabras)', valor: '3 a 6 puntos principales · Cuadrícula editorial 2 columnas' },
+  { clave: 'Nivel AMPLIA (4,500 - 9,000 palabras)', valor: '5 a 9 puntos principales · Versículos secundarios enlazados' },
+  { clave: 'Nivel PROFUNDA (>9,000 palabras)', valor: '7 a 12 puntos principales · Alta densidad y rigor doctrinal' },
 ]);
-
-// ======================= PÁGINA 3: LLM FAILOVER & INFOGRAFÍA 9:16 =======================
-saltarPagina();
 
 encabezadoSeccion('05', 'Motor de Análisis y Cadena LLM Multi-Tier');
 
@@ -566,7 +585,7 @@ parrafo(
 
 dibujarDiagramaResilienciaLLM();
 
-subtitulo('5.1 Normalización Defensiva de Datos');
+subtitulo('5.1 Normalización Defensiva de Datos Homiléticos');
 parrafo(
   'Para blindar la interfaz gráfica y los motores de exportación contra variaciones de formato o campos omitidos por los modelos, los datos atraviesan la función normalizarAnalisis():\n' +
   '• Derivación de Enseñanzas: Si el modelo no devuelve "grandes_ensenanzas", se generan del primer enunciado de cada punto.\n' +
@@ -574,7 +593,10 @@ parrafo(
   '• Respaldo Bíblico: Si el pasaje principal no fue devuelto, se enlaza al primer versículo citado en la enseñanza.'
 );
 
-encabezadoSeccion('06', 'Motor de Composición Editorial 9:16');
+// ======================= PÁGINA 4: MOTORES EDITORIALES 9:16 Y PDF =======================
+saltarPagina();
+
+encabezadoSeccion('06', 'Motor de Composición Editorial 9:16', true);
 
 parrafo(
   'Diseñado en lib/infografia-layout.ts y ejecutado en components/infografia.tsx. Resuelve el problema histórico de las infografías que crecían sin control vertical o se truncaban en Stories:'
@@ -590,9 +612,6 @@ callout(
   'Especificación de la Infografía TeoDoc'
 );
 
-// ======================= PÁGINA 4: MOTOR PDF, IOS IN-APP & QA =======================
-saltarPagina();
-
 encabezadoSeccion('07', 'Motor PDF Vectorial y Margen de Argollado');
 
 parrafo(
@@ -605,10 +624,13 @@ callout(
   '• Control Anti-Huérfanos (Keep-With-Next): Todo encabezado evalúa el espacio remanente antes de imprimir, trasladando secciones completas a la página siguiente si no caben al menos dos líneas de cuerpo.\n' +
   '• Sincronización Estructural: Numerales y párrafos derivan del mismo objeto, imposibilitando desfases de numeración.',
   'success',
-  'Especificación Editorial de Encuadernación PDF'
+  'Especificación Editorial de Encuadernación PDF (98 pt)'
 );
 
-encabezadoSeccion('08', 'Arquitectura de Entrega In-App para iOS y Android');
+// ======================= PÁGINA 5: IOS IN-APP & CERTIFICACIÓN QA =======================
+saltarPagina();
+
+encabezadoSeccion('08', 'Arquitectura de Entrega In-App para iOS y Android', true);
 
 parrafo(
   'En navegadores basados en WebKit (Safari en iPhone y iPad), las descargas programáticas tradicionales con tags <a> provocan la apertura de ventanas en blanco ("about:blank") y bloquean el guardado de archivos. TeoDoc resuelve esto con una metodología unificada de entrega:'
@@ -625,12 +647,22 @@ callout(
 
 encabezadoSeccion('09', 'Certificación de Calidad QA (40/40 Invariantes)');
 
+parrafo(
+  'Para garantizar que ninguna actualización altere los flujos ministeriales críticos, el sistema ejecuta una batería exhaustiva de 40 pruebas automatizadas antes de cualquier despliegue:'
+);
+
 tablaKeyValue([
   { clave: 'npm run test:logica (11 pruebas)', valor: 'Riqueza textual, duraciones estimadas, conteo de versículos' },
   { clave: 'npm run test:infografia (9 pruebas)', valor: 'Retícula Carbon 8px, safe zones, canvas fijo 1080×1920 px' },
   { clave: 'npm run test:entrega (20 pruebas)', valor: 'Entrega iOS, MIME types, margen 98pt, término "expositor"' },
   { clave: 'Compilación de Producción', valor: 'next build Turbopack: 0 errores, 0 warnings, TypeScript estricto' },
 ]);
+
+callout(
+  'TeoDoc v2.1 se entrega auditado y certificado bajo los más altos estándares editoriales de IBM Carbon Design e Impeccable. Todas las funciones de exportación y análisis homilético han sido verificadas en entornos de escritorio y dispositivos móviles Apple iOS / Android, garantizando total soberanía de datos y fidelidad doctrinal permanente para pastores y expositores.',
+  'success',
+  'Garantía de Calidad y Disponibilidad Ministerial'
+);
 
 // -------------------------------------------------------------
 // ENCABEZADOS Y PIES DE PÁGINA FORMALES EN TODAS LAS HOJAS
@@ -679,7 +711,7 @@ const pdfOutput = doc.output('arraybuffer');
 fs.writeFileSync(outPathRoot, Buffer.from(pdfOutput));
 fs.writeFileSync(outPathPublic, Buffer.from(pdfOutput));
 
-console.log(`[Éxito] Manual PDF generado con estándares editoriales:`);
+console.log(`[Éxito] Manual PDF generado con estándares editoriales Impeccable:`);
 console.log(`  -> ${outPathRoot} (${pdfOutput.byteLength} bytes)`);
 console.log(`  -> ${outPathPublic} (${pdfOutput.byteLength} bytes)`);
 console.log(`Total de páginas generadas: ${totalPaginas}`);
