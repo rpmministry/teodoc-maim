@@ -434,7 +434,7 @@ export default function Infografia({
           }}
         >
           <TeoDocBadge color={pal.accent} tema={tema} />
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
             <span
               style={{
                 fontSize: 11,
@@ -444,14 +444,19 @@ export default function Infografia({
                 background: theme.tagBg,
                 border: `1px solid ${theme.tagBorde}`,
                 borderRadius: 999,
-                padding: '3px 12px',
+                padding: '4px 12px',
                 letterSpacing: '0.08em',
                 textTransform: 'uppercase',
+                whiteSpace: 'nowrap',
+                lineHeight: 1.2,
+                display: 'inline-flex',
+                alignItems: 'center',
+                flexShrink: 0,
               }}
             >
               {categoriaTema}
             </span>
-            <span style={{ fontSize: 12, color: theme.colorTextoMuted, fontFamily: 'monospace', letterSpacing: '0.04em' }}>
+            <span style={{ fontSize: 12, color: theme.colorTextoMuted, fontFamily: 'monospace', letterSpacing: '0.04em', whiteSpace: 'nowrap', flexShrink: 0 }}>
               {fechaHoy}
             </span>
           </div>
@@ -464,15 +469,17 @@ export default function Infografia({
               display: 'inline-flex',
               alignItems: 'center',
               gap: 8,
-              marginBottom: 6,
+              marginBottom: 8,
               background: theme.tagBg,
               border: `1px solid ${theme.tagBorde}`,
               borderRadius: 6,
-              padding: '3px 10px',
+              padding: '4px 10px',
+              whiteSpace: 'nowrap',
+              flexShrink: 0,
             }}
           >
-            <div style={{ width: 8, height: 8, backgroundColor: pal.accent, borderRadius: 999 }} />
-            <span style={{ fontSize: 12, fontFamily: 'monospace', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: theme.tagColor }}>
+            <div style={{ width: 8, height: 8, backgroundColor: pal.accent, borderRadius: 999, flexShrink: 0 }} />
+            <span style={{ fontSize: 12, fontFamily: 'monospace', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: theme.tagColor, whiteSpace: 'nowrap', lineHeight: 1.2 }}>
               {entrada.tema}
             </span>
           </div>
@@ -509,11 +516,13 @@ export default function Infografia({
                   background: theme.tagBg,
                   border: `1px solid ${theme.tagBorde}`,
                   borderRadius: 4,
-                  padding: '2px 8px',
-                  marginBottom: 6,
+                  padding: '4px 10px',
+                  marginBottom: 8,
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0,
                 }}
               >
-                <span style={{ fontSize: 10, fontFamily: 'monospace', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: theme.tagColor }}>
+                <span style={{ fontSize: 11, fontFamily: 'monospace', fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: theme.tagColor, whiteSpace: 'nowrap', lineHeight: 1.2 }}>
                   IDEA CENTRAL DEL EXPOSITOR
                 </span>
               </div>
@@ -546,7 +555,7 @@ export default function Infografia({
               boxShadow: theme.cardBoxShadow,
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, gap: 12 }}>
               <div
                 style={{
                   display: 'inline-flex',
@@ -555,7 +564,10 @@ export default function Infografia({
                   background: theme.tagBg,
                   border: `1px solid ${theme.tagBorde}`,
                   borderRadius: 4,
-                  padding: '2px 8px',
+                  padding: '4px 10px',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0,
+                  boxSizing: 'border-box',
                 }}
               >
                 <span
@@ -564,23 +576,29 @@ export default function Infografia({
                     height: 6,
                     borderRadius: '50%',
                     backgroundColor: pal.accent,
+                    flexShrink: 0,
                   }}
                 />
-                <span style={{ fontSize: 10.5, fontFamily: 'monospace', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: theme.tagColor }}>
+                <span style={{ fontSize: 11, fontFamily: 'monospace', fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: theme.tagColor, whiteSpace: 'nowrap', lineHeight: 1.2 }}>
                   TEXTO BÍBLICO CLAVE
                 </span>
               </div>
               {entrada.pasaje ? (
                 <span
                   style={{
-                    fontSize: 14,
+                    fontSize: 13,
                     fontWeight: 800,
                     fontFamily: 'monospace',
                     letterSpacing: '0.06em',
                     color: '#ffffff',
                     background: pal.primary,
-                    padding: '2px 10px',
+                    padding: '3px 10px',
                     borderRadius: 4,
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0,
+                    lineHeight: 1.2,
+                    display: 'inline-flex',
+                    alignItems: 'center',
                   }}
                 >
                   {entrada.pasaje}
@@ -628,15 +646,18 @@ export default function Infografia({
                 >
                   <div
                     style={{
-                      display: 'inline-block',
+                      display: 'inline-flex',
+                      alignItems: 'center',
                       background: theme.tagBg,
                       border: `1px solid ${theme.tagBorde}`,
                       borderRadius: 4,
-                      padding: '2px 8px',
-                      marginBottom: 4,
+                      padding: '3px 8px',
+                      marginBottom: 6,
+                      whiteSpace: 'nowrap',
+                      flexShrink: 0,
                     }}
                   >
-                    <span style={{ fontSize: 11, fontWeight: 800, color: theme.tagColor, fontFamily: 'monospace' }}>
+                    <span style={{ fontSize: 11, fontWeight: 800, color: theme.tagColor, fontFamily: 'monospace', whiteSpace: 'nowrap', lineHeight: 1.2 }}>
                       {v.cita}
                     </span>
                   </div>
@@ -662,10 +683,12 @@ export default function Infografia({
                 background: theme.tagBg,
                 border: `1px solid ${theme.tagBorde}`,
                 borderRadius: 4,
-                padding: '3px 8px',
+                padding: '4px 10px',
+                whiteSpace: 'nowrap',
+                flexShrink: 0,
               }}
             >
-              <span style={{ fontSize: 10.5, fontFamily: 'monospace', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: theme.tagColor }}>
+              <span style={{ fontSize: 11, fontFamily: 'monospace', fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: theme.tagColor, whiteSpace: 'nowrap', lineHeight: 1.2 }}>
                 ENSEÑANZAS Y ESTRUCTURA TEOLÓGICA ({puntos.length} PUNTOS)
               </span>
             </div>
@@ -693,14 +716,14 @@ export default function Infografia({
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ fontSize: 12, fontWeight: 800, fontFamily: 'monospace', color: '#ffffff', background: pal.primary, padding: '2px 8px', borderRadius: 4 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                        <span style={{ fontSize: 12, fontWeight: 800, fontFamily: 'monospace', color: '#ffffff', background: pal.primary, padding: '3px 8px', borderRadius: 4, whiteSpace: 'nowrap', lineHeight: 1.2, display: 'inline-flex', alignItems: 'center' }}>
                           {p.numeral}
                         </span>
                         <IconoMiniPunto color={pal.accent} />
                       </div>
                       {p.versiculo ? (
-                        <span style={{ fontSize: 11, fontFamily: 'monospace', fontWeight: 700, color: theme.tagColor, background: theme.tagBg, border: `1px solid ${theme.tagBorde}`, padding: '2px 8px', borderRadius: 4 }}>
+                        <span style={{ fontSize: 11, fontFamily: 'monospace', fontWeight: 700, color: theme.tagColor, background: theme.tagBg, border: `1px solid ${theme.tagBorde}`, padding: '3px 8px', borderRadius: 4, whiteSpace: 'nowrap', flexShrink: 0, lineHeight: 1.2, display: 'inline-flex', alignItems: 'center' }}>
                           {p.versiculo}
                         </span>
                       ) : null}
@@ -743,16 +766,18 @@ export default function Infografia({
                     background: esClaro ? '#ffffff' : '#161616',
                     border: `1px solid ${theme.bordeSutil}`,
                     borderRadius: 4,
-                    padding: '3px 8px',
+                    padding: '4px 10px',
+                    whiteSpace: 'nowrap',
+                    flexShrink: 0,
                   }}
                 >
-                  <span style={{ fontSize: 9.5, fontFamily: 'monospace', fontWeight: 800, letterSpacing: '0.12em', color: theme.tagColor, textTransform: 'uppercase' }}>
+                  <span style={{ fontSize: 10, fontFamily: 'monospace', fontWeight: 800, letterSpacing: '0.1em', color: theme.tagColor, textTransform: 'uppercase', whiteSpace: 'nowrap', lineHeight: 1.2 }}>
                     SIMBOLOGÍA BÍBLICA
                   </span>
                 </div>
                 <IlustracionEditorial id={ilustracionId} size={250} pal={pal} modo="hero" />
                 <div style={{ marginTop: 10, textAlign: 'center' }}>
-                  <span style={{ fontSize: 12, fontWeight: 800, fontFamily: 'monospace', color: theme.tagColor, letterSpacing: '0.08em', textTransform: 'uppercase', background: theme.tagBg, border: `1px solid ${theme.tagBorde}`, padding: '4px 12px', borderRadius: 999 }}>
+                  <span style={{ fontSize: 12, fontWeight: 800, fontFamily: 'monospace', color: theme.tagColor, letterSpacing: '0.08em', textTransform: 'uppercase', background: theme.tagBg, border: `1px solid ${theme.tagBorde}`, padding: '4px 14px', borderRadius: 999, display: 'inline-flex', alignItems: 'center', whiteSpace: 'nowrap', lineHeight: 1.2 }}>
                     {categoriaTema}
                   </span>
                 </div>
@@ -779,7 +804,7 @@ export default function Infografia({
                   >
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                        <span style={{ fontSize: 12, fontWeight: 800, fontFamily: 'monospace', color: '#ffffff', background: pal.primary, padding: '2px 8px', borderRadius: 4 }}>
+                        <span style={{ fontSize: 12, fontWeight: 800, fontFamily: 'monospace', color: '#ffffff', background: pal.primary, padding: '3px 8px', borderRadius: 4, whiteSpace: 'nowrap', lineHeight: 1.2, display: 'inline-flex', alignItems: 'center' }}>
                           {p.numeral}
                         </span>
                         <IconoMiniPunto color={pal.accent} />
@@ -804,8 +829,12 @@ export default function Infografia({
                           color: theme.tagColor,
                           background: theme.tagBg,
                           border: `1px solid ${theme.tagBorde}`,
-                          padding: '2px 8px',
+                          padding: '3px 8px',
                           borderRadius: 4,
+                          whiteSpace: 'nowrap',
+                          lineHeight: 1.2,
+                          display: 'inline-flex',
+                          alignItems: 'center',
                         }}
                       >
                         {p.versiculo}
@@ -832,7 +861,7 @@ export default function Infografia({
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                      <span style={{ fontSize: 12, fontWeight: 800, fontFamily: 'monospace', color: '#ffffff', background: pal.primary, padding: '2px 8px', borderRadius: 4 }}>
+                      <span style={{ fontSize: 12, fontWeight: 800, fontFamily: 'monospace', color: '#ffffff', background: pal.primary, padding: '3px 8px', borderRadius: 4, whiteSpace: 'nowrap', lineHeight: 1.2, display: 'inline-flex', alignItems: 'center' }}>
                         {puntos[4].numeral}
                       </span>
                       <h3 style={{ margin: 0, fontSize: escala.tituloPunto, fontWeight: 700, color: theme.colorTextoPrincipal, lineHeight: 1.2 }}>
@@ -887,7 +916,7 @@ export default function Infografia({
                   }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-                    <span style={{ fontSize: 11, fontWeight: 800, fontFamily: 'monospace', color: '#ffffff', background: pal.primary, padding: '2px 7px', borderRadius: 4, lineHeight: 1 }}>
+                    <span style={{ fontSize: 11, fontWeight: 800, fontFamily: 'monospace', color: '#ffffff', background: pal.primary, padding: '3px 7px', borderRadius: 4, lineHeight: 1.2, whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', flexShrink: 0 }}>
                       {p.numeral}
                     </span>
                     <h3 style={{ margin: 0, fontSize: escala.tituloPunto, fontWeight: 700, color: theme.colorTextoPrincipal, lineHeight: 1.18 }}>
@@ -925,11 +954,14 @@ export default function Infografia({
                 background: theme.tagBg,
                 border: `1px solid ${theme.tagBorde}`,
                 borderRadius: 4,
-                padding: '2px 8px',
-                marginBottom: 4,
+                padding: '4px 10px',
+                marginBottom: 6,
+                whiteSpace: 'nowrap',
+                flexShrink: 0,
+                maxWidth: '100%',
               }}
             >
-              <span style={{ fontSize: 10, fontFamily: 'monospace', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: theme.tagColor }}>
+              <span style={{ fontSize: 10.5, fontFamily: 'monospace', fontWeight: 800, letterSpacing: '0.1em', textTransform: 'uppercase', color: theme.tagColor, whiteSpace: 'nowrap', lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 ENSEÑANZA DOCTRINAL: {doctrinas[0].sobre}
               </span>
             </div>
@@ -959,9 +991,14 @@ export default function Infografia({
                 background: theme.tagBg,
                 border: `1px solid ${theme.tagBorde}`,
                 borderRadius: 4,
-                padding: '2px 7px',
+                padding: '4px 8px',
                 letterSpacing: '0.1em',
                 textTransform: 'uppercase',
+                whiteSpace: 'nowrap',
+                lineHeight: 1.2,
+                display: 'inline-flex',
+                alignItems: 'center',
+                flexShrink: 0,
               }}
             >
               CONCEPTOS:
@@ -977,7 +1014,12 @@ export default function Infografia({
                   background: esClaro ? '#ffffff' : 'rgba(255, 255, 255, 0.05)',
                   border: `1px solid ${theme.bordeSutil}`,
                   borderRadius: 4,
-                  padding: '2px 8px',
+                  padding: '4px 8px',
+                  whiteSpace: 'nowrap',
+                  lineHeight: 1.2,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  flexShrink: 0,
                 }}
               >
                 #{c}
@@ -1010,11 +1052,13 @@ export default function Infografia({
                 background: theme.tagBg,
                 border: `1px solid ${theme.tagBorde}`,
                 borderRadius: 4,
-                padding: '2px 8px',
-                marginBottom: 4,
+                padding: '4px 10px',
+                marginBottom: 6,
+                whiteSpace: 'nowrap',
+                flexShrink: 0,
               }}
             >
-              <span style={{ fontSize: 9.5, fontFamily: 'monospace', fontWeight: 800, letterSpacing: '0.14em', textTransform: 'uppercase', color: theme.tagColor }}>
+              <span style={{ fontSize: 10, fontFamily: 'monospace', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', color: theme.tagColor, whiteSpace: 'nowrap', lineHeight: 1.2 }}>
                 VERDAD PARA RECORDAR // CONCLUSIÓN
               </span>
             </div>

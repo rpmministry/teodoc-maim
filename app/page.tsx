@@ -1704,7 +1704,7 @@ export default function Home() {
                   <div className="w-20 h-1 bg-[#0f62fe] mx-auto mb-6 rounded-full" />
                   {resultado.idea_principal ? (
                     <div className="text-left bg-[#1f1f1f]/90 border border-[#393939] p-5 sm:p-6 shadow-sm relative">
-                      <div className="inline-flex items-center gap-2 px-2.5 py-0.5 mb-2.5 bg-[#0f62fe]/10 border border-[#0f62fe]/30 text-xs font-mono text-[#78a9ff] font-semibold tracking-wider uppercase">
+                      <div className="inline-flex items-center gap-2 px-3 py-1 mb-2.5 bg-[#0f62fe]/10 border border-[#0f62fe]/30 text-xs font-mono text-[#78a9ff] font-semibold tracking-wider uppercase whitespace-nowrap">
                         Idea Central del Mensaje
                       </div>
                       <p className="text-[#f4f4f4] text-base sm:text-lg md:text-xl italic font-normal leading-relaxed">
@@ -1797,7 +1797,7 @@ export default function Home() {
             {/* Composición narrativa · Visualización dual (Oscura y Clara) · Export PNG de alta definición */}
             <div className="w-full pt-8 sm:pt-12">
               <div className="text-center mb-8 px-4">
-                <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#0f62fe]/10 border border-[#0f62fe]/30 rounded text-xs font-mono font-semibold tracking-widest text-[#78a9ff] uppercase mb-3">
+                <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#0f62fe]/10 border border-[#0f62fe]/30 rounded text-xs font-mono font-semibold tracking-widest text-[#78a9ff] uppercase mb-3 whitespace-nowrap">
                   // INFOGRAFÍA EDITORIAL 9:16 (1080×1920)
                 </div>
                 <h3 className="text-xl sm:text-2xl md:text-3xl font-bold text-[#ffffff] tracking-tight">
