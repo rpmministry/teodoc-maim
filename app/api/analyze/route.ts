@@ -503,7 +503,14 @@ async function analizarConGemini(text: string, contexto: string): Promise<any | 
 const OPENROUTER_TIMEOUT_MS = 120_000;
 const OPENROUTER_PREFERIDOS = ['google/gemini-2.0-flash-exp:free', 'google/gemini-flash-1.5:free', 'meta-llama/llama-3.3-70b-instruct:free', 'qwen/qwen-2.5-72b-instruct:free'];
 
-async function analizarConOpenRouter(text: string, contexto: string): Promise<any | null> {
+let cacheModelosOpenRouter: { modelos: string[]; expiracion: number } | null = null;
+const CACHE_OPENROUTER_TTL_MS = 30 * 60 * 1000; // 30 minutos
+
+async function obtenerModelosOpenRouter(): Promise<string[]> {
+  const ahora = Date.now();
+  if (cacheModelosOpenRouter && ahora < cacheModelosOpenRouter.expiracion) {
+    return cacheModelosOpenRouter.modelos;
+  }
   let modelos = MODELOS_OPENROUTER_DEFAULT;
   try {
     const resModels = await fetch('https://openrouter.ai/api/v1/models');
@@ -513,15 +520,21 @@ async function analizarConOpenRouter(text: string, contexto: string): Promise<an
         .filter((m: any) => m.id.endsWith(':free') && m.context_length >= 40000)
         .map((m: any) => m.id);
       if (vigentes.length > 0) {
-        // Prioriza modelos rápidos conocidos y añade el resto después.
         const preferidos = OPENROUTER_PREFERIDOS.filter((m) => vigentes.includes(m));
         const otros = vigentes.filter((m) => !preferidos.includes(m));
         modelos = [...preferidos, ...otros].slice(0, 3);
+        cacheModelosOpenRouter = { modelos, expiracion: ahora + CACHE_OPENROUTER_TTL_MS };
+        return modelos;
       }
     }
   } catch {
-    console.warn('No se pudo obtener la lista dinámica, usando defaults.');
+    console.warn('No se pudo obtener la lista dinámica de OpenRouter, usando defaults.');
   }
+  return modelos;
+}
+
+async function analizarConOpenRouter(text: string, contexto: string): Promise<any | null> {
+  const modelos = await obtenerModelosOpenRouter();
 
   // Presupuesto global de OpenRouter: no encadenar modelos más allá del tope,
   // para que el pipeline completo quede dentro del límite del servidor.

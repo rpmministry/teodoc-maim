@@ -3,6 +3,7 @@ import { Type } from '@google/genai';
 import { NextRequest, NextResponse } from 'next/server';
 import { generarJsonConGemini } from '@/lib/ai-gemini';
 import { permitirPeticion } from '@/lib/rate-limit';
+import { LIBROS_BIBLICOS } from '@/lib/riqueza-contenido';
 
 export const maxDuration = 30;
 export const dynamic = 'force-dynamic';
@@ -12,6 +13,10 @@ export const dynamic = 'force-dynamic';
 const MIN_PALABRAS = 12;
 const MAX_CHARS_VALIDACION = 40_000;
 const MAX_CONTENT_LENGTH = 1_000_000;
+
+// Patrones inequívocos para aprobación instantánea (0 ms, sin llamada LLM ociosa)
+const TERMINOS_CRISTIANOS = /\b(?:dios|jes[uú]s|jesucristo|cristo|se[ñn]or|esp[ií]ritu\s+santo|padre|evangelio|biblia|escritura|salvaci[oó]n|gracia|fe|oraci[oó]n|disc[ií]pulo|ap[oó]stol|pastor|iglesia|doctrina|reino\s+de\s+dios)\b/i;
+const REGEX_CITA_BIBLICA = new RegExp(`\\b(?:${LIBROS_BIBLICOS})\\s+\\d{1,3}`, 'i');
 
 export type MotivoValidacion = 'valido' | 'corto' | 'no_relacionado';
 
@@ -85,12 +90,19 @@ export async function POST(req: NextRequest) {
     // Acotamos ANTES de normalizar/contar para no procesar entradas enormes.
     const text = normalizar(raw.slice(0, MAX_CHARS_VALIDACION));
 
-    if (!text || contarPalabras(text) < MIN_PALABRAS) {
+    const palabras = contarPalabras(text);
+    if (!text || palabras < MIN_PALABRAS) {
       return NextResponse.json({ valido: false, motivo: 'corto' as MotivoValidacion });
     }
 
-    // Evaluación de contenido (leniente). Si la IA falla, NO bloqueamos:
-    // la prioridad es no rechazar un mensaje válido.
+    // Fast-path: Si tiene volumen sustancial (>= 35 palabras) y referencias bíblicas
+    // o términos teológicos evidentes, se aprueba de inmediato (ahorra 2-4 s de LLM).
+    if (palabras >= 35 && (REGEX_CITA_BIBLICA.test(text) || TERMINOS_CRISTIANOS.test(text))) {
+      return NextResponse.json({ valido: true, motivo: 'valido' as MotivoValidacion });
+    }
+
+    // Evaluación de contenido con IA (leniente, para mensajes breves o ambiguos).
+    // Si la IA falla, NO bloqueamos: la prioridad es no rechazar un mensaje válido.
     const resultado = await clasificarConGemini(text.slice(0, 8000));
     if (!resultado) return NextResponse.json({ valido: true, motivo: 'valido' as MotivoValidacion });
 
