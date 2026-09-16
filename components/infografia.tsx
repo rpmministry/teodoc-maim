@@ -163,11 +163,11 @@ function TeoDocBadge({ color, tema = 'oscuro' }: { color?: string; tema?: TemaIn
           fontWeight: 800,
           letterSpacing: '0.14em',
           textTransform: 'uppercase',
-          color: esClaro ? '#111827' : '#ffffff',
+          color: esClaro ? '#161616' : '#ffffff',
           lineHeight: 1,
         }}
       >
-        TEO<span style={{ color: esClaro ? '#0f62fe' : '#38bdf8' }}>DOC</span>
+        TEO<span style={{ color: esClaro ? '#0f62fe' : '#78a9ff' }}>DOC</span>
       </span>
     </div>
   )
@@ -313,16 +313,16 @@ export default function Infografia({
 
   // Tokens de estilo según el tema (Oscuro Obsidiana vs Claro Editorial)
   const theme = {
-    bgLienzo: esClaro ? '#ffffff' : '#070b14',
+    bgLienzo: esClaro ? '#ffffff' : '#161616',
     bgGradiente: esClaro
       ? 'radial-gradient(circle at 85% 8%, rgba(15, 98, 254, 0.05) 0%, #ffffff 65%), radial-gradient(circle at 15% 92%, rgba(0, 67, 206, 0.03) 0%, #ffffff 60%)'
-      : `radial-gradient(circle at 85% 8%, ${pal.primary}24 0%, #070b14 65%), radial-gradient(circle at 15% 92%, ${pal.secondary}20 0%, #070b14 60%)`,
-    colorTextoPrincipal: esClaro ? '#111827' : '#ffffff',
-    colorTextoCuerpo: esClaro ? '#374151' : '#cbd5e1',
-    colorTextoMuted: esClaro ? '#64748b' : '#94a3b8',
-    bordeSutil: esClaro ? '#e2e8f0' : 'rgba(255, 255, 255, 0.1)',
+      : `radial-gradient(circle at 85% 8%, ${pal.primary}24 0%, #161616 65%), radial-gradient(circle at 15% 92%, ${pal.secondary}20 0%, #161616 60%)`,
+    colorTextoPrincipal: esClaro ? '#161616' : '#ffffff',
+    colorTextoCuerpo: esClaro ? '#393939' : '#c6c6c6',
+    colorTextoMuted: esClaro ? '#6f6f6f' : '#8d8d8d',
+    bordeSutil: esClaro ? '#e0e0e0' : 'rgba(255, 255, 255, 0.1)',
     cardBg: esClaro
-      ? 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)'
+      ? '#ffffff'
       : 'linear-gradient(135deg, rgba(255,255,255,0.045) 0%, rgba(255,255,255,0.015) 100%)',
     cardBoxShadow: esClaro ? '0 2px 8px rgba(15, 98, 254, 0.04)' : 'none',
     tagBg: esClaro ? 'rgba(15, 98, 254, 0.07)' : 'rgba(255, 255, 255, 0.08)',
@@ -331,14 +331,14 @@ export default function Infografia({
     vitrinaBg: esClaro
       ? 'radial-gradient(circle at center, rgba(15,98,254,0.07) 0%, rgba(15,98,254,0.01) 75%)'
       : 'radial-gradient(circle at center, rgba(255,255,255,0.07) 0%, rgba(255,255,255,0.015) 75%)',
-    vitrinaBorde: esClaro ? '#e2e8f0' : 'rgba(255, 255, 255, 0.12)',
+    vitrinaBorde: esClaro ? '#e0e0e0' : 'rgba(255, 255, 255, 0.12)',
     footerBg: esClaro
-      ? 'linear-gradient(90deg, #f8fafc 0%, #ffffff 100%)'
+      ? '#f4f4f4'
       : 'linear-gradient(90deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.02) 100%)',
     gridPatternStroke: esClaro ? 'rgba(15, 98, 254, 0.035)' : 'rgba(255, 255, 255, 0.024)',
     glowStopColor: esClaro ? '#0f62fe' : pal.accent,
     glowStopOpacity: esClaro ? '0.07' : '0.14',
-    glowEndColor: esClaro ? '#ffffff' : '#070b14',
+    glowEndColor: esClaro ? '#ffffff' : '#161616',
     curveGradStop1: esClaro ? '#0f62fe' : pal.accent,
     curveGradStop2: esClaro ? '#0043ce' : pal.primary,
     curveGradStop3: esClaro ? '#0f62fe' : pal.accent,
@@ -496,7 +496,6 @@ export default function Infografia({
               style={{
                 background: theme.cardBg,
                 border: `1px solid ${theme.bordeSutil}`,
-                borderLeft: `4px solid ${pal.accent}`,
                 borderRadius: 10,
                 padding: '12px 18px',
                 boxShadow: theme.cardBoxShadow,
@@ -622,7 +621,6 @@ export default function Infografia({
                   style={{
                     background: theme.cardBg,
                     border: `1px solid ${theme.bordeSutil}`,
-                    borderLeft: `3px solid ${pal.secondary}`,
                     borderRadius: 8,
                     padding: '8px 12px',
                     boxShadow: theme.cardBoxShadow,
@@ -742,7 +740,7 @@ export default function Infografia({
                     left: 16,
                     display: 'inline-flex',
                     alignItems: 'center',
-                    background: esClaro ? '#ffffff' : 'rgba(0, 0, 0, 0.45)',
+                    background: esClaro ? '#ffffff' : '#161616',
                     border: `1px solid ${theme.bordeSutil}`,
                     borderRadius: 4,
                     padding: '3px 8px',
@@ -880,7 +878,6 @@ export default function Infografia({
                   style={{
                     background: theme.cardBg,
                     border: `1px solid ${theme.bordeSutil}`,
-                    borderLeft: `3px solid ${pal.accent}`,
                     borderRadius: 10,
                     padding: '8px 12px',
                     display: 'flex',
@@ -915,7 +912,6 @@ export default function Infografia({
               flexShrink: 0,
               background: theme.cardBg,
               border: `1px solid ${theme.bordeSutil}`,
-              borderLeft: `4px solid ${esClaro ? '#0f62fe' : pal.glow}`,
               borderRadius: 10,
               padding: '10px 14px',
               boxShadow: theme.cardBoxShadow,
@@ -996,7 +992,6 @@ export default function Infografia({
             flexShrink: 0,
             background: theme.footerBg,
             border: `1px solid ${theme.bordeSutil}`,
-            borderLeft: `5px solid ${pal.accent}`,
             borderRadius: 12,
             padding: '12px 18px',
             display: 'flex',

@@ -1577,15 +1577,20 @@ export default function Home() {
           <div className="mt-5 sm:mt-6 w-full max-w-lg">
             <div key={versoIndex} className="verse-fade border-l-2 border-[#0f62fe] pl-4">
               <p className="text-sm sm:text-base italic text-[#e0e0e0] leading-snug">“{promesasBiblicas[versoIndex].texto}”</p>
-              <p className="mt-1.5 text-[11px] font-semibold uppercase tracking-wider text-[#78a9ff]">{promesasBiblicas[versoIndex].cita}</p>
+              <p className="mt-1.5 text-xs font-semibold uppercase tracking-wider text-[#78a9ff]">{promesasBiblicas[versoIndex].cita}</p>
             </div>
           </div>
         )}
 
         {/* AVISO — Carbon inline notification */}
         {!loading && !resultado && error && (
-          <div className="mt-8 w-full max-w-md border-l-4 border-[#0f62fe] bg-[#262626] px-4 py-3 text-sm text-[#f4f4f4]">
-            <p className="font-semibold mb-1">🕊️ Un momento</p>
+          <div className="mt-8 w-full max-w-md border border-[#393939] bg-[#262626] p-4 text-sm text-[#f4f4f4] shadow-sm">
+            <div className="flex items-center gap-2 mb-1.5 text-[#78a9ff]">
+              <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span className="font-semibold text-sm text-[#f4f4f4]">Un momento</span>
+            </div>
             <p className="text-[#c6c6c6]">{error}</p>
             {textoPendiente && (
               <button
@@ -1600,8 +1605,13 @@ export default function Home() {
 
         {/* AUDIO NO VÁLIDO — mensaje humano y acción para reintentar */}
         {!loading && !resultado && avisoAudio && (
-          <div className="mt-8 w-full max-w-lg border-l-4 border-[#f1c21b] bg-[#262626] px-5 py-5 text-sm text-[#f4f4f4] animate-fade-in">
-            <p className="font-semibold mb-2">🕊️ Aún no podemos analizar este contenido</p>
+          <div className="mt-8 w-full max-w-lg border border-[#f1c21b]/40 bg-[#262626] p-5 text-sm text-[#f4f4f4] animate-fade-in shadow-sm">
+            <div className="flex items-center gap-2 mb-2 text-[#f1c21b]">
+              <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <span className="font-semibold text-sm text-[#f4f4f4]">Aún no podemos analizar este contenido</span>
+            </div>
             <p className="text-[#c6c6c6] leading-relaxed">
               {avisoAudio === 'no_relacionado'
                 ? 'Parece que el contenido trata un tema diferente al propósito de TeoDoc.'
@@ -1621,8 +1631,13 @@ export default function Home() {
 
         {/* YOUTUBE NO DISPONIBLE — oculto junto con la entrada por enlace */}
         {YOUTUBE_ENABLED && !loading && !resultado && avisoYoutube && (
-          <div className="mt-8 w-full max-w-lg border-l-4 border-[#f1c21b] bg-[#262626] px-5 py-5 text-sm text-[#f4f4f4] animate-fade-in">
-            <p className="font-semibold mb-2">🕊️ No pudimos usar ese enlace</p>
+          <div className="mt-8 w-full max-w-lg border border-[#f1c21b]/40 bg-[#262626] p-5 text-sm text-[#f4f4f4] animate-fade-in shadow-sm">
+            <div className="flex items-center gap-2 mb-2 text-[#f1c21b]">
+              <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <span className="font-semibold text-sm text-[#f4f4f4]">No pudimos usar ese enlace</span>
+            </div>
             <p className="text-[#c6c6c6] leading-relaxed">{avisoYoutube}</p>
             <div className="mt-4 flex flex-wrap gap-2">
               <button
@@ -1688,10 +1703,10 @@ export default function Home() {
                   </h2>
                   <div className="w-20 h-1 bg-[#0f62fe] mx-auto mb-6 rounded-full" />
                   {resultado.idea_principal ? (
-                    <div className="text-left bg-[#1f1f1f]/80 border border-[#393939] border-l-4 border-l-[#0f62fe] p-4 sm:p-5 rounded-r shadow-sm">
-                      <p className="text-xs font-mono uppercase tracking-wider text-[#78a9ff] mb-1 font-semibold">
+                    <div className="text-left bg-[#1f1f1f]/90 border border-[#393939] p-5 sm:p-6 shadow-sm relative">
+                      <div className="inline-flex items-center gap-2 px-2.5 py-0.5 mb-2.5 bg-[#0f62fe]/10 border border-[#0f62fe]/30 text-xs font-mono text-[#78a9ff] font-semibold tracking-wider uppercase">
                         Idea Central del Mensaje
-                      </p>
+                      </div>
                       <p className="text-[#f4f4f4] text-base sm:text-lg md:text-xl italic font-normal leading-relaxed">
                         "{resultado.idea_principal}"
                       </p>
@@ -1702,7 +1717,8 @@ export default function Home() {
               
               <div className="p-6 sm:p-8 md:p-12 space-y-10 sm:space-y-16">
                 <section>
-                  <h3 className="text-sm font-semibold text-[#f4f4f4] mb-6 sm:mb-8 uppercase tracking-wider border-l-4 border-[#0f62fe] pl-3">
+                  <h3 className="text-sm font-semibold text-[#f4f4f4] mb-6 sm:mb-8 uppercase tracking-wider flex items-center gap-2.5">
+                    <span className="w-1.5 h-4 bg-[#0f62fe] inline-block" aria-hidden="true" />
                     Desarrollo Bíblico
                   </h3>
                   
@@ -1768,7 +1784,10 @@ export default function Home() {
 
                 {resultado.conclusion ? (
                   <section className="bg-[#262626] p-6 sm:p-8 border border-[#393939]">
-                    <h3 className="text-sm font-semibold text-[#f4f4f4] mb-5 sm:mb-6 uppercase tracking-wider border-l-4 border-[#0f62fe] pl-3">Conclusión del estudio</h3>
+                    <h3 className="text-sm font-semibold text-[#f4f4f4] mb-5 sm:mb-6 uppercase tracking-wider flex items-center gap-2.5">
+                      <span className="w-1.5 h-4 bg-[#0f62fe] inline-block" aria-hidden="true" />
+                      Conclusión del estudio
+                    </h3>
                     <p className="text-[#c6c6c6] leading-relaxed font-normal text-sm sm:text-base">{resultado.conclusion}</p>
                   </section>
                 ) : null}
@@ -1811,7 +1830,7 @@ export default function Home() {
                       <h4 className="text-sm sm:text-base font-bold text-[#ffffff] tracking-wide">
                         Versión Oscura
                       </h4>
-                      <span className="text-[10px] font-mono uppercase px-2 py-0.5 bg-[#0f62fe]/20 text-[#78a9ff] border border-[#0f62fe]/40 rounded">
+                      <span className="text-xs font-mono uppercase px-2 py-0.5 bg-[#0f62fe]/20 text-[#78a9ff] border border-[#0f62fe]/40 rounded">
                         Obsidiana
                       </span>
                     </div>
@@ -1849,7 +1868,7 @@ export default function Home() {
                       <h4 className="text-sm sm:text-base font-bold text-[#ffffff] tracking-wide">
                         Versión Clara
                       </h4>
-                      <span className="text-[10px] font-mono uppercase px-2 py-0.5 bg-white/10 text-white border border-white/20 rounded">
+                      <span className="text-xs font-mono uppercase px-2 py-0.5 bg-white/10 text-white border border-white/20 rounded">
                         Editorial Blanco
                       </span>
                     </div>
@@ -1940,7 +1959,7 @@ export default function Home() {
             {/* Barra superior */}
             <div className="flex items-center justify-between px-3.5 py-2.5 sm:px-4 sm:py-3 border-b border-[#333333] bg-[#161616] shrink-0">
               <div className="flex items-center gap-2 min-w-0 pr-2">
-                <span className="shrink-0 px-2 py-0.5 text-[10px] font-bold rounded bg-[#0f62fe] text-white uppercase tracking-wider">
+                <span className="shrink-0 px-2 py-0.5 text-xs font-bold rounded bg-[#0f62fe] text-white uppercase tracking-wider">
                   {previewArchivo.tipo === 'pdf' ? 'PDF' : 'Infografía 9:16'}
                 </span>
                 <p className="text-xs font-medium text-[#f4f4f4] truncate">{previewArchivo.nombre}</p>
@@ -1974,7 +1993,7 @@ export default function Home() {
                       className="rounded-lg shadow-[0_12px_36px_rgba(0,0,0,0.8)] border border-[#30363d] select-none pointer-events-auto"
                     />
                   </div>
-                  <p className="mt-2.5 text-[11px] text-[#8b949e] text-center px-2">
+                  <p className="mt-2.5 text-xs text-[#8d8d8d] text-center px-2">
                     💡 Tip: Mantén presionada la imagen para guardarla en tu galería de Fotos.
                   </p>
                 </div>
@@ -2129,7 +2148,7 @@ export default function Home() {
                     </a>
                   </div>
                 ) : null}
-                <p className="mt-2 text-[11px] leading-snug text-[#8d8d8d]">
+                <p className="mt-2 text-xs leading-snug text-[#8d8d8d]">
                   {esIOS() ? 'Usa "Ver" para previsualizar o "Guardar / Compartir" para agregarlo a tus Fotos o Archivos.' : 'Descargado automáticamente en tu navegador. Puedes abrirlo o guardarlo de nuevo.'}
                 </p>
               </div>
@@ -2174,7 +2193,7 @@ export default function Home() {
 
       {/* FOOTER PERFECTAMENTE VISIBLE Y ELEVADO */}
       <footer className="shrink-0 w-full border-t border-[#393939] bg-[#161616] z-20">
-        <div className="shell-container shell-safe-bottom flex flex-col items-center justify-center pt-6 text-[11px] text-[#a8a8a8] font-normal tracking-wide gap-1">
+        <div className="shell-container shell-safe-bottom flex flex-col items-center justify-center pt-6 text-xs text-[#a8a8a8] font-normal tracking-wide gap-1">
           <p className="text-[#c6c6c6]">Versión 1.1 Beta</p>
           <p>Desarrollado por Mauricio Andrade Luna</p>
         </div>
