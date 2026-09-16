@@ -645,10 +645,10 @@ callout(
   'Metodología de Entrega In-App Multiplataforma'
 );
 
-encabezadoSeccion('09', 'Certificación QA y Blindaje (49/49 Invariantes)');
+encabezadoSeccion('09', 'Certificación QA, Blindaje y Resiliencia (58/58 Invariantes)');
 
 parrafo(
-  'Para garantizar que ninguna actualización altere los flujos ministeriales ni exponga el código fuente, el sistema ejecuta 49 pruebas automatizadas y estrena un proxy perimetral:'
+  'Para garantizar que ninguna actualización altere los flujos ministeriales, exponga el código fuente ni pierda análisis al suspenderse la pantalla en móviles, el sistema ejecuta 58 pruebas automatizadas:'
 );
 
 tablaKeyValue([
@@ -656,6 +656,7 @@ tablaKeyValue([
   { clave: 'test:infografia (9 pruebas)', valor: 'Retícula Carbon 8px, safe zones, canvas fijo 1080×1920 px' },
   { clave: 'test:entrega (20 pruebas)', valor: 'Entrega iOS, MIME types, margen 98pt, término "expositor"' },
   { clave: 'test:seguridad (9 pruebas)', valor: 'Sin source maps, CSP estricto, proxy.ts, anti-SSRF y rate limit' },
+  { clave: 'test:resiliencia (9 pruebas)', valor: 'Screen Wake Lock API, persistencia cliente 48h, auto-recuperación' },
 ]);
 
 callout(
