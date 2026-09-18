@@ -2251,19 +2251,41 @@ export default function Home() {
       {/* FOOTER PERFECTAMENTE VISIBLE Y ELEVADO */}
       <footer className="shrink-0 w-full border-t border-[#393939] bg-[#161616] z-20">
         <div className="shell-container shell-safe-bottom flex flex-col sm:flex-row items-center justify-center pt-6 pb-6 text-xs text-[#a8a8a8] font-normal tracking-wide gap-1 sm:gap-2">
-          <p className="text-[#c6c6c6]">Versión 1</p>
+          <p className="text-[#c6c6c6]">Versión 1.0</p>
           <span className="hidden sm:inline text-[#525252]">·</span>
-          <p>
-            Desarrollado por{' '}
+          <div className="flex items-center gap-1.5">
+            <span>Desarrollado por</span>
             <a
               href="https://www.alsiztech.com"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-[#78a9ff] hover:text-[#a6c8ff] hover:underline underline-offset-4 transition-colors font-medium"
+              className="inline-flex items-center gap-1.5 text-[#78a9ff] hover:text-[#a6c8ff] hover:underline underline-offset-4 transition-colors font-medium group"
+              title="Visitar www.alsiztech.com"
             >
-              AlsizTech
+              <svg
+                viewBox="0 0 200 200"
+                className="w-4 h-4 shrink-0 transition-transform group-hover:scale-110"
+                aria-hidden="true"
+              >
+                <defs>
+                  <linearGradient id="alsizFooterGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="#2563EB" />
+                    <stop offset="45%" stopColor="#06B6D4" />
+                    <stop offset="100%" stopColor="#1E3A8A" />
+                  </linearGradient>
+                </defs>
+                <path
+                  d="M 55 145 L 100 70 L 145 145"
+                  fill="none"
+                  stroke="url(#alsizFooterGrad)"
+                  strokeWidth="38"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+              <span>AlsizTech</span>
             </a>
-          </p>
+          </div>
         </div>
       </footer>
     </div>

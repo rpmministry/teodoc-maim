@@ -731,12 +731,23 @@ for (let p = 1; p <= totalPaginas; p++) {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
   setText(C.secondary);
-  const piePrefijo = 'Versión 1 · Desarrollado por ';
+  const piePrefijo = 'Versión 1.0 · Desarrollado por ';
   doc.text(piePrefijo, margin, pieY);
   const anchoPrefijo = doc.getTextWidth(piePrefijo);
+
+  // Isotipo distintivo AlsizTech en vector
+  const iconX = margin + anchoPrefijo;
+  const iconY = pieY - 1;
+  setStroke([6, 182, 212]); // #06B6D4 Cyan de la identidad AlsizTech
+  doc.setLineWidth(1.3);
+  doc.setLineCap('round');
+  doc.setLineJoin('round');
+  doc.line(iconX, iconY, iconX + 3.5, iconY - 5.5);
+  doc.line(iconX + 3.5, iconY - 5.5, iconX + 7, iconY);
+
   setText(C.accent);
   doc.setFont('helvetica', 'bold');
-  doc.textWithLink('AlsizTech · www.alsiztech.com', margin + anchoPrefijo, pieY, { url: 'https://www.alsiztech.com' });
+  doc.textWithLink('AlsizTech · www.alsiztech.com', iconX + 10, pieY, { url: 'https://www.alsiztech.com' });
 
   doc.setFont('helvetica', 'bold');
   setText(C.accent);
