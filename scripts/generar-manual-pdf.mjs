@@ -731,7 +731,12 @@ for (let p = 1; p <= totalPaginas; p++) {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
   setText(C.secondary);
-  doc.text('© 2026 TeoDoc Ministerial · Sistema de Análisis Homilético y Exegético', margin, pieY);
+  const piePrefijo = 'Versión 1 · Desarrollado por ';
+  doc.text(piePrefijo, margin, pieY);
+  const anchoPrefijo = doc.getTextWidth(piePrefijo);
+  setText(C.accent);
+  doc.setFont('helvetica', 'bold');
+  doc.textWithLink('AlsizTech · www.alsiztech.com', margin + anchoPrefijo, pieY, { url: 'https://www.alsiztech.com' });
 
   doc.setFont('helvetica', 'bold');
   setText(C.accent);

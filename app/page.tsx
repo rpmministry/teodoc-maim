@@ -2250,9 +2250,20 @@ export default function Home() {
 
       {/* FOOTER PERFECTAMENTE VISIBLE Y ELEVADO */}
       <footer className="shrink-0 w-full border-t border-[#393939] bg-[#161616] z-20">
-        <div className="shell-container shell-safe-bottom flex flex-col items-center justify-center pt-6 text-xs text-[#a8a8a8] font-normal tracking-wide gap-1">
-          <p className="text-[#c6c6c6]">Versión 1.1 Beta</p>
-          <p>Desarrollado por Mauricio Andrade Luna</p>
+        <div className="shell-container shell-safe-bottom flex flex-col sm:flex-row items-center justify-center pt-6 pb-6 text-xs text-[#a8a8a8] font-normal tracking-wide gap-1 sm:gap-2">
+          <p className="text-[#c6c6c6]">Versión 1</p>
+          <span className="hidden sm:inline text-[#525252]">·</span>
+          <p>
+            Desarrollado por{' '}
+            <a
+              href="https://www.alsiztech.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[#78a9ff] hover:text-[#a6c8ff] hover:underline underline-offset-4 transition-colors font-medium"
+            >
+              AlsizTech
+            </a>
+          </p>
         </div>
       </footer>
     </div>
