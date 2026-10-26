@@ -42,6 +42,10 @@ Crea `.env.local` a partir de `.env.example`. Nunca lo agregues a Git.
 | `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` | Para audio | Cloud name usado por cliente y servidor |
 | `CLOUDINARY_API_KEY` | Opcional | Ruta `/api/upload` |
 | `CLOUDINARY_API_SECRET` | Opcional | Ruta `/api/upload`; nunca exponer |
+| `BIBLE_VERIFY` | Recomendada | Activa la verificación con GetBible; `false` la desactiva |
+| `BIBLE_API_BASE` | Recomendada | Base de GetBible, por defecto `https://query.getbible.net/v2` |
+| `BIBLE_TRANSLATION` | Recomendada | Traducción abierta, por defecto `sse` |
+| `BIBLE_TRANSLATION_LICENSE` | Recomendada | Licencia del texto, por defecto `Dominio público` |
 | `NEXT_PUBLIC_SITE_URL` | Producción | URL pública sin barra final; resuelve Open Graph |
 | `SUPADATA_API_KEY` | No | Proveedor heredado de transcripción por URL |
 | `TRANSCRIPT_SERVICE_URL` | No | Servicio propio de transcripción |
@@ -65,6 +69,23 @@ Reglas:
 
 Los modelos configurados en `lib/ai-gemini.ts` son `gemini-3.8-flash` y `gemini-4.0-flash`. Si tu cuenta no los ofrece, el sistema intenta OpenRouter y DeepSeek como respaldo; también puedes ajustar la lista a los modelos disponibles en tu cuenta. Confirma la disponibilidad en https://ai.google.dev/gemini-api/docs/models y vuelve a ejecutar las pruebas.
 
+### Biblia abierta (GetBible)
+
+TeoDoc verifica las referencias con **GetBible V2** y **Sagradas Escrituras (1569)**, una traducción de dominio público.
+
+```text
+BIBLE_API_BASE=https://query.getbible.net/v2
+BIBLE_TRANSLATION=sse
+BIBLE_TRANSLATION_LICENSE=Dominio público
+BIBLE_VERIFY=true
+```
+
+- Repositorio de la API: https://github.com/getbible/v2 (GPL-3.0).
+- Ejemplo de consulta: https://query.getbible.net/v2/sse/Santiago 2:17
+- Si autoaloja GetBible, cambie `BIBLE_API_BASE` por su URL.
+- Si usa otra traducción, cambie `BIBLE_TRANSLATION` y su licencia; no etiquete como dominio público un texto protegido.
+- Si la API no responde, el análisis continúa y las referencias quedan pendientes.
+- La integración no requiere clave.
 ## 3. Cloudinary para audio
 
 1. Crea una cuenta y copia el **Cloud name**.

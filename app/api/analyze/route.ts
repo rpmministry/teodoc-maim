@@ -6,6 +6,7 @@ import { contextoRiqueza } from '@/lib/riqueza-contenido';
 import { esModalidad, esRangoEdad, normalizarPredicador, normalizarTituloProporcionado, normalizarFechaISO, obtenerRangoEdad } from '@/lib/modalidades';
 import { especializadoTieneContenido, normalizarAnalisisGeneral, normalizarEspecializado, normalizarMetadatos, resumenParaEspecialidad } from '@/lib/normalizar';
 import { construirPromptEspecializado, ESQUEMAS_POR_MODALIDAD } from '@/lib/ai/modalidades';
+import { verificarReferencias } from '@/lib/biblia';
 import type { MetadatosPredica, ModalidadId, PredicaAnalisis, RangoEdad } from '@/lib/tipos';
 
 export const maxDuration = 300;
@@ -382,6 +383,7 @@ export async function POST(req: NextRequest) {
     }
 
     const analisisGeneral: PredicaAnalisis = normalizarAnalisisGeneral(crudoGeneral);
+    await verificarReferencias(analisisGeneral);
     if (metadatos.tituloProporcionado) analisisGeneral.titulo = metadatos.tituloProporcionado;
 
     if (modalidad === 'general') {

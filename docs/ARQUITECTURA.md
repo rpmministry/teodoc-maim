@@ -74,7 +74,7 @@ El especialista recibe la transcripción y un resumen compacto del análisis gen
 
 ## Referencias y exportación
 
-- `lib/referencias.ts` construye un inventario único de referencias detectadas. Cada una declara tipo de uso, confianza, traducción y estado `pendiente_de_verificacion`. No se presenta como texto canónico verificado.
+- `lib/referencias.ts` construye un inventario único de referencias detectadas. `lib/biblia.ts` las verifica con GetBible y Sagradas Escrituras 1569 (dominio público); cada referencia declara tipo de uso, confianza, traducción, licencia y estado verificado o pendiente. Si la consulta falla, se conserva el texto detectado y se marca pendiente.
 - `lib/pdf/` genera los cinco PDF.
 - `lib/docx/` genera los cinco DOCX con portada, estructura, tablas, citas y paginación.
 - `lib/biblioteca.ts` conserva hasta seis predicaciones durante 30 días en `localStorage`, con sus documentos independientes. No es una base de datos multiusuario ni un historial de versiones.

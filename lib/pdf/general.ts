@@ -2,7 +2,7 @@ import type { MetadatosPredica, PredicaAnalisis } from '../tipos.ts';
 import { DocumentoPDF, fechaDocumento, type RecursosPdf } from './base.ts';
 import { fuentePredica, metadatosDocumento } from './comunes.ts';
 import { preguntasReflexion } from '../reflexion.ts';
-import { construirReferencias, NOTA_VERIFICACION } from '../referencias.ts';
+import { construirReferencias, notaReferencias } from '../referencias.ts';
 
 export function construirPdfGeneral(analisis: PredicaAnalisis, metadatos: MetadatosPredica, recursos: RecursosPdf): Blob {
   const meta = metadatosDocumento(analisis, metadatos);
@@ -112,7 +112,7 @@ export function construirPdfGeneral(analisis: PredicaAnalisis, metadatos: Metada
   if (referencias.length) {
     d.tituloSeccion('Inventario de referencias bíblicas', '11');
     d.inventarioReferencias(referencias);
-    d.parrafo(NOTA_VERIFICACION, { tamano: 8.5, color: [122, 102, 98] });
+    d.parrafo(notaReferencias(referencias), { tamano: 8.5, color: [122, 102, 98] });
   }
 
   d.parrafo(

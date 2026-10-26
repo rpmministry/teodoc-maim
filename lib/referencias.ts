@@ -5,13 +5,24 @@ export interface ReferenciaDetectada {
   texto: string;
   tipoUso: 'lectura_o_cita' | 'referencia_detectada';
   confianza: 'media' | 'baja';
-  estado: 'pendiente_de_verificacion';
+  estado: 'verificada' | 'pendiente_de_verificacion';
   traduccion: string;
+  licencia?: string;
   fuente: string;
 }
 
 export const NOTA_VERIFICACION =
-  'Las referencias se detectaron a partir del análisis de la transcripción. Su texto y su traducción deben verificarse con una fuente bíblica autorizada antes de su publicación o reproducción.';
+  'Las referencias se detectaron a partir del análisis de la transcripción. Las que no pudieron comprobarse se marcan como pendientes y deben verificarse con una fuente bíblica autorizada antes de su publicación o reproducción.';
+
+export function notaReferencias(referencias: ReferenciaDetectada[]): string {
+  const verificadas = referencias.filter((referencia) => referencia.estado === 'verificada').length;
+  if (!verificadas) return NOTA_VERIFICACION;
+  if (verificadas === referencias.length) {
+    const primera = referencias[0];
+    return `Referencias verificadas con ${primera.traduccion}${primera.licencia ? ` (${primera.licencia})` : ''}. El texto se conserva según la fuente consultada.`;
+  }
+  return `Se verificaron ${verificadas} de ${referencias.length} referencias. Las restantes siguen pendientes y deben revisarse con una fuente bíblica autorizada.`;
+}
 
 export function construirReferencias(analisis: PredicaAnalisis): ReferenciaDetectada[] {
   const fuentes: Array<{ versiculo: Versiculo; tipoUso: ReferenciaDetectada['tipoUso']; confianza: ReferenciaDetectada['confianza'] }> = [
@@ -22,23 +33,23 @@ export function construirReferencias(analisis: PredicaAnalisis): ReferenciaDetec
     ),
   ];
 
-  const vistos = new Set<string>();
-  const resultado: ReferenciaDetectada[] = [];
+  const indice = new Map<string, ReferenciaDetectada>();
   for (const { versiculo, tipoUso, confianza } of fuentes) {
     const cita = versiculo.cita.trim();
     if (!cita) continue;
     const clave = cita.toLowerCase();
-    if (vistos.has(clave)) continue;
-    vistos.add(clave);
-    resultado.push({
+    const existente = indice.get(clave);
+    if (existente && existente.estado === 'verificada') continue;
+    indice.set(clave, {
       cita,
       texto: versiculo.texto,
       tipoUso,
       confianza,
-      estado: 'pendiente_de_verificacion',
-      traduccion: 'No identificada en la transcripción',
-      fuente: 'Análisis de la transcripción',
+      estado: versiculo.estadoVerificacion || 'pendiente_de_verificacion',
+      traduccion: versiculo.traduccion || 'No identificada en la transcripción',
+      licencia: versiculo.licencia,
+      fuente: versiculo.fuente || 'Análisis de la transcripción',
     });
   }
-  return resultado;
+  return Array.from(indice.values());
 }

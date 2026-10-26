@@ -48,7 +48,7 @@ Se transformó el proyecto en **TeoDoc MAIM**: una aplicación de análisis bíb
 - `lib/ai/modalidades.ts`: reglas y esquemas de las cuatro especialidades.
 - `lib/tipos.ts`, `lib/normalizar.ts`, `lib/modalidades.ts`, `lib/validacion-formulario.ts`.
 - `lib/pdf/` y `lib/docx/`: cinco constructores PDF y cinco DOCX.
-- `lib/referencias.ts`: inventario de referencias con estado de verificación.
+- `lib/referencias.ts` y `lib/biblia.ts`: inventario y verificación con GetBible/Sagradas Escrituras 1569 (dominio público).
 - `lib/biblioteca.ts` y `components/resultados/biblioteca.tsx`: persistencia, generación independiente e historial local.
 - `components/marca.tsx`, `components/formulario-analisis.tsx`, `components/resultados/`.
 - `app/globals.css`, `app/layout.tsx`.
@@ -65,6 +65,7 @@ Se transformó el proyecto en **TeoDoc MAIM**: una aplicación de análisis bíb
 | `npm run build` | correcto |
 | `test:logica` | 11 superadas |
 | `test:modalidades` | 14 superadas |
+| `test:biblia` | 4 superadas |
 | `test:pdf` | 10 superadas |
 | `test:word` | 6 superadas |
 | `test:entrega` | 10 superadas |
@@ -72,7 +73,7 @@ Se transformó el proyecto en **TeoDoc MAIM**: una aplicación de análisis bíb
 | `test:resiliencia` | 9 superadas |
 | `test:identidad` | 8 superadas |
 | `test:biblioteca` | 4 superadas |
-| **Total** | **81** |
+| **Total** | **85** |
 
 PDF observados: general 6 páginas, grupos 6, jóvenes 6, niños 5, devocionales 12. Word: cinco DOCX válidos, con portada, estructura propia y paginación. Descarga real en navegador: `teodoc-maim-jovenes.pdf` y `teodoc-maim-jovenes.docx`. La biblioteca pasó de 2/5 a 5/5 con respuestas simuladas, sin errores.
 
@@ -87,10 +88,10 @@ PDF observados: general 6 páginas, grupos 6, jóvenes 6, niños 5, devocionales
 
 ## Limitaciones de la especialización
 
-- No hay una API bíblica autorizada configurada: las referencias se muestran como pendientes de verificación y no se presenta una reconstrucción de memoria como cita canónica.
+- La verificación bíblica del análisis general usa GetBible V2 y Sagradas Escrituras (1569), de dominio público. Si la API falla, la referencia queda pendiente; no se presenta una reconstrucción de memoria como cita canónica. Las lecturas internas de las especialidades no se verifican automáticamente.
 - La biblioteca es local (localStorage, 30 días, máximo seis predicaciones), no una base de datos multiusuario.
 - No se implementó un historial de versiones por documento; se conserva la última versión de cada modalidad.
-- La generación real general se ejecutó con 347 caracteres (HTTP 200 en 96 s), pero Gemini 3.8 estaba saturado y 4.0 no existe; respondió el respaldo. Las especialidades en vivo y la transcripción controlada no se probaron.
+- La generación real general se ejecutó con 347 caracteres (HTTP 200 en 96 s), pero Gemini 3.8 estaba saturado y 4.0 no existe; respondió el respaldo. La verificación con GetBible comprobó 6/6 referencias con Sagradas Escrituras 1569. Las especialidades en vivo y la transcripción controlada no se probaron.
 
 ## Incidencias corregidas durante la verificación
 

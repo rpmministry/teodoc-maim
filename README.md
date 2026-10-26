@@ -78,7 +78,7 @@ La modalidad especializada se genera en una segunda llamada que recibe la transc
 
 La profundidad del análisis es proporcional al contenido real: extensión, densidad, diversidad de ideas, referencias y peso teológico. No se rellenan secciones para alcanzar un número de páginas.
 
-El análisis incluye un inventario de referencias detectadas. No hay una API bíblica autorizada configurada, por lo que las referencias se muestran como **pendientes de verificación**; no se presenta una reconstrucción de memoria como cita canónica. Ver `docs/REFERENCIAS.md`.
+El análisis incluye un inventario de referencias. La verificación usa la API abierta **GetBible V2** con **Sagradas Escrituras (1569)**, una traducción de dominio público. Si una referencia no se puede comprobar, queda marcada como pendiente. No se presenta una reconstrucción de memoria como cita canónica. Ver `docs/REFERENCIAS.md` y https://github.com/getbible/v2.
 
 ## Tecnologías
 
@@ -110,6 +110,10 @@ DEEPSEEK_API_KEY=
 ASSEMBLYAI_API_KEY=
 DEEPGRAM_API_KEY=
 NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=
+BIBLE_API_BASE=https://query.getbible.net/v2
+BIBLE_TRANSLATION=sse
+BIBLE_TRANSLATION_LICENSE=Dominio público
+BIBLE_VERIFY=true
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
 ```
 
@@ -141,6 +145,7 @@ npm run typecheck      # TypeScript sin emitir
 npm run verificar      # suite completa de pruebas
 npm run test:logica    # proporcionalidad del análisis
 npm run test:modalidades
+npm run test:biblia    # normaliza y verifica referencias con fuente abierta
 npm run test:pdf       # genera y audita los cinco PDF en tmp/pdf/
 npm run test:word      # genera y audita los cinco DOCX en tmp/docx/
 npm run test:biblioteca # persistencia, historial y regeneración independiente
@@ -159,11 +164,11 @@ Los PDF de prueba se escriben en `tmp/pdf/` y no se versionan. Las capturas y ar
 - `npm run lint`: 0 errores.
 - `npm run typecheck`: 0 errores.
 - `npm run build`: compilación correcta.
-- `npm run verificar`: 81 pruebas superadas (lógica 11, modalidades 14, PDF 10, Word 6, entrega 10, seguridad 9, resiliencia 9, identidad 8, biblioteca 4).
+- `npm run verificar`: 85 pruebas superadas (lógica 11, modalidades 14, Biblia 4, PDF 10, Word 6, entrega 10, seguridad 9, resiliencia 9, identidad 8, biblioteca 4).
 - Verificación visual de los cinco PDF, DOCX e interfaz en escritorio y móvil.
 - Descarga real desde el navegador comprobada con `teodoc-maim-jovenes.pdf` (6 páginas, texto con predicador y acentos).
 
-Se ejecutó una prueba real de extremo a extremo con 347 caracteres: respuesta 200 en 96 s, 3 puntos y acentos conservados. Gemini `3.8-flash` estaba saturado y `4.0-flash` no existe en la cuenta; respondió el respaldo OpenRouter/DeepSeek. La transcripción de audio y las cinco especialidades en vivo no se ejecutaron en la suite automatizada. Consulta `docs/PRUEBAS.md` para el detalle y `docs/IDENTIDAD.md` para las fuentes.
+Se ejecutó una prueba real de extremo a extremo con 347 caracteres: respuesta 200 en 96 s, 3 puntos y acentos conservados. La verificación bíblica real comprobó 6 de 6 referencias con GetBible y Sagradas Escrituras 1569. Gemini `3.8-flash` estaba saturado y `4.0-flash` no existe en la cuenta; respondió el respaldo OpenRouter/DeepSeek. La transcripción de audio y las cinco especialidades en vivo no se ejecutaron en la suite automatizada. Consulta `docs/PRUEBAS.md` para el detalle y `docs/IDENTIDAD.md` para las fuentes.
 
 ## Privacidad y cuidado
 
@@ -183,6 +188,7 @@ Se ejecutó una prueba real de extremo a extremo con 347 caracteres: respuesta 2
 - [`docs/PRUEBAS.md`](docs/PRUEBAS.md): cobertura, comandos y resultados.
 - [`docs/ARQUITECTURA.md`](docs/ARQUITECTURA.md): flujo, endpoints, persistencia y seguridad.
 - [`docs/DESPLIEGUE.md`](docs/DESPLIEGUE.md): configuración de claves, Cloudinary, GitHub y Vercel.
+- [`docs/OPEN_SOURCE.md`](docs/OPEN_SOURCE.md): ruta de código abierto para Biblia, Whisper, PostgreSQL, Auth.js, MinIO y despliegue.
 
 ## Repositorio
 

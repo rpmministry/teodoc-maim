@@ -15,6 +15,7 @@ npm run verificar
 | --- | --- | --- |
 | `test:logica` | proporcionalidad y riqueza del contenido | 11 |
 | `test:modalidades` | cinco modalidades, metadatos, referencias, normalización y prompts | 14 |
+| `test:biblia` | normalización y verificación con fuente abierta | 4 |
 | `test:pdf` | cinco PDF reales, fuentes, acentos, secciones y paginación | 10 |
 | `test:word` | cinco DOCX reales, estructura, acentos y paginación | 6 |
 | `test:entrega` | descarga, iOS, vista previa, retiro de infografías | 10 |
@@ -22,7 +23,7 @@ npm run verificar
 | `test:resiliencia` | wake lock, TTL, recuperación y limpieza | 9 |
 | `test:identidad` | nombre oficial, activos, colores y fuente | 8 |
 | `test:biblioteca` | persistencia, historial y regeneración independiente | 4 |
-| **Total** | | **81** |
+| **Total** | | **85** |
 
 La suite no necesita servidor ni claves de IA. Los PDF y DOCX se generan con fixtures en `scripts/fixtures/demo.ts` y se escriben en `tmp/pdf/` y `tmp/docx/`.
 
@@ -61,6 +62,16 @@ Verificación funcional de los cinco PDF
 
 Páginas observadas en PDF: general 6, grupos 6, jóvenes 6, niños 5, devocionales 12.
 
+## Verificación bíblica abierta
+
+`scripts/verificar-biblia.mts` comprueba con `fetch` simulado:
+
+- normalización de nombres y abreviaturas españolas;
+- asignación de texto, traducción, licencia y fuente;
+- referencias no disponibles marcadas como pendientes;
+- ausencia de traducciones inventadas cuando falla la consulta.
+
+La prueba real con GetBible y `sse` verificó 6 de 6 referencias del fixture y devolvió textos de Sagradas Escrituras (1569), marcados como dominio público. Una prueba de extremo a extremo posterior (45 s) verificó `Santiago 2:17` en el análisis generado. La consulta real no forma parte de la suite para evitar dependencia de red.
 ## Verificación de Word
 
 `scripts/verificar-word.mts` genera los cinco DOCX y comprueba:

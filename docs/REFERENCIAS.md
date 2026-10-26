@@ -1,46 +1,66 @@
-# Referencias bíblicas y verificación
+# Referencias bíblicas y verificación abierta
 
-## Estado actual
+## Implementación actual
 
-La aplicación construye un **inventario de referencias detectadas** a partir del análisis de la transcripción. Cada referencia incluye:
+La aplicación verifica las referencias del análisis general con:
 
-- cita;
-- texto detectado, si existe;
-- tipo de uso (`lectura_o_cita` o `referencia_detectada`);
-- confianza inicial (`media` o `baja`);
-- estado (`pendiente_de_verificacion`);
-- traducción identificada;
-- fuente.
+- **GetBible V2**, API de código abierto: https://github.com/getbible/v2
+- **Sagradas Escrituras (1569)**, traducción española de dominio público (`sse`).
+- Endpoint de consulta: `https://query.getbible.net/v2/sse/{referencia}`
 
-El inventario se muestra en el análisis general web, en el PDF general y en el Word general. Las demás especialidades conservan las citas usadas y una nota de verificación.
+El proceso:
 
-## Por qué todo aparece como pendiente
+1. Normaliza nombres y abreviaturas de libros en español.
+2. Consulta las referencias únicas del análisis general.
+3. Sustituye el texto detectado por el texto de la fuente abierta.
+4. Registra traducción, licencia, URL de la fuente y estado.
+5. Si una consulta falla, conserva el texto detectado y marca la referencia como pendiente.
 
-No hay una API bíblica autorizada configurada en este entorno. Por eso el sistema **no afirma** que un texto sea una cita canónica verificada. Tampoco reconstruye versículos de memoria en los prompts: la instrucción actual es registrar la referencia y conservar solo el fragmento que la transcripción cite, marcándolo para revisión.
+La verificación real de prueba comprobó **6 de 6 referencias** del fixture con esta fuente.
 
-Esto cumple con el principio de no presentar como certeza lo que no se ha comprobado. La verificación con una fuente autorizada es un paso posterior, humano o mediante un proveedor con licencia.
+## Variables de entorno
 
-## Traducciones y permisos
+```text
+BIBLE_API_BASE=https://query.getbible.net/v2
+BIBLE_TRANSLATION=sse
+BIBLE_TRANSLATION_LICENSE=Dominio público
+BIBLE_VERIFY=true
+```
 
-- Reina-Valera 1960 es una traducción protegida. No se debe redistribuir su texto completo sin autorización.
-- No se deben mezclar traducciones ni atribuir al predicador una versión que no identificó.
-- Si se integra una API bíblica, debe registrar proveedor, traducción, licencia, fecha de consulta y restricciones de reproducción.
-- Si una traducción no permite la reproducción, el documento debe mostrar la referencia, un extracto permitido cuando corresponda y un enlace a una fuente autorizada.
-- Las fuentes de terceros no conceden permiso automático para redistribuir sus textos.
+- `BIBLE_VERIFY=false` desactiva las consultas y deja todas las referencias pendientes.
+- `BIBLE_TRANSLATION` debe corresponder a una traducción disponible en la instancia de GetBible.
+- Si cambias a una traducción con derechos, actualiza `BIBLE_TRANSLATION_LICENSE` y verifica que su licencia permita la reproducción prevista. No uses una licencia de dominio público para un texto protegido.
 
-## Próxima integración recomendada
+## Licencias
 
-1. Elegir un proveedor bíblico autorizado con permiso de reproducción para el uso previsto.
-2. Configurar la clave en el servidor, nunca en el cliente.
-3. Implementar una etapa `verificarReferencias` que consulte el pasaje, guarde la traducción y la licencia, y actualice el estado a `verificada` o `no_disponible`.
-4. Mostrar el estado en la interfaz y en los PDF/Word.
-5. No generar los documentos finales con citas marcadas como verificadas si la consulta no se completó.
+- **GetBible V2** está publicado bajo GPL-3.0. Si se autoaloja o modifica, debe cumplirse la GPL.
+- **Sagradas Escrituras (1569)** se distribuye como dominio público en GetBible.
+- **Reina-Valera 1960 y otras revisiones modernas** están protegidas. No se redistribuyen como texto completo sin autorización.
+- No se mezclan traducciones: cada referencia verificada conserva la traducción de la fuente consultada.
+- No se atribuye al predicador una traducción que no identificó.
 
-## Pruebas
+## Autoalojamiento opcional
 
-`npm run test:modalidades` comprueba que:
+Para no depender de la API pública:
 
-- el inventario no duplica referencias;
-- todas las referencias declaran su estado;
-- los tipos de uso son válidos;
-- el texto no promete una verificación que no existe.
+```bash
+git clone https://github.com/getbible/v2.git
+cd v2
+# Sigue las instrucciones del repositorio para levantar la API
+```
+
+Después configura:
+
+```text
+BIBLE_API_BASE=http://localhost:PUERTO/v2
+```
+
+El backend de TeoDoc llama a GetBible desde el servidor; la API bíblica no se expone al navegador.
+
+## Límites
+
+- La traducción `sse` es histórica y su lenguaje puede resultar arcaico; es fiel al texto disponible, pero puede requerir revisión editorial.
+- No se verifican las lecturas internas de las especialidades generadas por IA; el inventario verificado es el del análisis general.
+- No hay marcas de tiempo por referencia.
+- La consulta depende de red y disponibilidad del servicio; un fallo no invalida el análisis, solo deja la referencia pendiente.
+- La verificación textual no sustituye la revisión exegética ni pastoral.

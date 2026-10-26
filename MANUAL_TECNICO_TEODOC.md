@@ -52,6 +52,7 @@ lib/
   docx/                       Generación de los cinco Word
   biblioteca.ts               Persistencia local e historial
   referencias.ts              Inventario y estado de verificación
+  biblia.ts                   Verificación con GetBible y dominio público
 scripts/                      Pruebas y fixtures
 public/
   institucional/              Logotipo e isotipo oficiales
@@ -94,7 +95,7 @@ npm run build
 npm run verificar
 ```
 
-La suite local (81 pruebas) cubre lógica, modalidades, los cinco PDF, los cinco Word, biblioteca, entrega, seguridad, resiliencia e identidad. No requiere claves. La generación real general se probó con 347 caracteres (HTTP 200, 96 s) mediante el respaldo; Gemini 3.8 estaba saturado y 4.0 no disponible.
+La suite local (85 pruebas) cubre lógica, modalidades, verificación bíblica, los cinco PDF, los cinco Word, biblioteca, entrega, seguridad, resiliencia e identidad. No requiere claves. La generación real general se probó con 347 caracteres (HTTP 200, 96 s) mediante el respaldo; Gemini 3.8 estaba saturado y 4.0 no disponible.
 
 ## 8. Límites
 

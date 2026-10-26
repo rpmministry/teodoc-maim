@@ -557,7 +557,7 @@ export class DocumentoPDF {
     ['Referencia', 'Uso', 'Estado'].forEach((titulo, indice) => this.doc.text(titulo.toUpperCase(), x[indice] + 7, this.y + 16));
     this.y += 24;
     referencias.forEach((referencia, indice) => {
-      const celdas = [referencia.cita, referencia.tipoUso === 'lectura_o_cita' ? 'Lectura o cita' : 'Detectada', 'Pendiente'];
+      const celdas = [referencia.cita, referencia.tipoUso === 'lectura_o_cita' ? 'Lectura o cita' : 'Detectada', referencia.estado === 'verificada' ? 'Verificada' : 'Pendiente'];
       const lineas = celdas.map((celda, i) => {
         this.fuentes(i === 0);
         this.doc.setFontSize(8.5);

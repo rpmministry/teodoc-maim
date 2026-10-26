@@ -5,6 +5,10 @@ export type RangoEdad = '3-5' | '6-8' | '9-12';
 export interface Versiculo {
   cita: string;
   texto: string;
+  traduccion?: string;
+  licencia?: string;
+  fuente?: string;
+  estadoVerificacion?: 'verificada' | 'pendiente_de_verificacion';
 }
 
 export interface Subtema {

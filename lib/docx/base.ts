@@ -205,7 +205,7 @@ export class DocumentoWord {
       ...referencias.map((referencia) => new TableRow({ children: [
         celda(referencia.cita, true),
         celda(referencia.tipoUso === 'lectura_o_cita' ? 'Lectura o cita' : 'Detectada'),
-        celda('Pendiente de verificación'),
+        celda(referencia.estado === 'verificada' ? `Verificada · ${referencia.traduccion}` : 'Pendiente'),
       ] })),
     ];
     this.hijos.push(new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: filas }));

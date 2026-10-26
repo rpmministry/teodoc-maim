@@ -61,10 +61,7 @@ function listaMultilinea(valor: unknown, max = 30): string[] {
 function listaVersiculos(valor: unknown, max = 20): Versiculo[] {
   if (!Array.isArray(valor)) return [];
   return valor
-    .map((item) => {
-      const v = registro(item);
-      return { cita: texto(v.cita), texto: texto(v.texto) };
-    })
+    .map((item) => versiculo(item))
     .filter((v) => v.cita || v.texto)
     .slice(0, max);
 }
@@ -72,7 +69,15 @@ function listaVersiculos(valor: unknown, max = 20): Versiculo[] {
 function versiculo(valor: unknown): Versiculo {
   const v = registro(valor);
   if (typeof valor === 'string') return { cita: texto(valor), texto: '' };
-  return { cita: texto(v.cita), texto: texto(v.texto) };
+  const resultado: Versiculo = { cita: texto(v.cita), texto: texto(v.texto) };
+  const traduccion = texto(v.traduccion);
+  const licencia = texto(v.licencia);
+  const fuente = texto(v.fuente);
+  if (traduccion) resultado.traduccion = traduccion;
+  if (licencia) resultado.licencia = licencia;
+  if (fuente) resultado.fuente = fuente;
+  if (v.estadoVerificacion === 'verificada' || v.estadoVerificacion === 'pendiente_de_verificacion') resultado.estadoVerificacion = v.estadoVerificacion;
+  return resultado;
 }
 
 function pasos(valor: unknown, max = 20): string[] {
