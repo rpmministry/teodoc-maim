@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import type { ResultadoAnalisis } from '@/lib/tipos';
-import { fechaLarga, nombreArchivoPdf, obtenerModalidad, obtenerRangoEdad } from '@/lib/modalidades';
+import { fechaLarga, nombreArchivoPdf, nombreArchivoWord, obtenerModalidad, obtenerRangoEdad } from '@/lib/modalidades';
 import { especializadoTieneContenido } from '@/lib/normalizar';
 import { IconoDescarga, IconoFlecha } from '../marca';
 import ResultadoGeneral from './general';
@@ -11,13 +11,16 @@ import { ResultadoDevocionales, ResultadoGrupos, ResultadoJovenes, ResultadoNino
 interface Props {
   resultado: ResultadoAnalisis;
   descargando: 'general' | 'modalidad' | null;
+  descargandoWord: 'general' | 'modalidad' | null;
   onNuevo: () => void;
   onDescargarGeneral: () => void;
   onDescargarModalidad: () => void;
+  onDescargarWordGeneral: () => void;
+  onDescargarWordModalidad: () => void;
   onReintentarModalidad: () => void;
 }
 
-export default function PanelResultados({ resultado, descargando, onNuevo, onDescargarGeneral, onDescargarModalidad, onReintentarModalidad }: Props) {
+export default function PanelResultados({ resultado, descargando, descargandoWord, onNuevo, onDescargarGeneral, onDescargarModalidad, onDescargarWordGeneral, onDescargarWordModalidad, onReintentarModalidad }: Props) {
   const modalidad = obtenerModalidad(resultado.metadatos.modalidad);
   const tieneEspecializado = resultado.metadatos.modalidad !== 'general' &&
     especializadoTieneContenido(resultado.metadatos.modalidad, resultado.especializado);
@@ -59,6 +62,14 @@ export default function PanelResultados({ resultado, descargando, onNuevo, onDes
             {descargando === 'general' ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-[var(--coral)]/30 border-t-[var(--coral)]" aria-hidden="true" /> : <IconoDescarga />}
             Análisis general
           </button>
+          <button type="button" onClick={onDescargarWordModalidad} disabled={descargandoWord !== null || !tieneEspecializado} className="btn-secundario px-3 py-2 text-[11px] disabled:cursor-not-allowed disabled:opacity-45">
+            {descargandoWord === 'modalidad' ? <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-[var(--coral)]/30 border-t-[var(--coral)]" aria-hidden="true" /> : <IconoDescarga className="h-3.5 w-3.5" />}
+            Word modalidad
+          </button>
+          <button type="button" onClick={onDescargarWordGeneral} disabled={descargandoWord !== null} className="btn-secundario px-3 py-2 text-[11px]">
+            {descargandoWord === 'general' ? <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-[var(--coral)]/30 border-t-[var(--coral)]" aria-hidden="true" /> : <IconoDescarga className="h-3.5 w-3.5" />}
+            Word general
+          </button>
         </div>
         <button type="button" onClick={onNuevo} className="text-left text-[12px] font-semibold text-[var(--coralOscuro)] underline-offset-4 hover:underline sm:text-right">
           Preparar otra prédica <IconoFlecha className="ml-1 inline h-3.5 w-3.5" />
@@ -69,6 +80,7 @@ export default function PanelResultados({ resultado, descargando, onNuevo, onDes
         <div className="mb-5 flex flex-wrap gap-2 text-[10.5px] text-[var(--muted)]">
           <span className="rounded-full bg-[#f5ebdd] px-3 py-1.5 font-medium">PDF: {nombreArchivoPdf(resultado.metadatos.modalidad)}</span>
           {resultado.metadatos.modalidad !== 'general' && <span className="rounded-full bg-[#f5ebdd] px-3 py-1.5 font-medium">General: {nombreArchivoPdf('general')}</span>}
+          <span className="rounded-full bg-[#f5ebdd] px-3 py-1.5 font-medium">Word: {nombreArchivoWord(resultado.metadatos.modalidad)}</span>
         </div>
 
         {resultado.advertenciaEspecializado && (

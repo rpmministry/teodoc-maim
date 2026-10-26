@@ -3,8 +3,9 @@
 import { useEffect, useRef, useState } from 'react';
 import FormularioAnalisis, { type EstadoAudioFormulario, type ValoresFormulario } from '@/components/formulario-analisis';
 import PanelResultados from '@/components/resultados/panel';
+import BibliotecaDocumentos from '@/components/resultados/biblioteca';
 import { IconoCheck, IconoDescarga, IconoFlecha, LogoMaim, MarcaProducto } from '@/components/marca';
-import { nombreArchivoPdf, normalizarPredicador, normalizarTituloProporcionado } from '@/lib/modalidades';
+import { MODALIDADES, nombreArchivoPdf, nombreArchivoWord, normalizarPredicador, normalizarTituloProporcionado } from '@/lib/modalidades';
 import { normalizarMetadatos, normalizarRespuesta } from '@/lib/normalizar';
 import type { ResultadoAnalisis } from '@/lib/tipos';
 import { guardarUltimoAnalisis, obtenerUltimoAnalisis, limpiarUltimoAnalisis, guardarTranscripcionPendiente, obtenerTranscripcionPendiente, limpiarTranscripcionPendiente } from '@/lib/analisis-storage';
@@ -12,6 +13,8 @@ import { adquirirPantallaActiva, liberarPantallaActiva } from '@/lib/wake-lock';
 import { subirAudio, validarArchivo } from '@/lib/audio-upload';
 import { compartirArchivo, crearArchivo, descargarArchivo, puedeCompartirArchivos } from '@/lib/entrega';
 import { validarFormulario } from '@/lib/validacion-formulario';
+import { guardarDocumento, guardarPredicacionConGeneral, getPredicacion, leerBiblioteca, type PredicacionBiblioteca } from '@/lib/biblioteca';
+import type { ModalidadId } from '@/lib/tipos';
 
 const FORMULARIO_INICIAL: ValoresFormulario = {
   titulo: '',
@@ -28,6 +31,7 @@ interface ArchivoListo {
   nombre: string;
   file: File;
   url: string;
+  formato: 'pdf' | 'docx';
 }
 
 interface Aviso {
@@ -46,6 +50,11 @@ export default function Inicio() {
   const [textoPendiente, setTextoPendiente] = useState<string | null>(null);
   const [estadoAudio, setEstadoAudio] = useState<EstadoAudioFormulario>({ activo: false, progreso: 0 });
   const [descargando, setDescargando] = useState<'general' | 'modalidad' | null>(null);
+  const [descargandoWord, setDescargandoWord] = useState<'general' | 'modalidad' | null>(null);
+  const [biblioteca, setBiblioteca] = useState<PredicacionBiblioteca[]>([]);
+  const [predicacionId, setPredicacionId] = useState<string | null>(null);
+  const [generandoDoc, setGenerandoDoc] = useState<ModalidadId | 'todos' | null>(null);
+  const [erroresDocs, setErroresDocs] = useState<Partial<Record<ModalidadId, string>>>({});
   const [ultimoArchivo, setUltimoArchivo] = useState<ArchivoListo | null>(null);
   const [mostrarPreview, setMostrarPreview] = useState(false);
   const [aviso, setAviso] = useState<Aviso | null>(null);
@@ -69,10 +78,13 @@ export default function Inicio() {
 
   useEffect(() => {
     const temporizador = window.setTimeout(() => {
+      setBiblioteca(leerBiblioteca());
       const previo = obtenerUltimoAnalisis<Record<string, unknown>>();
       if (previo && typeof previo === 'object') {
         const metadatos = normalizarMetadatos(previo.metadatos);
-        setResultado(normalizarRespuesta(previo, metadatos));
+        const normalizado = normalizarRespuesta(previo, metadatos);
+        setResultado(normalizado);
+        setPredicacionId(normalizado.metadatos.fechaAnalisis);
       }
       const pendiente = obtenerTranscripcionPendiente();
       if (pendiente) {
@@ -301,6 +313,8 @@ export default function Inicio() {
       guardarUltimoAnalisis(normalizado);
       guardarTranscripcionPendiente(texto);
       setTextoPendiente(texto);
+      setBiblioteca(guardarPredicacionConGeneral(texto, normalizado.metadatos, normalizado));
+      setPredicacionId(normalizado.metadatos.fechaAnalisis);
       setResultado(normalizado);
       setProgreso(100);
       setCargando(false);
@@ -336,6 +350,10 @@ export default function Inicio() {
     setEstadoAudio({ activo: false, progreso: 0 });
     setProgreso(0);
     setDescargando(null);
+    setDescargandoWord(null);
+    setPredicacionId(null);
+    setGenerandoDoc(null);
+    setErroresDocs({});
     setMostrarPreview(false);
     setUltimoArchivo(null);
     setAviso(null);
@@ -343,40 +361,205 @@ export default function Inicio() {
     window.setTimeout(() => document.getElementById('crear')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
   };
 
+  const entregarDocumento = async (documento: ResultadoAnalisis, formato: 'pdf' | 'word') => {
+    try {
+      const metadatos = { ...documento.metadatos, tituloProporcionado: documento.titulo };
+      const analisis = { ...documento, metadatos };
+      let blob: Blob;
+      if (formato === 'pdf') {
+        const pdf = await import('@/lib/pdf');
+        const recursos = await pdf.cargarRecursosPdf();
+        blob = metadatos.modalidad === 'general'
+          ? pdf.construirPdfGeneralDocumento({ analisis, metadatos, recursos })
+          : pdf.construirPdfModalidad({ analisis, metadatos, recursos });
+      } else {
+        const word = await import('@/lib/docx');
+        blob = metadatos.modalidad === 'general'
+          ? await word.construirWordGeneralDocumento({ analisis, metadatos })
+          : await word.construirWordModalidad({ analisis, metadatos });
+      }
+      const nombre = formato === 'pdf' ? nombreArchivoPdf(metadatos.modalidad) : nombreArchivoWord(metadatos.modalidad);
+      descargarArchivo(blob, nombre);
+      if (archivoUrlRef.current) URL.revokeObjectURL(archivoUrlRef.current);
+      const url = URL.createObjectURL(blob);
+      archivoUrlRef.current = url;
+      setUltimoArchivo({ nombre, file: crearArchivo(blob, nombre), url, formato: formato === 'pdf' ? 'pdf' : 'docx' });
+      setAviso({ tipo: 'ok', mensaje: `${formato === 'pdf' ? 'PDF' : 'Word'} listo: ${nombre}` });
+    } catch (error) {
+      setAviso({ tipo: 'error', mensaje: error instanceof Error ? error.message : `No se pudo generar el ${formato === 'pdf' ? 'PDF' : 'Word'}.` });
+    }
+  };
+
   const descargar = async (tipo: 'general' | 'modalidad') => {
     if (!resultado || descargando) return;
     setDescargando(tipo);
     setAviso(null);
     try {
-      const pdf = await import('@/lib/pdf');
-      const recursos = await pdf.cargarRecursosPdf();
-      const metadatos = tipo === 'general'
-        ? { ...resultado.metadatos, modalidad: 'general' as const, rangoEdad: undefined, tituloProporcionado: resultado.titulo }
-        : { ...resultado.metadatos, tituloProporcionado: resultado.titulo };
-      const analisis = { ...resultado, metadatos };
-      const blob = tipo === 'general'
-        ? pdf.construirPdfGeneralDocumento({ analisis, metadatos, recursos })
-        : pdf.construirPdfModalidad({ analisis, metadatos, recursos });
-      const nombre = tipo === 'general' ? nombreArchivoPdf('general') : nombreArchivoPdf(resultado.metadatos.modalidad);
-      descargarArchivo(blob, nombre);
-      if (archivoUrlRef.current) URL.revokeObjectURL(archivoUrlRef.current);
-      const url = URL.createObjectURL(blob);
-      archivoUrlRef.current = url;
-      setUltimoArchivo({ nombre, file: crearArchivo(blob, nombre), url });
-      setAviso({ tipo: 'ok', mensaje: `PDF listo: ${nombre}` });
-    } catch (error) {
-      setAviso({ tipo: 'error', mensaje: error instanceof Error ? error.message : 'No se pudo generar el PDF.' });
+      const documento = tipo === 'general'
+        ? { ...resultado, metadatos: { ...resultado.metadatos, modalidad: 'general' as const, rangoEdad: undefined, tituloProporcionado: resultado.titulo }, especializado: {} }
+        : resultado;
+      await entregarDocumento(documento, 'pdf');
     } finally {
       setDescargando(null);
     }
   };
 
+  const descargarWord = async (tipo: 'general' | 'modalidad') => {
+    if (!resultado || descargandoWord) return;
+    setDescargandoWord(tipo);
+    setAviso(null);
+    try {
+      const documento = tipo === 'general'
+        ? { ...resultado, metadatos: { ...resultado.metadatos, modalidad: 'general' as const, rangoEdad: undefined, tituloProporcionado: resultado.titulo }, especializado: {} }
+        : resultado;
+      await entregarDocumento(documento, 'word');
+    } finally {
+      setDescargandoWord(null);
+    }
+  };
+
+  const descargarBiblioteca = async (modalidad: ModalidadId, formato: 'pdf' | 'word') => {
+    const actual = getPredicacion(biblioteca, predicacionId);
+    const documento = actual?.documentos[modalidad];
+    if (!documento) return;
+    if (formato === 'pdf') {
+      if (descargando) return;
+      setDescargando('modalidad');
+      try { await entregarDocumento(documento, 'pdf'); } finally { setDescargando(null); }
+    } else {
+      if (descargandoWord) return;
+      setDescargandoWord('modalidad');
+      try { await entregarDocumento(documento, 'word'); } finally { setDescargandoWord(null); }
+    }
+  };
+
+  const solicitarDocumento = async (modalidad: ModalidadId, predicacion: PredicacionBiblioteca): Promise<ResultadoAnalisis> => {
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 295_000);
+    try {
+      const respuesta = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          text: predicacion.texto,
+          modalidad,
+          rangoEdad: modalidad === 'ninos' ? (predicacion.metadatos.rangoEdad || formulario.rangoEdad) : undefined,
+          titulo: predicacion.titulo,
+          predicador: predicacion.predicador,
+          fecha: predicacion.fecha,
+        }),
+        signal: controller.signal,
+      });
+      const data = await respuesta.json().catch(() => null);
+      if (!respuesta.ok) {
+        if (respuesta.status === 503 || data?.error === 'busy') throw new Error('El servicio de análisis está ocupado. Intenta de nuevo en unos minutos.');
+        throw new Error(data?.error || 'No se pudo generar este documento.');
+      }
+      if (!data || typeof data !== 'object') throw new Error('El servidor devolvió una respuesta vacía.');
+      const metadatos = normalizarMetadatos({
+        ...predicacion.metadatos,
+        modalidad,
+        rangoEdad: modalidad === 'ninos' ? (predicacion.metadatos.rangoEdad || formulario.rangoEdad) : undefined,
+        titulo: predicacion.titulo,
+        predicador: predicacion.predicador,
+        fecha: predicacion.fecha,
+        fechaAnalisis: predicacion.id,
+      });
+      const normalizado = normalizarRespuesta(data, metadatos);
+      normalizado.titulo = predicacion.titulo;
+      normalizado.metadatos = {
+        ...normalizado.metadatos,
+        ...metadatos,
+        fechaAnalisis: predicacion.id,
+        tituloProporcionado: predicacion.titulo,
+      };
+      return normalizado;
+    } catch (error) {
+      if ((error as { name?: string })?.name === 'AbortError') {
+        throw new Error('La generación tardó más de lo permitido. Intenta de nuevo.');
+      }
+      throw error;
+    } finally {
+      window.clearTimeout(timeout);
+    }
+  };
+
+  const generarDocumentoModalidad = async (modalidad: ModalidadId) => {
+    const actual = getPredicacion(biblioteca, predicacionId);
+    if (!actual) return;
+    setGenerandoDoc(modalidad);
+    setErroresDocs((previos) => {
+      const siguiente = { ...previos };
+      delete siguiente[modalidad];
+      return siguiente;
+    });
+    try {
+      const documento = await solicitarDocumento(modalidad, actual);
+      const siguienteBiblioteca = guardarDocumento(actual.id, actual.texto, documento.metadatos, documento);
+      setBiblioteca(siguienteBiblioteca);
+      setPredicacionId(actual.id);
+      setResultado(documento);
+      setFormulario((valor) => ({ ...valor, texto: actual.texto, modalidad, rangoEdad: documento.metadatos.rangoEdad || valor.rangoEdad }));
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (error) {
+      setErroresDocs((previos) => ({ ...previos, [modalidad]: error instanceof Error ? error.message : 'No se pudo generar este documento.' }));
+    } finally {
+      setGenerandoDoc(null);
+    }
+  };
+
+  const generarTodosLosDocumentos = async () => {
+    const actual = getPredicacion(biblioteca, predicacionId);
+    if (!actual) return;
+    const faltantes = MODALIDADES.filter((modalidad) => !actual.documentos[modalidad.id]).map((modalidad) => modalidad.id);
+    if (!faltantes.length) return;
+    setGenerandoDoc('todos');
+    setErroresDocs({});
+    let ultimo: ResultadoAnalisis | null = null;
+    for (const modalidad of faltantes) {
+      try {
+        const documento = await solicitarDocumento(modalidad, actual);
+        guardarDocumento(actual.id, actual.texto, documento.metadatos, documento);
+        setBiblioteca(leerBiblioteca());
+        setPredicacionId(actual.id);
+        ultimo = documento;
+      } catch (error) {
+        setErroresDocs((previos) => ({ ...previos, [modalidad]: error instanceof Error ? error.message : 'No se pudo generar este documento.' }));
+      }
+    }
+    if (ultimo) {
+      setResultado(ultimo);
+      setFormulario((valor) => ({ ...valor, texto: actual.texto, modalidad: ultimo!.metadatos.modalidad, rangoEdad: ultimo!.metadatos.rangoEdad || valor.rangoEdad }));
+      setBiblioteca(leerBiblioteca());
+    }
+    setGenerandoDoc(null);
+  };
+
+  const verDocumento = (modalidad: ModalidadId) => {
+    const actual = getPredicacion(biblioteca, predicacionId);
+    const documento = actual?.documentos[modalidad];
+    if (!actual || !documento) return;
+    setResultado(documento);
+    setFormulario((valor) => ({ ...valor, texto: actual.texto, modalidad, rangoEdad: documento.metadatos.rangoEdad || valor.rangoEdad }));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const abrirPredicacion = (id: string) => {
+    const predicacion = getPredicacion(biblioteca, id);
+    if (!predicacion) return;
+    const documento = predicacion.documentos[predicacion.metadatos.modalidad] || Object.values(predicacion.documentos)[0];
+    if (!documento) return;
+    setPredicacionId(predicacion.id);
+    setResultado(documento);
+    setFormulario((valor) => ({ ...valor, texto: predicacion.texto, modalidad: documento.metadatos.modalidad, rangoEdad: documento.metadatos.rangoEdad || valor.rangoEdad }));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
   const compartirUltimo = async () => {
     if (!ultimoArchivo) return;
     const compartido = await compartirArchivo(ultimoArchivo.file, ultimoArchivo.nombre);
     setAviso({
       tipo: compartido ? 'ok' : 'error',
-      mensaje: compartido ? 'Archivo enviado al panel de compartir.' : 'Tu navegador no pudo abrir el panel de compartir. Usa la vista previa para guardar el PDF.',
+      mensaje: compartido ? 'Archivo enviado al panel de compartir.' : 'Tu navegador no pudo abrir el panel de compartir. Usa Descargar de nuevo.',
     });
   };
 
@@ -401,6 +584,8 @@ export default function Inicio() {
           : progreso < 92
             ? 'Redactando el material especializado…'
             : 'Finalizando el documento…';
+
+  const predicacionActual = getPredicacion(biblioteca, predicacionId);
 
   return (
     <div className="min-h-screen">
@@ -485,11 +670,28 @@ export default function Inicio() {
               <PanelResultados
                 resultado={resultado}
                 descargando={descargando}
+                descargandoWord={descargandoWord}
                 onNuevo={nuevoAnalisis}
                 onDescargarGeneral={() => void descargar('general')}
                 onDescargarModalidad={() => void descargar('modalidad')}
+                onDescargarWordGeneral={() => void descargarWord('general')}
+                onDescargarWordModalidad={() => void descargarWord('modalidad')}
                 onReintentarModalidad={reintentarModalidad}
               />
+              {predicacionActual && (
+                <BibliotecaDocumentos
+                  predicacion={predicacionActual}
+                  todas={biblioteca}
+                  actual={resultado.metadatos.modalidad}
+                  generando={generandoDoc}
+                  errores={erroresDocs}
+                  onVer={verDocumento}
+                  onGenerar={(modalidad) => void generarDocumentoModalidad(modalidad)}
+                  onGenerarTodos={() => void generarTodosLosDocumentos()}
+                  onDescargar={(modalidad, formato) => void descargarBiblioteca(modalidad, formato)}
+                  onAbrirPredicacion={abrirPredicacion}
+                />
+              )}
             </div>
           ) : (
             <FormularioAnalisis
@@ -501,6 +703,27 @@ export default function Inicio() {
               estadoAudio={estadoAudio}
               errores={errores}
             />
+          )}
+
+          {!resultado && biblioteca.length > 0 && (
+            <details className="mt-5 rounded-[16px] border border-[var(--linea)] bg-[#fffdf8] p-4">
+              <summary className="cursor-pointer text-[12px] font-semibold text-[var(--coralOscuro)]">
+                Predicaciones guardadas ({biblioteca.length})
+              </summary>
+              <div className="mt-3 space-y-2">
+                {biblioteca.map((item) => (
+                  <div key={item.id} className="flex flex-wrap items-center justify-between gap-2 rounded-[10px] bg-[#fbf2e6] px-3 py-2.5">
+                    <div>
+                      <p className="text-[12px] font-semibold text-[var(--tinta)]">{item.titulo}</p>
+                      <p className="text-[10.5px] text-[var(--muted)]">
+                        {[item.predicador, item.fecha, `${Object.keys(item.documentos).length} documentos`].filter(Boolean).join(' · ')}
+                      </p>
+                    </div>
+                    <button type="button" onClick={() => abrirPredicacion(item.id)} className="text-[11px] font-semibold text-[var(--coralOscuro)] underline underline-offset-4">Abrir</button>
+                  </div>
+                ))}
+              </div>
+            </details>
           )}
         </section>
 
@@ -570,7 +793,7 @@ export default function Inicio() {
               <div className="mt-2 flex flex-wrap items-center gap-3 text-[11.5px] font-semibold text-[var(--coralOscuro)]">
                 {aviso.tipo === 'ok' && ultimoArchivo && (
                   <>
-                    <button type="button" onClick={() => setMostrarPreview(true)} className="underline underline-offset-4">Ver PDF</button>
+                    {ultimoArchivo.formato === 'pdf' && <button type="button" onClick={() => setMostrarPreview(true)} className="underline underline-offset-4">Ver PDF</button>}
                     {puedeCompartirArchivos() && <button type="button" onClick={() => void compartirUltimo()} className="underline underline-offset-4">Compartir</button>}
                     <button type="button" onClick={() => descargarArchivo(ultimoArchivo.file, ultimoArchivo.nombre)} className="inline-flex items-center gap-1 underline underline-offset-4"><IconoDescarga className="h-3.5 w-3.5" />Descargar de nuevo</button>
                   </>
@@ -582,7 +805,7 @@ export default function Inicio() {
         </div>
       )}
 
-      {mostrarPreview && ultimoArchivo && (
+      {mostrarPreview && ultimoArchivo && ultimoArchivo.formato === 'pdf' && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-[#1c1110]/70 p-3 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="preview-title" onClick={() => setMostrarPreview(false)}>
           <div className="flex max-h-[94vh] w-full max-w-4xl flex-col overflow-hidden rounded-[18px] bg-[var(--crema)] shadow-2xl" onClick={(event) => event.stopPropagation()}>
             <div className="flex items-center justify-between gap-3 border-b border-[var(--linea)] px-4 py-3">

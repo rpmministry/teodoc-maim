@@ -1,7 +1,8 @@
 import type { MetadatosPredica, PredicaAnalisis } from '../tipos.ts';
 import { DocumentoPDF, fechaDocumento, type RecursosPdf } from './base.ts';
-import { fuentePredica, metadatosDocumento, referenciasUnicas } from './comunes.ts';
+import { fuentePredica, metadatosDocumento } from './comunes.ts';
 import { preguntasReflexion } from '../reflexion.ts';
+import { construirReferencias, NOTA_VERIFICACION } from '../referencias.ts';
 
 export function construirPdfGeneral(analisis: PredicaAnalisis, metadatos: MetadatosPredica, recursos: RecursosPdf): Blob {
   const meta = metadatosDocumento(analisis, metadatos);
@@ -107,16 +108,16 @@ export function construirPdfGeneral(analisis: PredicaAnalisis, metadatos: Metada
     d.caja(analisis.oracion, { tono: 'coral', etiqueta: 'Oración sugerida', tamano: 10.5 });
   }
 
-  const referencias = referenciasUnicas(analisis);
+  const referencias = construirReferencias(analisis);
   if (referencias.length) {
-    d.tituloSeccion('Referencias bíblicas', '11');
-    d.chips(referencias);
+    d.tituloSeccion('Inventario de referencias bíblicas', '11');
+    d.inventarioReferencias(referencias);
+    d.parrafo(NOTA_VERIFICACION, { tamano: 8.5, color: [122, 102, 98] });
   }
 
-  d.tituloSeccion('Nota editorial', '12');
   d.parrafo(
-    'Este documento distingue el contenido de la prédica de las explicaciones y aplicaciones editoriales. Las citas bíblicas se presentan en Reina-Valera 1960. Las referencias y afirmaciones deben verificarse con el texto bíblico y revisarse pastoralmente antes de su uso.',
-    { tamano: 9, color: [122, 102, 98] },
+    'Este documento distingue el contenido de la prédica de las explicaciones y aplicaciones editoriales. Las afirmaciones deben revisarse pastoralmente antes de su uso.',
+    { tamano: 8.5, color: [122, 102, 98] },
   );
 
   return d.finalizar('Análisis general');

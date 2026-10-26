@@ -42,7 +42,8 @@ No es un generador de sermones ni un resumen genérico. Es una herramienta de es
 - Niños con rango de edad, relato, actividad, juego y guía del maestro.
 - Devocionales de siete días con lectura, reflexión, aplicación, acción y oración.
 - Campo opcional de predicador, título y fecha.
-- Cinco PDF con identidad institucional y numeración.
+- Cinco PDF y cinco Word con identidad institucional y numeración.
+- Biblioteca local para generar, consultar y descargar cada documento por separado.
 - Persistencia local de 48 horas y recuperación de la transcripción.
 
 ## Brand Commitments

@@ -1,5 +1,6 @@
 import type { EstudioJovenes, MetadatosPredica, PredicaAnalisis } from '../tipos.ts';
 import { DocumentoPDF, fechaDocumento, type RecursosPdf } from './base.ts';
+import { NOTA_VERIFICACION } from '../referencias.ts';
 import { fuentePredica, metadatosDocumento, referenciasUnicas } from './comunes.ts';
 
 export function construirPdfJovenes(
@@ -105,6 +106,7 @@ export function construirPdfJovenes(
     'Escucha antes de corregir. No fuerces a nadie a compartir experiencias personales. Si surge una situación que requiera acompañamiento pastoral, acude a tu líder o pastor. Este material distingue el mensaje bíblico de las aplicaciones editoriales.',
     { tamano: 9, color: [122, 102, 98] },
   );
+  d.parrafo(NOTA_VERIFICACION, { tamano: 8.5, color: [122, 102, 98] });
 
   return d.finalizar('Jóvenes');
 }

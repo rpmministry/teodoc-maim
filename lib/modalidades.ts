@@ -87,6 +87,10 @@ export function nombreArchivoPdf(id: ModalidadId): string {
   return obtenerModalidad(id).archivoPdf;
 }
 
+export function nombreArchivoWord(id: ModalidadId): string {
+  return nombreArchivoPdf(id).replace(/\.pdf$/, '.docx');
+}
+
 export function normalizarEspacios(valor: unknown): string {
   return String(valor ?? '').replace(/\s+/g, ' ').trim();
 }

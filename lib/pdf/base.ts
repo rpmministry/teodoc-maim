@@ -2,6 +2,7 @@ import { jsPDF } from 'jspdf';
 import type { MetadatosPredica, Versiculo } from '../tipos.ts';
 import { fechaAnalisisLarga, fechaLarga, obtenerRangoEdad } from '../modalidades.ts';
 import { IDENTIDAD_MAIM } from '../institucional.ts';
+import type { ReferenciaDetectada } from '../referencias.ts';
 
 export const PRODUCTO = 'TeoDoc MAIM';
 export const INSTITUCION = IDENTIDAD_MAIM.nombre;
@@ -543,6 +544,49 @@ export class DocumentoPDF {
     return this;
   }
 
+  inventarioReferencias(referencias: ReferenciaDetectada[]): this {
+    if (!referencias.length) return this;
+    const x = [this.margenIzq, this.margenIzq + this.ancho * 0.38, this.margenIzq + this.ancho * 0.76];
+    const anchos = [this.ancho * 0.38, this.ancho * 0.38, this.ancho * 0.24];
+    this.asegurar(32);
+    this.setFill(PALETA.coralOscuro);
+    this.doc.rect(this.margenIzq, this.y, this.ancho, 24, 'F');
+    this.fuentes(true);
+    this.doc.setFontSize(8.3);
+    this.setText(PALETA.blanco);
+    ['Referencia', 'Uso', 'Estado'].forEach((titulo, indice) => this.doc.text(titulo.toUpperCase(), x[indice] + 7, this.y + 16));
+    this.y += 24;
+    referencias.forEach((referencia, indice) => {
+      const celdas = [referencia.cita, referencia.tipoUso === 'lectura_o_cita' ? 'Lectura o cita' : 'Detectada', 'Pendiente'];
+      const lineas = celdas.map((celda, i) => {
+        this.fuentes(i === 0);
+        this.doc.setFontSize(8.5);
+        return this.lineas(celda, anchos[i] - 12);
+      });
+      const alto = Math.max(...lineas.map((l) => l.length), 1) * 13 + 10;
+      this.asegurar(alto);
+      if (indice % 2 === 0) {
+        this.setFill(PALETA.superficie);
+        this.doc.rect(this.margenIzq, this.y, this.ancho, alto, 'F');
+      }
+      lineas.forEach((ls, i) => {
+        this.fuentes(i === 0);
+        this.doc.setFontSize(8.5);
+        this.setText(i === 2 ? [122, 75, 20] : PALETA.texto);
+        let yCelda = this.y + 12;
+        for (const linea of ls) {
+          this.doc.text(linea, x[i] + 7, yCelda);
+          yCelda += 13;
+        }
+      });
+      this.setDraw(PALETA.linea);
+      this.doc.setLineWidth(0.4);
+      this.doc.line(this.margenIzq, this.y + alto, this.pageW - this.margenDer, this.y + alto);
+      this.y += alto;
+    });
+    this.y += 14;
+    return this;
+  }
   chips(items: string[]): this {
     if (!items.length) return this;
     const alto = 22;

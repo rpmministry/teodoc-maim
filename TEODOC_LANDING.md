@@ -37,7 +37,7 @@
 
 1. **Elige la modalidad.** General, grupos, jóvenes, niños o devocionales.
 2. **Sube el audio.** TeoDoc transcribe el mensaje y lo usa como base del análisis.
-3. **Descarga y enseña.** PDF con portada institucional, contenido completo y numeración.
+3. **Descarga y enseña.** PDF o Word con portada institucional, contenido completo y numeración.
 
 ## Pie
 

@@ -1,5 +1,6 @@
 import type { EstudioGrupos, MetadatosPredica, PredicaAnalisis } from '../tipos.ts';
 import { DocumentoPDF, fechaDocumento, type RecursosPdf } from './base.ts';
+import { NOTA_VERIFICACION } from '../referencias.ts';
 import { fuentePredica, metadatosDocumento, referenciasUnicas } from './comunes.ts';
 
 export function construirPdfGrupos(
@@ -111,6 +112,7 @@ export function construirPdfGrupos(
     'Este estudio se basa en el contenido real de la prédica. No sustituye la lectura del pasaje ni la supervisión pastoral. Si alguna afirmación no se puede sostener con el texto bíblico, detén la conversación y consulta con tu líder.',
     { tamano: 9, color: [122, 102, 98] },
   );
+  d.parrafo(NOTA_VERIFICACION, { tamano: 8.5, color: [122, 102, 98] });
 
   return d.finalizar('Grupos pequeños');
 }

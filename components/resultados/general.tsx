@@ -2,10 +2,12 @@
 
 import type { ResultadoAnalisis } from '@/lib/tipos';
 import { preguntasReflexion } from '@/lib/reflexion';
+import { construirReferencias, NOTA_VERIFICACION } from '@/lib/referencias';
 import { Bloque, Caja, Chips, Cita, Lista, SeccionResultado, SinContenido } from './ui';
 
 export default function ResultadoGeneral({ analisis }: { analisis: ResultadoAnalisis }) {
   const preguntas = preguntasReflexion(analisis);
+  const referencias = construirReferencias(analisis);
   const tieneContexto = Boolean(analisis.contexto_biblico || analisis.contexto_historico || analisis.contexto_literario || analisis.relacion_textos || analisis.interpretacion);
 
   return (
@@ -107,6 +109,22 @@ export default function ResultadoGeneral({ analisis }: { analisis: ResultadoAnal
         {analisis.aplicacion.length === 0 && preguntas.length === 0 && <SinContenido mensaje="El mensaje no ofreció aplicaciones explícitas." />}
       </SeccionResultado>
 
+      {referencias.length > 0 && (
+        <SeccionResultado numero="R" titulo="Inventario de referencias bíblicas">
+          <p className="mb-3 text-[12px] leading-relaxed text-[var(--muted)]">{NOTA_VERIFICACION}</p>
+          <div className="overflow-hidden rounded-[12px] border border-[var(--linea)]">
+            {referencias.map((referencia) => (
+              <div key={referencia.cita} className="flex flex-wrap items-start justify-between gap-2 border-b border-[var(--linea)] px-4 py-3 last:border-b-0">
+                <div>
+                  <p className="text-[12.5px] font-semibold text-[var(--tinta)]">{referencia.cita}</p>
+                  <p className="mt-0.5 text-[11px] text-[var(--muted)]">{referencia.tipoUso === 'lectura_o_cita' ? 'Lectura o cita principal' : 'Referencia detectada'} · {referencia.traduccion}</p>
+                </div>
+                <span className="rounded-full bg-[#fff3d7] px-2.5 py-1 text-[9.5px] font-bold uppercase tracking-[0.06em] text-[#7a4b14]">Pendiente de verificación</span>
+              </div>
+            ))}
+          </div>
+        </SeccionResultado>
+      )}
       {(analisis.conclusion || analisis.oracion) && (
         <SeccionResultado numero="07" titulo="Conclusión y oración">
           {analisis.conclusion && <Caja etiqueta="Conclusión del estudio">{analisis.conclusion}</Caja>}

@@ -47,7 +47,9 @@ Se transformó el proyecto en **TeoDoc MAIM**: una aplicación de análisis bíb
 - `app/api/analyze/route.ts`: general + especialidad, metadatos, validaciones y esquemas.
 - `lib/ai/modalidades.ts`: reglas y esquemas de las cuatro especialidades.
 - `lib/tipos.ts`, `lib/normalizar.ts`, `lib/modalidades.ts`, `lib/validacion-formulario.ts`.
-- `lib/pdf/`: base y cinco constructores.
+- `lib/pdf/` y `lib/docx/`: cinco constructores PDF y cinco DOCX.
+- `lib/referencias.ts`: inventario de referencias con estado de verificación.
+- `lib/biblioteca.ts` y `components/resultados/biblioteca.tsx`: persistencia, generación independiente e historial local.
 - `components/marca.tsx`, `components/formulario-analisis.tsx`, `components/resultados/`.
 - `app/globals.css`, `app/layout.tsx`.
 - `public/institucional/`, `public/fonts/`, iconos de la app.
@@ -62,15 +64,17 @@ Se transformó el proyecto en **TeoDoc MAIM**: una aplicación de análisis bíb
 | `npm run typecheck` | 0 errores |
 | `npm run build` | correcto |
 | `test:logica` | 11 superadas |
-| `test:modalidades` | 13 superadas |
+| `test:modalidades` | 14 superadas |
 | `test:pdf` | 10 superadas |
+| `test:word` | 6 superadas |
 | `test:entrega` | 10 superadas |
 | `test:seguridad` | 9 superadas |
 | `test:resiliencia` | 9 superadas |
 | `test:identidad` | 8 superadas |
-| **Total** | **70** |
+| `test:biblioteca` | 4 superadas |
+| **Total** | **81** |
 
-PDF observados: general 6 páginas, grupos 6, jóvenes 6, niños 5, devocionales 12. Descarga real en navegador: `teodoc-maim-jovenes.pdf`, 6 páginas, «Samuel Rojas» y acentos presentes.
+PDF observados: general 6 páginas, grupos 6, jóvenes 6, niños 5, devocionales 12. Word: cinco DOCX válidos, con portada, estructura propia y paginación. Descarga real en navegador: `teodoc-maim-jovenes.pdf` y `teodoc-maim-jovenes.docx`. La biblioteca pasó de 2/5 a 5/5 con respuestas simuladas, sin errores.
 
 ## Identidad
 
@@ -80,6 +84,13 @@ PDF observados: general 6 páginas, grupos 6, jóvenes 6, niños 5, devocionales
 - Fuente: https://www.facebook.com/casamaialasnaciones (consulta 26/10/2026).
 - Logotipo e isotipo oficiales; coral `#f04e59` y crema `#ffefb4`.
 - Sin misión, visión, doctrina, autoridades ni organigrama inventados.
+
+## Limitaciones de la especialización
+
+- No hay una API bíblica autorizada configurada: las referencias se muestran como pendientes de verificación y no se presenta una reconstrucción de memoria como cita canónica.
+- La biblioteca es local (localStorage, 30 días, máximo seis predicaciones), no una base de datos multiusuario.
+- No se implementó un historial de versiones por documento; se conserva la última versión de cada modalidad.
+- La generación real con IA no se ejecutó por falta de claves; las pruebas usan fixtures y respuestas simuladas.
 
 ## Incidencias corregidas durante la verificación
 

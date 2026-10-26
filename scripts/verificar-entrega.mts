@@ -46,6 +46,8 @@ comprobar('Cada modalidad tiene un PDF descargable con su nombre exacto', () => 
   for (const nombre of nombres) assert.ok(!nombre.includes('infografia'));
   assert.ok(panel.includes('Descargar PDF de esta modalidad'));
   assert.ok(panel.includes('Análisis general'));
+  assert.ok(panel.includes('Word modalidad') && panel.includes('Word general'), 'Faltan las descargas Word');
+  assert.ok(existsSync(resolve(raiz, 'components/resultados/biblioteca.tsx')), 'Falta la biblioteca de documentos');
   assert.ok(page.includes("descargar('general')"));
   assert.ok(page.includes("descargar('modalidad')"));
 });

@@ -14,17 +14,19 @@ npm run verificar
 | Comando | Qué cubre | Resultado esperado |
 | --- | --- | --- |
 | `test:logica` | proporcionalidad y riqueza del contenido | 11 |
-| `test:modalidades` | cinco modalidades, metadatos, normalización y prompts | 13 |
+| `test:modalidades` | cinco modalidades, metadatos, referencias, normalización y prompts | 14 |
 | `test:pdf` | cinco PDF reales, fuentes, acentos, secciones y paginación | 10 |
+| `test:word` | cinco DOCX reales, estructura, acentos y paginación | 6 |
 | `test:entrega` | descarga, iOS, vista previa, retiro de infografías | 10 |
 | `test:seguridad` | cabeceras, rate limit, SSRF, límites y prompt | 9 |
 | `test:resiliencia` | wake lock, TTL, recuperación y limpieza | 9 |
 | `test:identidad` | nombre oficial, activos, colores y fuente | 8 |
-| **Total** | | **70** |
+| `test:biblioteca` | persistencia, historial y regeneración independiente | 4 |
+| **Total** | | **81** |
 
-La suite no necesita servidor ni claves de IA. Los PDF se generan con fixtures en `scripts/fixtures/demo.ts` y se escriben en `tmp/pdf/`.
+La suite no necesita servidor ni claves de IA. Los PDF y DOCX se generan con fixtures en `scripts/fixtures/demo.ts` y se escriben en `tmp/pdf/` y `tmp/docx/`.
 
-## Verificación de PDF
+## Verificación de PDF y Word
 
 `scripts/verificar-pdf.mts` comprueba página por página con PDF.js:
 
@@ -57,8 +59,20 @@ Verificación funcional de los cinco PDF
 10 pruebas superadas. Archivos en tmp/pdf/.
 ```
 
-Páginas observadas: general 6, grupos 6, jóvenes 6, niños 5, devocionales 12.
+Páginas observadas en PDF: general 6, grupos 6, jóvenes 6, niños 5, devocionales 12.
 
+## Verificación de Word
+
+`scripts/verificar-word.mts` genera los cinco DOCX y comprueba:
+
+- que son archivos ZIP válidos con `word/document.xml`;
+- título, predicador, institución, portada y paginación;
+- estructura propia de cada especialidad;
+- acentos y ausencia de marcadores técnicos;
+- siete jornadas en el plan devocional;
+- propiedades del documento.
+
+La descarga real desde el navegador se comprobó con `teodoc-maim-jovenes.docx`; el aviso de descarga no ofrece vista previa para Word y mantiene Compartir y Descargar de nuevo.
 ## Verificación visual
 
 Se renderizaron los PDF con PyMuPDF y se revisaron portadas y páginas interiores:
@@ -92,6 +106,16 @@ Se verificó en perfiles de Android, iPhone, tablet y Mac:
 
 No hay dispositivos físicos iOS/Android conectados a este entorno; la comprobación se hizo con emulación de navegador y revisión de la activación nativa.
 
+## Biblioteca y generación independiente
+
+`scripts/verificar-biblioteca.mts` simula `localStorage` y comprueba:
+
+- que el análisis general se conserva al agregar una especialidad;
+- que una nueva especialidad no borra las anteriores;
+- que se recuperan texto y metadatos;
+- que el historial tolera datos corruptos.
+
+En navegador se simuló la respuesta de `/api/analyze` para generar las tres especialidades faltantes y se verificó que la biblioteca pasó de 2/5 a 5/5 sin errores, con descarga PDF/Word por documento.
 ## Prueba de descarga real en navegador
 
 Con Edge headless + CDP se inyectó un resultado fixture, se seleccionó la pestaña **Jóvenes** y se pulsó **Descargar PDF de esta modalidad**:

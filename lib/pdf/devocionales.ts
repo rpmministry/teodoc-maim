@@ -1,5 +1,6 @@
 import type { MetadatosPredica, PlanDevocional, PredicaAnalisis } from '../tipos.ts';
 import { DocumentoPDF, fechaDocumento, type RecursosPdf } from './base.ts';
+import { NOTA_VERIFICACION } from '../referencias.ts';
 import { fuentePredica, metadatosDocumento, referenciasUnicas } from './comunes.ts';
 
 export function construirPdfDevocionales(
@@ -88,9 +89,10 @@ export function construirPdfDevocionales(
     d.chips(referencias);
   }
   d.caja(
-    'Este plan distingue el texto bíblico, la reflexión editorial y la aplicación personal. Las citas se presentan en Reina-Valera 1960. No sustituye la lectura de la Biblia ni el acompañamiento pastoral.',
+    'Este plan distingue el texto bíblico, la reflexión editorial y la aplicación personal. Las referencias se detectaron a partir de la predicación y su texto debe verificarse con una traducción autorizada. No sustituye la lectura de la Biblia ni el acompañamiento pastoral.',
     { tamano: 9, etiqueta: 'Nota editorial' },
   );
+  d.parrafo(NOTA_VERIFICACION, { tamano: 8.5, color: [122, 102, 98] });
 
   return d.finalizar('Devocionales de siete días');
 }

@@ -17,6 +17,7 @@ import {
 import { especializadoTieneContenido, normalizarDevocionales, normalizarGrupos, normalizarJovenes, normalizarMetadatos, normalizarNinos, normalizarRespuesta } from '../lib/normalizar.ts';
 import { REGLAS_POR_MODALIDAD, construirPromptEspecializado } from '../lib/ai/modalidades.ts';
 import { crearResultadoDemo, metadatosDemo } from './fixtures/demo.ts';
+import { construirReferencias } from '../lib/referencias.ts';
 import type { ModalidadId } from '../lib/tipos.ts';
 
 const raiz = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -114,6 +115,13 @@ comprobar('Una respuesta incompleta no se considera material válido para PDF', 
   assert.equal(especializadoTieneContenido('jovenes', { jovenes: normalizarJovenes({ tema: 'Solo un tema' }) }), false);
   assert.equal(especializadoTieneContenido('ninos', { ninos: normalizarNinos({ objetivo_aprendizaje: 'Solo un objetivo' }) }), false);
   assert.equal(especializadoTieneContenido('devocionales', { devocionales: normalizarDevocionales({ dias: [{ dia: 1, titulo: 'Incompleto' }] }) }), false);
+});
+comprobar('El inventario de referencias es único y declara su estado de verificación', () => {
+  const referencias = construirReferencias(crearResultadoDemo('general'));
+  assert.ok(referencias.length >= 3);
+  assert.equal(new Set(referencias.map((r) => r.cita.toLowerCase())).size, referencias.length);
+  assert.ok(referencias.every((r) => r.estado === 'pendiente_de_verificacion'));
+  assert.ok(referencias.every((r) => r.tipoUso === 'lectura_o_cita' || r.tipoUso === 'referencia_detectada'));
 });
 comprobar('El plan devocional conserva siete días ordenados y rechaza contenido vacío', () => {
   const plan = normalizarDevocionales({ introduccion: 'Intro', proposito: 'Propósito', dias: [

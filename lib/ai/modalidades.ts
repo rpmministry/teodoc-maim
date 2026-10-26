@@ -25,7 +25,7 @@ const ACTIVIDAD = {
 
 export const REGLAS_CALIDAD_MODALIDAD = `REGLAS DE FIDELIDAD Y CALIDAD:
 - Trabaja únicamente con lo que sostienen la transcripción y el análisis general. No inventes versículos, citas, autores, hechos, biografías, cargos ni doctrina.
-- Distingue con claridad el texto bíblico, la explicación y la aplicación. Usa Reina-Valera 1960 para las citas.
+- Distingue con claridad el texto bíblico, la explicación y la aplicación. No reconstruyas de memoria el texto bíblico: registra la referencia y conserva solo el fragmento que la transcripción cite, marcándolo para verificación.
 - No atribuyas al expositor ideas que no aparezcan en la transcripción. Cuando expliques o apliques, redacta como material del estudio, no como si fueran palabras textuales del expositor.
 - No infieras la personalidad, historia, afiliaciones o intención de quien predica. No escribas una biografía.
 - Si la transcripción no permite sustentar una sección, devuélvela vacía o con menos elementos; nunca rellenes con generalidades.

@@ -44,6 +44,19 @@ La descarga general adicional siempre usa `teodoc-maim-analisis-general.pdf`.
 - `lib/pdf/recursos.ts`: carga los recursos en el navegador y los convierte a base64.
 - `lib/pdf/base.ts`: portada, tipografía, párrafos, listas, citas, cajas, agendas y numeración.
 
+## Word (.docx)
+
+`lib/docx/` genera las cinco versiones Word con `docx` y `Packer.toBlob`:
+
+- portada con metadatos;
+- títulos y subtítulos jerárquicos;
+- citas en cajas con borde;
+- tablas de agenda y referencias;
+- pie con numeración `Página X de Y`;
+- estructuras propias por especialidad;
+- nota de verificación bíblica.
+
+Los nombres siguen el mismo patrón que los PDF, con extensión `.docx`. La descarga se realiza en el navegador y no se almacena en un servidor.
 ## Verificación
 
 `npm run test:pdf` genera los cinco documentos con fixtures y comprueba:

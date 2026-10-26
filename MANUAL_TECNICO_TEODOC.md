@@ -2,7 +2,7 @@
 
 **Versión:** 1.0.0
 **Stack:** Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4, jsPDF.
-**Alcance:** análisis bíblico, cinco modalidades y PDF. La generación de infografías fue retirada.
+**Alcance:** análisis bíblico, cinco modalidades, PDF, Word, referencias detectadas y biblioteca local. La generación de infografías fue retirada.
 
 La documentación detallada está en:
 
@@ -11,6 +11,8 @@ La documentación detallada está en:
 - [`docs/MODALIDADES.md`](docs/MODALIDADES.md)
 - [`docs/PDF.md`](docs/PDF.md)
 - [`docs/IDENTIDAD.md`](docs/IDENTIDAD.md)
+- [`docs/REFERENCIAS.md`](docs/REFERENCIAS.md)
+- [`docs/ESTRUCTURAS.md`](docs/ESTRUCTURAS.md)
 - [`docs/PRUEBAS.md`](docs/PRUEBAS.md)
 
 ## 1. Flujo
@@ -46,7 +48,10 @@ lib/
   audio-upload.ts             Cloudinary por partes
   entrega.ts                  Descarga y Web Share
   institucional.ts            Identidad verificada
-  pdf/                        Generación de los cinco documentos
+  pdf/                        Generación de los cinco PDF
+  docx/                       Generación de los cinco Word
+  biblioteca.ts               Persistencia local e historial
+  referencias.ts              Inventario y estado de verificación
 scripts/                      Pruebas y fixtures
 public/
   institucional/              Logotipo e isotipo oficiales
@@ -89,7 +94,7 @@ npm run build
 npm run verificar
 ```
 
-La suite local (70 pruebas) cubre lógica, modalidades, los cinco PDF, entrega, seguridad, resiliencia e identidad. No requiere claves. La generación real de IA no se ejecutó por falta de credenciales.
+La suite local (81 pruebas) cubre lógica, modalidades, los cinco PDF, los cinco Word, biblioteca, entrega, seguridad, resiliencia e identidad. No requiere claves. La generación real de IA no se ejecutó por falta de credenciales.
 
 ## 8. Límites
 

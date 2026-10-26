@@ -72,6 +72,13 @@ El especialista recibe la transcripción y un resumen compacto del análisis gen
 - **Memoria:** el PDF se genera como `Blob`; se crea una URL temporal para vista previa y se revoca al reemplazar o desmontar.
 - **Cloudinary:** recibe el audio. Su retención depende de la cuenta y la configuración del proveedor; no se controla desde TeoDoc.
 
+## Referencias y exportación
+
+- `lib/referencias.ts` construye un inventario único de referencias detectadas. Cada una declara tipo de uso, confianza, traducción y estado `pendiente_de_verificacion`. No se presenta como texto canónico verificado.
+- `lib/pdf/` genera los cinco PDF.
+- `lib/docx/` genera los cinco DOCX con portada, estructura, tablas, citas y paginación.
+- `lib/biblioteca.ts` conserva hasta seis predicaciones durante 30 días en `localStorage`, con sus documentos independientes. No es una base de datos multiusuario ni un historial de versiones.
+- La regeneración de una modalidad actualiza únicamente ese documento; los demás permanecen.
 ## Seguridad
 
 - Rate limit por endpoint/IP en `lib/rate-limit.ts`.
