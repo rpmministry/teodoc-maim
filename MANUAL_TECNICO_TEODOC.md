@@ -94,11 +94,11 @@ npm run build
 npm run verificar
 ```
 
-La suite local (81 pruebas) cubre lógica, modalidades, los cinco PDF, los cinco Word, biblioteca, entrega, seguridad, resiliencia e identidad. No requiere claves. La generación real de IA no se ejecutó por falta de credenciales.
+La suite local (81 pruebas) cubre lógica, modalidades, los cinco PDF, los cinco Word, biblioteca, entrega, seguridad, resiliencia e identidad. No requiere claves. La generación real general se probó con 347 caracteres (HTTP 200, 96 s) mediante el respaldo; Gemini 3.8 estaba saturado y 4.0 no disponible.
 
 ## 8. Límites
 
 - Publicado en GitHub (`origin/main`).
 - Sin despliegue en Vercel ni operaciones remotas destructivas.
-- La generación con IA y la transcripción real no se probaron de extremo a extremo en este entorno.
+- La transcripción de audio y las cinco especialidades en vivo no se probaron; la generación general real sí se verificó.
 - La revisión editorial del contenido generado sigue siendo responsabilidad del equipo pastoral.

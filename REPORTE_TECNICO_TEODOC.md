@@ -90,7 +90,7 @@ PDF observados: general 6 páginas, grupos 6, jóvenes 6, niños 5, devocionales
 - No hay una API bíblica autorizada configurada: las referencias se muestran como pendientes de verificación y no se presenta una reconstrucción de memoria como cita canónica.
 - La biblioteca es local (localStorage, 30 días, máximo seis predicaciones), no una base de datos multiusuario.
 - No se implementó un historial de versiones por documento; se conserva la última versión de cada modalidad.
-- La generación real con IA no se ejecutó por falta de claves; las pruebas usan fixtures y respuestas simuladas.
+- La generación real general se ejecutó con 347 caracteres (HTTP 200 en 96 s), pero Gemini 3.8 estaba saturado y 4.0 no existe; respondió el respaldo. Las especialidades en vivo y la transcripción controlada no se probaron.
 
 ## Incidencias corregidas durante la verificación
 

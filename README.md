@@ -163,7 +163,7 @@ Los PDF de prueba se escriben en `tmp/pdf/` y no se versionan. Las capturas y ar
 - Verificación visual de los cinco PDF, DOCX e interfaz en escritorio y móvil.
 - Descarga real desde el navegador comprobada con `teodoc-maim-jovenes.pdf` (6 páginas, texto con predicador y acentos).
 
-La generación real mediante IA **no se pudo ejecutar** en este entorno porque no hay claves de proveedores configuradas. Las pruebas de contenido, normalización y PDF usan fixtures deterministas. Consulta `docs/PRUEBAS.md` para el detalle y `docs/IDENTIDAD.md` para las fuentes.
+Se ejecutó una prueba real de extremo a extremo con 347 caracteres: respuesta 200 en 96 s, 3 puntos y acentos conservados. Gemini `3.8-flash` estaba saturado y `4.0-flash` no existe en la cuenta; respondió el respaldo OpenRouter/DeepSeek. La transcripción de audio y las cinco especialidades en vivo no se ejecutaron en la suite automatizada. Consulta `docs/PRUEBAS.md` para el detalle y `docs/IDENTIDAD.md` para las fuentes.
 
 ## Privacidad y cuidado
 

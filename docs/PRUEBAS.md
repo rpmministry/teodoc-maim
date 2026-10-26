@@ -138,7 +138,7 @@ Se verificó manualmente:
 - cuerpo no JSON → 400;
 - texto mayor de 250 000 caracteres → 413.
 
-No se pudo verificar la generación real porque el entorno no tiene `GEMINI_API_KEY`, `OPENROUTER_API_KEY` ni `DEEPSEEK_API_KEY`. El servidor responde de forma controlada (503) y la interfaz conserva la transcripción para reintentar. Las pruebas de normalización y PDF cubren la estructura completa con fixtures deterministas.
+Se ejecutó una generación real de análisis general con 347 caracteres: HTTP 200 en 96 s, 3 puntos y acentos conservados. Gemini `3.8-flash` agotó el tiempo por alta demanda y `4.0-flash` respondió 404; la cadena pasó a OpenRouter/DeepSeek. La transcripción de audio y las cinco especialidades en vivo no se probaron en la suite automatizada; la estructura y exportación se validan con fixtures.
 
 ## Verificación de identidad
 
