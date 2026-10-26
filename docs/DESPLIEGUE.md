@@ -193,6 +193,8 @@ Repite `vercel env add` para los proveedores que uses. `vercel env pull .env.loc
 | 504 o timeout | El plan de Vercel limita la duración | Usa un plan con mayor `maxDuration` o reduce la cadena de proveedores |
 | 413 | Texto mayor a 250 000 caracteres | Divide la transcripción |
 | Error al subir audio | Preset unsigned ausente o cloud name incorrecto | Crea `teodoc_preset` y revisa `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` |
+| «Los servicios de transcripción están temporalmente saturados» | No hay `ASSEMBLYAI_API_KEY` ni `DEEPGRAM_API_KEY`, o ambas fallaron | Configura al menos una clave, reinicia el servidor y revisa cuotas |
+| La clave de Deepgram no es válida | Token incorrecto o sin permisos | Regenera la clave en Deepgram y actualiza la variable |
 | PDF no descarga en iOS | Comportamiento esperado | Usa **Ver PDF** y **Compartir** |
 | Vista previa vacía | CSP o visor del navegador | Usa el enlace «Si el visor no carga, abrir el PDF» |
 | Open Graph apunta a localhost | `NEXT_PUBLIC_SITE_URL` sin configurar | Configura el dominio y redespliega |

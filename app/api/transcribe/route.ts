@@ -1,24 +1,19 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { AssemblyAI } from 'assemblyai';
 import { NextRequest, NextResponse } from 'next/server';
 import { verificarRateLimit } from '@/lib/rate-limit';
 
-export const maxDuration = 60; // Extiende límite de Vercel
+export const maxDuration = 60;
 export const dynamic = 'force-dynamic';
 
-const aai = new AssemblyAI({ apiKey: process.env.ASSEMBLYAI_API_KEY as string });
+const assemblyApiKey = process.env.ASSEMBLYAI_API_KEY?.trim();
+const deepgramApiKey = process.env.DEEPGRAM_API_KEY?.trim();
+const aai = assemblyApiKey ? new AssemblyAI({ apiKey: assemblyApiKey }) : null;
 
-/**
- * Filtro defensivo anti-SSRF:
- * Asegura que la URL sea HTTPS legítima y bloquea peticiones hacia direcciones IP internas o de metadatos.
- */
 function esUrlAudioSegura(urlString: string): boolean {
   try {
     const parsed = new URL(urlString);
     if (parsed.protocol !== 'https:') return false;
     const hostname = parsed.hostname.toLowerCase();
-
-    // Bloquear loopback, rangos privados y metadatos de proveedores cloud
     if (
       hostname === 'localhost' ||
       hostname === '127.0.0.1' ||
@@ -36,66 +31,96 @@ function esUrlAudioSegura(urlString: string): boolean {
   }
 }
 
+function errorDeepgram(status: number): string {
+  if (status === 401 || status === 403) return 'La clave de Deepgram no es válida o no tiene permisos para transcribir.';
+  if (status === 429) return 'Deepgram alcanzó temporalmente su límite de uso. Intenta de nuevo en unos minutos.';
+  if (status === 402) return 'La cuenta de Deepgram no tiene saldo o crédito disponible.';
+  if (status === 413) return 'El audio es demasiado grande para Deepgram. Usa un archivo más liviano.';
+  return `Deepgram no pudo transcribir el audio (HTTP ${status}). Revisa la consola de Deepgram.`;
+}
+
 export async function POST(req: NextRequest) {
   try {
-    // 1. Control de tasa (Rate Limiting) por IP
     const rate = verificarRateLimit(req, 'transcribe', 15, 60_000);
     if (!rate.permitido) {
       console.warn('[Seguridad] Límite de tasa excedido en /api/transcribe');
       return NextResponse.json(
         { error: 'Demasiadas solicitudes de transcripción. Por favor espera un momento.' },
-        { status: 429, headers: { 'Retry-After': String(Math.ceil(rate.resetMs / 1000)) } }
+        { status: 429, headers: { 'Retry-After': String(Math.ceil(rate.resetMs / 1000)) } },
       );
     }
 
-    const body = await req.json();
-    const { audioUrl } = body;
+    const body = (await req.json().catch(() => null)) as { audioUrl?: unknown } | null;
+    const audioUrl = typeof body?.audioUrl === 'string' ? body.audioUrl : '';
 
-    if (!audioUrl || typeof audioUrl !== 'string') {
+    if (!audioUrl) {
       return NextResponse.json({ error: 'No se recibió la ruta del audio.' }, { status: 400 });
     }
 
-    // 2. Validación anti-SSRF
     if (!esUrlAudioSegura(audioUrl)) {
-      console.warn(`[Seguridad] Intento de SSRF bloqueado en /api/transcribe: ${audioUrl}`);
+      console.warn('[Seguridad] Intento de SSRF bloqueado en /api/transcribe');
       return NextResponse.json({ error: 'La URL del audio no es válida o no está permitida.' }, { status: 400 });
     }
 
+    if (!aai && !deepgramApiKey) {
+      console.error('[Transcripción] No hay ASSEMBLYAI_API_KEY ni DEEPGRAM_API_KEY configuradas.');
+      return NextResponse.json(
+        {
+          error: 'No hay proveedor de transcripción configurado. Agrega ASSEMBLYAI_API_KEY o DEEPGRAM_API_KEY en .env.local o en las variables de Vercel, y reinicia el servidor.',
+        },
+        { status: 503 },
+      );
+    }
+
     let textoTranscrito = '';
+    let falloAssembly = '';
 
-    // Intentar con AssemblyAI (usando el enlace directamente)
-    try {
-      const transcript = await aai.transcripts.transcribe({
-        audio: audioUrl,
-        language_code: 'es',
-      });
-      if (transcript.status === 'error') throw new Error(transcript.error);
-      textoTranscrito = transcript.text || '';
-    } catch (aaiError: any) {
-      console.warn('AssemblyAI falló, activando Deepgram de respaldo...', aaiError?.message || aaiError);
+    if (aai) {
+      try {
+        const transcript = await aai.transcripts.transcribe({
+          audio: audioUrl,
+          language_code: 'es',
+        });
+        if (transcript.status === 'error') throw new Error(transcript.error || 'AssemblyAI devolvió un error.');
+        textoTranscrito = transcript.text || '';
+      } catch (error) {
+        falloAssembly = error instanceof Error ? error.message : 'AssemblyAI no respondió.';
+        console.warn('[Transcripción] AssemblyAI falló:', falloAssembly.slice(0, 180));
+      }
+    }
 
-      // Respaldo con Deepgram (también usando el enlace)
-      const dgResponse = await fetch('https://api.deepgram.com/v1/listen?model=nova-2&language=es&smart_format=true', {
+    if (!textoTranscrito && deepgramApiKey) {
+      const respuesta = await fetch('https://api.deepgram.com/v1/listen?model=nova-2&language=es&smart_format=true', {
         method: 'POST',
         headers: {
-          Authorization: `Token ${process.env.DEEPGRAM_API_KEY}`,
+          Authorization: `Token ${deepgramApiKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ url: audioUrl }),
       });
 
-      if (!dgResponse.ok) throw new Error('Los servicios de transcripción están temporalmente saturados.');
-      const dgData = await dgResponse.json();
-      textoTranscrito = dgData.results?.channels[0]?.alternatives[0]?.transcript || '';
+      if (!respuesta.ok) {
+        console.warn(`[Transcripción] Deepgram falló con HTTP ${respuesta.status}.`);
+        throw new Error(errorDeepgram(respuesta.status));
+      }
+
+      const datos = (await respuesta.json()) as {
+        results?: { channels?: Array<{ alternatives?: Array<{ transcript?: string }> }> };
+      };
+      textoTranscrito = datos.results?.channels?.[0]?.alternatives?.[0]?.transcript || '';
     }
 
-    if (!textoTranscrito || textoTranscrito.trim().length === 0) {
-      throw new Error('No se detectó voz o el archivo está vacío.');
+    if (!textoTranscrito) {
+      if (falloAssembly && !deepgramApiKey) {
+        throw new Error('AssemblyAI no pudo transcribir el audio y no hay un proveedor de respaldo configurado. Revisa la clave o agrega DEEPGRAM_API_KEY.');
+      }
+      throw new Error('No se detectó voz clara en el audio o el archivo está vacío. Prueba con otro archivo o revisa el volumen.');
     }
 
     return NextResponse.json({ text: textoTranscrito });
-  } catch (error: any) {
-    console.error('Error crítico en transcripción:', error?.message || error);
-    return NextResponse.json({ error: error?.message || 'Error al transcribir el audio.' }, { status: 500 });
+  } catch (error) {
+    const mensaje = error instanceof Error ? error.message : 'Error al transcribir el audio.';
+    console.error('[Transcripción] Error:', mensaje);
+    return NextResponse.json({ error: mensaje }, { status: 500 });
   }
 }

@@ -71,6 +71,8 @@ comprobar('API Transcribe: Rate limiting y filtro anti-SSRF de audioUrl', () => 
   assert.ok(transcribe.includes('esUrlAudioSegura'), 'Falta función anti-SSRF');
   assert.ok(transcribe.includes('169.254'), 'Debe bloquear IP de metadatos 169.254');
   assert.ok(transcribe.includes('127.0.0.1'), 'Debe bloquear localhost/127.0.0.1');
+  assert.ok(transcribe.includes('ASSEMBLYAI_API_KEY') && transcribe.includes('DEEPGRAM_API_KEY'), 'Debe validar los proveedores de transcripción');
+  assert.ok(transcribe.includes('No hay proveedor de transcripción configurado'), 'Debe explicar la falta de configuración');
 });
 
 comprobar('API Upload: Rate limiting, límite 150 MB y validación de tipos MIME', () => {
