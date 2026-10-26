@@ -5,7 +5,7 @@ import FormularioAnalisis, { type EstadoAudioFormulario, type ValoresFormulario 
 import PanelResultados from '@/components/resultados/panel';
 import BibliotecaDocumentos from '@/components/resultados/biblioteca';
 import { IconoCheck, IconoDescarga, IconoFlecha, LogoMaim, MarcaProducto } from '@/components/marca';
-import { MODALIDADES, nombreArchivoPdf, nombreArchivoWord, normalizarPredicador, normalizarTituloProporcionado } from '@/lib/modalidades';
+import { MODALIDADES, nombreArchivoPdf, nombreArchivoWord, normalizarPredicador, normalizarTituloProporcionado, obtenerModalidad } from '@/lib/modalidades';
 import { normalizarMetadatos, normalizarRespuesta } from '@/lib/normalizar';
 import type { ResultadoAnalisis } from '@/lib/tipos';
 import { guardarUltimoAnalisis, obtenerUltimoAnalisis, limpiarUltimoAnalisis, guardarTranscripcionPendiente, obtenerTranscripcionPendiente, limpiarTranscripcionPendiente } from '@/lib/analisis-storage';
@@ -34,6 +34,11 @@ interface ArchivoListo {
   formato: 'pdf' | 'docx';
 }
 
+function formatearTiempo(segundos: number): string {
+  const minutos = Math.floor(segundos / 60);
+  const resto = segundos % 60;
+  return `${minutos}:${String(resto).padStart(2, '0')}`;
+}
 interface Aviso {
   tipo: 'ok' | 'error';
   mensaje: string;
@@ -44,6 +49,7 @@ export default function Inicio() {
   const [resultado, setResultado] = useState<ResultadoAnalisis | null>(null);
   const [cargando, setCargando] = useState(false);
   const [progreso, setProgreso] = useState(0);
+  const [tiempo, setTiempo] = useState(0);
   const [errores, setErrores] = useState<string[]>([]);
   const [errorServicio, setErrorServicio] = useState<string | null>(null);
   const [advertenciaValidacion, setAdvertenciaValidacion] = useState<string | null>(null);
@@ -59,6 +65,7 @@ export default function Inicio() {
   const [mostrarPreview, setMostrarPreview] = useState(false);
   const [aviso, setAviso] = useState<Aviso | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const inicioProgresoRef = useRef(0);
   const archivoUrlRef = useRef<string | null>(null);
 
   const detenerProgreso = () => {
@@ -70,8 +77,11 @@ export default function Inicio() {
 
   const iniciarProgreso = (desde: number) => {
     detenerProgreso();
+    inicioProgresoRef.current = Date.now();
+    setTiempo(0);
     setProgreso(desde);
     timerRef.current = setInterval(() => {
+      setTiempo(Math.floor((Date.now() - inicioProgresoRef.current) / 1000));
       setProgreso((valor) => (valor >= 96 ? 96 : valor + Math.max(1, Math.floor((97 - valor) * 0.06))));
     }, 1000);
   };
@@ -141,7 +151,7 @@ export default function Inicio() {
     setFormulario((valor) => ({ ...valor, texto: '' }));
     setTextoPendiente(null);
     setCargando(true);
-    setProgreso(6);
+    iniciarProgreso(6);
     setEstadoAudio({ activo: true, progreso: 6, nombre: archivo.name, mensaje: 'Subiendo audio…' });
     void adquirirPantallaActiva();
 
@@ -183,6 +193,7 @@ export default function Inicio() {
       setFormulario((valor) => ({ ...valor, texto: transcripcion }));
       guardarTranscripcionPendiente(transcripcion);
       setTextoPendiente(transcripcion);
+      detenerProgreso();
       setEstadoAudio({ activo: false, progreso: 100, nombre: archivo.name, mensaje: 'Transcripción lista.' });
       setProgreso(100);
       setErrores([]);
@@ -195,6 +206,7 @@ export default function Inicio() {
       });
       setProgreso(0);
     } finally {
+      detenerProgreso();
       setCargando(false);
       void liberarPantallaActiva();
     }
@@ -219,7 +231,7 @@ export default function Inicio() {
     }
     if (!opciones.reintento) setResultado(null);
     setCargando(true);
-    setProgreso(10);
+    iniciarProgreso(10);
     void adquirirPantallaActiva();
     document.title = 'Generando análisis… · TeoDoc MAIM';
 
@@ -242,6 +254,7 @@ export default function Inicio() {
                 ? 'El contenido no parece una enseñanza cristiana analizable. Puedes continuar si consideras que es un mensaje válido.'
                 : 'La transcripción parece demasiado corta o incompleta para un análisis responsable. Puedes añadir más contenido o continuar bajo tu criterio.';
               setAdvertenciaValidacion(motivo);
+              detenerProgreso();
               setCargando(false);
               setProgreso(0);
               void liberarPantallaActiva();
@@ -252,7 +265,7 @@ export default function Inicio() {
         } catch {}
       }
 
-      iniciarProgreso(42);
+      setProgreso(42);
       const controller = new AbortController();
       const timeout = window.setTimeout(() => controller.abort(), 295_000);
       let respuesta: Response;
@@ -349,6 +362,7 @@ export default function Inicio() {
     setFormulario(FORMULARIO_INICIAL);
     setEstadoAudio({ activo: false, progreso: 0 });
     setProgreso(0);
+    setTiempo(0);
     setDescargando(null);
     setDescargandoWord(null);
     setPredicacionId(null);
@@ -488,6 +502,8 @@ export default function Inicio() {
     const actual = getPredicacion(biblioteca, predicacionId);
     if (!actual) return;
     setGenerandoDoc(modalidad);
+    iniciarProgreso(8);
+    void adquirirPantallaActiva();
     setErroresDocs((previos) => {
       const siguiente = { ...previos };
       delete siguiente[modalidad];
@@ -498,13 +514,18 @@ export default function Inicio() {
       const siguienteBiblioteca = guardarDocumento(actual.id, actual.texto, documento.metadatos, documento);
       setBiblioteca(siguienteBiblioteca);
       setPredicacionId(actual.id);
+      detenerProgreso();
+      setProgreso(100);
       setResultado(documento);
       setFormulario((valor) => ({ ...valor, texto: actual.texto, modalidad, rangoEdad: documento.metadatos.rangoEdad || valor.rangoEdad }));
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (error) {
+      setProgreso(0);
       setErroresDocs((previos) => ({ ...previos, [modalidad]: error instanceof Error ? error.message : 'No se pudo generar este documento.' }));
     } finally {
+      detenerProgreso();
       setGenerandoDoc(null);
+      void liberarPantallaActiva();
     }
   };
 
@@ -514,14 +535,18 @@ export default function Inicio() {
     const faltantes = MODALIDADES.filter((modalidad) => !actual.documentos[modalidad.id]).map((modalidad) => modalidad.id);
     if (!faltantes.length) return;
     setGenerandoDoc('todos');
+    iniciarProgreso(5);
+    void adquirirPantallaActiva();
     setErroresDocs({});
     let ultimo: ResultadoAnalisis | null = null;
-    for (const modalidad of faltantes) {
+    for (let indice = 0; indice < faltantes.length; indice++) {
+      const modalidad = faltantes[indice];
       try {
         const documento = await solicitarDocumento(modalidad, actual);
         guardarDocumento(actual.id, actual.texto, documento.metadatos, documento);
         setBiblioteca(leerBiblioteca());
         setPredicacionId(actual.id);
+        setProgreso(Math.min(94, Math.round(((indice + 1) / faltantes.length) * 90)));
         ultimo = documento;
       } catch (error) {
         setErroresDocs((previos) => ({ ...previos, [modalidad]: error instanceof Error ? error.message : 'No se pudo generar este documento.' }));
@@ -532,7 +557,10 @@ export default function Inicio() {
       setFormulario((valor) => ({ ...valor, texto: actual.texto, modalidad: ultimo!.metadatos.modalidad, rangoEdad: ultimo!.metadatos.rangoEdad || valor.rangoEdad }));
       setBiblioteca(leerBiblioteca());
     }
+    detenerProgreso();
+    setProgreso(100);
     setGenerandoDoc(null);
+    void liberarPantallaActiva();
   };
 
   const verDocumento = (modalidad: ModalidadId) => {
@@ -575,15 +603,21 @@ export default function Inicio() {
 
   const mensajeProgreso = estadoAudio.activo
     ? estadoAudio.mensaje || 'Procesando el audio…'
-    : progreso < 25
-      ? 'Preparando la solicitud…'
-      : progreso < 50
-        ? 'Validando el contenido…'
-        : progreso < 72
-          ? 'Analizando la enseñanza…'
-          : progreso < 92
-            ? 'Redactando el material especializado…'
-            : 'Finalizando el documento…';
+    : generandoDoc === 'todos'
+      ? 'Generando los documentos pendientes…'
+      : generandoDoc
+        ? `Generando ${obtenerModalidad(generandoDoc).nombre}…`
+        : progreso < 25
+          ? 'Preparando la solicitud…'
+          : progreso < 50
+            ? 'Validando el contenido…'
+            : progreso < 72
+              ? 'Analizando la enseñanza…'
+              : progreso < 92
+                ? 'Redactando el material especializado…'
+                : 'Finalizando el documento…';
+
+  const porcentaje = Math.max(0, Math.min(100, Math.round(progreso)));
 
   const predicacionActual = getPredicacion(biblioteca, predicacionId);
 
@@ -769,14 +803,18 @@ export default function Inicio() {
         </div>
       </footer>
 
-      {cargando && (
+      {(cargando || generandoDoc !== null) && (
         <div className="fixed bottom-4 left-1/2 z-40 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 rounded-[14px] border border-white/10 bg-[var(--tinta)] px-4 py-3.5 text-white shadow-[0_20px_60px_rgba(43,31,30,0.35)]" aria-live="polite">
           <div className="flex items-center justify-between gap-3">
             <p className="text-[12px] font-medium">{mensajeProgreso}</p>
-            <span className="flex shrink-0 items-center gap-1.5 rounded-full bg-white/10 px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.08em] text-white/80"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#8be3b0]" />Pantalla activa</span>
+            <span className="shrink-0 text-[12px] font-semibold tabular-nums text-[#ffd8a8]">{porcentaje}% · {formatearTiempo(tiempo)}</span>
           </div>
-          <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-white/15">
-            <div className="h-full rounded-full bg-[var(--coral)] transition-all duration-500" style={{ width: `${Math.max(4, Math.min(100, progreso))}%` }} />
+          <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-white/15" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={porcentaje} aria-label="Progreso estimado de la generación">
+            <div className="h-full rounded-full bg-[var(--coral)] transition-all duration-500" style={{ width: `${Math.max(4, porcentaje)}%` }} />
+          </div>
+          <div className="mt-2 flex items-center justify-between text-[9px] font-semibold uppercase tracking-[0.08em] text-white/55">
+            <span>Progreso estimado</span>
+            <span className="flex items-center gap-1.5"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#8be3b0]" />Pantalla activa</span>
           </div>
         </div>
       )}
