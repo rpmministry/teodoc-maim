@@ -16,6 +16,7 @@ npm run verificar
 | `test:logica` | proporcionalidad y riqueza del contenido | 11 |
 | `test:modalidades` | cinco modalidades, metadatos, referencias, normalización y prompts | 14 |
 | `test:biblia` | normalización y verificación con fuente abierta | 4 |
+| `test:biblia-rvc` | adaptador API.Bible/RVC con prueba simulada | 2 |
 | `test:pdf` | cinco PDF reales, fuentes, acentos, secciones y paginación | 10 |
 | `test:word` | cinco DOCX reales, estructura, acentos y paginación | 6 |
 | `test:entrega` | descarga, iOS, vista previa, retiro de infografías | 10 |
@@ -23,7 +24,7 @@ npm run verificar
 | `test:resiliencia` | wake lock, TTL, recuperación y limpieza | 9 |
 | `test:identidad` | nombre oficial, activos, colores y fuente | 8 |
 | `test:biblioteca` | persistencia, historial y regeneración independiente | 4 |
-| **Total** | | **85** |
+| **Total** | | **87** |
 
 La suite no necesita servidor ni claves de IA. Los PDF y DOCX se generan con fixtures en `scripts/fixtures/demo.ts` y se escriben en `tmp/pdf/` y `tmp/docx/`.
 

@@ -95,7 +95,7 @@ npm run build
 npm run verificar
 ```
 
-La suite local (85 pruebas) cubre lógica, modalidades, verificación bíblica, los cinco PDF, los cinco Word, biblioteca, entrega, seguridad, resiliencia e identidad. No requiere claves. La generación real general se probó con 347 caracteres (HTTP 200, 96 s) mediante el respaldo; Gemini 3.8 estaba saturado y 4.0 no disponible.
+La suite local (87 pruebas) cubre lógica, modalidades, verificación bíblica y RVC, los cinco PDF, los cinco Word, biblioteca, entrega, seguridad, resiliencia e identidad. No requiere claves. La generación real general se probó con 347 caracteres (HTTP 200, 96 s) mediante el respaldo; Gemini 3.8 estaba saturado y 4.0 no disponible.
 
 ## 8. Límites
 

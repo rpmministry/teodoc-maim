@@ -78,7 +78,9 @@ La modalidad especializada se genera en una segunda llamada que recibe la transc
 
 La profundidad del análisis es proporcional al contenido real: extensión, densidad, diversidad de ideas, referencias y peso teológico. No se rellenan secciones para alcanzar un número de páginas.
 
-El análisis incluye un inventario de referencias. La verificación usa la API abierta **GetBible V2** con **Sagradas Escrituras (1569)**, una traducción de dominio público. Si una referencia no se puede comprobar, queda marcada como pendiente. No se presenta una reconstrucción de memoria como cita canónica. Ver `docs/REFERENCIAS.md` y https://github.com/getbible/v2.
+El análisis incluye un inventario de referencias. Por defecto se verifica con la API abierta **GetBible V2** y **Sagradas Escrituras (1569)**, de dominio público. Si una referencia no se puede comprobar, queda marcada como pendiente.
+
+Para usar **Reina Valera Contemporánea (RVC)** se requiere una clave de API.Bible y una licencia que incluya RVC. No es una traducción abierta y no debe extraerse de terceros. El adaptador `BIBLE_PROVIDER=api-bible` está implementado; configura la clave, ejecuta `npm run biblia:buscar`, copia el ID de RVC y completa las variables. La IA no reconstruye RVC: el servidor solicita el texto al proveedor autorizado. Ver `docs/REFERENCIAS.md`.
 
 ## Tecnologías
 
@@ -110,8 +112,10 @@ DEEPSEEK_API_KEY=
 ASSEMBLYAI_API_KEY=
 DEEPGRAM_API_KEY=
 NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=
+BIBLE_PROVIDER=getbible
 BIBLE_API_BASE=https://query.getbible.net/v2
 BIBLE_TRANSLATION=sse
+BIBLE_TRANSLATION_NAME=Sagradas Escrituras (1569)
 BIBLE_TRANSLATION_LICENSE=Dominio público
 BIBLE_VERIFY=true
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
@@ -146,6 +150,8 @@ npm run verificar      # suite completa de pruebas
 npm run test:logica    # proporcionalidad del análisis
 npm run test:modalidades
 npm run test:biblia    # normaliza y verifica referencias con fuente abierta
+npm run test:biblia-rvc # adaptador API.Bible/RVC con prueba simulada
+npm run biblia:buscar  # lista biblias españolas de API.Bible y busca RVC
 npm run test:pdf       # genera y audita los cinco PDF en tmp/pdf/
 npm run test:word      # genera y audita los cinco DOCX en tmp/docx/
 npm run test:biblioteca # persistencia, historial y regeneración independiente
@@ -164,7 +170,7 @@ Los PDF de prueba se escriben en `tmp/pdf/` y no se versionan. Las capturas y ar
 - `npm run lint`: 0 errores.
 - `npm run typecheck`: 0 errores.
 - `npm run build`: compilación correcta.
-- `npm run verificar`: 85 pruebas superadas (lógica 11, modalidades 14, Biblia 4, PDF 10, Word 6, entrega 10, seguridad 9, resiliencia 9, identidad 8, biblioteca 4).
+- `npm run verificar`: 87 pruebas superadas (lógica 11, modalidades 14, Biblia 4, RVC 2, PDF 10, Word 6, entrega 10, seguridad 9, resiliencia 9, identidad 8, biblioteca 4).
 - Verificación visual de los cinco PDF, DOCX e interfaz en escritorio y móvil.
 - Descarga real desde el navegador comprobada con `teodoc-maim-jovenes.pdf` (6 páginas, texto con predicador y acentos).
 

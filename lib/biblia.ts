@@ -1,9 +1,16 @@
 import type { PredicaAnalisis, Versiculo } from './tipos.ts';
 
-const BASE = (process.env.BIBLE_API_BASE || 'https://query.getbible.net/v2').replace(/\/$/, '');
+type Proveedor = 'getbible' | 'api-bible';
+
+const PROVEEDOR: Proveedor = process.env.BIBLE_PROVIDER === 'api-bible' ? 'api-bible' : 'getbible';
+const API_KEY = process.env.BIBLE_API_KEY?.trim();
+const BIBLE_ID = process.env.BIBLE_TRANSLATION_ID?.trim();
+const BASE = (process.env.BIBLE_API_BASE || (PROVEEDOR === 'api-bible' ? 'https://api.scripture.api.bible/v1' : 'https://query.getbible.net/v2')).replace(/\/$/, '');
 const TRADUCCION = process.env.BIBLE_TRANSLATION || 'sse';
-const LICENCIA = process.env.BIBLE_TRANSLATION_LICENSE || 'Dominio público';
+const NOMBRE_TRADUCCION = process.env.BIBLE_TRANSLATION_NAME || (PROVEEDOR === 'api-bible' ? 'Traducción autorizada' : 'Sagradas Escrituras (1569)');
+const LICENCIA = process.env.BIBLE_TRANSLATION_LICENSE || (PROVEEDOR === 'api-bible' ? 'Uso autorizado por el proveedor' : 'Dominio público');
 const HABILITADO = process.env.BIBLE_VERIFY !== 'false';
+const FALLBACK_ABIERTO = process.env.BIBLE_FALLBACK_OPEN === 'true';
 const TIMEOUT_MS = 6000;
 
 const LIBROS: Record<string, string> = {
@@ -75,6 +82,24 @@ const LIBROS: Record<string, string> = {
   ap: 'Apocalipsis', apoc: 'Apocalipsis', apocalipsis: 'Apocalipsis',
 };
 
+const OSIS: Record<string, string> = {
+  'Génesis': 'GEN', 'Éxodo': 'EXO', 'Levítico': 'LEV', 'Números': 'NUM', 'Deuteronomio': 'DEU',
+  'Josué': 'JOS', 'Jueces': 'JDG', 'Rut': 'RUT', '1 Samuel': '1SA', '2 Samuel': '2SA',
+  '1 Reyes': '1KI', '2 Reyes': '2KI', '1 Crónicas': '1CH', '2 Crónicas': '2CH',
+  'Esdras': 'EZR', 'Nehemías': 'NEH', 'Ester': 'EST', 'Job': 'JOB', 'Salmos': 'PSA',
+  'Proverbios': 'PRO', 'Eclesiastés': 'ECC', 'Cantares': 'SNG', 'Isaías': 'ISA',
+  'Jeremías': 'JER', 'Lamentaciones': 'LAM', 'Ezequiel': 'EZK', 'Daniel': 'DAN',
+  'Oseas': 'HOS', 'Joel': 'JOL', 'Amós': 'AMO', 'Abdías': 'OBA', 'Jonás': 'JON',
+  'Miqueas': 'MIC', 'Nahúm': 'NAM', 'Habacuc': 'HAB', 'Sofonías': 'ZEP', 'Hageo': 'HAG',
+  'Zacarías': 'ZEC', 'Malaquías': 'MAL', 'Mateo': 'MAT', 'Marcos': 'MRK', 'Lucas': 'LUK',
+  'Juan': 'JHN', 'Hechos': 'ACT', 'Romanos': 'ROM', '1 Corintios': '1CO', '2 Corintios': '2CO',
+  'Gálatas': 'GAL', 'Efesios': 'EPH', 'Filipenses': 'PHP', 'Colosenses': 'COL',
+  '1 Tesalonicenses': '1TH', '2 Tesalonicenses': '2TH', '1 Timoteo': '1TI', '2 Timoteo': '2TI',
+  'Tito': 'TIT', 'Filemón': 'PHM', 'Hebreos': 'HEB', 'Santiago': 'JAS', '1 Pedro': '1PE',
+  '2 Pedro': '2PE', '1 Juan': '1JN', '2 Juan': '2JN', '3 Juan': '3JN', 'Judas': 'JUD',
+  'Apocalipsis': 'REV',
+};
+
 export interface VerificacionBiblica {
   texto: string;
   traduccion: string;
@@ -105,41 +130,78 @@ export function normalizarCita(cita: string): string | null {
   return `${libro} ${capitulo}:${versiculos}`;
 }
 
-function extraerRespuesta(datos: unknown, fuente: string): VerificacionBiblica | null {
+export function normalizarCitaOsis(cita: string): string | null {
+  const normalizada = normalizarCita(cita);
+  if (!normalizada) return null;
+  const coincidencia = normalizada.match(/^(.+?)\s+(\d+):([\d,\-]+)$/);
+  if (!coincidencia) return null;
+  const osis = OSIS[coincidencia[1]] || '';
+  if (!osis) return null;
+  return `${osis}.${coincidencia[2]}.${coincidencia[3]}`;
+}
+
+function extraerGetBible(datos: unknown, fuente: string): VerificacionBiblica | null {
   if (!datos || typeof datos !== 'object') return null;
-  const valores = Object.values(datos as Record<string, unknown>);
-  for (const valor of valores) {
+  for (const valor of Object.values(datos as Record<string, unknown>)) {
     if (!valor || typeof valor !== 'object') continue;
-    const registro = valor as { verses?: Array<{ text?: unknown }>; translation?: unknown };
+    const registro = valor as { verses?: Array<{ text?: unknown }> };
     if (!Array.isArray(registro.verses) || !registro.verses.length) continue;
     const texto = registro.verses.map((versiculo) => (typeof versiculo?.text === 'string' ? versiculo.text.trim() : '')).filter(Boolean).join(' ');
-    if (!texto) continue;
-    return {
-      texto,
-      traduccion: typeof registro.translation === 'string' ? registro.translation : TRADUCCION,
-      licencia: LICENCIA,
-      fuente,
-    };
+    if (texto) return { texto, traduccion: NOMBRE_TRADUCCION, licencia: LICENCIA, fuente };
   }
   return null;
+}
+
+function extraerApiBible(datos: unknown, fuente: string): VerificacionBiblica | null {
+  if (!datos || typeof datos !== 'object') return null;
+  const data = (datos as { data?: { content?: unknown; copyright?: unknown } }).data;
+  if (!data || typeof data.content !== 'string') return null;
+  const texto = data.content
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!texto) return null;
+  const copyright = typeof data.copyright === 'string' ? data.copyright.trim().slice(0, 240) : '';
+  return { texto, traduccion: NOMBRE_TRADUCCION, licencia: copyright || LICENCIA, fuente };
+}
+
+async function consultarGetBible(cita: string): Promise<VerificacionBiblica | null> {
+  const normalizada = normalizarCita(cita);
+  if (!normalizada) return null;
+  const fuente = `${BASE}/${TRADUCCION}/${encodeURIComponent(normalizada)}`;
+  const respuesta = await fetch(fuente, { signal: AbortSignal.timeout(TIMEOUT_MS) });
+  if (!respuesta.ok) return null;
+  return extraerGetBible(await respuesta.json(), fuente);
+}
+
+async function consultarApiBible(cita: string): Promise<VerificacionBiblica | null> {
+  if (!API_KEY || !BIBLE_ID) return null;
+  const osis = normalizarCitaOsis(cita);
+  if (!osis) return null;
+  const fuente = `${BASE}/bibles/${encodeURIComponent(BIBLE_ID)}/passages/${encodeURIComponent(osis)}?content-type=text&include-notes=false&include-titles=false&include-chapter-numbers=false&include-verse-numbers=false&include-verse-spans=false`;
+  const respuesta = await fetch(fuente, { headers: { 'api-key': API_KEY }, signal: AbortSignal.timeout(TIMEOUT_MS) });
+  if (!respuesta.ok) return null;
+  return extraerApiBible(await respuesta.json(), fuente);
 }
 
 async function verificarUna(cita: string): Promise<VerificacionBiblica | null> {
   const normalizada = normalizarCita(cita);
   if (!normalizada) return null;
-  const clave = `${TRADUCCION}:${normalizada.toLowerCase()}`;
+  const clave = `${PROVEEDOR}:${BIBLE_ID || TRADUCCION}:${normalizada.toLowerCase()}`;
   const enCache = cache.get(clave);
   if (enCache && enCache.expira > Date.now()) return enCache.valor || null;
-  const fuente = `${BASE}/${TRADUCCION}/${encodeURIComponent(normalizada)}`;
   try {
-    const respuesta = await fetch(fuente, { signal: AbortSignal.timeout(TIMEOUT_MS) });
-    if (!respuesta.ok) {
-      cache.set(clave, { expira: Date.now() + 5 * 60 * 1000 });
-      return null;
+    let resultado = PROVEEDOR === 'api-bible' ? await consultarApiBible(cita) : await consultarGetBible(cita);
+    if (!resultado && PROVEEDOR === 'api-bible' && FALLBACK_ABIERTO) {
+      resultado = await consultarGetBible(cita);
     }
-    const datos = await respuesta.json();
-    const resultado = extraerRespuesta(datos, fuente);
-    cache.set(clave, { valor: resultado || undefined, expira: Date.now() + CACHE_MS });
+    cache.set(clave, { valor: resultado || undefined, expira: Date.now() + (resultado ? CACHE_MS : 5 * 60 * 1000) });
     return resultado;
   } catch {
     cache.set(clave, { expira: Date.now() + 5 * 60 * 1000 });
@@ -157,6 +219,11 @@ function versiculosDe(analisis: PredicaAnalisis): Versiculo[] {
 
 export async function verificarReferencias(analisis: PredicaAnalisis): Promise<PredicaAnalisis> {
   if (!HABILITADO) return analisis;
+  if (PROVEEDOR === 'api-bible' && (!API_KEY || !BIBLE_ID)) {
+    console.warn('[Biblia] BIBLE_PROVIDER=api-bible requiere BIBLE_API_KEY y BIBLE_TRANSLATION_ID. Las referencias quedan pendientes.');
+    for (const versiculo of versiculosDe(analisis)) versiculo.estadoVerificacion = 'pendiente_de_verificacion';
+    return analisis;
+  }
   const versiculos = versiculosDe(analisis);
   const citas = Array.from(new Set(versiculos.map((versiculo) => versiculo.cita.trim()).filter(Boolean))).slice(0, 16);
   if (!citas.length) return analisis;

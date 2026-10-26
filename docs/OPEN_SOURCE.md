@@ -55,6 +55,17 @@ BIBLE_API_BASE=http://localhost:8000/v2
 
 GetBible es GPL-3.0. Si lo modificas y distribuyes, debes respetar esa licencia. La traducción `sse` se distribuye como dominio público; no uses la etiqueta «dominio público» para Reina-Valera 1960 ni otras revisiones protegidas.
 
+### Reina Valera Contemporánea (RVC)
+
+RVC **no es código abierto**. Para usarla:
+
+1. Obtén una clave de API.Bible: https://scripture.api.bible/
+2. Confirma que tu cuenta tiene licencia para RVC.
+3. Configura `BIBLE_PROVIDER=api-bible` y `BIBLE_API_KEY`.
+4. Ejecuta `npm run biblia:buscar` y copia el ID de RVC.
+5. Completa `BIBLE_TRANSLATION_ID`, `BIBLE_TRANSLATION_NAME` y `BIBLE_TRANSLATION_LICENSE`.
+
+No extraigas RVC de YouVersion, Bible Gateway ni copias no autorizadas. La IA no reconstruye el texto: el servidor lo solicita al proveedor licenciado. Si no tienes licencia, usa GetBible con `sse` (dominio público).
 ## 2. Transcripción abierta con Whisper
 
 Opciones:

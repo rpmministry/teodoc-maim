@@ -42,7 +42,12 @@ Crea `.env.local` a partir de `.env.example`. Nunca lo agregues a Git.
 | `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME` | Para audio | Cloud name usado por cliente y servidor |
 | `CLOUDINARY_API_KEY` | Opcional | Ruta `/api/upload` |
 | `CLOUDINARY_API_SECRET` | Opcional | Ruta `/api/upload`; nunca exponer |
-| `BIBLE_VERIFY` | Recomendada | Activa la verificación con GetBible; `false` la desactiva |
+| `BIBLE_PROVIDER` | Recomendada | `getbible` (abierta) o `api-bible` (RVC con licencia) |
+| `BIBLE_API_KEY` | Solo api-bible | Clave de API.Bible; nunca en el cliente |
+| `BIBLE_TRANSLATION_ID` | Solo api-bible | ID de la biblia RVC autorizada |
+| `BIBLE_TRANSLATION_NAME` | Recomendada | Nombre de la traducción mostrado en documentos |
+| `BIBLE_FALLBACK_OPEN` | Opcional | `true` permite volver a SSE si API.Bible falla; por defecto `false` |
+| `BIBLE_VERIFY` | Recomendada | Activa la verificación; `false` la desactiva |
 | `BIBLE_API_BASE` | Recomendada | Base de GetBible, por defecto `https://query.getbible.net/v2` |
 | `BIBLE_TRANSLATION` | Recomendada | Traducción abierta, por defecto `sse` |
 | `BIBLE_TRANSLATION_LICENSE` | Recomendada | Licencia del texto, por defecto `Dominio público` |
@@ -69,6 +74,30 @@ Reglas:
 
 Los modelos configurados en `lib/ai-gemini.ts` son `gemini-3.8-flash` y `gemini-4.0-flash`. Si tu cuenta no los ofrece, el sistema intenta OpenRouter y DeepSeek como respaldo; también puedes ajustar la lista a los modelos disponibles en tu cuenta. Confirma la disponibilidad en https://ai.google.dev/gemini-api/docs/models y vuelve a ejecutar las pruebas.
 
+### Reina Valera Contemporánea (RVC)
+
+RVC es una traducción protegida. El adaptador está implementado, pero requiere una cuenta de **API.Bible** con licencia RVC. No se extrae de YouVersion, Bible Gateway ni copias no autorizadas.
+
+```text
+BIBLE_PROVIDER=api-bible
+BIBLE_API_BASE=https://api.scripture.api.bible/v1
+BIBLE_API_KEY=tu_clave
+BIBLE_TRANSLATION_ID=ID_DE_RVC
+BIBLE_TRANSLATION_NAME=Reina Valera Contemporánea
+BIBLE_TRANSLATION_LICENSE=© Sociedades Bíblicas Unidas. Uso autorizado.
+BIBLE_FALLBACK_OPEN=false
+BIBLE_VERIFY=true
+```
+
+Busca el ID:
+
+```powershell
+npm run biblia:buscar
+```
+
+Si RVC no aparece, tu clave no tiene acceso a esa traducción. Solicita la licencia correspondiente. Mientras tanto, mantén `BIBLE_PROVIDER=getbible` con Sagradas Escrituras 1569.
+
+No se declara operativa hasta ejecutar `biblia:buscar` con una clave válida y comprobar una referencia real.
 ### Biblia abierta (GetBible)
 
 TeoDoc verifica las referencias con **GetBible V2** y **Sagradas Escrituras (1569)**, una traducción de dominio público.

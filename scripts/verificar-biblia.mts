@@ -21,7 +21,7 @@ globalThis.fetch = (async (input: RequestInfo | URL) => {
   }), { status: 200, headers: { 'Content-Type': 'application/json' } });
 }) as typeof fetch;
 
-const { normalizarCita, verificarReferencias } = await import('../lib/biblia.ts');
+const { normalizarCita, normalizarCitaOsis, verificarReferencias } = await import('../lib/biblia.ts');
 
 let pasadas = 0;
 const pruebas: string[] = [];
@@ -36,6 +36,8 @@ await comprobar('Normaliza nombres y abreviaturas de libros en español', () => 
   assert.equal(normalizarCita('Salmo 23:1-3'), 'Salmos 23:1-3');
   assert.equal(normalizarCita('1 Co 13:4-7'), '1 Corintios 13:4-7');
   assert.equal(normalizarCita('texto sin referencia'), null);
+  assert.equal(normalizarCitaOsis('Santiago 2:17'), 'JAS.2.17');
+  assert.equal(normalizarCitaOsis('1 Corintios 13:4-7'), '1CO.13.4-7');
 });
 
 await comprobar('Verifica las referencias con una fuente abierta y conserva licencia y fuente', async () => {

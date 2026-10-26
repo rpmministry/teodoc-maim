@@ -57,6 +57,59 @@ BIBLE_API_BASE=http://localhost:PUERTO/v2
 
 El backend de TeoDoc llama a GetBible desde el servidor; la API bíblica no se expone al navegador.
 
+## Reina Valera Contemporánea (RVC)
+
+RVC es una traducción **protegida**. No es un dataset abierto y no debe extraerse de YouVersion, Bible Gateway ni sitios de terceros. La aplicación no la reconstruye con IA: la solicita a un proveedor autorizado.
+
+### Requisitos
+
+1. Una cuenta de **API.Bible**: https://scripture.api.bible/
+2. Una clave de API.
+3. Acceso/licencia para RVC en esa cuenta. Si RVC no aparece en el catálogo de tu clave, solicita acceso a Sociedades Bíblicas Unidas o al proveedor.
+
+### Buscar el identificador de RVC
+
+Agrega la clave a `.env.local`:
+
+```text
+BIBLE_API_KEY=tu_clave
+BIBLE_API_BASE=https://api.scripture.api.bible/v1
+```
+
+Ejecuta:
+
+```powershell
+npm run biblia:buscar
+```
+
+El script lista las biblias españolas disponibles y busca nombres como «Reina Valera Contemporánea» o «RVC». Copia el `id` que corresponda.
+
+### Configurar RVC
+
+```text
+BIBLE_PROVIDER=api-bible
+BIBLE_API_BASE=https://api.scripture.api.bible/v1
+BIBLE_API_KEY=tu_clave
+BIBLE_TRANSLATION_ID=ID_DE_RVC
+BIBLE_TRANSLATION_NAME=Reina Valera Contemporánea
+BIBLE_TRANSLATION_LICENSE=© Sociedades Bíblicas Unidas. Uso autorizado.
+BIBLE_FALLBACK_OPEN=false
+BIBLE_VERIFY=true
+```
+
+Reinicia el servidor. Desde ese momento:
+
+1. La IA identifica las referencias.
+2. El servidor consulta el pasaje en RVC mediante API.Bible.
+3. El texto RVC sustituye al texto detectado y se marca como verificado.
+4. La fuente, la traducción y la licencia quedan registradas en UI, PDF y Word.
+5. Si la consulta falla, la referencia queda pendiente. No se mezcla automáticamente con otra traducción.
+
+`BIBLE_FALLBACK_OPEN=true` solo debe usarse si aceptas explícitamente el respaldo a Sagradas Escrituras 1569. Por defecto está desactivado para no mezclar traducciones.
+
+### Estado
+
+El adaptador `api-bible` y el buscador de identificadores están implementados. No se pudo verificar RVC en vivo porque el entorno no tiene una clave de API.Bible con licencia RVC. No se declara operativa hasta que `biblia:buscar` devuelva el ID y una consulta real confirme el texto.
 ## Límites
 
 - La traducción `sse` es histórica y su lenguaje puede resultar arcaico; es fiel al texto disponible, pero puede requerir revisión editorial.
