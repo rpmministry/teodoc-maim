@@ -52,10 +52,11 @@ comprobar('Los colores de la interfaz se tomaron del logotipo oficial', () => {
   assert.ok(css.includes('--tinta: #2b1f1e'), 'Falta el color de texto principal');
 });
 
-comprobar('La interfaz usa el nombre verificado y no inventa una denominación', () => {
+comprobar('El producto conserva el nombre verificado y no inventa una denominación', () => {
   const page = leer('app/page.tsx');
   const pdf = leer('lib/pdf/base.ts');
-  assert.ok(page.includes('IDENTIDAD_MAIM.nombre'));
+  const marca = leer('components/marca.tsx');
+  assert.ok(marca.includes('maim-portada.jpg'));
   assert.ok(pdf.includes('IDENTIDAD_MAIM.nombre'));
   assert.ok(leer('lib/institucional.ts').includes("nombre: 'MAIM Casa de Oración'"));
   assert.ok(!page.includes('Iglesia MAIM Casa de Oración'), 'Se añadió un título no verificado');
@@ -68,7 +69,7 @@ comprobar('El contenido editorial no atribuye biografías ni cargos al expositor
   const page = leer('app/page.tsx');
   const form = leer('components/formulario-analisis.tsx');
   const prompt = leer('app/api/analyze/route.ts');
-  assert.ok(page.includes('No se generan biografías') || page.includes('No se genera una biografía'));
+  assert.ok(page.includes('Sin inventar biografías'));
   assert.ok(form.includes('No se genera una biografía'));
   assert.ok(prompt.includes('no asumas su nombre, biografía ni cargos'));
   assert.ok(!prompt.includes('biografía del predicador'), 'El prompt debe evitar generar biografías');

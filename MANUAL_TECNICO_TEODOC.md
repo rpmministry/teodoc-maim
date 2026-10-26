@@ -15,7 +15,7 @@ La documentación detallada está en:
 
 ## 1. Flujo
 
-1. La persona escribe o pega una transcripción, o sube un audio.
+1. La persona elige la modalidad y sube el audio del mensaje.
 2. El audio se sube a Cloudinary y se transcribe con AssemblyAI (respaldo: Deepgram `nova-2`).
 3. La transcripción se revisa y se edita.
 4. Se validan texto, modalidad y edad.
@@ -34,7 +34,7 @@ app/
   api/upload/route.ts         Subida alternativa
   api/validate/route.ts       Validación orientativa
 components/
-  formulario-analisis.tsx     Datos, audio, texto y modalidad
+  formulario-analisis.tsx     Datos, modalidad y audio
   marca.tsx                   Marca y activos
   resultados/                 Presentación general y especializada
   liquid-orb.tsx              Componente visual compartido conservado

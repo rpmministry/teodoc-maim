@@ -166,8 +166,8 @@ comprobar('El texto no usa promesas de infografías ni biografías inventadas', 
     const contenido = leer(archivo).toLowerCase();
     assert.ok(!contenido.includes('infografia'), `Quedó una referencia a infografía en ${archivo}`);
   }
-  const page = leer('app/page.tsx');
-  assert.ok(page.includes('No se genera una biografía'), 'Falta la advertencia sobre biografías');
+  const form = leer('components/formulario-analisis.tsx');
+  assert.ok(form.includes('No se genera una biografía'), 'Falta la advertencia sobre biografías');
 });
 
 comprobar('El prompt general conserva la regla de proporcionalidad y el blindaje', () => {

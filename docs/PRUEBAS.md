@@ -78,6 +78,8 @@ Se capturaron:
 
 ## Selector de audio en móviles
 
+La interfaz simplificada no expone un editor de transcripción: el texto se obtiene del audio y la API conserva la entrada de texto para integraciones.
+
 El botón de audio usa activación nativa mediante `<label htmlFor="audio-file-input">` y un `input type="file"` accesible con `sr-only`. No se depende de `input.click()` programático, que algunos navegadores móviles bloquean.
 
 Se verificó en perfiles de Android, iPhone, tablet y Mac:

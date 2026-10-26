@@ -119,8 +119,10 @@ comprobar('La transcripción, el análisis y el audio compartido se conservan', 
   assert.ok(existsSync(resolve(raiz, 'app/api/transcribe/route.ts')));
   assert.ok(existsSync(resolve(raiz, 'app/api/upload/route.ts')));
   assert.ok(existsSync(resolve(raiz, 'lib/audio-upload.ts')));
-  assert.ok(form.includes('Subir audio para transcribir'));
-  assert.ok(form.includes('Transcripción o texto del mensaje'));
+  assert.ok(form.includes('Audio del mensaje'));
+  assert.ok(form.includes('Transcripción lista'));
+  assert.ok(!form.includes('<textarea'), 'La interfaz simplificada no debe mostrar el editor de transcripción');
+  assert.ok(form.indexOf('Elige la modalidad') < form.indexOf('Sube el audio'), 'La modalidad debe elegirse antes del audio');
   assert.ok(form.includes('htmlFor="audio-file-input"'), 'El botón de audio debe usar activación nativa con label');
   assert.ok(form.includes('id="audio-file-input"'), 'Falta el input de audio identificable');
   assert.ok(form.includes('accept="audio/*'), 'El selector debe aceptar audio en móviles');

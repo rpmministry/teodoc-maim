@@ -19,7 +19,7 @@ export function validarFormulario(entrada: EntradaFormulario): ResultadoValidaci
   const errores: string[] = [];
   const texto = entrada.texto.trim();
   if (!texto) {
-    errores.push('Escribe o pega la transcripción, o sube un audio para transcribirlo.');
+    errores.push('Sube un audio y espera la transcripción antes de generar el análisis.');
   } else if (texto.length < 120) {
     errores.push('La transcripción es demasiado corta para un análisis responsable. Añade al menos 120 caracteres de contenido.');
   } else if (texto.length > 250_000) {

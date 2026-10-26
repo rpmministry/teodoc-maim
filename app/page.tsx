@@ -12,7 +12,6 @@ import { adquirirPantallaActiva, liberarPantallaActiva } from '@/lib/wake-lock';
 import { subirAudio, validarArchivo } from '@/lib/audio-upload';
 import { compartirArchivo, crearArchivo, descargarArchivo, puedeCompartirArchivos } from '@/lib/entrega';
 import { validarFormulario } from '@/lib/validacion-formulario';
-import { IDENTIDAD_MAIM } from '@/lib/institucional';
 
 const FORMULARIO_INICIAL: ValoresFormulario = {
   titulo: '',
@@ -127,6 +126,8 @@ export default function Inicio() {
       return;
     }
 
+    setFormulario((valor) => ({ ...valor, texto: '' }));
+    setTextoPendiente(null);
     setCargando(true);
     setProgreso(6);
     setEstadoAudio({ activo: true, progreso: 6, nombre: archivo.name, mensaje: 'Subiendo audio…' });
@@ -152,21 +153,25 @@ export default function Inicio() {
         });
         data = await respuesta.json().catch(() => null);
         if (!respuesta.ok || !data?.text) {
-          throw new Error(data?.error || 'No se pudo transcribir el audio. Intenta de nuevo o pega la transcripción.');
+          throw new Error(data?.error || 'No se pudo transcribir el audio. Intenta de nuevo.');
         }
       } catch (error) {
         if ((error as { name?: string })?.name === 'AbortError') {
-          throw new Error('La transcripción tardó más de lo permitido. Puedes intentar con un audio más corto o pegar el texto.');
+          throw new Error('La transcripción tardó más de lo permitido. Intenta con un audio más corto.');
         }
         throw error;
       } finally {
         window.clearTimeout(timeout);
       }
 
-      setFormulario((valor) => ({ ...valor, texto: data?.text || '' }));
-      guardarTranscripcionPendiente(data.text || '');
-      setTextoPendiente(data.text || '');
-      setEstadoAudio({ activo: false, progreso: 100, nombre: archivo.name, mensaje: 'Transcripción lista. Revísala y corrige nombres o citas antes de generar el estudio.' });
+      const transcripcion = (data?.text || '').trim();
+      if (transcripcion.length < 120) {
+        throw new Error('La transcripción es demasiado corta para generar un análisis. Prueba con un audio más completo.');
+      }
+      setFormulario((valor) => ({ ...valor, texto: transcripcion }));
+      guardarTranscripcionPendiente(transcripcion);
+      setTextoPendiente(transcripcion);
+      setEstadoAudio({ activo: false, progreso: 100, nombre: archivo.name, mensaje: 'Transcripción lista.' });
       setProgreso(100);
       setErrores([]);
     } catch (error) {
@@ -338,11 +343,6 @@ export default function Inicio() {
     window.setTimeout(() => document.getElementById('crear')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
   };
 
-  const limpiarDatosLocales = () => {
-    nuevoAnalisis();
-    setAviso({ tipo: 'ok', mensaje: 'Se borraron los datos guardados en este navegador.' });
-  };
-
   const descargar = async (tipo: 'general' | 'modalidad') => {
     if (!resultado || descargando) return;
     setDescargando(tipo);
@@ -414,8 +414,6 @@ export default function Inicio() {
           </a>
           <nav className="flex items-center gap-1 text-[12px] font-medium text-[var(--texto)]" aria-label="Navegación principal">
             <a href="#como-funciona" className="hidden rounded-full px-3 py-2 transition hover:bg-white/70 hover:text-[var(--tinta)] md:block">Cómo funciona</a>
-            <a href="#identidad" className="hidden rounded-full px-3 py-2 transition hover:bg-white/70 hover:text-[var(--tinta)] md:block">Identidad</a>
-            <a href="#privacidad" className="hidden rounded-full px-3 py-2 transition hover:bg-white/70 hover:text-[var(--tinta)] lg:block">Privacidad</a>
             {resultado ? (
               <button type="button" onClick={nuevoAnalisis} className="btn-primario ml-2 px-4 py-2 text-[12px]">Nuevo estudio</button>
             ) : (
@@ -427,60 +425,38 @@ export default function Inicio() {
 
       <main>
         {!resultado && (
-          <section id="inicio" className="contenedor grid gap-10 pb-12 pt-12 lg:grid-cols-[1.15fr_0.85fr] lg:items-center lg:pb-16 lg:pt-16">
-            <div>
-              <p className="flex items-center gap-2 text-[10.5px] font-bold uppercase tracking-[0.17em] text-[var(--coralOscuro)]">
+          <section id="inicio" className="contenedor pb-12 pt-12 lg:pb-16 lg:pt-16">
+            <div className="mx-auto max-w-3xl text-center">
+              <p className="flex items-center justify-center gap-2 text-[10.5px] font-bold uppercase tracking-[0.17em] text-[var(--coralOscuro)]">
                 <span className="h-px w-8 bg-[var(--coral)]" aria-hidden="true" />
                 Análisis bíblico para el ministerio
               </p>
-              <h1 className="mt-5 max-w-2xl text-[clamp(2.5rem,1.6rem+3.4vw,4.35rem)] font-semibold leading-[1.02] tracking-[-0.045em] text-[var(--tinta)]">
+              <h1 className="mx-auto mt-5 max-w-2xl text-[clamp(2.5rem,1.6rem+3.4vw,4.35rem)] font-semibold leading-[1.02] tracking-[-0.045em] text-[var(--tinta)]">
                 De la prédica al <span className="text-[var(--coralOscuro)]">estudio que transforma.</span>
               </h1>
-              <p className="mt-6 max-w-xl text-[15px] leading-relaxed text-[var(--texto)] sm:text-[16px]">
-                Convierte la transcripción de un mensaje en un análisis fiel y en materiales listos para enseñar. Cinco modalidades, un mismo contenido real y un PDF preparado para tu equipo.
+              <p className="mx-auto mt-6 max-w-xl text-[15px] leading-relaxed text-[var(--texto)] sm:text-[16px]">
+                Sube el audio de una prédica, elige cómo la vas a enseñar y recibe un análisis fiel con su PDF listo para compartir.
               </p>
-              <div className="mt-7 flex flex-wrap gap-2">
+              <div className="mt-7 flex flex-wrap justify-center gap-2">
                 {['Análisis general', 'Grupos pequeños', 'Jóvenes', 'Niños', 'Devocionales de 7 días'].map((etiqueta) => (
                   <span key={etiqueta} className="rounded-full border border-[#e1c9bb] bg-white/60 px-3 py-1.5 text-[10.5px] font-semibold text-[var(--texto)]">{etiqueta}</span>
                 ))}
               </div>
-              <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
+              <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row sm:items-center">
                 <a href="#crear" className="btn-primario justify-center px-5 py-3 text-[13px]">
                   Preparar mi estudio <IconoFlecha />
                 </a>
                 <a href="#como-funciona" className="btn-secundario justify-center px-5 py-3 text-[13px]">Ver cómo funciona</a>
               </div>
-              <p className="mt-4 flex items-center gap-1.5 text-[11px] text-[var(--muted)]">
+              <p className="mt-4 flex items-center justify-center gap-1.5 text-[11px] text-[var(--muted)]">
                 <IconoCheck className="h-3.5 w-3.5 text-[var(--coralOscuro)]" />
                 Sin inventar biografías, citas ni doctrina. El contenido se basa en la transcripción.
               </p>
             </div>
-
-            <aside className="relative overflow-hidden rounded-[22px] border border-[#e6cdbf] bg-[#fffdf8] p-6 shadow-[0_24px_70px_rgba(76,43,36,0.1)] sm:p-7">
-              <div className="absolute -right-16 -top-16 h-40 w-40 rounded-full bg-[var(--cremaOficial)] opacity-60" aria-hidden="true" />
-              <div className="relative">
-                <LogoMaim tamano="mediano" />
-                <p className="mt-6 text-[10px] font-bold uppercase tracking-[0.16em] text-[var(--coralOscuro)]">Identidad institucional verificada</p>
-                <h2 className="mt-1.5 text-[20px] font-semibold leading-tight tracking-[-0.02em] text-[var(--tinta)]">{IDENTIDAD_MAIM.nombre}</h2>
-                <p className="mt-3 text-[12.5px] leading-relaxed text-[var(--texto)]">{IDENTIDAD_MAIM.descripcion}</p>
-                <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-[var(--linea)] pt-4 text-[10.5px] text-[var(--muted)]">
-                  <span className="rounded-full bg-[var(--superficie)] px-2.5 py-1 font-semibold text-[var(--coralOscuro)]">Organización religiosa</span>
-                  <a href={IDENTIDAD_MAIM.urlOficial} target="_blank" rel="noopener noreferrer" className="font-semibold underline decoration-[#d7b8aa] underline-offset-4 hover:text-[var(--coralOscuro)]">Página oficial</a>
-                </div>
-                <p className="mt-2 text-[10px] text-[var(--muted)]">Fuente consultada el {IDENTIDAD_MAIM.consultado}.</p>
-              </div>
-            </aside>
           </section>
         )}
 
         <section id="crear" className="contenedor scroll-mt-24 pb-12">
-          {!resultado && (
-            <div className="mb-7 max-w-2xl">
-              <p className="text-[10.5px] font-bold uppercase tracking-[0.16em] text-[var(--coralOscuro)]">Crea el material</p>
-              <h2 className="mt-2 text-[clamp(1.75rem,1.3rem+1.4vw,2.5rem)] font-semibold tracking-[-0.035em] text-[var(--tinta)]">Prepara tu estudio en tres decisiones.</h2>
-              <p className="mt-2 text-[13.5px] leading-relaxed text-[var(--muted)]">Aporta el contenido real, elige cómo lo vas a enseñar y descarga el documento. El análisis general siempre queda incluido.</p>
-            </div>
-          )}
 
           {errorServicio && (
             <div className="mb-5 rounded-[12px] border border-[#e8b4b8] bg-[#fff4f4] px-4 py-3.5" role="alert">
@@ -539,9 +515,9 @@ export default function Inicio() {
             </div>
             <div className="mt-7 grid gap-4 md:grid-cols-3">
               {[
-                { numero: '01', titulo: 'Aporta el contenido real', texto: 'Escribe, pega la transcripción o sube el audio. TeoDoc transcribe y tú revisas antes de continuar.' },
-                { numero: '02', titulo: 'Elige la modalidad', texto: 'El análisis general se mantiene. La modalidad añade el desarrollo específico para el público que vas a acompañar.' },
-                { numero: '03', titulo: 'Descarga y enseña', texto: 'Obtén un PDF con portada institucional, contenido completo y numeración. Revísalo pastoralmente antes de usarlo.' },
+                { numero: '01', titulo: 'Elige la modalidad', texto: 'Selecciona el material que necesitas: general, grupos, jóvenes, niños o devocionales.' },
+                { numero: '02', titulo: 'Sube el audio', texto: 'TeoDoc transcribe el mensaje automáticamente y lo usa como base del análisis.' },
+                { numero: '03', titulo: 'Descarga y enseña', texto: 'Obtén el PDF con portada institucional, contenido completo y numeración.' },
               ].map((paso) => (
                 <div key={paso.numero} className="rounded-[14px] bg-[var(--superficie)] p-5">
                   <span className="text-[11px] font-bold tracking-[0.1em] text-[var(--coralOscuro)]">{paso.numero}</span>
@@ -553,61 +529,6 @@ export default function Inicio() {
           </div>
         </section>
 
-        <section id="identidad" className="contenedor scroll-mt-24 pb-16">
-          <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
-            <div className="rounded-[22px] border border-[#e6cdbf] bg-[#fffdf8] p-6 sm:p-8">
-              <div className="flex flex-wrap items-center gap-3">
-                <LogoMaim tamano="pequeno" />
-                <div>
-                  <p className="text-[10.5px] font-bold uppercase tracking-[0.16em] text-[var(--coralOscuro)]">Identidad institucional</p>
-                  <h2 className="text-[22px] font-semibold tracking-[-0.025em] text-[var(--tinta)]">{IDENTIDAD_MAIM.nombre}</h2>
-                </div>
-              </div>
-              <p className="mt-5 text-[14px] leading-[1.8] text-[var(--texto)]">{IDENTIDAD_MAIM.descripcion}</p>
-              <dl className="mt-6 grid gap-4 border-t border-[var(--linea)] pt-5 sm:grid-cols-2">
-                <div><dt className="text-[9.5px] font-bold uppercase tracking-[0.11em] text-[var(--muted)]">Categoría pública</dt><dd className="mt-1 text-[12.5px] text-[var(--tinta)]">{IDENTIDAD_MAIM.categoria}</dd></div>
-                <div><dt className="text-[9.5px] font-bold uppercase tracking-[0.11em] text-[var(--muted)]">Fuente</dt><dd className="mt-1 text-[12.5px] text-[var(--tinta)]"><a href={IDENTIDAD_MAIM.urlOficial} target="_blank" rel="noopener noreferrer" className="underline decoration-[#d7b8aa] underline-offset-4 hover:text-[var(--coralOscuro)]">{IDENTIDAD_MAIM.fuente}</a></dd></div>
-                <div><dt className="text-[9.5px] font-bold uppercase tracking-[0.11em] text-[var(--muted)]">Fecha de consulta</dt><dd className="mt-1 text-[12.5px] text-[var(--tinta)]">{IDENTIDAD_MAIM.consultado}</dd></div>
-                <div><dt className="text-[9.5px] font-bold uppercase tracking-[0.11em] text-[var(--muted)]">Color institucional</dt><dd className="mt-1 flex items-center gap-2 text-[12.5px] text-[var(--tinta)]"><span className="h-3.5 w-3.5 rounded-full border border-white/60 bg-[var(--coral)]" />Coral y crema del logotipo oficial</dd></div>
-              </dl>
-            </div>
-            <div className="flex flex-col gap-4">
-              <div className="rounded-[22px] bg-[var(--tinta)] p-6 text-white sm:p-8">
-                <p className="text-[10.5px] font-bold uppercase tracking-[0.16em] text-[#ffd8a8]">Criterio editorial</p>
-                <h2 className="mt-2 text-[21px] font-semibold tracking-[-0.02em]">Fidelidad antes que relleno.</h2>
-                <ul className="mt-4 space-y-3 text-[12.5px] leading-relaxed text-white/80">
-                  <li className="flex gap-2"><IconoCheck className="mt-0.5 h-4 w-4 shrink-0 text-[var(--coral)]" />El nombre del expositor se usa solo para identificar la fuente. No se genera una biografía.</li>
-                  <li className="flex gap-2"><IconoCheck className="mt-0.5 h-4 w-4 shrink-0 text-[var(--coral)]" />No se inventan citas, versículos, autores ni doctrina que la transcripción no sostenga.</li>
-                  <li className="flex gap-2"><IconoCheck className="mt-0.5 h-4 w-4 shrink-0 text-[var(--coral)]" />El material es un apoyo: debe revisarse a la luz de la Biblia y con acompañamiento pastoral.</li>
-                </ul>
-              </div>
-              <div className="rounded-[22px] border border-[var(--linea)] bg-[#f7eee2] p-5 text-[12px] leading-relaxed text-[var(--texto)]">
-                <p className="font-semibold text-[var(--tinta)]">Sobre el logotipo y los colores</p>
-                <p className="mt-1.5">Se usan los materiales oficiales publicados por {IDENTIDAD_MAIM.nombre} en su página de Facebook. No se redibujó ni se alteró el logotipo. Los colores se tomaron de esos archivos.</p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section id="privacidad" className="contenedor scroll-mt-24 pb-20">
-          <div className="rounded-[22px] border border-[var(--linea)] bg-[#fbf4e9] p-6 sm:p-8">
-            <p className="text-[10.5px] font-bold uppercase tracking-[0.16em] text-[var(--coralOscuro)]">Privacidad y cuidado</p>
-            <div className="mt-3 grid gap-6 md:grid-cols-[1.1fr_0.9fr]">
-              <div>
-                <h2 className="text-[24px] font-semibold tracking-[-0.03em] text-[var(--tinta)]">Tu transcripción no se queda en el servidor.</h2>
-                <p className="mt-2 max-w-2xl text-[12.5px] leading-relaxed text-[var(--texto)]">TeoDoc procesa el contenido para generar el estudio. El último resultado se guarda en este navegador durante 48 horas para recuperarlo ante una recarga o bloqueo de pantalla. Si subes audio, este se envía a Cloudinary y al proveedor de transcripción configurado.</p>
-              </div>
-              <div className="flex flex-col justify-between gap-4">
-                <ul className="space-y-2 text-[12px] leading-relaxed text-[var(--texto)]">
-                  <li>No publiques datos personales sensibles en la transcripción.</li>
-                  <li>Verifica siempre las citas bíblicas y las afirmaciones antes de enseñar.</li>
-                  <li>Puedes borrar el resultado local en cualquier momento.</li>
-                </ul>
-                <button type="button" onClick={limpiarDatosLocales} className="btn-secundario w-fit">Borrar datos de este navegador</button>
-              </div>
-            </div>
-          </div>
-        </section>
       </main>
 
       <footer className="border-t border-[var(--linea)] bg-[#fffdf8]">
@@ -620,9 +541,6 @@ export default function Inicio() {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px] text-[var(--muted)]">
-            <a href={IDENTIDAD_MAIM.urlOficial} target="_blank" rel="noopener noreferrer" className="hover:text-[var(--coralOscuro)]">Facebook oficial</a>
-            <a href="#identidad" className="hover:text-[var(--coralOscuro)]">Identidad</a>
-            <a href="#privacidad" className="hover:text-[var(--coralOscuro)]">Privacidad</a>
             <span>© {new Date().getFullYear()} TeoDoc MAIM</span>
           </div>
         </div>

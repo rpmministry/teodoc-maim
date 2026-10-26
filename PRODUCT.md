@@ -35,7 +35,7 @@ No es un generador de sermones ni un resumen genérico. Es una herramienta de es
 
 ## Capabilities
 
-- Transcripción por texto pegado o audio.
+- Carga de audio en la interfaz; la API conserva entrada de texto para integraciones.
 - Análisis general con contexto, desarrollo, enseñanzas, conceptos y aplicaciones.
 - Grupos pequeños con agenda, preguntas, actividad, compromiso y guía del líder.
 - Jóvenes con conceptos, casos, dinámica y desafío semanal.

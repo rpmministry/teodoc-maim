@@ -3,7 +3,7 @@
 import { useState, type ReactNode } from 'react';
 import { MODALIDADES, RANGOS_EDAD } from '@/lib/modalidades';
 import type { ModalidadId, RangoEdad } from '@/lib/tipos';
-import { IconoAudio, IconoCheck, IconoFlecha, IconoModalidad, IconoTexto } from './marca';
+import { IconoAudio, IconoCheck, IconoFlecha, IconoModalidad } from './marca';
 
 export interface ValoresFormulario {
   titulo: string;
@@ -39,7 +39,7 @@ function Seccion({ numero, titulo, descripcion, children }: { numero: string; ti
         <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--coralOscuro)] text-[11px] font-bold text-white">{numero}</span>
         <div>
           <h2 className="text-[15px] font-semibold tracking-[-0.01em] text-[var(--tinta)]">{titulo}</h2>
-          {descripcion && <p className="mt-1 max-w-2xl text-[13px] leading-relaxed text-[var(--muted)]">{descripcion}</p>}
+          {descripcion && <p className="mt-1 max-w-2xl text-[12.5px] leading-relaxed text-[var(--muted)]">{descripcion}</p>}
         </div>
       </div>
       {children}
@@ -49,12 +49,12 @@ function Seccion({ numero, titulo, descripcion, children }: { numero: string; ti
 
 export default function FormularioAnalisis({ valores, onCambio, onArchivo, onAnalizar, cargando, estadoAudio, errores }: Props) {
   const [arrastrando, setArrastrando] = useState(false);
-  const [mostrarAyuda, setMostrarAyuda] = useState(false);
   const caracteres = valores.texto.trim().length;
+  const transcripcionLista = caracteres >= 120 && !estadoAudio.activo && !estadoAudio.error;
+  const selectorDeshabilitado = cargando || estadoAudio.activo;
 
   const aceptarArchivo = (archivo: File | undefined) => {
-    if (!archivo) return;
-    onArchivo(archivo);
+    if (archivo) onArchivo(archivo);
   };
 
   return (
@@ -75,7 +75,8 @@ export default function FormularioAnalisis({ valores, onCambio, onArchivo, onAna
           </ul>
         </div>
       )}
-      <Seccion numero="1" titulo="Identifica el mensaje" descripcion="Estos datos son opcionales. No se usan para inventar biografías ni atribuciones.">
+
+      <Seccion numero="1" titulo="Identifica el mensaje" descripcion="Opcional. El nombre solo identifica la fuente.">
         <div className="grid gap-4 sm:grid-cols-2">
           <label className="block sm:col-span-2">
             <span className="mb-1.5 block text-[12px] font-semibold text-[var(--tinta)]">Título del mensaje</span>
@@ -85,7 +86,7 @@ export default function FormularioAnalisis({ valores, onCambio, onArchivo, onAna
               value={valores.titulo}
               maxLength={180}
               onChange={(event) => onCambio({ titulo: event.target.value })}
-              placeholder="Si lo dejas vacío, se sugerirá a partir de la transcripción"
+              placeholder="Se sugiere a partir de la transcripción"
             />
           </label>
           <label className="block">
@@ -99,7 +100,7 @@ export default function FormularioAnalisis({ valores, onCambio, onArchivo, onAna
               placeholder="Ej. Juan Pérez"
               autoComplete="name"
             />
-            <span className="mt-1.5 block text-[11px] leading-relaxed text-[var(--muted)]">Solo identifica la fuente en el estudio y el PDF. No se genera una biografía.</span>
+            <span className="mt-1.5 block text-[11px] leading-relaxed text-[var(--muted)]">Solo identifica la fuente. No se genera una biografía.</span>
           </label>
           <label className="block">
             <span className="mb-1.5 block text-[12px] font-semibold text-[var(--tinta)]">Fecha de la prédica</span>
@@ -109,107 +110,12 @@ export default function FormularioAnalisis({ valores, onCambio, onArchivo, onAna
               value={valores.fecha}
               onChange={(event) => onCambio({ fecha: event.target.value })}
             />
-            <span className="mt-1.5 block text-[11px] leading-relaxed text-[var(--muted)]">Opcional. Se muestra en la portada y en el PDF.</span>
+            <span className="mt-1.5 block text-[11px] leading-relaxed text-[var(--muted)]">Opcional.</span>
           </label>
         </div>
       </Seccion>
 
-      <Seccion numero="2" titulo="Aporta el contenido real" descripcion="Escribe, pega la transcripción o sube el audio del mensaje. El análisis se basa exclusivamente en este contenido.">
-        <div
-          className={`relative mb-4 rounded-[14px] border border-dashed p-4 transition ${arrastrando ? 'border-[var(--coral)] bg-[#fff3ed]' : 'border-[#d9bfb3] bg-[#fbf4e9]'}`}
-          onDragOver={(event) => {
-            event.preventDefault();
-            setArrastrando(true);
-          }}
-          onDragLeave={() => setArrastrando(false)}
-          onDrop={(event) => {
-            event.preventDefault();
-            setArrastrando(false);
-            aceptarArchivo(event.dataTransfer.files?.[0]);
-          }}
-        >
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-start gap-3">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-[var(--coralOscuro)] shadow-sm">
-                <IconoAudio />
-              </span>
-              <div>
-                <p className="text-[13px] font-semibold text-[var(--tinta)]">
-                  {estadoAudio.activo ? estadoAudio.mensaje || 'Procesando audio...' : 'Subir audio para transcribir'}
-                </p>
-                <p id="audio-help" className="mt-0.5 text-[11.5px] leading-relaxed text-[var(--muted)]">
-                  MP3, M4A, WAV, OGG, OPUS o video. Hasta 500 MB. También puedes arrastrarlo aquí.
-                </p>
-                {estadoAudio.nombre && !estadoAudio.error && (
-                  <p className="mt-1 text-[11px] font-medium text-[var(--coralOscuro)]">{estadoAudio.nombre}</p>
-                )}
-                {estadoAudio.mensaje && !estadoAudio.activo && !estadoAudio.error && (
-                  <p className="mt-1 text-[11.5px] leading-relaxed text-[#3f6b47]" role="status">{estadoAudio.mensaje}</p>
-                )}
-                {estadoAudio.error && <p className="mt-1 text-[11.5px] text-[#9d2c34]" role="alert">{estadoAudio.error}</p>}
-              </div>
-            </div>
-            <label
-              htmlFor="audio-file-input"
-              className={`btn-secundario relative min-h-[48px] shrink-0 touch-manipulation justify-center focus-within:ring-2 focus-within:ring-[var(--coral)] focus-within:ring-offset-2 focus-within:ring-offset-[#fffdf8] ${
-                cargando || estadoAudio.activo ? 'pointer-events-none cursor-not-allowed opacity-50' : 'cursor-pointer'
-              }`}
-              aria-disabled={cargando || estadoAudio.activo}
-            >
-              <input
-                id="audio-file-input"
-                type="file"
-                accept="audio/*,video/mp4,video/quicktime,video/webm,.mp3,.m4a,.wav,.aac,.ogg,.oga,.opus,.flac,.mp4,.mov"
-                className="sr-only"
-                onChange={(event) => {
-                  aceptarArchivo(event.target.files?.[0]);
-                  event.target.value = '';
-                }}
-                disabled={cargando || estadoAudio.activo}
-                aria-label="Seleccionar archivo de audio del mensaje"
-                aria-describedby="audio-help"
-              />
-              <span>{estadoAudio.activo ? 'Procesando…' : estadoAudio.nombre ? 'Cambiar audio' : 'Elegir audio'}</span>
-            </label>
-          </div>
-          {estadoAudio.activo && (
-            <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-white">
-              <div className="h-full rounded-full bg-[var(--coral)] transition-all duration-500" style={{ width: `${Math.max(4, estadoAudio.progreso)}%` }} />
-            </div>
-          )}
-        </div>
-
-        <label className="block">
-          <span className="mb-2 flex items-center justify-between gap-3">
-            <span className="flex items-center gap-2 text-[12px] font-semibold text-[var(--tinta)]">
-              <IconoTexto className="h-4 w-4 text-[var(--coralOscuro)]" />
-              Transcripción o texto del mensaje
-            </span>
-            <span className={`text-[11px] tabular-nums ${caracteres > 250000 ? 'text-[#9d2c34]' : 'text-[var(--muted)]'}`}>{caracteres.toLocaleString('es-CO')} / 250,000</span>
-          </span>
-          <textarea
-            className="campo min-h-[250px] resize-y font-[420] leading-[1.7]"
-            value={valores.texto}
-            onChange={(event) => onCambio({ texto: event.target.value })}
-            placeholder="Pega aquí la transcripción del mensaje. Si subiste un audio, la transcripción aparecerá en este campo y podrás corregirla antes de generar el estudio."
-            aria-describedby="ayuda-texto"
-            disabled={cargando}
-          />
-        </label>
-        <div id="ayuda-texto" className="mt-2 flex flex-wrap items-center justify-between gap-2 text-[11px] text-[var(--muted)]">
-          <span>Mínimo 120 caracteres. Revisa nombres propios y citas bíblicas antes de continuar.</span>
-          <button type="button" className="font-semibold text-[var(--coralOscuro)] underline-offset-4 hover:underline" onClick={() => setMostrarAyuda((valor) => !valor)} aria-expanded={mostrarAyuda}>
-            {mostrarAyuda ? 'Ocultar privacidad' : 'Privacidad del contenido'}
-          </button>
-        </div>
-        {mostrarAyuda && (
-          <p className="mt-2 rounded-[10px] bg-[#f7eee2] px-3 py-2 text-[11px] leading-relaxed text-[var(--texto)]">
-            La transcripción se envía al proveedor de análisis para generar el estudio y no se almacena en el servidor de TeoDoc. El último resultado queda en este navegador durante 48 horas para que puedas recuperarlo. Si subes audio, este se procesa mediante Cloudinary y el servicio de transcripción elegido.
-          </p>
-        )}
-      </Seccion>
-
-      <Seccion numero="3" titulo="Elige la modalidad" descripcion="El análisis general siempre se conserva. La modalidad seleccionada añade un desarrollo especializado y su propio PDF.">
+      <Seccion numero="2" titulo="Elige la modalidad" descripcion="El análisis general siempre se incluye.">
         <fieldset>
           <legend className="sr-only">Modalidad del análisis</legend>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -241,7 +147,6 @@ export default function FormularioAnalisis({ valores, onCambio, onArchivo, onAna
                   </span>
                   <span className="text-[12.5px] font-semibold leading-snug text-[var(--tinta)]">{modalidad.nombre}</span>
                   <span className="mt-1.5 text-[11px] leading-relaxed text-[var(--muted)]">{modalidad.descripcion}</span>
-                  <span className="mt-3 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--coralOscuro)]">{modalidad.publico}</span>
                 </label>
               );
             })}
@@ -265,7 +170,6 @@ export default function FormularioAnalisis({ valores, onCambio, onArchivo, onAna
                       className="sr-only"
                     />
                     {rango.etiqueta}
-                    <span className={`ml-1.5 text-[10px] ${activo ? 'text-white/80' : 'text-[var(--muted)]'}`}>{rango.descripcion}</span>
                   </label>
                 );
               })}
@@ -274,11 +178,82 @@ export default function FormularioAnalisis({ valores, onCambio, onArchivo, onAna
         )}
       </Seccion>
 
+      <Seccion numero="3" titulo="Sube el audio" descripcion="La transcripción se procesa automáticamente.">
+        <div
+          className={`rounded-[14px] border border-dashed p-4 transition ${arrastrando ? 'border-[var(--coral)] bg-[#fff3ed]' : 'border-[#d9bfb3] bg-[#fbf4e9]'}`}
+          onDragOver={(event) => {
+            event.preventDefault();
+            setArrastrando(true);
+          }}
+          onDragLeave={() => setArrastrando(false)}
+          onDrop={(event) => {
+            event.preventDefault();
+            setArrastrando(false);
+            aceptarArchivo(event.dataTransfer.files?.[0]);
+          }}
+        >
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-[var(--coralOscuro)] shadow-sm">
+                <IconoAudio />
+              </span>
+              <div>
+                <p className="text-[13px] font-semibold text-[var(--tinta)]">
+                  {estadoAudio.activo ? estadoAudio.mensaje || 'Procesando audio…' : 'Audio del mensaje'}
+                </p>
+                <p id="audio-help" className="mt-0.5 text-[11.5px] leading-relaxed text-[var(--muted)]">
+                  MP3, M4A, WAV, OGG, OPUS o MP4. Hasta 500 MB.
+                </p>
+                {estadoAudio.nombre && !estadoAudio.error && (
+                  <p className="mt-1 text-[11px] font-medium text-[var(--coralOscuro)]">{estadoAudio.nombre}</p>
+                )}
+                {transcripcionLista && (
+                  <p className="mt-1 text-[11.5px] leading-relaxed text-[#3f6b47]" role="status">
+                    Transcripción lista · {caracteres.toLocaleString('es-CO')} caracteres
+                  </p>
+                )}
+                {!estadoAudio.activo && !estadoAudio.error && !valores.texto && (
+                  <p className="mt-1 text-[11.5px] text-[var(--muted)]">Aún no has subido un audio.</p>
+                )}
+                {estadoAudio.error && <p className="mt-1 text-[11.5px] text-[#9d2c34]" role="alert">{estadoAudio.error}</p>}
+              </div>
+            </div>
+            <label
+              htmlFor="audio-file-input"
+              className={`btn-secundario relative min-h-[48px] shrink-0 touch-manipulation justify-center focus-within:ring-2 focus-within:ring-[var(--coral)] focus-within:ring-offset-2 focus-within:ring-offset-[#fffdf8] ${
+                selectorDeshabilitado ? 'pointer-events-none cursor-not-allowed opacity-50' : 'cursor-pointer'
+              }`}
+              aria-disabled={selectorDeshabilitado}
+            >
+              <input
+                id="audio-file-input"
+                type="file"
+                accept="audio/*,video/mp4,video/quicktime,video/webm,.mp3,.m4a,.wav,.aac,.ogg,.oga,.opus,.flac,.mp4,.mov"
+                className="sr-only"
+                onChange={(event) => {
+                  aceptarArchivo(event.target.files?.[0]);
+                  event.target.value = '';
+                }}
+                disabled={selectorDeshabilitado}
+                aria-label="Seleccionar archivo de audio del mensaje"
+                aria-describedby="audio-help"
+              />
+              <span>{estadoAudio.activo ? 'Procesando…' : estadoAudio.nombre ? 'Cambiar audio' : 'Elegir audio'}</span>
+            </label>
+          </div>
+          {estadoAudio.activo && (
+            <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-white">
+              <div className="h-full rounded-full bg-[var(--coral)] transition-all duration-500" style={{ width: `${Math.max(4, estadoAudio.progreso)}%` }} />
+            </div>
+          )}
+        </div>
+      </Seccion>
+
       <div className="flex flex-col gap-3 border-t border-[var(--linea)] pt-6 sm:flex-row sm:items-center sm:justify-between">
         <p className="max-w-md text-[11px] leading-relaxed text-[var(--muted)]">
-          El material generado es un apoyo para el estudio. Debe revisarse a la luz de la Biblia y con acompañamiento pastoral antes de enseñarlo.
+          {valores.texto.trim() ? 'Listo para generar el estudio.' : 'Sube un audio para continuar.'}
         </p>
-        <button type="submit" className="btn-primario w-full sm:w-auto" disabled={cargando}>
+        <button type="submit" className="btn-primario w-full sm:w-auto" disabled={cargando || !valores.texto.trim()}>
           {cargando ? (
             <>
               <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" aria-hidden="true" />

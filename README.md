@@ -7,7 +7,7 @@ TeoDoc MAIM es una aplicación web para convertir la transcripción de una préd
 ## Estado del proyecto
 
 - Análisis general, cinco modalidades, campo opcional de predicador y PDF implementados.
-- Interfaz responsive con transcripción por texto o audio, selector de modalidad y descarga de documentos.
+- Interfaz responsive con carga de audio, selector de modalidad y descarga de documentos.
 - Funcionalidad de infografías retirada por completo; la transcripción, el análisis y los componentes compartidos se conservan.
 - Verificación técnica local: `lint`, `typecheck`, `build`, pruebas de lógica, PDF, seguridad y resiliencia.
 - Publicado en GitHub; sin despliegue en producción ni operaciones remotas destructivas.
@@ -59,7 +59,7 @@ El título y la fecha también son opcionales. Si no se escribe un título, se u
 ## Flujo de uso
 
 1. **Identifica el mensaje:** título, predicador y fecha, todos opcionales.
-2. **Aporta el contenido real:** escribe o pega la transcripción, o sube un audio para transcribirlo. La transcripción queda editable antes de continuar.
+2. **Elige la modalidad y sube el audio:** la transcripción se procesa automáticamente. La API conserva la entrada de texto para integraciones externas.
 3. **Elige una modalidad:** el análisis general se mantiene y se añade el material especializado.
 4. **Genera:** se valida el contenido, se analiza y se redacta la modalidad.
 5. **Descarga y revisa:** cada documento se puede previsualizar, descargar y compartir. En iOS se usa la hoja de compartir en lugar de forzar una descarga.

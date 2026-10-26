@@ -2,7 +2,7 @@
 
 ## Flujo principal
 
-1. La persona elige texto o audio.
+1. La persona elige la modalidad y sube el audio. La API conserva la entrada de texto para integraciones.
 2. El audio se sube a Cloudinary (carga directa, por partes si supera 20 MB) y se transcribe con AssemblyAI; Deepgram `nova-2` es el respaldo.
 3. La transcripción se muestra en un editor para revisión y corrección.
 4. El formulario valida longitud, modalidad y rango de edad antes de llamar al servidor.
