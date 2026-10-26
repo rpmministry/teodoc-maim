@@ -115,7 +115,7 @@ La aplicación falla de forma controlada si no hay proveedor de análisis dispon
 
 ## Publicación en GitHub y Vercel
 
-El proyecto está publicado en GitHub (`origin/main`, commit `713a4b8`) y preparado para desplegarse en Vercel con Node.js 22. La guía completa, el detalle de cada variable, la creación del preset de Cloudinary, el despliegue, la verificación y el diagnóstico están en [`docs/DESPLIEGUE.md`](docs/DESPLIEGUE.md).
+El proyecto está publicado en GitHub (`origin/main`) y preparado para desplegarse en Vercel con Node.js 22. La guía completa, el detalle de cada variable, la creación del preset de Cloudinary, el despliegue, la verificación y el diagnóstico están en [`docs/DESPLIEGUE.md`](docs/DESPLIEGUE.md).
 
 Resumen:
 
@@ -180,4 +180,4 @@ La generación real mediante IA **no se pudo ejecutar** en este entorno porque n
 
 ## Repositorio
 
-El remoto configurado de este trabajo es `https://github.com/rpmministry/teodoc-maim.git`. El commit `713a4b8` fue publicado en `origin/main` con credenciales de Git; el repositorio no es verificable públicamente sin credenciales (la API de GitHub respondió 404 en el entorno de trabajo). No se configuró un remoto `upstream` y no se desplegó en Vercel desde este entorno.
+El remoto configurado de este trabajo es `https://github.com/rpmministry/teodoc-maim.git`. El repositorio fue publicado en `origin/main` con credenciales de Git; no es verificable públicamente sin credenciales (la API de GitHub respondió 404 en el entorno de trabajo). No se configuró un remoto `upstream` y no se desplegó en Vercel desde este entorno.

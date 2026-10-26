@@ -2,7 +2,7 @@
 
 **Fecha:** 26 de octubre de 2026
 **Remoto configurado:** `https://github.com/rpmministry/teodoc-maim.git`
-**Alcance:** ejecución autónoma del prompt maestro, publicada en GitHub (commit `713a4b8`), sin despliegue en Vercel ni operaciones remotas destructivas.
+**Alcance:** ejecución autónoma del prompt maestro, publicada en GitHub (`origin/main`), sin despliegue en Vercel ni operaciones remotas destructivas.
 
 ## Resumen
 

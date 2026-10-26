@@ -74,10 +74,10 @@ comprobar('app/page.tsx: Badge visual Carbon "Pantalla activa"', () => {
 });
 
 // ---- 4. Invariante de Modelos Gemini ----
-comprobar('lib/ai-gemini.ts: Modelos gemini-3.7-flash y gemini-3.6-flash preservados intactos', () => {
+comprobar('lib/ai-gemini.ts: Modelos gemini-3.8-flash y gemini-4.0-flash configurados', () => {
   assert.ok(
-    aiGemini.includes("'gemini-3.7-flash'") && aiGemini.includes("'gemini-3.6-flash'"),
-    'Los modelos Gemini autorizados fueron alterados'
+    aiGemini.includes("'gemini-3.8-flash'") && aiGemini.includes("'gemini-4.0-flash'"),
+    'Los modelos Gemini configurados no son los esperados'
   );
 });
 

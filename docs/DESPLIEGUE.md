@@ -63,7 +63,7 @@ Reglas:
 - **AssemblyAI:** dashboard, API key.
 - **Deepgram:** console, API keys.
 
-Los modelos configurados en `lib/ai-gemini.ts` son `gemini-3.7-flash` y `gemini-3.6-flash`. Si tu cuenta no los ofrece, cámbialos por modelos disponibles y vuelve a ejecutar las pruebas.
+Los modelos configurados en `lib/ai-gemini.ts` son `gemini-3.8-flash` y `gemini-4.0-flash`. Si tu cuenta no los ofrece, el sistema intenta OpenRouter y DeepSeek como respaldo; también puedes ajustar la lista a los modelos disponibles en tu cuenta. Confirma la disponibilidad en https://ai.google.dev/gemini-api/docs/models y vuelve a ejecutar las pruebas.
 
 ## 3. Cloudinary para audio
 
@@ -213,4 +213,4 @@ En Vercel, abre **Deployments**, elige el despliegue anterior estable y usa **Pr
 
 ## 11. Estado de esta entrega
 
-El código fue publicado en GitHub (`origin/main`, commit `713a4b8`). El despliegue en Vercel requiere iniciar sesión en una cuenta con permisos; no se ejecutó desde este entorno porque no hay credenciales de Vercel. La verificación local y el build de producción sí se completaron.
+El código fue publicado en GitHub (`origin/main`). El despliegue en Vercel requiere iniciar sesión en una cuenta con permisos; no se ejecutó desde este entorno porque no hay credenciales de Vercel. La verificación local y el build de producción sí se completaron.
