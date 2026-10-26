@@ -114,6 +114,6 @@ La fuente directa de Facebook respondió 400; el plugin público fue la vía de 
 
 - No hay claves de IA en el entorno de auditoría: la generación real de contenido y la transcripción no se pueden ejecutar de extremo a extremo.
 - No se realizó despliegue en producción.
-- No se hicieron operaciones remotas (`push`, releases, PR).
+- Se publicó el commit `713a4b8` en `origin/main`; no se crearon PR ni releases y no se desplegó en Vercel.
 - El repositorio remoto no es públicamente verificable (404 en la API de GitHub sin credenciales).
 - Los fixtures prueban estructura, normalización y PDF; no sustituyen una revisión editorial de contenido generado por IA.

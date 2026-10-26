@@ -213,4 +213,4 @@ En Vercel, abre **Deployments**, elige el despliegue anterior estable y usa **Pr
 
 ## 11. Estado de esta entrega
 
-El código quedó preparado para GitHub y Vercel. El despliegue en Vercel requiere iniciar sesión en una cuenta con permisos; no se ejecutó desde este entorno porque no hay credenciales de Vercel. La verificación local y el build de producción sí se completaron.
+El código fue publicado en GitHub (`origin/main`, commit `713a4b8`). El despliegue en Vercel requiere iniciar sesión en una cuenta con permisos; no se ejecutó desde este entorno porque no hay credenciales de Vercel. La verificación local y el build de producción sí se completaron.

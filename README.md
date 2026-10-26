@@ -10,7 +10,7 @@ TeoDoc MAIM es una aplicación web para convertir la transcripción de una préd
 - Interfaz responsive con transcripción por texto o audio, selector de modalidad y descarga de documentos.
 - Funcionalidad de infografías retirada por completo; la transcripción, el análisis y los componentes compartidos se conservan.
 - Verificación técnica local: `lint`, `typecheck`, `build`, pruebas de lógica, PDF, seguridad y resiliencia.
-- Sin despliegue en producción y sin operaciones remotas destructivas.
+- Publicado en GitHub; sin despliegue en producción ni operaciones remotas destructivas.
 - La generación real con IA requiere credenciales de los proveedores; no hay claves incluidas en el repositorio.
 
 ## Identidad institucional verificada
@@ -115,13 +115,13 @@ La aplicación falla de forma controlada si no hay proveedor de análisis dispon
 
 ## Publicación en GitHub y Vercel
 
-El proyecto está preparado para publicarse en Vercel con Node.js 22. La guía completa, el detalle de cada variable, la creación del preset de Cloudinary, el despliegue, la verificación y el diagnóstico están en [`docs/DESPLIEGUE.md`](docs/DESPLIEGUE.md).
+El proyecto está publicado en GitHub (`origin/main`, commit `713a4b8`) y preparado para desplegarse en Vercel con Node.js 22. La guía completa, el detalle de cada variable, la creación del preset de Cloudinary, el despliegue, la verificación y el diagnóstico están en [`docs/DESPLIEGUE.md`](docs/DESPLIEGUE.md).
 
 Resumen:
 
 1. Copia `.env.example` a `.env.local` y completa las claves reales.
 2. Ejecuta `npm run lint`, `npm run typecheck`, `npm run verificar` y `npm run build`.
-3. Publica en GitHub con `git push origin main`.
+3. El repositorio ya está publicado; para nuevos cambios, `git push origin main`.
 4. Importa el repositorio en Vercel, usa Node 22 y carga las variables de entorno.
 5. Despliega, prueba una prédica real y descarga los PDF.
 6. Actualiza `NEXT_PUBLIC_SITE_URL` con el dominio final y redespliega.
@@ -180,4 +180,4 @@ La generación real mediante IA **no se pudo ejecutar** en este entorno porque n
 
 ## Repositorio
 
-El remoto configurado de este trabajo es `https://github.com/rpmministry/teodoc-maim.git`. No se configuró un remoto `upstream` y no se realizaron `push`, despliegues ni operaciones remotas. El repositorio no es verificable públicamente sin credenciales (la API de GitHub respondió 404 en el entorno de trabajo).
+El remoto configurado de este trabajo es `https://github.com/rpmministry/teodoc-maim.git`. El commit `713a4b8` fue publicado en `origin/main` con credenciales de Git; el repositorio no es verificable públicamente sin credenciales (la API de GitHub respondió 404 en el entorno de trabajo). No se configuró un remoto `upstream` y no se desplegó en Vercel desde este entorno.

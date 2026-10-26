@@ -93,7 +93,7 @@ La suite local (70 pruebas) cubre lógica, modalidades, los cinco PDF, entrega, 
 
 ## 8. Límites
 
-- Sin despliegue en producción.
-- Sin `push` ni operaciones remotas.
+- Publicado en GitHub, commit `713a4b8`.
+- Sin despliegue en Vercel ni operaciones remotas destructivas.
 - La generación con IA y la transcripción real no se probaron de extremo a extremo en este entorno.
 - La revisión editorial del contenido generado sigue siendo responsabilidad del equipo pastoral.

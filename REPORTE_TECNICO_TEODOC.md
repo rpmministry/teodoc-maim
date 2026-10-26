@@ -2,7 +2,7 @@
 
 **Fecha:** 26 de octubre de 2026
 **Remoto configurado:** `https://github.com/rpmministry/teodoc-maim.git`
-**Alcance:** ejecución autónoma del prompt maestro, sin despliegue ni operaciones remotas.
+**Alcance:** ejecución autónoma del prompt maestro, publicada en GitHub (commit `713a4b8`), sin despliegue en Vercel ni operaciones remotas destructivas.
 
 ## Resumen
 
@@ -30,7 +30,7 @@ Se transformó el proyecto en **TeoDoc MAIM**: una aplicación de análisis bíb
 
 - **Generación real con IA:** la lógica está implementada, pero no hay claves en el entorno. No se pudo ejecutar una prédica real de extremo a extremo.
 - **Transcripción real:** los endpoints y la carga por partes se conservan; no se pudo probar con las claves de AssemblyAI/Deepgram.
-- **URL pública del fork:** el remoto está configurado, pero GitHub devolvió 404 sin credenciales; no se verificó públicamente.
+- **URL pública del fork:** el remoto está configurado y el push se verificó con credenciales; GitHub devuelve 404 sin credenciales, por lo que no es verificable públicamente desde este entorno.
 - **Verificación visual:** se revisaron capturas y PDF renderizados; no se ejecutó una auditoría automatizada con axe.
 
 ### PENDIENTE
