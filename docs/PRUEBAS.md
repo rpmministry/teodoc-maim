@@ -76,6 +76,20 @@ Se capturaron:
 - resultados generales y de jóvenes en móvil;
 - aviso de descarga y vista previa.
 
+## Selector de audio en móviles
+
+El botón de audio usa activación nativa mediante `<label htmlFor="audio-file-input">` y un `input type="file"` accesible con `sr-only`. No se depende de `input.click()` programático, que algunos navegadores móviles bloquean.
+
+Se verificó en perfiles de Android, iPhone, tablet y Mac:
+
+- el selector de archivos se abre;
+- el objetivo táctil mide 48 px de alto;
+- el input acepta `audio/*` y formatos habituales;
+- no hay desbordamiento horizontal;
+- el botón no queda deshabilitado sin una operación en curso.
+
+No hay dispositivos físicos iOS/Android conectados a este entorno; la comprobación se hizo con emulación de navegador y revisión de la activación nativa.
+
 ## Prueba de descarga real en navegador
 
 Con Edge headless + CDP se inyectó un resultado fixture, se seleccionó la pestaña **Jóvenes** y se pulsó **Descargar PDF de esta modalidad**:

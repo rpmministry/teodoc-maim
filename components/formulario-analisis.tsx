@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { MODALIDADES, RANGOS_EDAD } from '@/lib/modalidades';
 import type { ModalidadId, RangoEdad } from '@/lib/tipos';
 import { IconoAudio, IconoCheck, IconoFlecha, IconoModalidad, IconoTexto } from './marca';
@@ -50,7 +50,6 @@ function Seccion({ numero, titulo, descripcion, children }: { numero: string; ti
 export default function FormularioAnalisis({ valores, onCambio, onArchivo, onAnalizar, cargando, estadoAudio, errores }: Props) {
   const [arrastrando, setArrastrando] = useState(false);
   const [mostrarAyuda, setMostrarAyuda] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
   const caracteres = valores.texto.trim().length;
 
   const aceptarArchivo = (archivo: File | undefined) => {
@@ -129,18 +128,6 @@ export default function FormularioAnalisis({ valores, onCambio, onArchivo, onAna
             aceptarArchivo(event.dataTransfer.files?.[0]);
           }}
         >
-          <input
-            ref={inputRef}
-            type="file"
-            accept="audio/*,video/mp4,video/webm,.mp3,.m4a,.wav,.aac,.ogg,.opus,.flac,.mp4,.mov"
-            className="sr-only"
-            onChange={(event) => {
-              aceptarArchivo(event.target.files?.[0]);
-              event.target.value = '';
-            }}
-            disabled={cargando || estadoAudio.activo}
-            aria-label="Seleccionar audio del mensaje"
-          />
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-start gap-3">
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-[var(--coralOscuro)] shadow-sm">
@@ -150,7 +137,7 @@ export default function FormularioAnalisis({ valores, onCambio, onArchivo, onAna
                 <p className="text-[13px] font-semibold text-[var(--tinta)]">
                   {estadoAudio.activo ? estadoAudio.mensaje || 'Procesando audio...' : 'Subir audio para transcribir'}
                 </p>
-                <p className="mt-0.5 text-[11.5px] leading-relaxed text-[var(--muted)]">
+                <p id="audio-help" className="mt-0.5 text-[11.5px] leading-relaxed text-[var(--muted)]">
                   MP3, M4A, WAV, OGG, OPUS o video. Hasta 500 MB. También puedes arrastrarlo aquí.
                 </p>
                 {estadoAudio.nombre && !estadoAudio.error && (
@@ -162,14 +149,28 @@ export default function FormularioAnalisis({ valores, onCambio, onArchivo, onAna
                 {estadoAudio.error && <p className="mt-1 text-[11.5px] text-[#9d2c34]" role="alert">{estadoAudio.error}</p>}
               </div>
             </div>
-            <button
-              type="button"
-              onClick={() => inputRef.current?.click()}
-              disabled={cargando || estadoAudio.activo}
-              className="btn-secundario shrink-0 justify-center"
+            <label
+              htmlFor="audio-file-input"
+              className={`btn-secundario relative min-h-[48px] shrink-0 touch-manipulation justify-center focus-within:ring-2 focus-within:ring-[var(--coral)] focus-within:ring-offset-2 focus-within:ring-offset-[#fffdf8] ${
+                cargando || estadoAudio.activo ? 'pointer-events-none cursor-not-allowed opacity-50' : 'cursor-pointer'
+              }`}
+              aria-disabled={cargando || estadoAudio.activo}
             >
-              {estadoAudio.activo ? 'Procesando…' : estadoAudio.nombre ? 'Cambiar audio' : 'Elegir audio'}
-            </button>
+              <input
+                id="audio-file-input"
+                type="file"
+                accept="audio/*,video/mp4,video/quicktime,video/webm,.mp3,.m4a,.wav,.aac,.ogg,.oga,.opus,.flac,.mp4,.mov"
+                className="sr-only"
+                onChange={(event) => {
+                  aceptarArchivo(event.target.files?.[0]);
+                  event.target.value = '';
+                }}
+                disabled={cargando || estadoAudio.activo}
+                aria-label="Seleccionar archivo de audio del mensaje"
+                aria-describedby="audio-help"
+              />
+              <span>{estadoAudio.activo ? 'Procesando…' : estadoAudio.nombre ? 'Cambiar audio' : 'Elegir audio'}</span>
+            </label>
           </div>
           {estadoAudio.activo && (
             <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-white">
