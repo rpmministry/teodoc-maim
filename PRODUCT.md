@@ -4,43 +4,67 @@
 
 ## Platform
 
-web
+Web responsive.
 
 ## Users
-Expositores bíblicos, pastores, maestros de doctrina, líderes ministeriales, seminaristas y estudiantes de teología que preparan, evalúan o estudian mensajes y enseñanzas cristianas para la edificación comunitaria y el crecimiento ministerial.
+
+Predicadores, pastores, líderes de células, maestros de escuela dominical, líderes juveniles, familias y estudiantes de la Biblia que quieren convertir un mensaje real en materiales de estudio y enseñanza.
 
 ## Product Purpose
-TeoDoc es una herramienta de análisis homilético y exegético de alto rigor teológico. Transcribe y analiza enseñanzas en audio (o fuentes digitales) para extraer con fidelidad la estructura expositiva: idea central, propósito del mensaje, contexto histórico y literario, puntos doctrinales desarrollados, exégesis bíblica y aplicaciones ministeriales prácticas. Genera materiales de estudio estructurados tanto en formato imprimible para archivo (PDF A4) como en láminas editoriales para divulgación digital (Infografía 9:16 de 1080×1920).
+
+TeoDoc MAIM analiza la transcripción de una prédica o enseñanza y produce:
+
+1. un análisis bíblico y teológico general;
+2. un desarrollo especializado para una de cuatro modalidades;
+3. un PDF listo para imprimir y revisar.
+
+La aplicación identifica al predicador solo como metadato editorial. No inventa biografías, cargos, citas, versículos, autores ni doctrina.
 
 ## Positioning
-A diferencia de herramientas genéricas de transcripción o resúmenes automatizados con IA, TeoDoc aplica un clasificador de riqueza teológica y un marco metodológico homilético estricto que respeta la hermenéutica bíblica, el contexto de los pasajes y el rigor conceptual, prohibiendo terminología reduccionista (como "prédica" o "predicador", prefiriendo "mensaje" y "expositor").
+
+No es un generador de sermones ni un resumen genérico. Es una herramienta de estudio que conserva la trazabilidad del contenido, distingue el texto bíblico de la explicación y la aplicación, y permite elegir el público sin perder el análisis general.
 
 ## Operating Context
-- Preparación y perfeccionamiento de mensajes expositivos en escritorios y dispositivos móviles.
-- Impresión en papel A4 y archivado en carpetas de anillado/perforación para notas de estudio.
-- Comunicación visual y difusión pastoral en plataformas móviles (WhatsApp Status, Instagram Stories) mediante infografías verticales de alta definición.
-- Uso en entornos de iglesia y estudio bíblico con interacción fluida y sin distracciones.
 
-## Capabilities and Constraints
-- **Subida y transcripción de audio:** Procesamiento de archivos de audio locales con retroalimentación visual continua.
-- **Rigor terminológico:** Uso de "mensaje", "enseñanza", "expositor" (prohibido "prédica" y "predicador").
-- **Lienzo de infografía fijo:** 1080×1920 px (relación de aspecto 9:16 estricta, retícula de 8 px, áreas seguras de 64 px superior/inferior y 48 px laterales).
-- **Documento PDF A4 editorial:** Margen interior de argollado de 98 pt (~35 mm) y exterior de 54 pt, con prevención estricta de líneas o encabezados huérfanos.
-- **Flujo 100% en la misma ventana:** Sin apertura de pestañas en blanco (`about:blank`) en iOS ni ventanas emergentes intrusivas; entrega ágil a través de banner persistente y modal con visor integrado y Web Share nativo.
+- Preparación de estudios en escritorio y móvil.
+- Reuniones de grupos pequeños y células.
+- Encuentros juveniles.
+- Clases bíblicas infantiles.
+- Planes devocionales personales o familiares.
+- Descarga e impresión de documentos A4.
+
+## Capabilities
+
+- Transcripción por texto pegado o audio.
+- Análisis general con contexto, desarrollo, enseñanzas, conceptos y aplicaciones.
+- Grupos pequeños con agenda, preguntas, actividad, compromiso y guía del líder.
+- Jóvenes con conceptos, casos, dinámica y desafío semanal.
+- Niños con rango de edad, relato, actividad, juego y guía del maestro.
+- Devocionales de siete días con lectura, reflexión, aplicación, acción y oración.
+- Campo opcional de predicador, título y fecha.
+- Cinco PDF con identidad institucional y numeración.
+- Persistencia local de 48 horas y recuperación de la transcripción.
 
 ## Brand Commitments
-- **Nombre:** TeoDoc.
-- **Estética:** Sistema de diseño IBM Carbon (Carbon Design System), sobrio, técnico, funcional, libre de "AI slop" o decoraciones superfluas.
-- **Paleta tonal:** Carbón oscuro profundo (`#161616`), superficies (`#262626`), bordes estructurales (`#393939`), acento azul Carbon (`#0f62fe` / `#0043ce`), tipografía clara de alto contraste (`#ffffff`, `#f4f4f4`, `#c6c6c6`).
-- **Ilustraciones:** Vectoriales puras, temáticas teológicas bíblicas (sin recursos remotos, 100% offline).
 
-## Evidence on Hand
-- Componentes visuales y de diagramación: [`components/infografia.tsx`](file:///c:/Users/Alsiz/analizador-ministerial/components/infografia.tsx).
-- Motor de cálculo y retícula editorial: [`lib/infografia-layout.ts`](file:///c:/Users/Alsiz/analizador-ministerial/lib/infografia-layout.ts).
-- Interfaz principal y exportador de documentos: [`app/page.tsx`](file:///c:/Users/Alsiz/analizador-ministerial/app/page.tsx).
-- Suite de pruebas de invariantes: [`scripts/verificar-entrega.mts`](file:///c:/Users/Alsiz/analizador-ministerial/scripts/verificar-entrega.mts).
+- Nombre de producto: **TeoDoc MAIM**.
+- Institución: **MAIM Casa de Oración**, nombre verificado en su página oficial de Facebook.
+- Identidad visual: coral `#f04e59`, crema `#ffefb4`, tinta `#2b1f1e`, superficies crema.
+- Logotipo e isotipo oficiales, sin redibujar.
+- Tono editorial: sobrio, cálido, claro y pastoral.
+- Sin infografías ni recursos decorativos externos.
 
-## Product Principles
-1. **Fidelidad Exegética y Claridad:** La estructura teológica prevalece sobre cualquier adorno; cada título, cita y aplicación debe ser legible al instante.
-2. **Respeto a la Experiencia de Lectura:** Jerarquía visual estricta y tipografía de precisión suiza inspirada en IBM Carbon.
-3. **Robustez y Portabilidad Universal:** El usuario nunca debe ser sorprendido por fallos de plataforma (como pestañas en blanco en Safari o PDFs no legibles); todo funciona de forma predecible y nativa.
+## Constraints
+
+- El análisis depende de proveedores de IA y claves del entorno.
+- El material generado requiere revisión humana.
+- No se usa la identidad para atribuir doctrina o historia no verificada.
+- La privacidad se explica en la interfaz y en `docs/ARQUITECTURA.md`.
+
+## Evidence
+
+- `README.md`
+- `docs/MODALIDADES.md`
+- `docs/PDF.md`
+- `docs/IDENTIDAD.md`
+- `docs/PRUEBAS.md`

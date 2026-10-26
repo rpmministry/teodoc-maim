@@ -1,7 +1,10 @@
 {
-  "name": "analizador-ministerial",
-  "version": "0.1.0",
+  "name": "teodoc-maim",
+  "version": "1.0.0",
   "private": true,
+  "engines": {
+    "node": ">=20.9.0"
+  },
   "browserslist": [
     "ios_saf >= 15",
     "Safari >= 15"
@@ -11,48 +14,40 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit",
     "test:logica": "node scripts/verificar-riqueza.mts",
-    "test:infografia": "node scripts/verificar-infografia.mts",
+    "test:modalidades": "node scripts/verificar-modalidades.mts",
+    "test:pdf": "node scripts/verificar-pdf.mts",
     "test:entrega": "node scripts/verificar-entrega.mts",
     "test:seguridad": "node scripts/verificar-seguridad.mts",
     "test:resiliencia": "node scripts/verificar-resiliencia.mts",
-    "verificar": "npm run test:logica && npm run test:infografia && npm run test:entrega && npm run test:seguridad && npm run test:resiliencia"
+    "test:identidad": "node scripts/verificar-identidad.mts",
+    "verificar": "npm run test:logica && npm run test:modalidades && npm run test:pdf && npm run test:entrega && npm run test:seguridad && npm run test:resiliencia && npm run test:identidad"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.121.0",
     "@base-ui/react": "^1.7.0",
-    "@deepgram/sdk": "^5.8.0",
     "@google/genai": "^2.19.0",
     "assemblyai": "^4.36.7",
     "class-variance-authority": "^0.7.1",
     "cloudinary": "^2.11.0",
     "clsx": "^2.1.1",
-    "dom-to-image-more": "^3.10.2",
-    "ffmpeg-static": "^5.3.0",
-    "fluent-ffmpeg": "^2.1.3",
-    "groq-sdk": "^1.6.0",
-    "html2pdf.js": "^0.14.0",
-    "lucide-react": "^1.34.0",
+    "jspdf": "^4.2.1",
     "next": "16.3.3",
-    "openai": "^7.8.0",
     "react": "19.2.8",
     "react-dom": "19.2.8",
-    "react-markdown": "^10.1.0",
     "shadcn": "^4.19.0",
     "tailwind-merge": "^3.6.0",
     "tw-animate-css": "^1.4.0",
-    "uuid": "^14.0.2",
     "youtube-transcript": "^1.3.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
-    "@types/fluent-ffmpeg": "^2.1.28",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "@types/uuid": "^10.0.0",
     "eslint": "^9",
     "eslint-config-next": "16.3.3",
+    "pdfjs-dist": "^5.4.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

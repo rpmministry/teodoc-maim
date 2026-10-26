@@ -8,6 +8,7 @@ const cspHeader = `
   connect-src 'self' https://generativelanguage.googleapis.com https://openrouter.ai https://api.deepseek.com https://api.assemblyai.com https://api.deepgram.com https://api.cloudinary.com https://res.cloudinary.com https://www.youtube.com https://*.googlevideo.com;
   font-src 'self' data:;
   object-src 'none';
+  frame-src 'self' blob:;
   base-uri 'self';
   form-action 'self';
   frame-ancestors 'none';
