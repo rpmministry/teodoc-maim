@@ -47,7 +47,7 @@ curl "http://localhost:8010/?videoId=dQw4w9WgXcQ&lang=es"
 
 No necesitas tener un computador encendido. Opciones gratuitas y open source:
 
-- **Render (recomendado, 1 clic)**: este repo incluye `render.yaml` en la raíz.
+- **Render (opcional)**: este repo incluye el Blueprint en `services/render.yaml`.
   En https://dashboard.render.com → **New → Blueprint** → conecta el repo →
   Render crea el servicio Docker. Copia la URL y úsala como `TRANSCRIPT_SERVICE_URL`.
 - **Hugging Face Spaces (gratis, sin tarjeta)**: sigue
