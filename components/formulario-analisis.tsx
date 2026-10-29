@@ -94,6 +94,7 @@ export default function FormularioAnalisis({
   const [explorandoVideo, setExplorandoVideo] = useState(false);
   const [metadatosVideo, setMetadatosVideo] = useState<MetadatosVideoInfo | null>(null);
   const [errorVideo, setErrorVideo] = useState<string | null>(null);
+  const [avisoVideo, setAvisoVideo] = useState<string | null>(null);
   const [calidadSeleccionada, setCalidadSeleccionada] = useState('best');
   const [procesandoOperacion, setProcesandoOperacion] = useState<'descarga' | 'audio' | null>(null);
   const [progresoOperacion, setProgresoOperacion] = useState(0);
@@ -109,11 +110,13 @@ export default function FormularioAnalisis({
 
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const timeoutExplorarRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     return () => {
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
       if (timeoutExplorarRef.current) clearTimeout(timeoutExplorarRef.current);
+      if (abortControllerRef.current) abortControllerRef.current.abort();
     };
   }, []);
 
@@ -126,30 +129,69 @@ export default function FormularioAnalisis({
     if (archivo) onArchivo(archivo);
   };
 
+  // Normaliza y extrae una URL limpia, reparando duplicaciones accidentales o falta de protocolo http/https
+  const normalizarUrl = (url: string): string => {
+    let limpia = url.trim();
+    if (!limpia) return '';
+    limpia = limpia.replace(/^[<"']+|[>"']+$/g, '');
+
+    // Reparar duplicación accidental de pegado en el portapapeles: https://...https://...
+    const matchDoble = limpia.match(/(https?:\/\/[^\s"'<>]+?)https?:\/\//i);
+    if (matchDoble && matchDoble[1]) {
+      limpia = matchDoble[1];
+    } else {
+      const matchPrimera = limpia.match(/https?:\/\/[^\s"'<>]+/i);
+      if (matchPrimera) {
+        limpia = matchPrimera[0];
+      }
+    }
+
+    if (!/^https?:\/\//i.test(limpia)) {
+      if (/^(www\.)?(youtube\.com|youtu\.be|facebook\.com|fb\.watch|vimeo\.com|instagram\.com)/i.test(limpia)) {
+        limpia = `https://${limpia}`;
+      }
+    }
+
+    return limpia;
+  };
+
   // --- Manejador: Explorar Video por Enlace con URL específica ---
   const explorarVideoConUrl = async (urlAExplorar: string) => {
-    const urlLimpia = urlAExplorar.trim();
+    const urlLimpia = normalizarUrl(urlAExplorar);
     if (!urlLimpia) return;
     setExplorandoVideo(true);
     setErrorVideo(null);
-    setMetadatosVideo(null);
+    setAvisoVideo(null);
     setUrlDescargaDirecta(null);
+
+    // Cancelar cualquier probe anterior pendiente para evitar race conditions
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
 
     try {
       const res = await fetch('/api/multimedia/probe', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url: urlLimpia }),
+        signal: abortControllerRef.current.signal,
       });
       const data = await res.json().catch(() => null);
       if (!res.ok || !data?.ok) {
-        throw new Error(data?.error || 'No se pudo explorar el video. Verifica el enlace e intenta de nuevo.');
+        throw new Error(data?.error || data?.aviso || 'No se pudo explorar el video. Verifica el enlace e intenta de nuevo.');
       }
       setMetadatosVideo(data.metadatos);
+      if (data.aviso) {
+        setAvisoVideo(data.aviso);
+      }
       if (!valores.titulo && data.metadatos?.titulo) {
         onCambio({ titulo: data.metadatos.titulo });
       }
     } catch (err: unknown) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        return;
+      }
       setErrorVideo(err instanceof Error ? err.message : 'Error al explorar el video.');
     } finally {
       setExplorandoVideo(false);
@@ -161,23 +203,31 @@ export default function FormularioAnalisis({
   };
 
   const manejarPegadoUrl = (e: React.ClipboardEvent<HTMLInputElement>) => {
-    const textoPegado = e.clipboardData.getData('text').trim();
-    if (textoPegado && (textoPegado.startsWith('http://') || textoPegado.startsWith('https://'))) {
-      setUrlVideo(textoPegado);
+    // CRÍTICO: Prevenir la inserción por defecto del navegador que duplicaba la URL
+    // al concatenar la acción nativa con el estado controlado de React.
+    e.preventDefault();
+    const textoPegado = e.clipboardData.getData('text');
+    const urlLimpia = normalizarUrl(textoPegado);
+    if (urlLimpia) {
+      setUrlVideo(urlLimpia);
+      setErrorVideo(null);
+      setAvisoVideo(null);
       if (timeoutExplorarRef.current) clearTimeout(timeoutExplorarRef.current);
       timeoutExplorarRef.current = setTimeout(() => {
-        void explorarVideoConUrl(textoPegado);
+        void explorarVideoConUrl(urlLimpia);
       }, 100);
     }
   };
 
   // --- Manejador: Ejecutar Operación A (Descargar Video) u Operación B (Extraer Audio) ---
   const ejecutarOperacionVideo = async (operacion: 'descargar_video' | 'extraer_audio') => {
-    if (!urlVideo.trim()) return;
+    const urlLimpia = normalizarUrl(urlVideo);
+    if (!urlLimpia) return;
     setProcesandoOperacion(operacion === 'descargar_video' ? 'descarga' : 'audio');
     setProgresoOperacion(5);
     setMensajeOperacion(operacion === 'descargar_video' ? 'Iniciando descarga de video...' : 'Extrayendo audio del video...');
     setErrorVideo(null);
+    setAvisoVideo(null);
     void adquirirPantallaActiva();
 
     try {
@@ -185,7 +235,7 @@ export default function FormularioAnalisis({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          url: urlVideo.trim(),
+          url: urlLimpia,
           operacion,
           calidad: calidadSeleccionada,
         }),
@@ -516,12 +566,15 @@ export default function FormularioAnalisis({
                   className="campo flex-1 min-w-0 w-full"
                   value={urlVideo}
                   onChange={(e) => {
-                    const val = e.target.value;
-                    setUrlVideo(val);
-                    if (val.trim().startsWith('http://') || val.trim().startsWith('https://')) {
+                    const rawVal = e.target.value;
+                    setUrlVideo(rawVal);
+                    setErrorVideo(null);
+                    setAvisoVideo(null);
+                    const urlLimpia = normalizarUrl(rawVal);
+                    if (urlLimpia.startsWith('http://') || urlLimpia.startsWith('https://')) {
                       if (timeoutExplorarRef.current) clearTimeout(timeoutExplorarRef.current);
                       timeoutExplorarRef.current = setTimeout(() => {
-                        void explorarVideoConUrl(val);
+                        void explorarVideoConUrl(urlLimpia);
                       }, 700);
                     }
                   }}
@@ -542,29 +595,47 @@ export default function FormularioAnalisis({
 
             {errorVideo && (
               <div className="mt-3 rounded-[10px] bg-[#fff2f2] p-3 text-[11.5px] font-medium text-[#8f2830] break-words" role="alert">
-                {errorVideo}
+                <p>{errorVideo}</p>
+                <p className="mt-1 text-[11px] text-[#5c1c22]">
+                  💡 Consejo: Si el enlace es correcto, aún puedes pulsar &ldquo;⚡ Extraer audio y analizar&rdquo; a continuación para procesarlo directamente.
+                </p>
               </div>
             )}
 
-            {/* Tarjeta de previsualización del video */}
-            {metadatosVideo && (
+            {avisoVideo && (
+              <div className="mt-3 rounded-[10px] bg-[#fff8e7] p-3 text-[11.5px] font-medium text-[#8a5b14]" role="status">
+                {avisoVideo}
+              </div>
+            )}
+
+            {/* Tarjeta de previsualización y acciones del video (disponible si hay metadatos o si se pegó una URL) */}
+            {(metadatosVideo || urlVideo.trim().length > 10) && (
               <div className="mt-4 rounded-[14px] border border-[#e3d1c4] bg-white p-4 shadow-sm w-full max-w-full overflow-hidden">
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center w-full max-w-full">
-                  {metadatosVideo.miniatura && (
-                    <img
-                      src={metadatosVideo.miniatura}
-                      alt={metadatosVideo.titulo}
-                      className="h-20 w-32 shrink-0 rounded-[8px] object-cover border border-[#ebd8cb]"
-                    />
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[13.5px] font-bold text-[var(--tinta)] leading-snug break-words">{metadatosVideo.titulo}</p>
-                    <p className="mt-1 text-[11.5px] text-[var(--muted)] break-words">
-                      {metadatosVideo.autor && <span>{metadatosVideo.autor} · </span>}
-                      <span>Duración: {metadatosVideo.duracionFormateada}</span>
-                    </p>
+                {metadatosVideo ? (
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center w-full max-w-full">
+                    {metadatosVideo.miniatura && (
+                      <img
+                        src={metadatosVideo.miniatura}
+                        alt={metadatosVideo.titulo}
+                        className="h-20 w-32 shrink-0 rounded-[8px] object-cover border border-[#ebd8cb]"
+                      />
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[13.5px] font-bold text-[var(--tinta)] leading-snug break-words">{metadatosVideo.titulo}</p>
+                      <p className="mt-1 text-[11.5px] text-[var(--muted)] break-words">
+                        {metadatosVideo.autor && <span>{metadatosVideo.autor} · </span>}
+                        <span>Duración: {metadatosVideo.duracionFormateada}</span>
+                      </p>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="flex items-center gap-3 text-[12px] text-[var(--muted)]">
+                    <IconoVideo className="h-5 w-5 text-[var(--coralOscuro)] shrink-0" />
+                    <span className="break-words">
+                      Enlace preparado: <strong className="text-[var(--tinta)]">{urlVideo.trim()}</strong>
+                    </span>
+                  </div>
+                )}
 
                 {/* Acciones del video: Operación A (Descargar) vs Operación B (Extraer Audio) */}
                 <div className="mt-4 flex flex-col gap-3 border-t border-[#f2e6dc] pt-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between w-full max-w-full">
@@ -579,7 +650,11 @@ export default function FormularioAnalisis({
                       onChange={(e) => setCalidadSeleccionada(e.target.value)}
                       disabled={Boolean(procesandoOperacion)}
                     >
-                      {metadatosVideo.formatosDisponibles.map((f) => (
+                      {(metadatosVideo?.formatosDisponibles || [
+                        { id: 'best', resolucion: 'Mejor calidad disponible', extension: 'mp4' },
+                        { id: '720p', resolucion: '720p (HD)', extension: 'mp4' },
+                        { id: 'audio_mp3', resolucion: 'Solo audio', extension: 'mp3' },
+                      ]).map((f) => (
                         <option key={f.id} value={f.id}>
                           {f.resolucion} ({f.extension.toUpperCase()})
                         </option>
@@ -590,8 +665,8 @@ export default function FormularioAnalisis({
                   <div className="flex flex-wrap gap-2 w-full sm:w-auto">
                     <button
                       type="button"
-                      onClick={() => ejecutarOperacionVideo('descargar_video')}
-                      disabled={Boolean(procesandoOperacion)}
+                      onClick={() => void ejecutarOperacionVideo('descargar_video')}
+                      disabled={Boolean(procesandoOperacion) || explorandoVideo}
                       className="btn-secundario text-[12px] py-2 px-3 gap-1.5 flex-1 sm:flex-initial justify-center"
                     >
                       <IconoDescarga className="h-3.5 w-3.5 shrink-0" />
@@ -599,7 +674,7 @@ export default function FormularioAnalisis({
                     </button>
                     <button
                       type="button"
-                      onClick={() => ejecutarOperacionVideo('extraer_audio')}
+                      onClick={() => void ejecutarOperacionVideo('extraer_audio')}
                       disabled={Boolean(procesandoOperacion)}
                       className="btn-primario text-[12px] py-2 px-3 gap-1.5 flex-1 sm:flex-initial justify-center"
                     >
@@ -815,8 +890,9 @@ export default function FormularioAnalisis({
                 }}
                 onDetectarEnlaceVideo={(url) => {
                   setTabOrigen('enlace');
-                  setUrlVideo(url);
-                  void explorarVideoConUrl(url);
+                  const urlLimpia = normalizarUrl(url);
+                  setUrlVideo(urlLimpia);
+                  void explorarVideoConUrl(urlLimpia);
                 }}
                 disabled={cargando}
               />

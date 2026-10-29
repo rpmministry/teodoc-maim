@@ -62,7 +62,20 @@ export function validarUrlMultimedia(rawUrl: string): ValidacionUrlResultado {
     return { esValida: false, proveedor: 'desconocido', error: 'No se proporcionó una URL.' };
   }
 
-  const limpia = rawUrl.trim();
+  let limpia = rawUrl.trim();
+  // Quitar delimitadores o comillas accidentales
+  limpia = limpia.replace(/^[<"']+|[>"']+$/g, '');
+
+  // Reparar duplicación accidental de pegado: https://...https://...
+  const matchDoble = limpia.match(/(https?:\/\/[^\s"'<>]+?)https?:\/\//i);
+  if (matchDoble && matchDoble[1]) {
+    limpia = matchDoble[1];
+  }
+
+  // Si no se incluyó protocolo http:// o https://, agregarlo por defecto
+  if (!/^https?:\/\//i.test(limpia)) {
+    limpia = `https://${limpia}`;
+  }
 
   let parsed: URL;
   try {

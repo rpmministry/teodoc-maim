@@ -34,7 +34,24 @@ export async function POST(req: NextRequest) {
       });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Error al explorar el video.';
-      return NextResponse.json({ ok: false, error: msg }, { status: 422 });
+      // Aún si no pudimos extraer los metadatos completos (ej: miniatura/título bloqueado por plataforma),
+      // retornamos metadatos de contingencia para que el usuario NO quede bloqueado de extraer audio y analizar.
+      return NextResponse.json({
+        ok: true,
+        proveedor: validacion.proveedor,
+        url: validacion.urlLimpia || url,
+        aviso: msg,
+        metadatos: {
+          titulo: 'Enlace multimedia listo para procesar',
+          duracionSegundos: 0,
+          duracionFormateada: 'Detectada al procesar',
+          formatosDisponibles: [
+            { id: 'best', resolucion: 'Mejor calidad disponible', extension: 'mp4' },
+            { id: '720p', resolucion: '720p (HD)', extension: 'mp4' },
+            { id: 'audio_mp3', resolucion: 'Solo audio', extension: 'mp3', esSoloAudio: true },
+          ],
+        },
+      });
     }
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : 'Error inesperado.';

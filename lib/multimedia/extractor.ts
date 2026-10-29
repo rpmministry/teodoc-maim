@@ -2,6 +2,8 @@ import { spawn } from 'node:child_process';
 import { existsSync, statSync, readdirSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { obtenerDirectorioStaging, type MetadatosVideoInfo } from './job-manager.ts';
+import { extractYouTubeVideoId } from '../youtube/extract-video-id';
+import { fetchYouTubeOembed } from '../youtube/oembed';
 
 const NAVEGADOR_USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
@@ -105,7 +107,7 @@ function construirArgumentosBaseYtDlp(url: string, opciones: { esDescarga?: bool
   if (urlLower.includes('youtube.com') || urlLower.includes('youtu.be')) {
     args.push(
       '--extractor-args',
-      'youtube:player_client=android,web,ios;player_skip=configs,webpage',
+      'youtube:player_client=android,web',
       '--referer',
       'https://www.youtube.com/',
     );
@@ -129,103 +131,132 @@ function construirArgumentosBaseYtDlp(url: string, opciones: { esDescarga?: bool
 
 /**
  * Ejecuta yt-dlp -J para inspeccionar los metadatos y transmisiones disponibles sin descargar.
+ * Cuenta con timeout controlado y rescate instantáneo mediante oEmbed para enlaces de YouTube.
  */
 export async function obtenerMetadatosVideo(url: string): Promise<MetadatosVideoInfo> {
   const ytdlp = obtenerRutaYtDlp();
-  const baseArgs = construirArgumentosBaseYtDlp(url, { esDescarga: false });
+  const videoId = extractYouTubeVideoId(url);
 
-  const args = [
-    '-J',
-    ...baseArgs,
-    url,
+  const formatosDisponiblesPorDefecto: MetadatosVideoInfo['formatosDisponibles'] = [
+    {
+      id: 'best',
+      resolucion: 'Mejor calidad disponible',
+      extension: 'mp4',
+      tamanoAproximado: 'Automático',
+    },
+    {
+      id: '720p',
+      resolucion: '720p (HD)',
+      extension: 'mp4',
+      tamanoAproximado: 'Estándar',
+    },
+    {
+      id: '480p',
+      resolucion: '480p (Media / Móvil)',
+      extension: 'mp4',
+      tamanoAproximado: 'Liviano',
+    },
+    {
+      id: 'audio_mp3',
+      resolucion: 'Solo audio',
+      extension: 'mp3',
+      esSoloAudio: true,
+      tamanoAproximado: 'Óptimo para estudio',
+    },
   ];
 
-  return new Promise((resolvePromise, reject) => {
-    let stdoutData = '';
-    let stderrData = '';
+  try {
+    const baseArgs = construirArgumentosBaseYtDlp(url, { esDescarga: false });
+    const args = ['-J', ...baseArgs, url];
 
-    const proc = spawn(ytdlp, args, {
-      windowsHide: true,
-      stdio: ['ignore', 'pipe', 'pipe'],
-    });
+    const metadataYtDlp = await new Promise<MetadatosVideoInfo>((resolvePromise, reject) => {
+      let stdoutData = '';
+      let stderrData = '';
 
-    proc.stdout.on('data', (chunk) => {
-      stdoutData += chunk.toString('utf-8');
-    });
+      const proc = spawn(ytdlp, args, {
+        windowsHide: true,
+        stdio: ['ignore', 'pipe', 'pipe'],
+      });
 
-    proc.stderr.on('data', (chunk) => {
-      stderrData += chunk.toString('utf-8');
-    });
+      const timer = setTimeout(() => {
+        try {
+          proc.kill();
+        } catch {}
+        reject(new Error('Tiempo de espera agotado al consultar metadatos con yt-dlp'));
+      }, 15_000);
 
-    proc.on('error', (err) => {
-      reject(new Error(`No se pudo iniciar el extractor multimedia: ${err.message}`));
-    });
+      proc.stdout.on('data', (chunk) => {
+        stdoutData += chunk.toString('utf-8');
+      });
 
-    proc.on('close', (code) => {
-      if (code !== 0) {
-        const errorMsg = stderrData.trim() || `El proceso finalizó con código ${code}`;
-        // Errores amigables y categorizados
-        if (errorMsg.includes('403') || errorMsg.includes('Forbidden')) {
-          return reject(
-            new Error(
-              'La plataforma restringió la conexión temporalmente (código 403). Intenta nuevamente o sube el archivo de audio directamente.',
-            ),
-          );
+      proc.stderr.on('data', (chunk) => {
+        stderrData += chunk.toString('utf-8');
+      });
+
+      proc.on('error', (err) => {
+        clearTimeout(timer);
+        reject(new Error(`No se pudo iniciar el extractor multimedia: ${err.message}`));
+      });
+
+      proc.on('close', (code) => {
+        clearTimeout(timer);
+        if (code !== 0) {
+          const errorMsg = stderrData.trim() || `El proceso finalizó con código ${code}`;
+          return reject(new Error(errorMsg));
         }
-        if (errorMsg.includes('Private video') || errorMsg.includes('Video unavailable')) {
-          return reject(new Error('El video es privado o no está disponible públicamente.'));
-        }
-        if (errorMsg.includes('DRM') || errorMsg.includes('copyright')) {
-          return reject(new Error('Este video cuenta con protección o restricciones técnicas de reproducción.'));
-        }
-        return reject(new Error(`No se pudo obtener información del enlace: ${errorMsg.slice(0, 200)}`));
-      }
 
+        try {
+          const info = JSON.parse(stdoutData);
+          const duracion = typeof info.duration === 'number' ? info.duration : 0;
+
+          resolvePromise({
+            titulo: info.title || 'Prédica / Enseñanza',
+            duracionSegundos: duracion,
+            duracionFormateada: formatearSegundos(duracion),
+            autor: info.uploader || info.channel || undefined,
+            miniatura: info.thumbnail || undefined,
+            formatosDisponibles: formatosDisponiblesPorDefecto,
+          });
+        } catch {
+          reject(new Error('La información del video no pudo interpretarse correctamente.'));
+        }
+      });
+    });
+
+    return metadataYtDlp;
+  } catch (errPrimario) {
+    // Si yt-dlp falla o demora y es un video de YouTube, usamos el rescate oEmbed ultra-rápido y confiable
+    if (videoId) {
       try {
-        const info = JSON.parse(stdoutData);
-        const formatosDisponibles: MetadatosVideoInfo['formatosDisponibles'] = [
-          {
-            id: 'best',
-            resolucion: 'Mejor calidad disponible',
-            extension: 'mp4',
-            tamanoAproximado: 'Automático',
-          },
-          {
-            id: '720p',
-            resolucion: '720p (HD)',
-            extension: 'mp4',
-            tamanoAproximado: 'Estándar',
-          },
-          {
-            id: '480p',
-            resolucion: '480p (Media / Móvil)',
-            extension: 'mp4',
-            tamanoAproximado: 'Liviano',
-          },
-          {
-            id: 'audio_mp3',
-            resolucion: 'Solo audio',
-            extension: 'mp3',
-            esSoloAudio: true,
-            tamanoAproximado: 'Óptimo para estudio',
-          },
-        ];
+        const oembed = await fetchYouTubeOembed(videoId);
+        if (oembed.title) {
+          return {
+            titulo: oembed.title,
+            duracionSegundos: 0,
+            duracionFormateada: 'Detectada al procesar',
+            autor: oembed.author,
+            miniatura: `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`,
+            formatosDisponibles: formatosDisponiblesPorDefecto,
+          };
+        }
+      } catch {}
+    }
 
-        const duracion = typeof info.duration === 'number' ? info.duration : 0;
+    const errorMsg = errPrimario instanceof Error ? errPrimario.message : String(errPrimario);
+    if (errorMsg.includes('403') || errorMsg.includes('Forbidden')) {
+      throw new Error(
+        'La plataforma restringió la conexión temporalmente (código 403). Intenta nuevamente o extrae el audio directamente.',
+      );
+    }
+    if (errorMsg.includes('Private video') || errorMsg.includes('Video unavailable')) {
+      throw new Error('El video es privado o no está disponible públicamente.');
+    }
+    if (errorMsg.includes('DRM') || errorMsg.includes('copyright')) {
+      throw new Error('Este video cuenta con protección o restricciones técnicas de reproducción.');
+    }
 
-        resolvePromise({
-          titulo: info.title || 'Prédica / Enseñanza',
-          duracionSegundos: duracion,
-          duracionFormateada: formatearSegundos(duracion),
-          autor: info.uploader || info.channel || undefined,
-          miniatura: info.thumbnail || undefined,
-          formatosDisponibles,
-        });
-      } catch (err) {
-        reject(new Error('La información del video no pudo interpretarse correctamente.'));
-      }
-    });
-  });
+    throw new Error(errorMsg.slice(0, 150) || 'No se pudo obtener información del enlace.');
+  }
 }
 
 /**
