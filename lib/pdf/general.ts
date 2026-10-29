@@ -10,43 +10,39 @@ export function construirPdfGeneral(analisis: PredicaAnalisis, metadatos: Metada
   d.portada({
     etiqueta: 'Análisis general',
     titulo: analisis.titulo,
-    descripcion: 'Análisis bíblico y teológico del mensaje, con su desarrollo, referencias y aplicaciones.',
+    descripcion: 'Análisis bíblico y teológico del mensaje estructurado según los modelos de enseñanza y predicación de MAIM.',
     fechaDocumento: fechaDocumento(meta),
   });
 
-  // 01. Identificación del mensaje
-  d.tituloSeccion('Identificación del mensaje', '01');
+  // 01. FUNDAMENTO BÍBLICO E IDEA CENTRAL
+  d.tituloSeccion('Fundamento bíblico e idea central', '01');
+
+  d.subtitulo('Identificación del mensaje');
   d.ficha(fuentePredica(analisis, metadatos));
 
-  // 02. Idea central y propósito
-  d.tituloSeccion('Idea central y propósito', '02');
+  d.subtitulo('Idea central y propósito');
   if (analisis.idea_principal) {
     d.caja(analisis.idea_principal, { etiqueta: 'Idea central del mensaje', tamano: 11.5 });
   }
-  if (analisis.tema_principal) d.parrafo(`Tema principal: ${analisis.tema_principal}`, { negrita: false, despues: 4 });
-  if (analisis.proposito) d.parrafo(`Propósito: ${analisis.proposito}`, { despues: 4 });
+  if (analisis.tema_principal) d.parrafo(`Tema principal: ${analisis.tema_principal}`, { negrita: true, despues: 4 });
+  if (analisis.proposito) d.parrafo(`Propósito espiritual: ${analisis.proposito}`, { despues: 4 });
   if (analisis.contexto_general) d.parrafo(`Contexto general: ${analisis.contexto_general}`, { despues: 8 });
 
-  // 03. Fundamento bíblico
   const tieneTexto = analisis.texto_biblico_principal.cita || analisis.texto_biblico_principal.texto;
   if (tieneTexto || analisis.contexto_biblico || analisis.contexto_historico || analisis.contexto_literario || analisis.relacion_textos || analisis.interpretacion) {
-    d.tituloSeccion('Fundamento bíblico', '03');
+    d.subtitulo('Fundamento bíblico');
     if (tieneTexto) d.cita(analisis.texto_biblico_principal);
     if (analisis.contexto_biblico) {
-      d.subtitulo('Contexto del pasaje');
-      d.parrafo(analisis.contexto_biblico);
+      d.parrafo(`Contexto del pasaje: ${analisis.contexto_biblico}`, { sangria: 6 });
     }
     if (analisis.contexto_historico) {
-      d.subtitulo('Contexto histórico');
-      d.parrafo(analisis.contexto_historico);
+      d.parrafo(`Contexto histórico: ${analisis.contexto_historico}`, { sangria: 6 });
     }
     if (analisis.contexto_literario) {
-      d.subtitulo('Contexto literario');
-      d.parrafo(analisis.contexto_literario);
+      d.parrafo(`Contexto literario: ${analisis.contexto_literario}`, { sangria: 6 });
     }
     if (analisis.relacion_textos) {
-      d.subtitulo('Relación entre los textos');
-      d.parrafo(analisis.relacion_textos);
+      d.parrafo(`Relación entre los textos: ${analisis.relacion_textos}`, { sangria: 6 });
     }
     if (analisis.interpretacion) {
       d.subtitulo('Lectura y significado doctrinal');
@@ -58,9 +54,10 @@ export function construirPdfGeneral(analisis: PredicaAnalisis, metadatos: Metada
     }
   }
 
-  // 04. Desarrollo del mensaje
+  // 02. CUERPO Y DESARROLLO DEL MENSAJE
+  d.tituloSeccion('Cuerpo y desarrollo del mensaje', '02');
   if (analisis.desarrollo_progresivo.length) {
-    d.tituloSeccion('Desarrollo del mensaje', '04');
+    d.subtitulo('Desarrollo del mensaje');
     analisis.desarrollo_progresivo.forEach((punto, indice) => {
       const numero = String(indice + 1).padStart(2, '0');
       d.asegurar(85);
@@ -75,50 +72,50 @@ export function construirPdfGeneral(analisis: PredicaAnalisis, metadatos: Metada
     });
   }
 
-  // 05. Enseñanzas principales
   if (analisis.ensenanzas.length) {
-    d.tituloSeccion('Enseñanzas principales', '05');
+    d.subtitulo('Enseñanzas principales');
     for (const ensenanza of analisis.ensenanzas) {
       d.subtitulo(ensenanza.sobre ? `Sobre ${ensenanza.sobre}` : 'Enseñanza', [181, 48, 59]);
       d.parrafo(ensenanza.ensenanza);
     }
   }
 
-  // 06. Conceptos clave
   if (analisis.conceptos_clave.length || analisis.conceptos_teologicos.length) {
-    d.tituloSeccion('Conceptos clave', '06');
+    d.subtitulo('Conceptos clave');
     if (analisis.conceptos_clave.length) d.chips(analisis.conceptos_clave);
     for (const concepto of analisis.conceptos_teologicos) {
       d.parrafo(`${concepto.concepto}: ${concepto.significado}`);
     }
   }
 
-  // 07. Aplicación práctica
+  // 03. CIERRE, APLICACIÓN Y RESPUESTA PERSONAL
+  d.tituloSeccion('Cierre, aplicación y respuesta personal', '03');
+
   if (analisis.aplicacion.length) {
-    d.tituloSeccion('Aplicación práctica', '07');
+    d.subtitulo('Aplicación práctica');
     d.lista(analisis.aplicacion, { numerada: true });
   }
 
   const preguntas = preguntasReflexion(analisis);
   if (preguntas.length) {
-    d.tituloSeccion('Para reflexionar', '08');
+    d.subtitulo('Para reflexionar');
     d.lista(preguntas, { numerada: true });
   }
 
-  // 09. Conclusión del estudio
   if (analisis.conclusion) {
-    d.tituloSeccion('Conclusión del estudio', '09');
+    d.subtitulo('Conclusión del estudio');
     d.caja(analisis.conclusion, { tono: 'crema', tamano: 11 });
   }
 
   if (analisis.oracion) {
-    d.tituloSeccion('Oración', '10');
+    d.subtitulo('Oración');
     d.caja(analisis.oracion, { tono: 'coral', etiqueta: 'Oración sugerida', tamano: 10.5 });
   }
 
+  // APÉNDICE: INVENTARIO DE REFERENCIAS
   const referencias = construirReferencias(analisis);
   if (referencias.length) {
-    d.tituloSeccion('Inventario de referencias bíblicas', '11');
+    d.tituloSeccion('Inventario de referencias bíblicas', 'R');
     d.inventarioReferencias(referencias);
     d.parrafo(notaReferencias(referencias), { tamano: 8.5, color: [122, 102, 98] });
   }
