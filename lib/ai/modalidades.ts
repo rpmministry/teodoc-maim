@@ -96,80 +96,110 @@ REGLAS DE CALIDAD PARA EL BOSQUEJO:
 - No fuerces los apartados a ser exactamente 3 ni 5. Que el contenido real determine la cantidad.
 - No añadas «Objetivos», «Resumen ejecutivo» ni secciones que no surjan naturalmente del contenido.`;
 
-export const REGLAS_GRUPOS = `DISEÑO DEL ESTUDIO PARA GRUPOS PEQUEÑOS, CÉLULAS Y FAMILIAS:
-Diseña una guía comunitaria y pastoral profunda y participativa. Redacta el "contexto_pasaje", la "idea_central", las "aplicaciones" y el "caso_practico" en primera persona (singular o plural), como si el lector los interiorizara. Las preguntas deben formularse en segunda persona o con «¿Cómo…?» para invitar la reflexión personal.
+export const REGLAS_GRUPOS = `DISEÑO DEL ESTUDIO PARA GRUPOS PEQUEÑOS, CÉLULAS Y FAMILIAS (ESTILO MAIM):
+Diseña una guía comunitaria y pastoral profunda, participativa y edificante, impregnada del ADN espiritual de MAIM (adoración viva, koinonía genuina, intercesión apasionada y discipulado en santidad).
+
+PAUTAS DE REDACCIÓN Y ESTILO MAIM:
+- Redacta la "idea_central", las "aplicaciones" y el "compromiso_semanal" en primera persona (singular o plural): «Reconozco que…», «Necesitamos comprender…», «En nuestro hogar decidimos…».
+- El "contexto_pasaje" debe desarrollarse en prosa analítica y fluida, explicando con claridad el trasfondo y conectando la verdad bíblica con la vida diaria (sin frases superficiales).
+- Si la prédica incluye contrastes doctrinales (ej. el Espíritu Santo EN nosotros para salvación vs. SOBRE nosotros para ministerio) o términos originales (KOINONIA, BAPTIZO, EKBALO), incorpóralos en la explicación bíblica y en las preguntas.
+- PROHIBIDO usar «el predicador dijo», «el orador explica», «durante la prédica se enseñó». La enseñanza se presenta de manera directa e interiorizada.
+
+CAMPOS REQUERIDOS:
 - "objetivo": Propósito espiritual y formativo del encuentro en 1 o 2 oraciones claras.
-- "idea_central": Síntesis fiel del mensaje, redactada en primera persona plural: «Necesitamos comprender…», «Estamos llamados a…».
-- "contexto_pasaje": Contexto bíblico e histórico que ayude a comprender el pasaje principal; redactado de forma cercana y comprensible, en prosa fluida.
+- "idea_central": Proposición central del mensaje expresada en primera persona comunitaria.
+- "contexto_pasaje": Contexto bíblico, histórico y teológico necesario para entender el texto principal, redactado de forma accesible y profunda.
 - "agenda": Entre 5 y 8 momentos detallados con "momento", "minutos" y "descripcion" amplia; suma entre 60 y 90 minutos.
 - "materiales": Lista concreta de materiales necesarios.
-- "preguntas_inicio": 3 a 5 preguntas abiertas para romper el hielo y conectar la vida cotidiana con la verdad del mensaje.
-- "preguntas_comprension": 4 a 6 preguntas analíticas sobre el texto bíblico y las enseñanzas centrales.
-- "preguntas_reflexion": 4 a 6 preguntas de introspección que conduzcan a la transformación personal y familiar.
-- "actividad": Una actividad grupal con título, objetivo pedagógico y pasos explicados a fondo.
-- "caso_practico": Un caso realista y desarrollado para debatir en grupo, fiel al tema de la prédica.
-- "aplicaciones": 4 a 6 aplicaciones prácticas redactadas en primera persona: «Puedo…», «Necesito…», «Esta semana voy a…».
-- "compromiso_semanal": Un compromiso concreto, medible y alcanzable, expresado en primera persona.
-- "motivos_oracion": 4 a 6 motivos pastorales fundamentados en el mensaje.
-- "oracion_final": Oración pastoral comunitaria en primera persona plural, íntima y pastoral.
-- "orientaciones_lider": 5 a 8 recomendaciones pedagógicas y pastorales para el facilitador.`;
+- "preguntas_inicio": 3 a 5 preguntas abiertas y reflexivas para conectar al grupo con el tema antes de leer el pasaje.
+- "preguntas_comprension": 4 a 6 preguntas analíticas sobre el texto bíblico y las verdades centrales enseñadas.
+- "preguntas_reflexion": 4 a 6 preguntas de introspección profunda que confronten el corazón y lleven a la transformación personal y familiar.
+- "actividad": Una actividad grupal formativa y participativa con título, objetivo pedagógico y pasos explicados a fondo.
+- "caso_practico": Un caso realista y desarrollado para debatir en grupo, derivado estrictamente del tema bíblico.
+- "aplicaciones": 4 a 6 aplicaciones prácticas detalladas para la vida individual, laboral y familiar, redactadas en primera persona.
+- "compromiso_semanal": Un compromiso concreto, medible y alcanzable para la semana, expresado en primera persona.
+- "motivos_oracion": 4 a 6 motivos pastorales fundamentados en el mensaje, con énfasis en la intercesión y la vida de fe.
+- "oracion_final": Oración pastoral comunitaria en primera persona plural, solemne, íntima y de consagración.
+- "orientaciones_lider": 5 a 8 recomendaciones pedagógicas y pastorales prácticas para el facilitador de la célula.`;
 
-export const REGLAS_JOVENES = `DISEÑO DEL ESTUDIO PARA JÓVENES:
-Diseña un estudio formativo y relevante para adolescentes y jóvenes, sin infantilismos ni tecnicismos huecos. Redacta los "conceptos", las "aplicaciones" y el "desafio_semanal" en primera persona, como si el joven los interiorizara: «Comprendo que…», «Necesito…», «Esta semana voy a…».
-- "objetivo": Propósito formativo del encuentro para jóvenes.
-- "tema": Tema central con lenguaje directo y contemporáneo.
-- "contexto_pasaje": Contexto bíblico del pasaje explicado con claridad y relevancia práctica.
-- "conceptos": 3 a 6 conceptos teológicos fundamentales explicados en párrafos accesibles y cotidianos, en primera persona cuando corresponda.
-- "preguntas_reflexion": 5 a 7 preguntas de introspección personal sobre decisiones, identidad y fe.
-- "preguntas_grupales": 5 a 7 preguntas para debate y diálogo participativo grupal.
-- "casos_practicos": 3 a 5 situaciones reales sobre amistades, familia, estudios, integridad y vida digital.
-- "dinamica": Una dinámica participativa formativa con título, objetivo y pasos detallados.
-- "aplicaciones": 4 a 6 aplicaciones prácticas cotidianas, redactadas en primera persona.
-- "desafio_semanal": Un desafío espiritual concreto, redactado en primera persona singular o plural.
-- "motivos_oracion": 4 a 6 motivos de oración relevantes para su contexto.
-- "guia_lider": 5 a 8 pautas claras para el líder de jóvenes al conducir la reunión.`;
+export const REGLAS_JOVENES = `DISEÑO DEL ESTUDIO PARA JÓVENES (ESTILO MAIM):
+Diseña un estudio formativo, bíblicamente sólido y espiritualmente desafiante para adolescentes y jóvenes, sin infantilismos, sin condescendencia y sin tecnicismos huecos. Debe reflejar la pasión ministerial de MAIM por una juventud consagrada, impulsada por Dios (ekbalo) y despierta en sus sentidos espirituales.
 
-export const REGLAS_NINOS = `DISEÑO DE LA CLASE BÍBLICA PARA NIÑOS:
-Diseña una clase bíblica atractiva, didáctica y adaptada a la edad indicada:
+PAUTAS DE REDACCIÓN Y ESTILO MAIM:
+- Redacta los "conceptos", las "aplicaciones" y el "desafio_semanal" en primera persona: «Comprendo que…», «Necesito aprender a…», «Esta semana decido…».
+- Explica los conceptos teológicos y las palabras clave de la prédica (ej. qué significa el bautismo del Espíritu, koinonía íntima, ser enviado con violencia santa sin derecho a retorno) en párrafos contemporáneos, profundos y directos.
+- Las preguntas individuales y grupales deben invitar a la autenticidad radical, examinando la relación con Dios, las amistades, la integridad en lo secreto y las decisiones vocacionales.
+- PROHIBIDO usar «el expositor mencionó», «el orador enseña». La verdad bíblica se presenta con fuerza y cercanía.
+
+CAMPOS REQUERIDOS:
+- "objetivo": Propósito formativo y espiritual del encuentro para jóvenes.
+- "tema": Tema central con lenguaje claro, directo y bíblico.
+- "contexto_pasaje": Contexto del pasaje bíblico explicado con relevancia para la realidad juvenil.
+- "conceptos": 3 a 6 conceptos teológicos fundamentales explicados en párrafos accesibles, cotidianos y en primera persona.
+- "preguntas_reflexion": 5 a 7 preguntas de introspección personal sobre decisiones, identidad, consagración y fe.
+- "preguntas_grupales": 5 a 7 preguntas para debate sincero y diálogo participativo grupal.
+- "casos_practicos": 3 a 5 situaciones reales y dilemas actuales sobre amistades, familia, estudios, integridad y vida digital.
+- "dinamica": Una dinámica participativa formativa con título, objetivo espiritual y pasos claros.
+- "aplicaciones": 4 a 6 aplicaciones cotidianas concretas, redactadas en primera persona.
+- "desafio_semanal": Un desafío espiritual exigente y transformador para la semana, en primera persona.
+- "motivos_oracion": 4 a 6 motivos de oración relevantes para su generación y comunidad.
+- "guia_lider": 5 a 8 pautas claras y pastorales para el líder juvenil al conducir el encuentro.`;
+
+export const REGLAS_NINOS = `DISEÑO DE LA CLASE BÍBLICA PARA NIÑOS (ESTILO MAIM):
+Diseña una clase bíblica atractiva, reverente, didáctica y profundamente formativa, adaptada rigurosamente al rango de edad indicado (3 a 5 años, 6 a 8 años, o 9 a 12 años). Debe sembrar en el corazón de los niños el amor a Dios, la belleza de Su Palabra y la realidad viva de Su presencia.
+
+PAUTAS PEDAGÓGICAS Y ESTILO MAIM:
 - Adapta vocabulario, extensión y dinámicas al rango de edad seleccionado.
-- "objetivo_aprendizaje": Qué comprenderá y vivirá el niño al concluir la clase.
-- "relato": 3 a 6 partes narrativas con "parte", "titulo" y "texto" relatado en lenguaje vivo, expresivo y formativo para niños.
-- "versiculo_clave": Cita y texto bíblico adaptado a la memorización infantil.
-- "explicacion_versiculo": Explicación pedagógica, sencilla y profunda del versículo.
-- "preguntas_comprension": 4 a 6 preguntas participativas sobre el relato.
-- "actividad": Actividad manual, gráfica o didáctica con título, objetivo, materiales seguros y pasos claros.
-- "juego": Juego formativo con título, materiales y reglas paso a paso (sin coerción ni exclusión).
-- "aplicacion": Aplicación práctica y tangible para el día a día del niño.
-- "actividad_familia": Actividad breve para reforzar en casa con los padres.
-- "oracion_cierre": Oración sencilla, tierna y formativa.
+- En el "relato", presenta la historia bíblica con viveza y reverencia, diferenciando la verdad de la Escritura de las analogías didácticas.
+- La "aplicacion" debe redactarse en primera persona para el niño: «Hoy aprendo que…», «Puedo pedirle a Jesús que…», «Cuando tenga miedo o duda voy a…».
+- La "oracion_cierre" debe ser tierna, sencilla y de fe auténtica, permitiendo que el niño hable con Dios con confianza.
+- Cero dinámicas humillantes, peligrosas o que generen culpa innecesaria; fomenta la gracia, la obediencia gozosa y la gratitud.
+
+CAMPOS REQUERIDOS:
+- "objetivo_aprendizaje": Qué comprenderá, sentirá y vivirá el niño al concluir la clase.
+- "relato": 3 a 6 partes narrativas con "parte", "titulo" y "texto" relatado en lenguaje vivo, expresivo y pedagógico.
+- "versiculo_clave": Cita y texto bíblico adaptado para la memorización y comprensión infantil.
+- "explicacion_versiculo": Explicación sencilla, luminosa y profunda del versículo para el niño.
+- "preguntas_comprension": 4 a 6 preguntas participativas sobre el relato bíblico.
+- "actividad": Actividad didáctica o manual con título, objetivo, materiales seguros y pasos paso a paso.
+- "juego": Juego o dinámica formativa con título, materiales y reglas claras (inclusivo y sin exclusiones).
+- "aplicacion": Aplicación práctica y tangible para el día a día del niño, en primera persona.
+- "actividad_familia": Actividad breve y creativa para compartir y conversar en casa con los padres.
+- "oracion_cierre": Oración sencilla, cercana y formativa.
 - "recomendaciones_maestro": 5 a 8 recomendaciones pedagógicas y de cuidado para el maestro.
 - "duracion_aproximada": Tiempo total estimado (ej. "45 a 60 minutos").`;
 
-export const REGLAS_DEVOCIONALES = `DISEÑO DEL PLAN DEVOCIONAL DE SIETE DÍAS:
-Diseña un itinerario de siete jornadas diarias de meditación profunda. Redacta la "reflexion", la "ensenanza_central" y la "aplicacion" de cada día en primera persona, como si el creyente dialogara con Dios e interiorizara la verdad: «Hoy comprendo…», «Necesito…», «Me propongo…». Mantén el texto bíblico y su referencia exactamente como aparecen en la transcripción.
-- "introduccion": Presentación del plan devocional y su conexión con la enseñanza, en tono cercano y pastoral.
-- "proposito": Propósito espiritual del plan y recomendaciones de uso, en primera persona plural.
-- "dias": Exactamente siete jornadas con progresión temática coherente:
-  * Día 1: Fundamento y comprensión del mensaje.
-  * Día 2: Profundización en el texto bíblico.
-  * Día 3: Confrontación y examen personal.
-  * Día 4: Renovación de la mente y arrepentimiento.
-  * Día 5: La fe en acción y obediencia práctica.
-  * Día 6: Perseverancia y gracia en la prueba.
-  * Día 7: Testimonio, consagración y adoración.
-- Cada día incluye obligatoriamente:
-  * "dia": Número entero del 1 al 7.
-  * "titulo": Título evocador del día.
-  * "tema": Tema central del día.
-  * "lectura_principal": Pasaje con "cita" y "texto".
-  * "lecturas_complementarias": 1 a 3 pasajes con "cita" y "texto".
-  * "contexto": Contexto bíblico del pasaje del día.
-  * "reflexion": Reflexión devocional extensa y sustanciosa en 2 a 3 párrafos profundos.
-  * "ensenanza_central": Verdad doctrinal principal a retener.
-  * "pregunta_introspeccion": Pregunta profunda que examine el corazón.
-  * "aplicacion": Aplicación práctica para ese día.
-  * "accion": Compromiso o acto concreto a realizar durante la jornada.
-  * "oracion": Oración devocional guiada e íntima.`;
+export const REGLAS_DEVOCIONALES = `DISEÑO DEL PLAN DEVOCIONAL DE SIETE DÍAS (ESTILO MAIM):
+Diseña un itinerario de siete jornadas diarias de meditación profunda que guíe al creyente en un viaje espiritual continuo: desde la comprensión de la Palabra hasta la consagración y la oración ferviente, reflejando el corazón de los modelos de enseñanza de MAIM.
+
+PAUTAS DE REDACCIÓN Y ESTILO MAIM:
+- Redacta la "reflexion", la "ensenanza_central" y la "aplicacion" de cada jornada en PRIMERA PERSONA («Hoy reconozco…», «Comprendo que necesito…», «Decido buscar…»).
+- Cada reflexión debe ser extensa, rica y sustanciosa (2 a 3 párrafos profundos), conectando el pasaje del día con la vida interior y el llamado a servir a Dios.
+- Conserva el texto bíblico y sus referencias exactamente como aparecen en la transcripción, sin inventar versículos.
+- PROHIBIDO usar «el predicador enseñó», «se dijo en el sermón». Cada día se lee como una meditación íntima con Dios y Su Palabra.
+
+PROGRESIÓN TEMÁTICA DE LAS SIETE JORNADAS:
+  * Día 1: Fundamento y despertar (comprender la verdad central y reconocer la voz de Dios).
+  * Día 2: Profundización bíblica y revelación (exégesis interiorizada y entendimiento espiritual).
+  * Día 3: Examen del corazón y confrontación personal (examinar la vida a la luz de la Palabra).
+  * Día 4: Arrepentimiento y renovación de la mente (dejar la tibieza y recibir un corazón nuevo).
+  * Día 5: La fe en acción y obediencia práctica (ser impulsados con denuedo a cumplir la misión).
+  * Día 6: Koinonía y perseverancia en la prueba (comunión íntima con el Consolador y constancia).
+  * Día 7: Consagración, intercesión y adoración (vida de testimonio, fruto abundante y entrega total).
+
+CADA DÍA INCLUYE OBLIGATORIAMENTE:
+- "dia": Número entero del 1 al 7.
+- "titulo": Título evocador y ministerial del día.
+- "tema": Tema central específico de la jornada.
+- "lectura_principal": Pasaje con "cita" y "texto".
+- "lecturas_complementarias": 1 a 3 pasajes con "cita" y "texto".
+- "contexto": Contexto bíblico del pasaje del día en un párrafo sólido.
+- "reflexion": Reflexión devocional extensa y sustanciosa en 2 a 3 párrafos profundos en primera persona.
+- "ensenanza_central": Verdad doctrinal principal a retener, formulada con claridad.
+- "pregunta_introspeccion": Pregunta profunda que examine la conciencia y el corazón.
+- "aplicacion": Aplicación práctica concreta para el día en primera persona.
+- "accion": Acto o compromiso espiritual específico a realizar durante la jornada.
+- "oracion": Oración devocional guiada, íntima, reverente y de entrega personal a Dios.`;
 
 export const REGLAS_POR_MODALIDAD: Record<Exclude<ModalidadId, 'general'>, string> = {
   bosquejo: REGLAS_BOSQUEJO,
@@ -486,12 +516,12 @@ export function construirPromptEspecializado(modalidad: Exclude<ModalidadId, 'ge
   const reglas = REGLAS_POR_MODALIDAD[modalidad];
   const edad = modalidad === 'ninos' && rangoEdad ? `\nRANGO DE EDAD SELECCIONADO: ${rangoEdad}. Adapta toda la clase a este rango.` : '';
 
-  const contextoPrimerPersona = modalidad === 'bosquejo' ? '' : `
-ESTILO MAIM — PRIMERA PERSONA Y VOZ DIRECTA (aplica a todas las secciones de prosa):
-- Redacta en primera persona cuando el contenido invite al examen personal o la transformación: «reconozco», «necesito», «comprendo», «estoy llamado a».
-- Usa primera persona plural para enseñanzas comunitarias: «necesitamos», «estamos llamados», «debemos».
-- PROHIBIDO usar «el orador dice», «el predicador explica», «se mencionó» o cualquier forma indirecta. Las verdades se presentan directamente.
-- La primera persona solo aplica a explicaciones y aplicaciones; NO modifica el texto de los versículos bíblicos.
+  const contextoMaim = `
+MODELO GENERAL MAIM — IDENTIFICACIÓN Y ADAPTACIÓN SEGÚN EL ENFOQUE:
+Identifica la naturaleza del mensaje según los dos modelos homiléticos de referencia de MAIM y canalízala hacia esta modalidad especializada:
+1. MODELO A (TEMÁTICO / ENSEÑANZA BÍBLICA): Si la prédica organiza apartados teológicos, distinciones doctrinales (ej. el Espíritu Santo EN nosotros para salvación vs. SOBRE nosotros para ministerio), términos en griego/hebreo (KOINONIA, BAPTIZO) y tipología profética, transmite esa solidez doctrinal adaptada al grupo correspondiente.
+2. MODELO B (VIVENCIAL / EXHORTATIVO / URGENCIA): Si la prédica parte de un conflicto de fe, confronta con preguntas directas, destaca palabras de impacto espiritual (EKBALO: impulso santo sin retorno) y culmina en un llamado apasionado a no apagar el Espíritu, transmite esa urgencia y pasión espiritual al grupo correspondiente.
+3. VOZ DIRECTA Y PRIMERA PERSONA: Redacta en primera persona (singular para introspección y examen del corazón: «reconozco», «necesito», «comprendo»; plural para el cuerpo o comunidad: «debemos», «estamos llamados»). PROHIBIDO usar «el predicador señala», «el orador explica», «se mencionó». La enseñanza se presenta de forma directa e interiorizada. La primera persona no modifica las citas de la Escritura.
 `;
 
   return `PREFIJO INMUTABLE DE CONTEXTO Y SEGURIDAD:
@@ -501,7 +531,7 @@ REGLA INNEGOCIABLE DE CERO ALUCINACIÓN Y FIDELIDAD ESTRICTA:
 - No infieras la personalidad ni la biografía del predicador: limítate al contenido expuesto. Prohibido inventar doctrinas ajenas, biografías, antecedentes o historias no mencionadas.
 - No inventes versículos ni citas bíblicas: si un pasaje no se mencionó en la prédica, no lo agregues. Cita solo lo que el expositor utilizó o fundamentó.
 - Desarrolla cada sección en párrafos sólidos, analíticos y profundos con prosa completa y fundamentada (cero frases telegráficas, cero resúmenes superficiales).
-${contextoPrimerPersona}
+${contextoMaim}
 Devuelve ÚNICAMENTE un objeto JSON válido con la propiedad "especializado". No incluyas markdown fuera del JSON.
 ${reglas}${edad}
 ${REGLAS_CALIDAD_MODALIDAD}

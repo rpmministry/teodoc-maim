@@ -32,7 +32,7 @@ export default function ResultadoGeneral({ analisis }: { analisis: ResultadoAnal
             {analisis.contexto_historico && <div><h4 className="mb-1 text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--coralOscuro)]">Contexto histórico</h4><p className="text-[13px] leading-relaxed text-[var(--texto)]">{analisis.contexto_historico}</p></div>}
             {analisis.contexto_literario && <div><h4 className="mb-1 text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--coralOscuro)]">Contexto literario</h4><p className="text-[13px] leading-relaxed text-[var(--texto)]">{analisis.contexto_literario}</p></div>}
             {analisis.relacion_textos && <div><h4 className="mb-1 text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--coralOscuro)]">Relación entre los textos</h4><p className="text-[13px] leading-relaxed text-[var(--texto)]">{analisis.relacion_textos}</p></div>}
-            {analisis.interpretacion && <div className="sm:col-span-2"><h4 className="mb-1 text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--coralOscuro)]">Lectura presentada por el expositor</h4><p className="text-[13px] italic leading-relaxed text-[var(--texto)]">{analisis.interpretacion}</p></div>}
+            {analisis.interpretacion && <div className="sm:col-span-2"><h4 className="mb-1 text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--coralOscuro)]">Lectura y significado doctrinal</h4><p className="text-[13px] italic leading-relaxed text-[var(--texto)]">{analisis.interpretacion}</p></div>}
           </div>
         )}
         {analisis.otros_textos.length > 0 && (
