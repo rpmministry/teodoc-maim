@@ -3,7 +3,7 @@ const cspHeader = `
   default-src 'self';
   script-src 'self' 'unsafe-inline' 'unsafe-eval';
   style-src 'self' 'unsafe-inline';
-  img-src 'self' blob: data: https://res.cloudinary.com https://i.ytimg.com;
+  img-src 'self' blob: data: https://res.cloudinary.com https://i.ytimg.com https://*.ytimg.com https://*.vimeocdn.com;
   media-src 'self' blob: data: https://res.cloudinary.com;
   connect-src 'self' https://generativelanguage.googleapis.com https://openrouter.ai https://api.deepseek.com https://api.assemblyai.com https://api.deepgram.com https://api.cloudinary.com https://res.cloudinary.com https://www.youtube.com https://*.googlevideo.com;
   font-src 'self' data:;
