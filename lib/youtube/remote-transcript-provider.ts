@@ -10,7 +10,7 @@ import { parseVtt } from './vtt';
 import { fetchYouTubeOembed } from './oembed';
 
 // Respaldo OPEN SOURCE auto-hospedable. Apunta a un servicio propio (por
-// ejemplo `youtube-transcript-api`, ver services/youtube-transcript-api) que no
+// ejemplo `youtube-transcript-api`, ver microservicios-externos/youtube-transcript-api) que no
 // depende de créditos de terceros: se puede usar indefinidamente.
 //
 // Contrato del servicio:
