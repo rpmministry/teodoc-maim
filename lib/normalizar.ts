@@ -8,6 +8,7 @@ import type {
   DevocionalDia,
   DinamicaJuvenil,
   Ensenanza,
+  EstudioBosquejo,
   EstudioGrupos,
   EstudioJovenes,
   JuegoInfantil,
@@ -16,9 +17,11 @@ import type {
   PlanDevocional,
   PredicaAnalisis,
   PuntoDesarrollo,
+  PuntoPrincipalBosquejo,
   RangoEdad,
   RelatoInfantil,
   ResultadoAnalisis,
+  SubpuntoBosquejo,
   Versiculo,
 } from './tipos.ts';
 import { esModalidad, esRangoEdad, normalizarEspacios, normalizarFechaISO, normalizarPredicador, normalizarTituloProporcionado } from './modalidades.ts';
@@ -220,12 +223,87 @@ function normalizarActividad(valor: unknown): ActividadConPasos {
   };
 }
 
+const NUMEROS_ROMANOS = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
+const LETRAS_SUBPUNTOS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+
+export function normalizarBosquejo(valor: unknown): EstudioBosquejo {
+  const d = registro(valor);
+  const obj = registro(d.objetivos);
+  const intro = registro(d.introduccion);
+  const conc = registro(d.conclusion);
+  const des = registro(d.desafio_final ?? d.desafioFinal);
+
+  const rawPuntos = Array.isArray(d.puntos_principales)
+    ? d.puntos_principales
+    : Array.isArray(d.puntosPrincipales)
+      ? d.puntosPrincipales
+      : [];
+
+  const puntos: PuntoPrincipalBosquejo[] = (rawPuntos as unknown[])
+    .map((item: unknown, indice: number): PuntoPrincipalBosquejo => {
+      const p = registro(item);
+      const rawSubpuntos = Array.isArray(p.subpuntos) ? (p.subpuntos as unknown[]) : [];
+      const subpuntos: SubpuntoBosquejo[] = rawSubpuntos
+        .map((sItem: unknown, sIndice: number): SubpuntoBosquejo => {
+          const s = registro(sItem);
+          return {
+            letra: texto(s.letra) || LETRAS_SUBPUNTOS[sIndice] || String.fromCharCode(65 + sIndice),
+            titulo: texto(s.titulo ?? s.enunciado),
+            desarrollo: textoMultilinea(s.desarrollo ?? s.explicacion),
+            detalles: listaTexto(s.detalles, 8),
+            pasajes_apoyo: listaTexto(s.pasajes_apoyo ?? s.pasajesApoyo, 6),
+          };
+        })
+        .filter((s: SubpuntoBosquejo) => Boolean(s.titulo || s.desarrollo));
+      return {
+        romano: texto(p.romano) || NUMEROS_ROMANOS[indice] || `${indice + 1}`,
+        titulo: texto(p.titulo ?? p.punto),
+        cita: texto(p.cita ?? p.pasaje),
+        texto_cita: texto(p.texto_cita ?? p.textoCita ?? p.texto),
+        exposicion: textoMultilinea(p.exposicion ?? p.desarrollo ?? p.explicacion),
+        subpuntos,
+        ilustracion: textoMultilinea(p.ilustracion ?? p.ejemplo),
+        transicion: textoMultilinea(p.transicion ?? p.oracion_transicion),
+      };
+    })
+    .filter((p: PuntoPrincipalBosquejo) => Boolean(p.titulo || p.exposicion));
+
+  return {
+    titulo: texto(d.titulo),
+    tema_central: texto(d.tema_central ?? d.temaCentral ?? d.tema),
+    proposito_general: texto(d.proposito_general ?? d.propositoGeneral ?? d.proposito),
+    objetivos: {
+      cognitivo: texto(obj.cognitivo),
+      afectivo: texto(obj.afectivo),
+      volitivo: texto(obj.volitivo),
+    },
+    tesis: texto(d.tesis ?? d.proposicionHomiletica ?? d.idea_central ?? d.ideaCentral),
+    fundamento_doctrinal: textoMultilinea(d.fundamento_doctrinal ?? d.fundamentoDoctrinal ?? d.doctrina),
+    texto_base: versiculo(d.texto_base ?? d.textoBase),
+    introduccion: {
+      gancho: textoMultilinea(intro.gancho ?? intro.necesidad),
+      contexto: textoMultilinea(intro.contexto ?? intro.trasfondo),
+      transicion: textoMultilinea(intro.transicion ?? intro.oracion_transicion),
+    },
+    puntos_principales: puntos,
+    conclusion: {
+      recapitulacion: textoMultilinea(conc.recapitulacion ?? conc.resumen),
+      climax: textoMultilinea(conc.climax ?? conc.conclusion),
+    },
+    aplicacion_liderazgo: listaTexto(d.aplicacion_liderazgo ?? d.aplicacionLiderazgo ?? d.aplicaciones, 12),
+    desafio_final: {
+      llamado: textoMultilinea(des.llamado ?? des.desafio),
+      oracion_ministracion: textoMultilinea(des.oracion_ministracion ?? des.oracionMinistracion ?? des.oracion),
+    },
+  };
+}
+
 export function normalizarGrupos(valor: unknown): EstudioGrupos {
   const d = registro(valor);
   return {
     objetivo: texto(d.objetivo),
-    idea_central: texto(d.idea_central),
-    contexto_pasaje: textoMultilinea(d.contexto_pasaje),
+    idea_central: texto(d.idea_central ?? d.ideaCentral),
+    contexto_pasaje: textoMultilinea(d.contexto_pasaje ?? d.contextoPasaje ?? d.contexto),
     agenda: Array.isArray(d.agenda)
       ? d.agenda
           .map((item) => {
@@ -236,16 +314,16 @@ export function normalizarGrupos(valor: unknown): EstudioGrupos {
           .slice(0, 16)
       : [],
     materiales: listaTexto(d.materiales, 20),
-    preguntas_inicio: listaTexto(d.preguntas_inicio, 12),
-    preguntas_comprension: listaTexto(d.preguntas_comprension, 12),
-    preguntas_reflexion: listaTexto(d.preguntas_reflexion, 12),
+    preguntas_inicio: listaTexto(d.preguntas_inicio ?? d.preguntasInicio, 12),
+    preguntas_comprension: listaTexto(d.preguntas_comprension ?? d.preguntasComprension, 12),
+    preguntas_reflexion: listaTexto(d.preguntas_reflexion ?? d.preguntasReflexion, 12),
     actividad: normalizarActividad(d.actividad),
-    caso_practico: textoMultilinea(d.caso_practico),
+    caso_practico: textoMultilinea(d.caso_practico ?? d.casoPractico),
     aplicaciones: listaTexto(d.aplicaciones, 12),
-    compromiso_semanal: textoMultilinea(d.compromiso_semanal),
-    motivos_oracion: listaTexto(d.motivos_oracion, 12),
-    oracion_final: textoMultilinea(d.oracion_final),
-    orientaciones_lider: listaTexto(d.orientaciones_lider, 16),
+    compromiso_semanal: textoMultilinea(d.compromiso_semanal ?? d.compromisoSemanal),
+    motivos_oracion: listaTexto(d.motivos_oracion ?? d.motivosOracion, 12),
+    oracion_final: textoMultilinea(d.oracion_final ?? d.oracionFinal),
+    orientaciones_lider: listaTexto(d.orientaciones_lider ?? d.orientacionesLider, 16),
   };
 }
 
@@ -272,16 +350,16 @@ export function normalizarJovenes(valor: unknown): EstudioJovenes {
   return {
     objetivo: texto(d.objetivo),
     tema: texto(d.tema),
-    contexto_pasaje: textoMultilinea(d.contexto_pasaje),
+    contexto_pasaje: textoMultilinea(d.contexto_pasaje ?? d.contextoPasaje ?? d.contexto),
     conceptos,
-    preguntas_reflexion: listaTexto(d.preguntas_reflexion, 15),
-    preguntas_grupales: listaTexto(d.preguntas_grupales, 15),
-    casos_practicos: listaTexto(d.casos_practicos, 8),
+    preguntas_reflexion: listaTexto(d.preguntas_reflexion ?? d.preguntasReflexion, 15),
+    preguntas_grupales: listaTexto(d.preguntas_grupales ?? d.preguntasGrupales, 15),
+    casos_practicos: listaTexto(d.casos_practicos ?? d.casosPracticos, 8),
     dinamica: normalizarDinamica(d.dinamica),
     aplicaciones: listaTexto(d.aplicaciones, 12),
-    desafio_semanal: textoMultilinea(d.desafio_semanal),
-    motivos_oracion: listaTexto(d.motivos_oracion, 12),
-    guia_lider: listaTexto(d.guia_lider, 16),
+    desafio_semanal: textoMultilinea(d.desafio_semanal ?? d.desafioSemanal),
+    motivos_oracion: listaTexto(d.motivos_oracion ?? d.motivosOracion, 12),
+    guia_lider: listaTexto(d.guia_lider ?? d.guiaLider),
   };
 }
 
@@ -316,18 +394,18 @@ export function normalizarNinos(valor: unknown): ClaseNinos {
         .slice(0, 12)
     : [];
   return {
-    objetivo_aprendizaje: texto(d.objetivo_aprendizaje),
+    objetivo_aprendizaje: texto(d.objetivo_aprendizaje ?? d.objetivoAprendizaje ?? d.objetivo),
     relato,
-    versiculo_clave: versiculo(d.versiculo_clave),
-    explicacion_versiculo: textoMultilinea(d.explicacion_versiculo),
-    preguntas_comprension: listaTexto(d.preguntas_comprension, 15),
+    versiculo_clave: versiculo(d.versiculo_clave ?? d.versiculoClave),
+    explicacion_versiculo: textoMultilinea(d.explicacion_versiculo ?? d.explicacionVersiculo),
+    preguntas_comprension: listaTexto(d.preguntas_comprension ?? d.preguntasComprension, 15),
     actividad: normalizarActividadInfantil(d.actividad),
     juego: normalizarJuegoInfantil(d.juego),
     aplicacion: textoMultilinea(d.aplicacion),
-    actividad_familia: textoMultilinea(d.actividad_familia),
-    oracion_cierre: textoMultilinea(d.oracion_cierre),
-    recomendaciones_maestro: listaTexto(d.recomendaciones_maestro, 16),
-    duracion_aproximada: texto(d.duracion_aproximada),
+    actividad_familia: textoMultilinea(d.actividad_familia ?? d.actividadFamilia),
+    oracion_cierre: textoMultilinea(d.oracion_cierre ?? d.oracionCierre),
+    recomendaciones_maestro: listaTexto(d.recomendaciones_maestro ?? d.recomendacionesMaestro, 16),
+    duracion_aproximada: texto(d.duracion_aproximada ?? d.duracionAproximada),
   };
 }
 
@@ -342,12 +420,12 @@ export function normalizarDevocionales(valor: unknown): PlanDevocional {
             dia: Number.isFinite(numero) && numero > 0 ? Math.floor(numero) : indice + 1,
             titulo: texto(dia.titulo),
             tema: texto(dia.tema),
-            lectura_principal: versiculo(dia.lectura_principal),
-            lecturas_complementarias: listaVersiculos(dia.lecturas_complementarias, 6),
+            lectura_principal: versiculo(dia.lectura_principal ?? dia.lecturaPrincipal),
+            lecturas_complementarias: listaVersiculos(dia.lecturas_complementarias ?? dia.lecturasComplementarias, 6),
             contexto: textoMultilinea(dia.contexto),
             reflexion: textoMultilinea(dia.reflexion),
-            ensenanza_central: textoMultilinea(dia.ensenanza_central),
-            pregunta_introspeccion: texto(dia.pregunta_introspeccion),
+            ensenanza_central: textoMultilinea(dia.ensenanza_central ?? dia.ensenanzaCentral),
+            pregunta_introspeccion: texto(dia.pregunta_introspeccion ?? dia.preguntaIntrospeccion),
             aplicacion: textoMultilinea(dia.aplicacion),
             accion: textoMultilinea(dia.accion),
             oracion: textoMultilinea(dia.oracion),
@@ -366,8 +444,11 @@ export function normalizarDevocionales(valor: unknown): PlanDevocional {
 }
 
 export function normalizarEspecializado(modalidad: ModalidadId, valor: unknown): ContenidoEspecializado {
-  const datos = registro(valor);
+  const crudo = registro(valor);
+  const datos = registro(crudo.especializado ?? crudo);
   switch (modalidad) {
+    case 'bosquejo':
+      return { bosquejo: normalizarBosquejo(datos.bosquejo ?? datos) };
     case 'grupos':
       return { grupos: normalizarGrupos(datos.grupos ?? datos) };
     case 'jovenes':
@@ -383,6 +464,11 @@ export function normalizarEspecializado(modalidad: ModalidadId, valor: unknown):
 
 export function especializadoTieneContenido(modalidad: ModalidadId, contenido: ContenidoEspecializado): boolean {
   switch (modalidad) {
+    case 'bosquejo': {
+      const d = contenido.bosquejo;
+      if (!d) return false;
+      return Boolean((d.titulo || d.tema_central) && d.tesis && d.puntos_principales.length >= 2);
+    }
     case 'grupos': {
       const d = contenido.grupos;
       if (!d) return false;
@@ -491,3 +577,4 @@ export function capitalizarOracion(valor: string): string {
   if (!limpio) return '';
   return limpio.charAt(0).toUpperCase() + limpio.slice(1);
 }
+

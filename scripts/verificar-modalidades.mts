@@ -14,7 +14,7 @@ import {
   obtenerModalidad,
   obtenerRangoEdad,
 } from '../lib/modalidades.ts';
-import { especializadoTieneContenido, normalizarDevocionales, normalizarGrupos, normalizarJovenes, normalizarMetadatos, normalizarNinos, normalizarRespuesta } from '../lib/normalizar.ts';
+import { especializadoTieneContenido, normalizarBosquejo, normalizarDevocionales, normalizarGrupos, normalizarJovenes, normalizarMetadatos, normalizarNinos, normalizarRespuesta } from '../lib/normalizar.ts';
 import { REGLAS_POR_MODALIDAD, construirPromptEspecializado } from '../lib/ai/modalidades.ts';
 import { crearResultadoDemo, metadatosDemo } from './fixtures/demo.ts';
 import { construirReferencias } from '../lib/referencias.ts';
@@ -31,17 +31,18 @@ function comprobar(nombre: string, fn: () => void) {
   pruebas.push(`  ✓ ${nombre}`);
 }
 
-const IDS: ModalidadId[] = ['general', 'grupos', 'jovenes', 'ninos', 'devocionales'];
+const IDS: ModalidadId[] = ['general', 'bosquejo', 'grupos', 'jovenes', 'ninos', 'devocionales'];
 const NOMBRES_ESPERADOS: Record<ModalidadId, string> = {
   general: 'teodoc-maim-analisis-general.pdf',
+  bosquejo: 'teodoc-maim-bosquejo-ministerial.pdf',
   grupos: 'teodoc-maim-grupos-pequenos.pdf',
   jovenes: 'teodoc-maim-jovenes.pdf',
   ninos: 'teodoc-maim-clase-infantil.pdf',
   devocionales: 'teodoc-maim-devocionales-7-dias.pdf',
 };
 
-comprobar('Existen exactamente cinco modalidades con los identificadores requeridos', () => {
-  assert.equal(MODALIDADES.length, 5);
+comprobar('Existen exactamente seis modalidades con los identificadores requeridos', () => {
+  assert.equal(MODALIDADES.length, 6);
   assert.deepEqual(MODALIDADES.map((m) => m.id).sort(), [...IDS].sort());
   for (const modalidad of MODALIDADES) {
     assert.ok(modalidad.nombre.length > 3, `Nombre vacío en ${modalidad.id}`);
@@ -59,7 +60,7 @@ comprobar('Cada modalidad tiene un nombre de PDF único y exacto', () => {
     assert.ok(!nombres.has(nombre), `Nombre duplicado: ${nombre}`);
     nombres.add(nombre);
   }
-  assert.equal(nombres.size, 5);
+  assert.equal(nombres.size, 6);
 });
 
 comprobar('La modalidad de niños exige edad y ofrece tres rangos', () => {
@@ -95,7 +96,7 @@ comprobar('La fecha se valida y se presenta en español', () => {
   assert.match(fechaLarga('2026-10-18'), /18 de octubre de 2026/);
 });
 
-comprobar('Las cinco modalidades normalizan contenido completo y utilizable', () => {
+comprobar('Las seis modalidades normalizan contenido completo y utilizable', () => {
   for (const modalidad of IDS) {
     const resultado = crearResultadoDemo(modalidad);
     assert.equal(resultado.metadatos.modalidad, modalidad);
@@ -103,6 +104,7 @@ comprobar('Las cinco modalidades normalizan contenido completo y utilizable', ()
     assert.ok(resultado.idea_principal.length > 40);
     assert.ok(especializadoTieneContenido(modalidad, resultado.especializado), `Contenido vacío en ${modalidad}`);
     if (modalidad === 'general') assert.deepEqual(resultado.especializado, {});
+    if (modalidad === 'bosquejo') assert.ok((resultado.especializado.bosquejo?.puntos_principales?.length || 0) >= 3);
     if (modalidad === 'grupos') assert.equal(resultado.especializado.grupos?.agenda.length, 6);
     if (modalidad === 'jovenes') assert.equal(resultado.especializado.jovenes?.casos_practicos.length, 3);
     if (modalidad === 'ninos') assert.equal(resultado.especializado.ninos?.relato.length, 4);
@@ -111,6 +113,7 @@ comprobar('Las cinco modalidades normalizan contenido completo y utilizable', ()
 });
 
 comprobar('Una respuesta incompleta no se considera material válido para PDF', () => {
+  assert.equal(especializadoTieneContenido('bosquejo', { bosquejo: normalizarBosquejo({ titulo: 'Solo un título' }) }), false);
   assert.equal(especializadoTieneContenido('grupos', { grupos: normalizarGrupos({ objetivo: 'Solo un objetivo' }) }), false);
   assert.equal(especializadoTieneContenido('jovenes', { jovenes: normalizarJovenes({ tema: 'Solo un tema' }) }), false);
   assert.equal(especializadoTieneContenido('ninos', { ninos: normalizarNinos({ objetivo_aprendizaje: 'Solo un objetivo' }) }), false);
@@ -152,6 +155,7 @@ comprobar('La respuesta conserva el título proporcionado y no crea campos de in
 
 comprobar('Las reglas de cada modalidad exigen sus secciones distintivas', () => {
   const claves: Record<Exclude<ModalidadId, 'general'>, string[]> = {
+    bosquejo: ['puntos_principales', 'tesis', 'aplicacion_liderazgo', 'desafio_final'],
     grupos: ['agenda', 'preguntas_inicio', 'compromiso_semanal', 'orientaciones_lider'],
     jovenes: ['dinamica', 'preguntas_grupales', 'casos_practicos', 'desafio_semanal'],
     ninos: ['relato', 'actividad', 'juego', 'recomendaciones_maestro'],

@@ -2,7 +2,7 @@ import { AssemblyAI } from 'assemblyai';
 import { NextRequest, NextResponse } from 'next/server';
 import { verificarRateLimit } from '@/lib/rate-limit';
 
-export const maxDuration = 60;
+export const maxDuration = 300;
 export const dynamic = 'force-dynamic';
 
 const assemblyApiKey = process.env.ASSEMBLYAI_API_KEY?.trim();
@@ -73,46 +73,91 @@ export async function POST(req: NextRequest) {
     }
 
     let textoTranscrito = '';
+    let falloDeepgram = '';
     let falloAssembly = '';
 
-    if (aai) {
-      try {
-        const transcript = await aai.transcripts.transcribe({
-          audio: audioUrl,
-          language_code: 'es',
-        });
-        if (transcript.status === 'error') throw new Error(transcript.error || 'AssemblyAI devolvió un error.');
-        textoTranscrito = transcript.text || '';
-      } catch (error) {
-        falloAssembly = error instanceof Error ? error.message : 'AssemblyAI no respondió.';
-        console.warn('[Transcripción] AssemblyAI falló:', falloAssembly.slice(0, 180));
+    const orden = (process.env.TRANSCRIPT_PROVIDER_ORDER || 'deepgram,assemblyai')
+      .split(',')
+      .map((s) => s.trim().toLowerCase())
+      .filter(Boolean);
+
+    for (const proveedor of orden) {
+      if (textoTranscrito) break;
+
+      if (proveedor === 'deepgram' && deepgramApiKey) {
+        try {
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 60_000);
+          const respuesta = await fetch(
+            'https://api.deepgram.com/v1/listen?model=nova-2&language=es&smart_format=true&punctuate=true',
+            {
+              method: 'POST',
+              headers: {
+                Authorization: `Token ${deepgramApiKey}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({ url: audioUrl }),
+              signal: controller.signal,
+            },
+          );
+          clearTimeout(timeout);
+
+          if (!respuesta.ok) {
+            falloDeepgram = errorDeepgram(respuesta.status);
+            console.warn(`[Transcripción] Deepgram falló con HTTP ${respuesta.status}: ${falloDeepgram}`);
+            continue;
+          }
+
+          const datos = (await respuesta.json()) as {
+            results?: {
+              channels?: Array<{
+                alternatives?: Array<{
+                  transcript?: string;
+                  paragraphs?: { transcript?: string };
+                }>;
+              }>;
+            };
+          };
+          const alt = datos.results?.channels?.[0]?.alternatives?.[0];
+          const texto = alt?.paragraphs?.transcript || alt?.transcript || '';
+          if (texto.trim()) {
+            textoTranscrito = texto.trim();
+            console.info(`[Transcripción] Exitosa con Deepgram (${textoTranscrito.length} caracteres)`);
+            break;
+          }
+        } catch (error) {
+          falloDeepgram = error instanceof Error ? error.message : 'Deepgram no respondió.';
+          console.warn('[Transcripción] Deepgram falló:', falloDeepgram.slice(0, 180));
+        }
       }
-    }
 
-    if (!textoTranscrito && deepgramApiKey) {
-      const respuesta = await fetch('https://api.deepgram.com/v1/listen?model=nova-2&language=es&smart_format=true', {
-        method: 'POST',
-        headers: {
-          Authorization: `Token ${deepgramApiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ url: audioUrl }),
-      });
-
-      if (!respuesta.ok) {
-        console.warn(`[Transcripción] Deepgram falló con HTTP ${respuesta.status}.`);
-        throw new Error(errorDeepgram(respuesta.status));
+      if (proveedor === 'assemblyai' && aai) {
+        try {
+          console.info('[Transcripción] Intentando con AssemblyAI…');
+          const transcript = await aai.transcripts.transcribe({
+            audio: audioUrl,
+            language_code: 'es',
+          });
+          if (transcript.status === 'error') {
+            throw new Error(transcript.error || 'AssemblyAI devolvió un error.');
+          }
+          const texto = (transcript.text || '').trim();
+          if (texto) {
+            textoTranscrito = texto;
+            console.info(`[Transcripción] Exitosa con AssemblyAI (${textoTranscrito.length} caracteres)`);
+            break;
+          }
+        } catch (error) {
+          falloAssembly = error instanceof Error ? error.message : 'AssemblyAI no respondió.';
+          console.warn('[Transcripción] AssemblyAI falló:', falloAssembly.slice(0, 180));
+        }
       }
-
-      const datos = (await respuesta.json()) as {
-        results?: { channels?: Array<{ alternatives?: Array<{ transcript?: string }> }> };
-      };
-      textoTranscrito = datos.results?.channels?.[0]?.alternatives?.[0]?.transcript || '';
     }
 
     if (!textoTranscrito) {
-      if (falloAssembly && !deepgramApiKey) {
-        throw new Error('AssemblyAI no pudo transcribir el audio y no hay un proveedor de respaldo configurado. Revisa la clave o agrega DEEPGRAM_API_KEY.');
+      const errores = [falloDeepgram, falloAssembly].filter(Boolean).join(' | ');
+      if (errores) {
+        throw new Error(`No se pudo transcribir el audio: ${errores}`);
       }
       throw new Error('No se detectó voz clara en el audio o el archivo está vacío. Prueba con otro archivo o revisa el volumen.');
     }

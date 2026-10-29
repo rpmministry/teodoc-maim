@@ -6,7 +6,7 @@ import { fechaLarga, nombreArchivoPdf, nombreArchivoWord, obtenerModalidad, obte
 import { especializadoTieneContenido } from '@/lib/normalizar';
 import { IconoDescarga, IconoFlecha } from '../marca';
 import ResultadoGeneral from './general';
-import { ResultadoDevocionales, ResultadoGrupos, ResultadoJovenes, ResultadoNinos } from './especializados';
+import { ResultadoBosquejo, ResultadoDevocionales, ResultadoGrupos, ResultadoJovenes, ResultadoNinos } from './especializados';
 
 interface Props {
   resultado: ResultadoAnalisis;
@@ -20,13 +20,37 @@ interface Props {
   onReintentarModalidad: () => void;
 }
 
-export default function PanelResultados({ resultado, descargando, descargandoWord, onNuevo, onDescargarGeneral, onDescargarModalidad, onDescargarWordGeneral, onDescargarWordModalidad, onReintentarModalidad }: Props) {
+export default function PanelResultados({
+  resultado,
+  descargando,
+  descargandoWord,
+  onNuevo,
+  onDescargarGeneral,
+  onDescargarModalidad,
+  onDescargarWordGeneral,
+  onDescargarWordModalidad,
+  onReintentarModalidad,
+}: Props) {
   const modalidad = obtenerModalidad(resultado.metadatos.modalidad);
   const tieneEspecializado = resultado.metadatos.modalidad !== 'general' &&
     especializadoTieneContenido(resultado.metadatos.modalidad, resultado.especializado);
-  const [tab, setTab] = useState<'general' | 'especializada'>('general');
+
+  // Sincronización automática de tab al cambiar de documento o modalidad:
+  // Por defecto, una modalidad especializada muestra su sección especializada al usuario.
+  const docClave = `${resultado.metadatos.modalidad}-${resultado.metadatos.fechaAnalisis}`;
+  const [docIdPrevio, setDocIdPrevio] = useState<string>(docClave);
+  const [tabManual, setTabManual] = useState<'general' | 'especializada' | null>(null);
+
+  if (docClave !== docIdPrevio) {
+    setDocIdPrevio(docClave);
+    setTabManual(null);
+  }
+
+  const tabActiva = tabManual !== null
+    ? (tabManual === 'especializada' && tieneEspecializado ? 'especializada' : 'general')
+    : (tieneEspecializado ? 'especializada' : 'general');
+
   const mostrarTabs = resultado.metadatos.modalidad !== 'general' && tieneEspecializado;
-  const tabActiva = tab === 'especializada' && tieneEspecializado ? 'especializada' : 'general';
 
   return (
     <section className="overflow-hidden rounded-[20px] border border-[var(--linea)] bg-[#fffdf8] shadow-[0_24px_70px_rgba(76,43,36,0.09)]" aria-label="Resultados del análisis">
@@ -96,20 +120,20 @@ export default function PanelResultados({ resultado, descargando, descargandoWor
             <button
               type="button"
               role="tab"
-              aria-selected={tabActiva === 'general'}
-              onClick={() => setTab('general')}
-              className={`flex-1 rounded-[8px] px-3 py-2 text-[12px] font-semibold transition ${tabActiva === 'general' ? 'bg-white text-[var(--tinta)] shadow-sm' : 'text-[var(--muted)] hover:text-[var(--tinta)]'}`}
+              aria-selected={tabActiva === 'especializada'}
+              onClick={() => setTabManual('especializada')}
+              className={`flex-1 rounded-[8px] px-3 py-2 text-[12px] font-semibold transition ${tabActiva === 'especializada' ? 'bg-white text-[var(--tinta)] shadow-sm' : 'text-[var(--muted)] hover:text-[var(--tinta)]'}`}
             >
-              Análisis general
+              {modalidad.nombreCorto}
             </button>
             <button
               type="button"
               role="tab"
-              aria-selected={tabActiva === 'especializada'}
-              onClick={() => setTab('especializada')}
-              className={`flex-1 rounded-[8px] px-3 py-2 text-[12px] font-semibold transition ${tabActiva === 'especializada' ? 'bg-white text-[var(--tinta)] shadow-sm' : 'text-[var(--muted)] hover:text-[var(--tinta)]'}`}
+              aria-selected={tabActiva === 'general'}
+              onClick={() => setTabManual('general')}
+              className={`flex-1 rounded-[8px] px-3 py-2 text-[12px] font-semibold transition ${tabActiva === 'general' ? 'bg-white text-[var(--tinta)] shadow-sm' : 'text-[var(--muted)] hover:text-[var(--tinta)]'}`}
             >
-              {modalidad.nombreCorto}
+              Análisis general
             </button>
           </div>
         )}
@@ -117,10 +141,21 @@ export default function PanelResultados({ resultado, descargando, descargandoWor
         <div role="tabpanel">
           {tabActiva === 'especializada' && resultado.metadatos.modalidad !== 'general' ? (
             <>
-              {resultado.metadatos.modalidad === 'grupos' && resultado.especializado.grupos && <ResultadoGrupos analisis={resultado} datos={resultado.especializado.grupos} />}
-              {resultado.metadatos.modalidad === 'jovenes' && resultado.especializado.jovenes && <ResultadoJovenes analisis={resultado} datos={resultado.especializado.jovenes} />}
-              {resultado.metadatos.modalidad === 'ninos' && resultado.especializado.ninos && <ResultadoNinos analisis={resultado} datos={resultado.especializado.ninos} />}
-              {resultado.metadatos.modalidad === 'devocionales' && resultado.especializado.devocionales && <ResultadoDevocionales analisis={resultado} datos={resultado.especializado.devocionales} />}
+              {resultado.metadatos.modalidad === 'bosquejo' && resultado.especializado.bosquejo && (
+                <ResultadoBosquejo analisis={resultado} datos={resultado.especializado.bosquejo} />
+              )}
+              {resultado.metadatos.modalidad === 'grupos' && resultado.especializado.grupos && (
+                <ResultadoGrupos analisis={resultado} datos={resultado.especializado.grupos} />
+              )}
+              {resultado.metadatos.modalidad === 'jovenes' && resultado.especializado.jovenes && (
+                <ResultadoJovenes analisis={resultado} datos={resultado.especializado.jovenes} />
+              )}
+              {resultado.metadatos.modalidad === 'ninos' && resultado.especializado.ninos && (
+                <ResultadoNinos analisis={resultado} datos={resultado.especializado.ninos} />
+              )}
+              {resultado.metadatos.modalidad === 'devocionales' && resultado.especializado.devocionales && (
+                <ResultadoDevocionales analisis={resultado} datos={resultado.especializado.devocionales} />
+              )}
             </>
           ) : (
             <ResultadoGeneral analisis={resultado} />
@@ -130,3 +165,4 @@ export default function PanelResultados({ resultado, descargando, descargandoWor
     </section>
   );
 }
+

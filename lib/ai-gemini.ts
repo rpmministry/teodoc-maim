@@ -2,15 +2,92 @@
 import { GoogleGenAI } from '@google/genai';
 
 export const MODELOS_GEMINI = ['gemini-3.8-flash', 'gemini-4.0-flash'];
+const MODELOS_EFECTIVOS = ['gemini-3.5-flash', 'gemini-3-flash-preview', ...MODELOS_GEMINI];
 
 export const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-/** Extrae JSON válido de una respuesta que puede venir envuelta en ```json. */
-export function extraerJSON(texto: string) {
-  let limpio = texto.trim();
-  if (limpio.startsWith('```json')) limpio = limpio.replace(/^```json/, '').replace(/```$/, '').trim();
-  else if (limpio.startsWith('```')) limpio = limpio.replace(/^```/, '').replace(/```$/, '').trim();
-  return JSON.parse(limpio);
+/** Extrae JSON válido de una respuesta que puede venir envuelta en markdown o con texto complementario. */
+export function extraerJSON(texto: string): any {
+  if (!texto || typeof texto !== 'string') return null;
+  const limpio = texto.trim();
+
+  // 1. Si viene en bloque de código markdown ```json ... ```
+  const matchFenced = limpio.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  if (matchFenced && matchFenced[1]) {
+    try {
+      return JSON.parse(matchFenced[1].trim());
+    } catch {}
+  }
+
+  // 2. Intento directo de JSON.parse
+  try {
+    return JSON.parse(limpio);
+  } catch {}
+
+  // 3. Extraer el objeto balanceado más externo { ... } o [ ... ]
+  const firstBrace = limpio.indexOf('{');
+  const firstBracket = limpio.indexOf('[');
+
+  let startIdx = -1;
+  let isObject = true;
+  if (firstBrace !== -1 && (firstBracket === -1 || firstBrace < firstBracket)) {
+    startIdx = firstBrace;
+    isObject = true;
+  } else if (firstBracket !== -1) {
+    startIdx = firstBracket;
+    isObject = false;
+  }
+
+  if (startIdx !== -1) {
+    const openChar = isObject ? '{' : '[';
+    const closeChar = isObject ? '}' : ']';
+    let depth = 0;
+    let inString = false;
+    let escape = false;
+    let endIdx = -1;
+
+    for (let i = startIdx; i < limpio.length; i++) {
+      const char = limpio[i];
+      if (escape) {
+        escape = false;
+        continue;
+      }
+      if (char === '\\') {
+        escape = true;
+        continue;
+      }
+      if (char === '"') {
+        inString = !inString;
+        continue;
+      }
+      if (!inString) {
+        if (char === openChar) depth++;
+        else if (char === closeChar) {
+          depth--;
+          if (depth === 0) {
+            endIdx = i;
+            break;
+          }
+        }
+      }
+    }
+
+    if (endIdx !== -1) {
+      try {
+        return JSON.parse(limpio.slice(startIdx, endIdx + 1));
+      } catch {}
+    }
+  }
+
+  // 4. Último recurso: cortar desde la primera { hasta la última }
+  const lastBrace = limpio.lastIndexOf('}');
+  if (firstBrace !== -1 && lastBrace > firstBrace) {
+    try {
+      return JSON.parse(limpio.slice(firstBrace, lastBrace + 1));
+    } catch {}
+  }
+
+  throw new Error('No se pudo interpretar el formato JSON de la respuesta.');
 }
 
 let cliente: GoogleGenAI | null = null;
@@ -46,7 +123,7 @@ function conTiempoLimite<T>(promesa: Promise<T>, ms: number, etiqueta: string): 
  * Devuelve el JSON parseado o null. Lógica compartida por analyze y validate.
  */
 export async function generarJsonConGemini(opts: OpcionesGemini): Promise<any | null> {
-  const modelos = opts.modelos ?? MODELOS_GEMINI;
+  const modelos = opts.modelos ?? MODELOS_EFECTIVOS;
   const ai = gemini();
   for (const modelo of modelos) {
     for (let i = 0; i < 2; i++) {
@@ -59,6 +136,7 @@ export async function generarJsonConGemini(opts: OpcionesGemini): Promise<any | 
               systemInstruction: opts.systemInstruction,
               responseMimeType: 'application/json',
               responseSchema: opts.responseSchema,
+              maxOutputTokens: 8192,
             },
           }),
           opts.timeoutMs ?? 0,

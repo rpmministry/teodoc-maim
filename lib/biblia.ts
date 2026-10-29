@@ -217,6 +217,33 @@ function versiculosDe(analisis: PredicaAnalisis): Versiculo[] {
   ].filter((versiculo) => Boolean(versiculo.cita));
 }
 
+export function detectarCitasTexto(texto: string): string[] {
+  const patron = /\b(?:[1-3]\s+)?[A-ZÁÉÍÓÚ][a-záéíóúñ]+\s+\d{1,3}(?::\d{1,3}(?:-\d{1,3})?)?\b/g;
+  const encontrados = texto.match(patron) || [];
+  const validas = new Set<string>();
+  for (const item of encontrados) {
+    const normalizada = normalizarCita(item);
+    if (normalizada) validas.add(normalizada);
+    if (validas.size >= 8) break;
+  }
+  return Array.from(validas);
+}
+
+export async function obtenerContextoBaseVerificado(texto: string): Promise<string> {
+  const citas = detectarCitasTexto(texto);
+  if (!citas.length) return '';
+  const verificadas: Array<{ cita: string; texto: string }> = [];
+  for (const cita of citas) {
+    const res = await verificarUna(cita);
+    if (res && res.texto) {
+      verificadas.push({ cita, texto: res.texto });
+    }
+  }
+  if (!verificadas.length) return '';
+  return `CONTEXTO BÍBLICO BASE VERIFICADO (PRE-PROCESAMIENTO CANÓNICO):
+${verificadas.map((v) => `- ${v.cita}: "${v.texto}"`).join('\n')}`;
+}
+
 export async function verificarReferencias(analisis: PredicaAnalisis): Promise<PredicaAnalisis> {
   if (!HABILITADO) return analisis;
   if (PROVEEDOR === 'api-bible' && (!API_KEY || !BIBLE_ID)) {

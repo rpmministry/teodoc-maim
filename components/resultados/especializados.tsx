@@ -1,6 +1,6 @@
 'use client';
 
-import type { ClaseNinos, EstudioGrupos, EstudioJovenes, PlanDevocional, ResultadoAnalisis } from '@/lib/tipos';
+import type { ClaseNinos, EstudioBosquejo, EstudioGrupos, EstudioJovenes, PlanDevocional, ResultadoAnalisis } from '@/lib/tipos';
 import { obtenerRangoEdad } from '@/lib/modalidades';
 import { Bloque, Caja, Chips, Cita, Dato, Lista, SeccionResultado, SinContenido } from './ui';
 
@@ -14,6 +14,216 @@ function Referencias({ analisis }: { analisis: ResultadoAnalisis }) {
     <SeccionResultado numero="R" titulo="Referencias bíblicas del mensaje">
       <Chips items={referencias} />
     </SeccionResultado>
+  );
+}
+
+export function ResultadoBosquejo({ analisis, datos }: { analisis: ResultadoAnalisis; datos: EstudioBosquejo }) {
+  return (
+    <div className="space-y-6">
+      <SeccionResultado numero="01" titulo="Encabezado homilético y propósito">
+        <div className="rounded-[14px] border border-[var(--linea)] bg-white p-5 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--linea)] pb-3">
+            <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--coralOscuro)]">Bosquejo Homilético Oficial</span>
+            <span className="rounded-full bg-[#fbf2e6] px-3 py-1 text-[10px] font-semibold text-[var(--tinta)]">Liderazgo MAIM</span>
+          </div>
+          <h3 className="mt-3 text-[20px] font-bold text-[var(--tinta)]">{datos.titulo || analisis.titulo}</h3>
+          {datos.tema_central && (
+            <p className="mt-1 text-[13px] text-[var(--texto)]">
+              <strong className="font-semibold text-[var(--tinta)]">Tema central:</strong> {datos.tema_central}
+            </p>
+          )}
+          {datos.proposito_general && (
+            <p className="mt-2 text-[13px] leading-relaxed text-[var(--texto)]">
+              <strong className="font-semibold text-[var(--tinta)]">Propósito ministerial:</strong> {datos.proposito_general}
+            </p>
+          )}
+        </div>
+
+        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+          <div className="rounded-[12px] bg-[#fbf2e6] p-4">
+            <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--coralOscuro)]">Objetivo Cognitivo</p>
+            <p className="mt-1.5 text-[12.5px] leading-relaxed text-[var(--texto)]">{datos.objetivos?.cognitivo || 'Asimilar con claridad el fundamento doctrinal de la enseñanza.'}</p>
+          </div>
+          <div className="rounded-[12px] bg-[#fbf2e6] p-4">
+            <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--coralOscuro)]">Objetivo Afectivo</p>
+            <p className="mt-1.5 text-[12.5px] leading-relaxed text-[var(--texto)]">{datos.objetivos?.afectivo || 'Despertar convicción profunda y respuesta del corazón.'}</p>
+          </div>
+          <div className="rounded-[12px] bg-[#fbf2e6] p-4">
+            <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--coralOscuro)]">Objetivo Volitivo</p>
+            <p className="mt-1.5 text-[12.5px] leading-relaxed text-[var(--texto)]">{datos.objetivos?.volitivo || 'Llevar a una acción concreta y obediencia ministerial.'}</p>
+          </div>
+        </div>
+      </SeccionResultado>
+
+      <SeccionResultado numero="02" titulo="Tesis y fundamento doctrinal">
+        {datos.tesis ? <Caja tono="coral" etiqueta="Tesis / Proposición Homilética">{datos.tesis}</Caja> : <SinContenido mensaje="No se definió una proposición homilética explícita." />}
+        {datos.fundamento_doctrinal && (
+          <div className="mt-4 rounded-[12px] border border-[var(--linea)] bg-white p-4">
+            <p className="text-[10.5px] font-bold uppercase tracking-[0.1em] text-[var(--tinta)]">Fundamento Doctrinal</p>
+            <p className="mt-2 text-[13px] leading-relaxed text-[var(--texto)]">{datos.fundamento_doctrinal}</p>
+          </div>
+        )}
+        <div className="mt-4">
+          <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--coralOscuro)]">Texto base</p>
+          <Cita versiculo={datos.texto_base?.cita ? datos.texto_base : analisis.texto_biblico_principal} />
+        </div>
+      </SeccionResultado>
+
+      <SeccionResultado numero="03" titulo="Introducción del bosquejo">
+        <div className="space-y-3">
+          {datos.introduccion?.gancho && (
+            <div className="rounded-[12px] border border-[var(--linea)] bg-[#fbf7ee] p-4">
+              <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--coralOscuro)]">I. Gancho y Necesidad Humana</p>
+              <p className="mt-2 text-[13px] leading-relaxed text-[var(--texto)]">{datos.introduccion.gancho}</p>
+            </div>
+          )}
+          {datos.introduccion?.contexto && (
+            <div className="rounded-[12px] border border-[var(--linea)] bg-white p-4">
+              <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--muted)]">II. Contexto Histórico-Literario</p>
+              <p className="mt-2 text-[13px] leading-relaxed text-[var(--texto)]">{datos.introduccion.contexto}</p>
+            </div>
+          )}
+          {datos.introduccion?.transicion && (
+            <div className="rounded-[10px] border-l-[3px] border-[var(--coralOscuro)] bg-[#fdf1e8] p-3 text-[12.5px] italic text-[var(--texto)]">
+              <span className="font-semibold text-[var(--coralOscuro)]">Transición al cuerpo del mensaje: </span>
+              {datos.introduccion.transicion}
+            </div>
+          )}
+        </div>
+      </SeccionResultado>
+
+      <SeccionResultado numero="04" titulo="Desarrollo estructural jerárquico">
+        {!datos.puntos_principales || datos.puntos_principales.length === 0 ? (
+          <SinContenido mensaje="No se estructuraron puntos principales en el bosquejo." />
+        ) : (
+          <div className="space-y-6">
+            {datos.puntos_principales.map((punto, idx) => (
+              <article key={`${punto.romano}-${idx}`} className="rounded-[16px] border border-[var(--linea)] bg-white p-5 shadow-sm sm:p-6">
+                <div className="flex items-start gap-3.5 border-b border-[#f0e4d7] pb-4">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--coralOscuro)] text-[13px] font-bold text-white shadow-sm">
+                    {punto.romano || `P${idx + 1}`}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h4 className="text-[16px] font-bold text-[var(--tinta)]">{punto.titulo}</h4>
+                      {punto.cita && (
+                        <span className="rounded-full bg-[#fbf2e6] px-2.5 py-0.5 text-[10.5px] font-bold text-[var(--coralOscuro)]">
+                          {punto.cita}
+                        </span>
+                      )}
+                    </div>
+                    {punto.texto_cita && (
+                      <p className="mt-1.5 text-[12.5px] italic text-[var(--muted)]">&ldquo;{punto.texto_cita}&rdquo;</p>
+                    )}
+                  </div>
+                </div>
+
+                {punto.exposicion && (
+                  <div className="mt-4">
+                    <p className="text-[13.5px] leading-[1.8] text-[var(--texto)]">{punto.exposicion}</p>
+                  </div>
+                )}
+
+                {punto.subpuntos?.length > 0 && (
+                  <div className="mt-5 space-y-3 pl-2 sm:pl-4">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--muted)]">Subpuntos Argumentados</p>
+                    {punto.subpuntos.map((sub, sIdx) => (
+                      <div key={`${sub.letra}-${sIdx}`} className="rounded-[10px] border-l-2 border-[var(--coral)] bg-[#fbf5ed] p-3.5">
+                        <div className="flex items-baseline gap-2">
+                          <span className="font-bold text-[var(--coralOscuro)]">{sub.letra}.</span>
+                          <h5 className="text-[13.5px] font-semibold text-[var(--tinta)]">{sub.titulo}</h5>
+                        </div>
+                        {sub.desarrollo && <p className="mt-1.5 text-[12.5px] leading-relaxed text-[var(--texto)]">{sub.desarrollo}</p>}
+                        {sub.detalles && sub.detalles.length > 0 && (
+                          <ul className="mt-2 list-disc pl-5 text-[12px] leading-relaxed text-[var(--muted)]">
+                            {sub.detalles.map((det, dIdx) => (
+                              <li key={dIdx}>{det}</li>
+                            ))}
+                          </ul>
+                        )}
+                        {sub.pasajes_apoyo && sub.pasajes_apoyo.length > 0 && (
+                          <div className="mt-2 flex flex-wrap gap-1.5">
+                            {sub.pasajes_apoyo.map((ref, rIdx) => (
+                              <span key={rIdx} className="rounded bg-white px-2 py-0.5 text-[10px] font-medium text-[var(--coralOscuro)] border border-[#ebd8cb]">
+                                {ref}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {punto.ilustracion && (
+                  <div className="mt-4 rounded-[10px] bg-[#fbf2e6] p-3 text-[12px] leading-relaxed text-[var(--texto)]">
+                    <strong className="text-[var(--coralOscuro)]">Ilustración / Metáfora:</strong> {punto.ilustracion}
+                  </div>
+                )}
+
+                {punto.transicion && (
+                  <div className="mt-4 text-[12px] italic text-[var(--muted)]">
+                    <span className="font-semibold text-[var(--coralOscuro)]">Transición: </span>
+                    {punto.transicion}
+                  </div>
+                )}
+              </article>
+            ))}
+          </div>
+        )}
+      </SeccionResultado>
+
+      <SeccionResultado numero="05" titulo="Conclusión homilética">
+        <div className="space-y-3">
+          {datos.conclusion?.recapitulacion && (
+            <div className="rounded-[12px] border border-[var(--linea)] bg-white p-4">
+              <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--muted)]">Recapitulación sintética</p>
+              <p className="mt-1.5 text-[13px] leading-relaxed text-[var(--texto)]">{datos.conclusion.recapitulacion}</p>
+            </div>
+          )}
+          {datos.conclusion?.climax && (
+            <div className="rounded-[12px] border border-[#f0c3b8] bg-[#fff6f2] p-4">
+              <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--coralOscuro)]">Clímax del mensaje</p>
+              <p className="mt-1.5 text-[13.5px] font-medium leading-relaxed text-[var(--tinta)]">{datos.conclusion.climax}</p>
+            </div>
+          )}
+        </div>
+      </SeccionResultado>
+
+      <SeccionResultado numero="06" titulo="Aplicación pastoral para el liderazgo de MAIM">
+        {datos.aplicacion_liderazgo?.length > 0 ? (
+          <div className="space-y-2.5">
+            {datos.aplicacion_liderazgo.map((item, idx) => (
+              <div key={idx} className="flex items-start gap-3 rounded-[12px] border border-[var(--linea)] bg-white p-3.5">
+                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--coralOscuro)] text-[10px] font-bold text-white">
+                  {idx + 1}
+                </span>
+                <p className="text-[12.5px] leading-relaxed text-[var(--texto)]">{item}</p>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <SinContenido mensaje="No se incluyeron aplicaciones pastorales específicas para el liderazgo." />
+        )}
+      </SeccionResultado>
+
+      <SeccionResultado numero="07" titulo="Desafío final y oración de ministración">
+        {datos.desafio_final?.llamado && (
+          <Caja tono="coral" etiqueta="Llamado y desafío volitivo">
+            {datos.desafio_final.llamado}
+          </Caja>
+        )}
+        {datos.desafio_final?.oracion_ministracion && (
+          <div className="mt-4">
+            <Caja etiqueta="Oración pastoral de ministración">
+              {datos.desafio_final.oracion_ministracion}
+            </Caja>
+          </div>
+        )}
+      </SeccionResultado>
+
+      <Referencias analisis={analisis} />
+    </div>
   );
 }
 

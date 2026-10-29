@@ -151,20 +151,34 @@ export default function Inicio() {
     setFormulario((valor) => ({ ...valor, texto: '' }));
     setTextoPendiente(null);
     setCargando(true);
-    iniciarProgreso(6);
-    setEstadoAudio({ activo: true, progreso: 6, nombre: archivo.name, mensaje: 'Subiendo audio…' });
+    detenerProgreso();
+    setProgreso(8);
+    setEstadoAudio({ activo: true, progreso: 8, nombre: archivo.name, mensaje: 'Subiendo audio…' });
     void adquirirPantallaActiva();
 
+    let intervaloTranscribe: ReturnType<typeof setInterval> | null = null;
     try {
       const { audioUrl } = await subirAudio(archivo, (porcentaje) => {
-        setEstadoAudio((valor) => ({ ...valor, activo: true, progreso: porcentaje, mensaje: 'Subiendo audio…' }));
-        setProgreso(Math.max(6, Math.min(38, porcentaje)));
+        const progresoCarga = Math.max(8, Math.min(48, Math.round(porcentaje * 0.48)));
+        setEstadoAudio((valor) => ({ ...valor, activo: true, progreso: progresoCarga, mensaje: 'Subiendo audio…' }));
+        setProgreso(progresoCarga);
       });
 
       setEstadoAudio((valor) => ({ ...valor, activo: true, progreso: 52, mensaje: 'Transcribiendo el mensaje…' }));
-      setProgreso(48);
+      setProgreso(52);
+
+      // Progreso visual fluido durante la transcripción
+      intervaloTranscribe = setInterval(() => {
+        setEstadoAudio((valor) => ({
+          ...valor,
+          progreso: valor.progreso < 92 ? valor.progreso + 2 : 92,
+          mensaje: 'Transcribiendo el mensaje…',
+        }));
+        setProgreso((p) => (p < 92 ? p + 2 : 92));
+      }, 800);
+
       const controller = new AbortController();
-      const timeout = window.setTimeout(() => controller.abort(), 150_000);
+      const timeout = window.setTimeout(() => controller.abort(), 240_000);
       let data: { text?: string; error?: string } | null = null;
       try {
         const respuesta = await fetch('/api/transcribe', {
@@ -173,16 +187,19 @@ export default function Inicio() {
           body: JSON.stringify({ audioUrl }),
           signal: controller.signal,
         });
+        if (intervaloTranscribe) clearInterval(intervaloTranscribe);
         data = await respuesta.json().catch(() => null);
         if (!respuesta.ok || !data?.text) {
           throw new Error(data?.error || 'No se pudo transcribir el audio. Intenta de nuevo.');
         }
       } catch (error) {
+        if (intervaloTranscribe) clearInterval(intervaloTranscribe);
         if ((error as { name?: string })?.name === 'AbortError') {
           throw new Error('La transcripción tardó más de lo permitido. Intenta con un audio más corto.');
         }
         throw error;
       } finally {
+        if (intervaloTranscribe) clearInterval(intervaloTranscribe);
         window.clearTimeout(timeout);
       }
 
@@ -198,6 +215,8 @@ export default function Inicio() {
       setProgreso(100);
       setErrores([]);
     } catch (error) {
+      if (intervaloTranscribe) clearInterval(intervaloTranscribe);
+      detenerProgreso();
       setEstadoAudio({
         activo: false,
         progreso: 0,
@@ -206,6 +225,7 @@ export default function Inicio() {
       });
       setProgreso(0);
     } finally {
+      if (intervaloTranscribe) clearInterval(intervaloTranscribe);
       detenerProgreso();
       setCargando(false);
       void liberarPantallaActiva();

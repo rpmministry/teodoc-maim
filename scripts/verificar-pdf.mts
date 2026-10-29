@@ -57,7 +57,7 @@ function comprobar(nombre: string, fn: () => void) {
 
 const resultados: Record<ModalidadId, InspeccionPdf> = {} as Record<ModalidadId, InspeccionPdf>;
 
-for (const modalidad of ['general', 'grupos', 'jovenes', 'ninos', 'devocionales'] as ModalidadId[]) {
+for (const modalidad of ['general', 'bosquejo', 'grupos', 'jovenes', 'ninos', 'devocionales'] as ModalidadId[]) {
   const analisis = crearResultadoDemo(modalidad);
   const metadatos = modalidad === 'general' ? { ...metadatosDemo('general'), modalidad: 'general' as const } : metadatosDemo(modalidad);
   const blob = modalidad === 'general'
@@ -68,15 +68,15 @@ for (const modalidad of ['general', 'grupos', 'jovenes', 'ninos', 'devocionales'
   resultados[modalidad] = await inspeccionar(blob);
 }
 
-comprobar('Se generan los cinco PDF con el nombre exacto solicitado', () => {
-  assert.deepEqual(Object.keys(resultados).sort(), ['devocionales', 'general', 'grupos', 'jovenes', 'ninos'].sort());
+comprobar('Se generan los seis PDF con el nombre exacto solicitado', () => {
+  assert.deepEqual(Object.keys(resultados).sort(), ['bosquejo', 'devocionales', 'general', 'grupos', 'jovenes', 'ninos'].sort());
   for (const modalidad of Object.keys(resultados) as ModalidadId[]) {
-    assert.equal(nombreArchivoPdf(modalidad), `teodoc-maim-${{ general: 'analisis-general', grupos: 'grupos-pequenos', jovenes: 'jovenes', ninos: 'clase-infantil', devocionales: 'devocionales-7-dias' }[modalidad]}.pdf`);
+    assert.equal(nombreArchivoPdf(modalidad), `teodoc-maim-${{ general: 'analisis-general', bosquejo: 'bosquejo-ministerial', grupos: 'grupos-pequenos', jovenes: 'jovenes', ninos: 'clase-infantil', devocionales: 'devocionales-7-dias' }[modalidad]}.pdf`);
   }
 });
 
 comprobar('Todos los PDF son multipágina y superan el tamaño mínimo con fuentes incrustadas', () => {
-  const minimos: Record<ModalidadId, number> = { general: 2, grupos: 3, jovenes: 3, ninos: 3, devocionales: 8 };
+  const minimos: Record<ModalidadId, number> = { general: 2, bosquejo: 2, grupos: 3, jovenes: 3, ninos: 3, devocionales: 8 };
   for (const modalidad of Object.keys(resultados) as ModalidadId[]) {
     const pdf = resultados[modalidad];
     assert.ok(pdf.paginas >= minimos[modalidad], `${modalidad}: ${pdf.paginas} páginas`);
@@ -109,6 +109,7 @@ comprobar('Los PDF preservan acentos y no contienen placeholders técnicos', () 
 comprobar('Cada PDF contiene las secciones distintivas de su modalidad', () => {
   const requeridos: Record<ModalidadId, string[]> = {
     general: ['Identificación del mensaje', 'Idea central y propósito', 'Fundamento bíblico', 'Desarrollo del mensaje', 'Enseñanzas principales', 'Aplicación práctica', 'Conclusión del estudio'],
+    bosquejo: ['Datos de la enseñanza', 'Fundamento homilético y doctrinal', 'Objetivos de aprendizaje y ministración', 'Cuerpo y desarrollo del mensaje', 'Aplicación pastoral para el liderazgo MAIM', 'Desafío final y ministración'],
     grupos: ['Agenda del encuentro', 'Para comenzar', 'Comprender el texto', 'Actividad grupal', 'Compromiso de la semana', 'Orientaciones para el líder'],
     jovenes: ['Objetivo y tema del encuentro', 'Pasaje y conceptos fundamentales', 'Reflexión individual', 'Conversación grupal', 'Dinámica participativa', 'Desafío de la semana', 'Guía para el líder juvenil'],
     ninos: ['Datos de la clase', 'El versículo que aprenderemos', 'El relato bíblico', 'Actividad didáctica', 'Juego o dinámica', 'Lo que puedo vivir hoy', 'Guía para el maestro', 'Rango de edad'],
@@ -156,6 +157,6 @@ assert.ok(pdfSinPredicador.texto.includes('La fe que transforma'));
 pasadas += 1;
 pruebas.push('  ✓ El nombre es opcional: sin predicador no se imprime un campo vacío');
 
-console.log('Verificación funcional de los cinco PDF');
+console.log('Verificación funcional de los seis PDF');
 console.log(pruebas.join('\n'));
 console.log(`\n${pasadas} pruebas superadas. Archivos en tmp/pdf/.`);

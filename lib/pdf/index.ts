@@ -1,4 +1,5 @@
 import type { MetadatosPredica, ResultadoAnalisis } from '../tipos.ts';
+import { construirPdfBosquejo } from './bosquejo.ts';
 import { construirPdfDevocionales } from './devocionales.ts';
 import { construirPdfGeneral } from './general.ts';
 import { construirPdfGrupos } from './grupos.ts';
@@ -8,6 +9,12 @@ import type { RecursosPdf } from './base.ts';
 
 export type { RecursosPdf } from './base.ts';
 export { cargarRecursosPdf } from './recursos.ts';
+export { construirPdfBosquejo } from './bosquejo.ts';
+export { construirPdfGeneral } from './general.ts';
+export { construirPdfGrupos } from './grupos.ts';
+export { construirPdfJovenes } from './jovenes.ts';
+export { construirPdfNinos } from './ninos.ts';
+export { construirPdfDevocionales } from './devocionales.ts';
 
 export interface SolicitudPdf {
   analisis: ResultadoAnalisis;
@@ -24,6 +31,9 @@ export function construirPdfModalidad({ analisis, metadatos, recursos = {} }: So
   switch (metadatos.modalidad) {
     case 'general':
       return construirPdfGeneral(analisis, metadatos, recursos);
+    case 'bosquejo':
+      if (!especializado.bosquejo) throw new Error('El bosquejo ministerial no está disponible.');
+      return construirPdfBosquejo(analisis, especializado.bosquejo, metadatos, recursos);
     case 'grupos':
       if (!especializado.grupos) throw new Error('El estudio para grupos no está disponible.');
       return construirPdfGrupos(analisis, especializado.grupos, metadatos, recursos);

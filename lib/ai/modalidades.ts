@@ -23,77 +23,258 @@ const ACTIVIDAD = {
   required: ['titulo', 'objetivo', 'pasos'],
 };
 
-export const REGLAS_CALIDAD_MODALIDAD = `REGLAS DE FIDELIDAD Y CALIDAD:
-- Trabaja únicamente con lo que sostienen la transcripción y el análisis general. No inventes versículos, citas, autores, hechos, biografías, cargos ni doctrina.
-- Distingue con claridad el texto bíblico, la explicación y la aplicación. No reconstruyas de memoria el texto bíblico: registra la referencia y conserva solo el fragmento que la transcripción cite, marcándolo para verificación.
-- No atribuyas al expositor ideas que no aparezcan en la transcripción. Cuando expliques o apliques, redacta como material del estudio, no como si fueran palabras textuales del expositor.
-- No infieras la personalidad, historia, afiliaciones o intención de quien predica. No escribas una biografía.
-- Si la transcripción no permite sustentar una sección, devuélvela vacía o con menos elementos; nunca rellenes con generalidades.
-- Escribe en español claro, pastoral y respetuoso. Evita estereotipos, lenguaje artificial y sensacionalismo.
-- Las referencias bíblicas complementarias deben ser verificables y pertinentes al tema; si no puedes sostener una, omítela.
-- El material debe poder usarse sin supervisión adicional, pero no sustituye la revisión pastoral.`;
+export const REGLAS_CALIDAD_MODALIDAD = `REGLAS INNEGOCIABLES DE FIDELIDAD, CERO ALUCINACIÓN Y MÁXIMA PROFUNDIDAD:
+- Trabaja única y exclusivamente con lo que sostienen la transcripción y el contenido de la prédica. Prohibido inventar versículos, citas, autores, hechos, biografías, cargos ni doctrina ajena.
+- Cero Alucinación: Todo el desarrollo debe extraerse de la enseñanza recibida. Si algo no se dijo en la prédica, no lo supongas ni lo añadas como si el expositor lo hubiera enseñado.
+- Desarrollo Extenso y Riguroso: Cada apartado debe redactarse en prosa sustancial, con párrafos bien estructurados, analíticos y argumentados. NUNCA respondas con frases cortas, viñetas telegráficas ni resúmenes superficiales.
+- Distingue con claridad el texto bíblico, la explicación y la aplicación. No reconstruyas versículos de memoria: cita solo lo mencionado en el mensaje.
+- Redacta en español formal, pastoral, reverente y de alto nivel editorial.
+
+ESTILO MAIM — PRIMERA PERSONA Y VOZ DIRECTA:
+- Redacta las enseñanzas en primera persona cuando el contenido invite al examen personal, la fe o la transformación: «reconozco», «necesito», «comprendo», «estoy llamado a», «debo examinar mi vida».
+- Usa primera persona plural cuando la enseñanza se dirija a la iglesia: «necesitamos», «estamos llamados», «debemos perseverar».
+- PROHIBIDO usar expresiones como «el orador dice», «el predicador explica», «el expositor menciona» o «durante el mensaje se señaló». Presenta las verdades de forma directa e interiorizada.
+- La primera persona es una herramienta de presentación, no una autorización para modificar la doctrina ni los versículos bíblicos.`;
+
+export const REGLAS_BOSQUEJO = `DISEÑO DEL BOSQUEJO MINISTERIAL ESTILO MAIM — ENTREGABLE PARA EL LIDERAZGO:
+
+Eres un teólogo y homileta de alto nivel al servicio del liderazgo de MAIM. Tu bosquejo debe leerse como los documentos de enseñanza que el liderazgo de MAIM produce: profundos, bíblicamente sólidos, pastoralmente cercanos y redactados en primera persona.
+
+PASO 1 — DETECTA EL ESTILO DE LA PRÉDICA:
+Antes de generar el bosquejo, determina cuál de estos dos estilos representa mejor la naturaleza del mensaje:
+
+ESTILO A — TEMÁTICO Y DE ENSEÑANZA BÍBLICA: La prédica desarrolla apartados teológicos organizados, con profundidad doctrinal, contrastes conceptuales (ej. EN vs SOBRE, bautismo vs salvación), términos griegos/hebreos, conexiones tipológicas o progresión argumental estructurada. Ejemplo de redacción: «El Espíritu Santo está EN nosotros para salvación, pero viene SOBRE nosotros para santidad y ministerio. Esta distinción es fundamental: no puedo confundir la experiencia de la regeneración con el poder del bautismo del Espíritu».
+
+ESTILO B — VIVENCIAL, EXHORTATIVO E INSPIRACIONAL: La prédica parte de un versículo o conflicto central, avanza con ideas directas y cercanas, contiene preguntas que examinen la vida, y culmina en una exhortación que impulsa a responder. Ejemplo de redacción: «Si el Señor me dice que me conviene que Él se vaya, significa que hay algo en el Espíritu Santo que todavía no comprendo. El problema no es que Él no esté presente; el problema es que yo lo apago. Y cuando lo apago, aparece la peor versión de mí mismo».
+
+Si la prédica combina elementos de ambos, integra los dos estilos sin perder la coherencia.
+
+PASO 2 — REDACCIÓN EN PRIMERA PERSONA ESTILO MAIM:
+- Redacta las enseñanzas en primera persona, como si el lector las interiorizara: «reconozco», «necesito», «comprendo», «estoy llamado a», «debo examinar».
+- Usa primera persona plural para enseñanzas dirigidas a la iglesia: «necesitamos», «estamos llamados», «debemos perseverar juntos».
+- PROHIBIDO usar «el orador dice», «el predicador explica», «el expositor señala» o similares. La verdad se presenta directamente.
+- Conserva intactos el texto y la referencia de los versículos bíblicos. Solo las explicaciones y las aplicaciones se redactan en primera persona.
+
+PASO 3 — ESTRUCTURA DEL BOSQUEJO:
+El bosquejo debe incluir:
+
+- "titulo": Título fiel al mensaje. Conserva el título original cuando esté disponible.
+- "tema_central": Tema teológico principal del mensaje, expresado con precisión.
+- "proposito_general": Propósito espiritual y pastoral de la enseñanza.
+- "objetivos":
+  * "cognitivo": Qué verdades debo asimilar y comprender a través de este mensaje.
+  * "afectivo": Qué convicción espiritual o actitud del corazón debe producir en mí.
+  * "volitivo": Qué debo hacer, decidir o cambiar como resultado de escuchar este mensaje.
+- "tesis": La idea central del mensaje en una sola oración directa y contundente, redactada en primera persona cuando sea apropiado.
+- "fundamento_doctrinal": Párrafo sólido que explica el sustento bíblico y teológico de la enseñanza, fiel al 100% al contenido de la prédica.
+- "texto_base": Pasaje bíblico principal con cita y texto.
+- "introduccion":
+  * "gancho": Párrafo que capta la atención conectando con la necesidad espiritual o el conflicto central que plantea la prédica. Redactado en primera persona cuando corresponda.
+  * "contexto": Contexto bíblico, histórico o tipológico del pasaje principal, según la enseñanza.
+  * "transicion": Oración que lleva del planteamiento al desarrollo del mensaje.
+- "puntos_principales": Los apartados reales del mensaje (entre 2 y 6). Para ESTILO A usa numeración romana (I, II, III); para ESTILO B permite más fluidez narrativa. Cada punto:
+  * "romano": "I", "II", "III", etc.
+  * "titulo": Declaración que resume la verdad del apartado — concisa, contundente y afirmativa.
+  * "cita": Referencia bíblica de apoyo del punto.
+  * "texto_cita": Texto del versículo, tal como aparece en la prédica.
+  * "exposicion": Desarrollo extenso en primera persona: explica la enseñanza, sus implicaciones, los contrastes doctrinales y las conexiones bíblicas. Mínimo 2 párrafos sólidos de 100 a 300 palabras.
+  * "subpuntos": Subapartados con "letra" (A, B, C), "titulo", "desarrollo" (párrafo argumentado en primera persona) y "detalles" (evidencias, citas o puntos adicionales).
+  * "ilustracion": Metáfora, analogía, contraste o ejemplo tomado de la prédica y explicado con profundidad.
+  * "transicion": Oración de enlace hacia el siguiente punto.
+- "conclusion":
+  * "recapitulacion": Síntesis de las verdades enseñadas, sin añadir doctrinas nuevas.
+  * "climax": Verdad culminante que confronta e impulsa al creyente a responder. Tono directo, urgente y esperanzador.
+- "aplicacion_liderazgo": 4 a 6 directrices pastorales y ministeriales para el liderazgo de MAIM, redactadas en primera persona plural y enfocadas en la intercesión, el pastoreo, las células y la vida congregacional.
+- "desafio_final":
+  * "llamado": Desafío espiritual concreto para la iglesia. Redactado con urgencia y esperanza, en primera persona.
+  * "oracion_ministracion": Oración ministerial completa para sellar la enseñanza. Solemne, íntima y pastoral.
+
+REGLAS DE CALIDAD PARA EL BOSQUEJO:
+- Cuando la prédica explique un término griego o hebreo (ej. KOINONIA, BAPTIZO, EKBALO), consérvalo, explícalo con claridad y desarrolla su relevancia para la enseñanza.
+- Cuando haya contrastes doctrinales en el mensaje (ej. EN nosotros vs SOBRE nosotros), preséntalos con precisión y desarrolla sus implicaciones en primera persona.
+- Cuando haya conexiones tipológicas o proféticas en el mensaje (ej. fiestas judías como sombra del NT), explícalas con profundidad fiel al contenido de la prédica.
+- No fuerces los apartados a ser exactamente 3 ni 5. Que el contenido real determine la cantidad.
+- No añadas «Objetivos», «Resumen ejecutivo» ni secciones que no surjan naturalmente del contenido.`;
 
 export const REGLAS_GRUPOS = `DISEÑO DEL ESTUDIO PARA GRUPOS PEQUEÑOS, CÉLULAS Y FAMILIAS:
-- "objetivo": propósito espiritual y formativo del encuentro, en una o dos frases.
-- "idea_central": síntesis fiel del mensaje.
-- "contexto_pasaje": contexto bíblico e histórico necesario para comprender el pasaje principal.
-- "agenda": entre 5 y 8 momentos con "momento", "minutos" (número o rango como "10 min") y "descripcion". Debe sumar entre 60 y 90 minutos e incluir bienvenida, oración, lectura, estudio, actividad y cierre.
-- "materiales": lista concreta de materiales necesarios; puede ser vacía si no se requieren.
-- "preguntas_inicio": 3 a 4 preguntas abiertas para romper el hielo, conectadas con la experiencia del grupo.
-- "preguntas_comprension": 4 a 6 preguntas sobre el texto y lo enseñado, no memorísticas.
-- "preguntas_reflexion": 4 a 6 preguntas que lleven del entendimiento a la vida.
-- "actividad": una actividad grupal con título, objetivo y pasos numerados; segura, inclusiva y sin exponer a nadie.
-- "caso_practico": un caso realista para debatir, derivado del tema; vacío si no es pertinente.
-- "aplicaciones": 4 a 6 aplicaciones para la vida individual y familiar.
-- "compromiso_semanal": un compromiso concreto, medible y alcanzable.
-- "motivos_oracion": 3 a 5 motivos conectados con el mensaje.
-- "oracion_final": oración breve en primera persona plural.
-- "orientaciones_lider": 5 a 8 recomendaciones prácticas para facilitar, cuidar al grupo y manejar el tiempo.`;
+Diseña una guía comunitaria y pastoral profunda y participativa. Redacta el "contexto_pasaje", la "idea_central", las "aplicaciones" y el "caso_practico" en primera persona (singular o plural), como si el lector los interiorizara. Las preguntas deben formularse en segunda persona o con «¿Cómo…?» para invitar la reflexión personal.
+- "objetivo": Propósito espiritual y formativo del encuentro en 1 o 2 oraciones claras.
+- "idea_central": Síntesis fiel del mensaje, redactada en primera persona plural: «Necesitamos comprender…», «Estamos llamados a…».
+- "contexto_pasaje": Contexto bíblico e histórico que ayude a comprender el pasaje principal; redactado de forma cercana y comprensible, en prosa fluida.
+- "agenda": Entre 5 y 8 momentos detallados con "momento", "minutos" y "descripcion" amplia; suma entre 60 y 90 minutos.
+- "materiales": Lista concreta de materiales necesarios.
+- "preguntas_inicio": 3 a 5 preguntas abiertas para romper el hielo y conectar la vida cotidiana con la verdad del mensaje.
+- "preguntas_comprension": 4 a 6 preguntas analíticas sobre el texto bíblico y las enseñanzas centrales.
+- "preguntas_reflexion": 4 a 6 preguntas de introspección que conduzcan a la transformación personal y familiar.
+- "actividad": Una actividad grupal con título, objetivo pedagógico y pasos explicados a fondo.
+- "caso_practico": Un caso realista y desarrollado para debatir en grupo, fiel al tema de la prédica.
+- "aplicaciones": 4 a 6 aplicaciones prácticas redactadas en primera persona: «Puedo…», «Necesito…», «Esta semana voy a…».
+- "compromiso_semanal": Un compromiso concreto, medible y alcanzable, expresado en primera persona.
+- "motivos_oracion": 4 a 6 motivos pastorales fundamentados en el mensaje.
+- "oracion_final": Oración pastoral comunitaria en primera persona plural, íntima y pastoral.
+- "orientaciones_lider": 5 a 8 recomendaciones pedagógicas y pastorales para el facilitador.`;
 
 export const REGLAS_JOVENES = `DISEÑO DEL ESTUDIO PARA JÓVENES:
-- "objetivo": propósito del encuentro en una o dos frases.
-- "tema": tema central con lenguaje claro para adolescentes y jóvenes.
-- "contexto_pasaje": contexto bíblico del pasaje principal, sin tecnicismos innecesarios.
-- "conceptos": 3 a 6 conceptos fundamentales con explicación breve y cotidiana.
-- "preguntas_reflexion": 5 a 7 preguntas de reflexión individual.
-- "preguntas_grupales": 5 a 7 preguntas para conversación grupal.
-- "casos_practicos": 2 a 4 situaciones reales relacionadas con amistades, familia, estudios, decisiones, identidad, responsabilidad o crecimiento espiritual, solo cuando el mensaje los toque.
-- "dinamica": una dinámica participativa con título, objetivo y pasos; debe ser segura, sin humillación ni coerción.
-- "aplicaciones": 4 a 6 aplicaciones cotidianas.
-- "desafio_semanal": un desafío espiritual concreto y alcanzable.
-- "motivos_oracion": 3 a 5 motivos.
-- "guia_lider": 5 a 8 orientaciones para dirigir el encuentro juvenil.
-Evita imponer temas generacionales que la prédica no aborde. No uses lenguaje forzadamente juvenil ni estereotipos.`;
+Diseña un estudio formativo y relevante para adolescentes y jóvenes, sin infantilismos ni tecnicismos huecos. Redacta los "conceptos", las "aplicaciones" y el "desafio_semanal" en primera persona, como si el joven los interiorizara: «Comprendo que…», «Necesito…», «Esta semana voy a…».
+- "objetivo": Propósito formativo del encuentro para jóvenes.
+- "tema": Tema central con lenguaje directo y contemporáneo.
+- "contexto_pasaje": Contexto bíblico del pasaje explicado con claridad y relevancia práctica.
+- "conceptos": 3 a 6 conceptos teológicos fundamentales explicados en párrafos accesibles y cotidianos, en primera persona cuando corresponda.
+- "preguntas_reflexion": 5 a 7 preguntas de introspección personal sobre decisiones, identidad y fe.
+- "preguntas_grupales": 5 a 7 preguntas para debate y diálogo participativo grupal.
+- "casos_practicos": 3 a 5 situaciones reales sobre amistades, familia, estudios, integridad y vida digital.
+- "dinamica": Una dinámica participativa formativa con título, objetivo y pasos detallados.
+- "aplicaciones": 4 a 6 aplicaciones prácticas cotidianas, redactadas en primera persona.
+- "desafio_semanal": Un desafío espiritual concreto, redactado en primera persona singular o plural.
+- "motivos_oracion": 4 a 6 motivos de oración relevantes para su contexto.
+- "guia_lider": 5 a 8 pautas claras para el líder de jóvenes al conducir la reunión.`;
 
 export const REGLAS_NINOS = `DISEÑO DE LA CLASE BÍBLICA PARA NIÑOS:
-- Adapta vocabulario, extensión y actividades al rango de edad indicado. No alteres el sentido del texto bíblico.
-- "objetivo_aprendizaje": qué comprenderá y aplicará el niño, en lenguaje comprensible para el maestro.
-- "relato": 3 a 6 partes con "parte" (por ejemplo "Inicio"), "titulo" y "texto" narrado para los niños. Diferencia la narración bíblica de las analogías.
-- "versiculo_clave": cita y texto breve, adecuado a la edad.
-- "explicacion_versiculo": explicación sencilla y fiel.
-- "preguntas_comprension": 4 a 6 preguntas acordes a la edad.
-- "actividad": actividad didáctica con título, objetivo, materiales y pasos. Sin materiales peligrosos.
-- "juego": juego o dinámica con título, materiales y pasos; sin competencia humillante, miedo ni coerción.
-- "aplicacion": aplicación práctica concreta para el niño.
-- "actividad_familia": una actividad breve para compartir en casa.
-- "oracion_cierre": oración sencilla y no manipuladora.
-- "recomendaciones_maestro": 4 a 8 recomendaciones para el adulto responsable, incluyendo seguridad y trato sensible.
-- "duracion_aproximada": duración total sugerida según la edad, por ejemplo "45 minutos".
-No generes miedo, culpa innecesaria ni mensajes que avergüencen. La clase debe requerir preparación mínima del maestro.`;
+Diseña una clase bíblica atractiva, didáctica y adaptada a la edad indicada:
+- Adapta vocabulario, extensión y dinámicas al rango de edad seleccionado.
+- "objetivo_aprendizaje": Qué comprenderá y vivirá el niño al concluir la clase.
+- "relato": 3 a 6 partes narrativas con "parte", "titulo" y "texto" relatado en lenguaje vivo, expresivo y formativo para niños.
+- "versiculo_clave": Cita y texto bíblico adaptado a la memorización infantil.
+- "explicacion_versiculo": Explicación pedagógica, sencilla y profunda del versículo.
+- "preguntas_comprension": 4 a 6 preguntas participativas sobre el relato.
+- "actividad": Actividad manual, gráfica o didáctica con título, objetivo, materiales seguros y pasos claros.
+- "juego": Juego formativo con título, materiales y reglas paso a paso (sin coerción ni exclusión).
+- "aplicacion": Aplicación práctica y tangible para el día a día del niño.
+- "actividad_familia": Actividad breve para reforzar en casa con los padres.
+- "oracion_cierre": Oración sencilla, tierna y formativa.
+- "recomendaciones_maestro": 5 a 8 recomendaciones pedagógicas y de cuidado para el maestro.
+- "duracion_aproximada": Tiempo total estimado (ej. "45 a 60 minutos").`;
 
 export const REGLAS_DEVOCIONALES = `DISEÑO DEL PLAN DEVOCIONAL DE SIETE DÍAS:
-- "introduccion": presentación del recorrido y su conexión con la prédica.
-- "proposito": para qué sirve este plan y cómo usarlo.
-- "dias": exactamente 7 jornadas con progresión temática coherente: comprensión, reflexión, aplicación y consolidación. Cada día debe desarrollar una dimensión REAL del mensaje y no repetir la reflexión anterior.
-- Cada jornada incluye "dia" (1 a 7), "titulo", "tema", "lectura_principal" (cita y texto), "lecturas_complementarias" (0 a 3), "contexto", "reflexion", "ensenanza_central", "pregunta_introspeccion", "aplicacion", "accion" y "oracion".
-- La lectura principal y las complementarias deben ser pertinentes y verificables. No inventes referencias para completar siete días.
-- Si la transcripción no sostiene siete enfoques distintos, no rellenes con contenido genérico; aun así organiza siete jornadas breves alrededor de dimensiones reales del mismo mensaje, sin atribuir al expositor ideas ausentes.`;
+Diseña un itinerario de siete jornadas diarias de meditación profunda. Redacta la "reflexion", la "ensenanza_central" y la "aplicacion" de cada día en primera persona, como si el creyente dialogara con Dios e interiorizara la verdad: «Hoy comprendo…», «Necesito…», «Me propongo…». Mantén el texto bíblico y su referencia exactamente como aparecen en la transcripción.
+- "introduccion": Presentación del plan devocional y su conexión con la enseñanza, en tono cercano y pastoral.
+- "proposito": Propósito espiritual del plan y recomendaciones de uso, en primera persona plural.
+- "dias": Exactamente siete jornadas con progresión temática coherente:
+  * Día 1: Fundamento y comprensión del mensaje.
+  * Día 2: Profundización en el texto bíblico.
+  * Día 3: Confrontación y examen personal.
+  * Día 4: Renovación de la mente y arrepentimiento.
+  * Día 5: La fe en acción y obediencia práctica.
+  * Día 6: Perseverancia y gracia en la prueba.
+  * Día 7: Testimonio, consagración y adoración.
+- Cada día incluye obligatoriamente:
+  * "dia": Número entero del 1 al 7.
+  * "titulo": Título evocador del día.
+  * "tema": Tema central del día.
+  * "lectura_principal": Pasaje con "cita" y "texto".
+  * "lecturas_complementarias": 1 a 3 pasajes con "cita" y "texto".
+  * "contexto": Contexto bíblico del pasaje del día.
+  * "reflexion": Reflexión devocional extensa y sustanciosa en 2 a 3 párrafos profundos.
+  * "ensenanza_central": Verdad doctrinal principal a retener.
+  * "pregunta_introspeccion": Pregunta profunda que examine el corazón.
+  * "aplicacion": Aplicación práctica para ese día.
+  * "accion": Compromiso o acto concreto a realizar durante la jornada.
+  * "oracion": Oración devocional guiada e íntima.`;
 
 export const REGLAS_POR_MODALIDAD: Record<Exclude<ModalidadId, 'general'>, string> = {
+  bosquejo: REGLAS_BOSQUEJO,
   grupos: REGLAS_GRUPOS,
   jovenes: REGLAS_JOVENES,
   ninos: REGLAS_NINOS,
   devocionales: REGLAS_DEVOCIONALES,
+};
+
+const SUBPUNTO_BOSQUEJO = {
+  type: Type.OBJECT,
+  properties: {
+    letra: TEXTO,
+    titulo: TEXTO,
+    desarrollo: TEXTO,
+    detalles: LISTA_TEXTO,
+    pasajes_apoyo: LISTA_TEXTO,
+  },
+  required: ['letra', 'titulo', 'desarrollo'],
+};
+
+const PUNTO_BOSQUEJO = {
+  type: Type.OBJECT,
+  properties: {
+    romano: TEXTO,
+    titulo: TEXTO,
+    cita: TEXTO,
+    texto_cita: TEXTO,
+    exposicion: TEXTO,
+    subpuntos: {
+      type: Type.ARRAY,
+      items: SUBPUNTO_BOSQUEJO,
+    },
+    ilustracion: TEXTO,
+    transicion: TEXTO,
+  },
+  required: ['romano', 'titulo', 'cita', 'exposicion', 'subpuntos'],
+};
+
+const ESQUEMA_BOSQUEJO = {
+  type: Type.OBJECT,
+  properties: {
+    especializado: {
+      type: Type.OBJECT,
+      properties: {
+        bosquejo: {
+          type: Type.OBJECT,
+          properties: {
+            titulo: TEXTO,
+            tema_central: TEXTO,
+            proposito_general: TEXTO,
+            objetivos: {
+              type: Type.OBJECT,
+              properties: {
+                cognitivo: TEXTO,
+                afectivo: TEXTO,
+                volitivo: TEXTO,
+              },
+              required: ['cognitivo', 'afectivo', 'volitivo'],
+            },
+            tesis: TEXTO,
+            fundamento_doctrinal: TEXTO,
+            texto_base: VERSICULO,
+            introduccion: {
+              type: Type.OBJECT,
+              properties: {
+                gancho: TEXTO,
+                contexto: TEXTO,
+                transicion: TEXTO,
+              },
+              required: ['gancho', 'contexto', 'transicion'],
+            },
+            puntos_principales: {
+              type: Type.ARRAY,
+              items: PUNTO_BOSQUEJO,
+            },
+            conclusion: {
+              type: Type.OBJECT,
+              properties: {
+                recapitulacion: TEXTO,
+                climax: TEXTO,
+              },
+              required: ['recapitulacion', 'climax'],
+            },
+            aplicacion_liderazgo: LISTA_TEXTO,
+            desafio_final: {
+              type: Type.OBJECT,
+              properties: {
+                llamado: TEXTO,
+                oracion_ministracion: TEXTO,
+              },
+              required: ['llamado', 'oracion_ministracion'],
+            },
+          },
+          required: [
+            'titulo', 'tema_central', 'proposito_general', 'objetivos', 'tesis',
+            'fundamento_doctrinal', 'texto_base', 'introduccion', 'puntos_principales',
+            'conclusion', 'aplicacion_liderazgo', 'desafio_final',
+          ],
+        },
+      },
+      required: ['bosquejo'],
+    },
+  },
+  required: ['especializado'],
 };
 
 const ESQUEMA_GRUPOS = {
@@ -294,6 +475,7 @@ const ESQUEMA_DEVOCIONALES = {
 };
 
 export const ESQUEMAS_POR_MODALIDAD: Record<Exclude<ModalidadId, 'general'>, unknown> = {
+  bosquejo: ESQUEMA_BOSQUEJO,
   grupos: ESQUEMA_GRUPOS,
   jovenes: ESQUEMA_JOVENES,
   ninos: ESQUEMA_NINOS,
@@ -303,9 +485,27 @@ export const ESQUEMAS_POR_MODALIDAD: Record<Exclude<ModalidadId, 'general'>, unk
 export function construirPromptEspecializado(modalidad: Exclude<ModalidadId, 'general'>, rangoEdad?: string): string {
   const reglas = REGLAS_POR_MODALIDAD[modalidad];
   const edad = modalidad === 'ninos' && rangoEdad ? `\nRANGO DE EDAD SELECCIONADO: ${rangoEdad}. Adapta toda la clase a este rango.` : '';
-  return `Eres un pedagogo cristiano y editor ministerial. A partir de una prédica real y del análisis general ya elaborado, diseña un material especializado de alta calidad. Devuelve ÚNICAMENTE un objeto JSON válido con la propiedad "especializado". No incluyas markdown fuera del JSON.
+
+  const contextoPrimerPersona = modalidad === 'bosquejo' ? '' : `
+ESTILO MAIM — PRIMERA PERSONA Y VOZ DIRECTA (aplica a todas las secciones de prosa):
+- Redacta en primera persona cuando el contenido invite al examen personal o la transformación: «reconozco», «necesito», «comprendo», «estoy llamado a».
+- Usa primera persona plural para enseñanzas comunitarias: «necesitamos», «estamos llamados», «debemos».
+- PROHIBIDO usar «el orador dice», «el predicador explica», «se mencionó» o cualquier forma indirecta. Las verdades se presentan directamente.
+- La primera persona solo aplica a explicaciones y aplicaciones; NO modifica el texto de los versículos bíblicos.
+`;
+
+  return `PREFIJO INMUTABLE DE CONTEXTO Y SEGURIDAD:
+Eres un teólogo y pedagogo ministerial de alto nivel cristiano evangélico para MAIM Casa de Oración.
+REGLA INNEGOCIABLE DE CERO ALUCINACIÓN Y FIDELIDAD ESTRICTA:
+- Trabaja con FIDELIDAD ABSOLUTA a la transcripción fuente y al contenido bíblico expuesto.
+- No infieras la personalidad ni la biografía del predicador: limítate al contenido expuesto. Prohibido inventar doctrinas ajenas, biografías, antecedentes o historias no mencionadas.
+- No inventes versículos ni citas bíblicas: si un pasaje no se mencionó en la prédica, no lo agregues. Cita solo lo que el expositor utilizó o fundamentó.
+- Desarrolla cada sección en párrafos sólidos, analíticos y profundos con prosa completa y fundamentada (cero frases telegráficas, cero resúmenes superficiales).
+${contextoPrimerPersona}
+Devuelve ÚNICAMENTE un objeto JSON válido con la propiedad "especializado". No incluyas markdown fuera del JSON.
 ${reglas}${edad}
 ${REGLAS_CALIDAD_MODALIDAD}
 
-No repitas el análisis general completo: aprovecha sus hallazgos y desarrolla el material de la modalidad solicitada. El nombre de quien predica, si fue proporcionado, se añadirá como metadato editorial fuera de este JSON; no lo uses para inferir datos personales.`;
+No repitas el análisis general completo: aprovecha sus hallazgos y desarrolla exhaustivamente el material de la modalidad solicitada.`;
 }
+

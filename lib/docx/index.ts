@@ -1,9 +1,17 @@
 import type { MetadatosPredica, ResultadoAnalisis } from '../tipos.ts';
+import { construirWordBosquejo } from './bosquejo.ts';
+import { construirWordDevocionales } from './devocionales.ts';
 import { construirWordGeneral } from './general.ts';
 import { construirWordGrupos } from './grupos.ts';
 import { construirWordJovenes } from './jovenes.ts';
 import { construirWordNinos } from './ninos.ts';
-import { construirWordDevocionales } from './devocionales.ts';
+
+export { construirWordBosquejo } from './bosquejo.ts';
+export { construirWordGeneral } from './general.ts';
+export { construirWordGrupos } from './grupos.ts';
+export { construirWordJovenes } from './jovenes.ts';
+export { construirWordNinos } from './ninos.ts';
+export { construirWordDevocionales } from './devocionales.ts';
 
 export interface SolicitudWord {
   analisis: ResultadoAnalisis;
@@ -19,6 +27,9 @@ export function construirWordModalidad({ analisis, metadatos }: SolicitudWord): 
   switch (metadatos.modalidad) {
     case 'general':
       return construirWordGeneral(analisis, metadatos);
+    case 'bosquejo':
+      if (!especializado.bosquejo) throw new Error('El bosquejo ministerial no está disponible.');
+      return construirWordBosquejo(analisis, especializado.bosquejo, metadatos);
     case 'grupos':
       if (!especializado.grupos) throw new Error('El estudio para grupos no está disponible.');
       return construirWordGrupos(analisis, especializado.grupos, metadatos);

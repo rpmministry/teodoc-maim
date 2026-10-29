@@ -7,7 +7,7 @@ export interface Modalidad {
   descripcion: string;
   publico: string;
   archivoPdf: string;
-  icono: 'libro' | 'grupo' | 'jovenes' | 'ninos' | 'devocional';
+  icono: 'libro' | 'bosquejo' | 'grupo' | 'jovenes' | 'ninos' | 'devocional';
 }
 
 export const MODALIDADES: Modalidad[] = [
@@ -19,6 +19,15 @@ export const MODALIDADES: Modalidad[] = [
     publico: 'Predicadores, líderes y estudiantes de la Biblia',
     archivoPdf: 'teodoc-maim-analisis-general.pdf',
     icono: 'libro',
+  },
+  {
+    id: 'bosquejo',
+    nombre: 'Bosquejo ministerial',
+    nombreCorto: 'Bosquejo',
+    descripcion: 'Bosquejo homilético y pedagógico de alto nivel ministerial, listo para imprimir o entregar al liderazgo de MAIM.',
+    publico: 'Pastores, predicadores y liderazgo ministerial de MAIM',
+    archivoPdf: 'teodoc-maim-bosquejo-ministerial.pdf',
+    icono: 'bosquejo',
   },
   {
     id: 'grupos',

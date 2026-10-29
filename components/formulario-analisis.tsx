@@ -208,9 +208,10 @@ export default function FormularioAnalisis({ valores, onCambio, onArchivo, onAna
                   <p className="mt-1 text-[11px] font-medium text-[var(--coralOscuro)]">{estadoAudio.nombre}</p>
                 )}
                 {transcripcionLista && (
-                  <p className="mt-1 text-[11.5px] leading-relaxed text-[#3f6b47]" role="status">
-                    Transcripción lista · {caracteres.toLocaleString('es-CO')} caracteres
-                  </p>
+                  <div className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-[#e8f5e9] px-3 py-1 text-[11.5px] font-semibold text-[#276738]" role="status">
+                    <IconoCheck className="h-3.5 w-3.5 shrink-0" />
+                    <span>Transcripción lista · {caracteres.toLocaleString('es-CO')} caracteres</span>
+                  </div>
                 )}
                 {!estadoAudio.activo && !estadoAudio.error && !valores.texto && (
                   <p className="mt-1 text-[11.5px] text-[var(--muted)]">Aún no has subido un audio.</p>
@@ -250,10 +251,22 @@ export default function FormularioAnalisis({ valores, onCambio, onArchivo, onAna
       </Seccion>
 
       <div className="flex flex-col gap-3 border-t border-[var(--linea)] pt-6 sm:flex-row sm:items-center sm:justify-between">
-        <p className="max-w-md text-[11px] leading-relaxed text-[var(--muted)]">
-          {valores.texto.trim() ? 'Listo para generar el estudio.' : 'Sube un audio para continuar.'}
+        <p className="max-w-md text-[12px] leading-relaxed text-[var(--muted)]">
+          {valores.texto.trim() ? (
+            <span className="font-medium text-[#276738]">
+              ✓ Transcripción cargada. Listo para generar tu estudio bíblico y PDF.
+            </span>
+          ) : (
+            'Sube un audio para continuar.'
+          )}
         </p>
-        <button type="submit" className="btn-primario w-full sm:w-auto" disabled={cargando || !valores.texto.trim()}>
+        <button
+          type="submit"
+          className={`btn-primario w-full sm:w-auto transition-all ${
+            valores.texto.trim() && !cargando ? 'shadow-[0_8px_24px_rgba(240,78,89,0.3)] ring-2 ring-[var(--coral)] ring-offset-2' : ''
+          }`}
+          disabled={cargando || !valores.texto.trim()}
+        >
           {cargando ? (
             <>
               <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" aria-hidden="true" />

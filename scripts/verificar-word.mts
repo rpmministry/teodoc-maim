@@ -57,7 +57,7 @@ function comprobar(nombre: string, fn: () => void) {
   pruebas.push(`  ✓ ${nombre}`);
 }
 
-const modalidades: ModalidadId[] = ['general', 'grupos', 'jovenes', 'ninos', 'devocionales'];
+const modalidades: ModalidadId[] = ['general', 'bosquejo', 'grupos', 'jovenes', 'ninos', 'devocionales'];
 const resultados = {} as Record<ModalidadId, InspeccionWord>;
 
 for (const modalidad of modalidades) {
@@ -71,7 +71,7 @@ for (const modalidad of modalidades) {
   resultados[modalidad] = await inspeccionar(blob);
 }
 
-comprobar('Se generan los cinco documentos Word con nombre exacto', () => {
+comprobar('Se generan los seis documentos Word con nombre exacto', () => {
   for (const modalidad of modalidades) {
     const nombre = nombreArchivoWord(modalidad);
     assert.match(nombre, /^teodoc-maim-[a-z0-9-]+\.docx$/);
@@ -100,6 +100,7 @@ comprobar('Los DOCX incluyen portada, título, predicador y salto de página', (
 comprobar('Cada DOCX conserva la estructura propia de su especialidad', () => {
   const requeridas: Record<ModalidadId, string[]> = {
     general: ['Ficha técnica', 'Idea central', 'Fundamento bíblico', 'Desarrollo completo', 'Inventario de referencias', 'Nota de fidelidad'],
+    bosquejo: ['Datos de la enseñanza y fundamento doctrinal', 'Objetivos de aprendizaje y ministración', 'Introducción homilética', 'Cuerpo y desarrollo homilético', 'Aplicación pastoral para el liderazgo de MAIM', 'Desafío final y ministración'],
     grupos: ['Preparación del facilitador', 'Agenda de la reunión', 'Observación del texto', 'Actividad grupal', 'Compromiso de la semana', 'Nota para el facilitador'],
     jovenes: ['Ficha del encuentro', 'Conceptos teológicos', 'Casos prácticos', 'Dinámica participativa', 'Compromiso de la semana', 'Guía breve para el líder'],
     ninos: ['Ficha del maestro', 'Relato bíblico', 'Actividad central', 'Juego o dinámica', 'Aplicación para el niño', 'Salvaguardas infantiles'],
@@ -128,6 +129,6 @@ comprobar('El plan devocional contiene siete jornadas en Word', () => {
   for (let dia = 1; dia <= 7; dia++) assert.ok(texto.includes(`Día ${dia}`), `Falta Día ${dia}`);
 });
 
-console.log('Verificación funcional de los cinco documentos Word');
+console.log('Verificación funcional de los seis documentos Word');
 console.log(pruebas.join('\n'));
 console.log(`\n${pasadas} pruebas superadas. Archivos en tmp/docx/.`);

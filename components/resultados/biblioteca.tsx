@@ -38,13 +38,13 @@ export default function BibliotecaDocumentos({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--coralOscuro)]">Documentos de esta predicación</p>
-          <h2 className="mt-1 text-[20px] font-semibold tracking-[-0.02em] text-[var(--tinta)]">{generados} de 5 generados</h2>
+          <h2 className="mt-1 text-[20px] font-semibold tracking-[-0.02em] text-[var(--tinta)]">{generados} de {MODALIDADES.length} generados</h2>
           <p className="mt-1 text-[12px] leading-relaxed text-[var(--muted)]">Cada formato se puede generar y descargar por separado.</p>
         </div>
         <button
           type="button"
           onClick={onGenerarTodos}
-          disabled={generando !== null || generados === 5}
+          disabled={generando !== null || generados === MODALIDADES.length}
           className="btn-secundario w-fit text-[11px] disabled:cursor-not-allowed disabled:opacity-50"
         >
           {generando === 'todos' ? 'Generando documentos…' : 'Generar todos'}

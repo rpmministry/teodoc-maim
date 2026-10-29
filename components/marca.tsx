@@ -36,6 +36,12 @@ export function IconoModalidad({ tipo, className = 'h-5 w-5' }: { tipo: Modalida
           <path d="M4 18.5A2.5 2.5 0 0 1 6.5 16H20M8 7h8M8 11h6" />
         </>
       )}
+      {tipo === 'bosquejo' && (
+        <>
+          <path d="M4 6h2M4 12h2M4 18h2M10 6h10M10 12h10M10 18h7" />
+          <path d="M14 2v4M18 2v4" />
+        </>
+      )}
       {tipo === 'grupo' && (
         <>
           <circle cx="9" cy="8" r="3" />

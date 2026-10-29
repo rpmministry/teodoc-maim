@@ -1,4 +1,4 @@
-import type { MetadatosPredica, ModalidadId, ResultadoAnalisis } from '../../lib/tipos.ts';
+import type { EstudioBosquejo, MetadatosPredica, ModalidadId, ResultadoAnalisis } from '../../lib/tipos.ts';
 import { normalizarAnalisisGeneral, normalizarEspecializado } from '../../lib/normalizar.ts';
 
 export const TEXTO_DEMO = `Hoy quiero hablarles de una fe que no se queda en las palabras. Santiago, en el capítulo dos, versículo diecisiete, nos dice que la fe, si no tiene obras, es muerta en sí misma. No se trata de ganar la salvación con esfuerzo humano, sino de demostrar con la vida que realmente confiamos en Dios. La fe bíblica comienza cuando escuchamos su Palabra con un corazón dispuesto. Después, esa fe se vuelve obediencia concreta en la casa, en el trabajo y en la manera en que tratamos a los demás. También se vuelve perseverancia cuando las circunstancias no cambian. Abraham creyó a Dios y su fe se expresó en obediencia. Rahab confió y actuó conforme a esa confianza. Nosotros estamos llamados a vivir una fe que escuche, que obedezca y que espere en las promesas de Dios. Que esta semana podamos identificar una acción concreta en la que nuestra fe se haga visible.`;
@@ -245,7 +245,121 @@ const DEVOCIONALES = {
   ],
 };
 
+const BOSQUEJO: EstudioBosquejo = {
+  titulo: 'La fe que transforma en acción',
+  tema_central: 'Naturaleza viva y activa de la fe cristiana verdadera',
+  proposito_general: 'Exhortar y equipar al liderazgo y congregación para articular y modelar una fe probada en obediencia, servicio e integridad.',
+  objetivos: {
+    cognitivo: 'Comprender que la justificación por la gracia de Dios produce indefectiblemente el fruto visible de las buenas obras.',
+    afectivo: 'Desarrollar una profunda convicción de dependencia espiritual y celo santo para rechazar una religiosidad pasiva o nominal.',
+    volitivo: 'Asumir compromisos concretos de servicio, reconciliación y testimonio pastoral en la vida familiar y eclesial.',
+  },
+  tesis: 'La fe salvadora otorgada por la gracia de Dios se autentica necesariamente a través de una obediencia visible y perseverante en la vida cotidiana.',
+  fundamento_doctrinal: 'La soteriología bíblica enseña que somos salvos por gracia mediante la fe, para andar en las buenas obras que Dios preparó de antemano (Efesios 2:8-10; Santiago 2:14-26).',
+  texto_base: {
+    cita: 'Santiago 2:17',
+    texto: 'Así también la fe, si no tiene obras, es muerta en sí misma.',
+  },
+  introduccion: {
+    gancho: 'Es fácil profesar verdades elevadas con los labios mientras nuestras acciones cotidianas desmienten lo que afirmamos creer.',
+    contexto: 'El apóstol Santiago confronta a una comunidad creyente dispersa propensa a confundir el mero asentimiento intelectual con la fe viva que salva.',
+    transicion: 'Al examinar este pasaje, descubrimos las tres dimensiones indispensables de una fe viva que honra a Cristo.',
+  },
+  puntos_principales: [
+    {
+      romano: 'I',
+      titulo: 'El origen de la fe viva: La recepción atenta de la Palabra',
+      cita: 'Romanos 10:17',
+      texto_cita: 'Así que la fe es por el oír, y el oír, por la palabra de Dios.',
+      exposicion: 'La fe bíblica no surge de la inventiva humana ni de meros impulsos emocionales efímeros; es engendrada por el Espíritu Santo mediante la exposición y obediencia a las Sagradas Escrituras.',
+      subpuntos: [
+        {
+          letra: 'A',
+          titulo: 'La necesidad de escuchar con docilidad',
+          desarrollo: 'Escuchar la voz de Dios exige renunciar a la autosuficiencia y someter nuestros criterios preconcebidos al veredicto divino.',
+          detalles: ['La reverencia ante las Escrituras precede a toda obediencia eficaz.', 'El creyente que no se expone a la Palabra languidece en una fe estéril.'],
+          pasajes_apoyo: ['Santiago 1:19-21'],
+        },
+        {
+          letra: 'B',
+          titulo: 'La confrontación regeneradora de la verdad',
+          desarrollo: 'La Palabra no fue dada solo para satisfacer nuestra curiosidad intelectual, sino para redargüir, corregir e instruir en justicia.',
+          detalles: ['La verdad bíblica actúa como un espejo que revela nuestra condición real.', 'La gracia capacita al corazón contrito para responder positivamente.'],
+          pasajes_apoyo: ['2 Timoteo 3:16-17'],
+        },
+      ],
+      ilustracion: 'Así como una semilla no puede germinar en tierra árida sin agua, la fe no florece sin el sustento continuo de la Palabra de Dios.',
+      transicion: 'Habiendo comprendido cómo nace la fe viva en el corazón, debemos examinar su manifestación obligatoria en la conducta.',
+    },
+    {
+      romano: 'II',
+      titulo: 'La evidencia de la fe viva: La obediencia práctica en lo cotidiano',
+      cita: 'Santiago 1:22',
+      texto_cita: 'Pero sed hacedores de la palabra, y no tan solamente oidores, engañándoos a vosotros mismos.',
+      exposicion: 'La autenticidad de nuestra comunión con Dios se valida no por la vehemencia de nuestros discursos, sino por la rectitud e integridad de nuestras decisiones diarias.',
+      subpuntos: [
+        {
+          letra: 'A',
+          titulo: 'Fidelidad en el núcleo familiar',
+          desarrollo: 'El primer altar donde se prueba la fe es el hogar: en la paciencia conyugal, la crianza en amor y el cuidado mutuo.',
+          detalles: ['El liderazgo eclesial pierde credibilidad si fracasa deliberadamente en el testimonio doméstico.', 'El perdón y la generosidad deben practicarse primero entre los íntimos.'],
+          pasajes_apoyo: ['1 Timoteo 5:8'],
+        },
+        {
+          letra: 'B',
+          titulo: 'Integridad en la esfera pública y laboral',
+          desarrollo: 'El testimonio de Cristo se preserva cuando el creyente honra sus compromisos, trabaja con excelencia y rechaza la deshonestidad.',
+          detalles: ['Las buenas obras en el entorno social confirman la veracidad del mensaje del evangelio.', 'El servicio silencioso glorifica al Padre celestial.'],
+          pasajes_apoyo: ['Mateo 5:16', 'Colosenses 3:23'],
+        },
+      ],
+      ilustracion: 'El expositor recordó que un árbol no se califica por la frondosidad de su follaje, sino por la calidad y permanencia de sus frutos comestibles.',
+      transicion: 'No obstante, esta obediencia no está exenta de dificultades; por ello, requiere ser templada en el fuego de la perseverancia.',
+    },
+    {
+      romano: 'III',
+      titulo: 'La madurez de la fe viva: La perseverancia inquebrantable en la prueba',
+      cita: 'Santiago 1:3-4',
+      texto_cita: 'Sabiendo que la prueba de vuestra fe produce paciencia. Mas tenga la paciencia su obra completa, para que seáis perfectos y cabales, sin que os falte cosa alguna.',
+      exposicion: 'La fe madura no es aquella que jamás experimenta aflicción, sino la que permanece anclada en el carácter inmutable de Dios cuando las circunstancias son adversas.',
+      subpuntos: [
+        {
+          letra: 'A',
+          titulo: 'La prueba como crisol formativo',
+          desarrollo: 'Dios permite vicisitudes no para destruirnos, sino para purificar los motivos de nuestra confianza y despojarnos de la vanagloria.',
+          detalles: ['El sufrimiento santificado produce paciencia y carácter probado.', 'La queja esteriliza el aprendizaje espiritual; la adoración en la prueba fortalece el alma.'],
+          pasajes_apoyo: ['1 Pedro 1:6-7'],
+        },
+        {
+          letra: 'B',
+          titulo: 'La esperanza activa sostenida en la promesa',
+          desarrollo: 'Esperar en Dios no significa resignación pasiva, sino avanzar firmes en el cumplimiento de la mayordomía encomendada.',
+          detalles: ['Abraham creyó en esperanza contra esperanza cuando todo parecía humanamente imposible.', 'La fidelidad en la prueba es la mayor ofrenda de adoración ministerial.'],
+          pasajes_apoyo: ['Romanos 4:18-21', 'Hebreos 11:1'],
+        },
+      ],
+      ilustracion: 'El ancla no se prueba en aguas serenas de la bahía, sino en medio del embate de la tormenta marina.',
+      transicion: 'Frente a esta gloriosa verdad, llegamos al punto cumbre de aplicación para el liderazgo ministerial.',
+    },
+  ],
+  conclusion: {
+    recapitulacion: 'La fe genuina ni se conforma con el asentimiento teórico ni claudica en la tribulación: escucha con reverencia, obedece en santidad y persevera hasta el fin sustentada por la gracia inmerecida de Dios.',
+    climax: 'No compareceremos ante el tribunal de Cristo por la cantidad de sermones escuchados, sino por la fidelidad práctica con la que encarnamos el evangelio eterno de nuestro Señor.',
+  },
+  aplicacion_liderazgo: [
+    'Modelar una coherencia intachable entre la predicación pública desde el púlpito y la conducta privada en el seno familiar.',
+    'Establecer mecanismos pastorales de rendición de cuentas y acompañamiento fraterno para pastores, líderes y obreros de MAIM.',
+    'Fomentar una cultura eclesial donde las enseñanzas culminen siempre en metas de servicio, misericordia y alcance evangelístico medible.',
+    'Pastorear con paciencia y discernimiento a los creyentes que atraviesan temporadas de crisis y desánimo espiritual.',
+  ],
+  desafio_final: {
+    llamado: 'Hoy convocamos a todo líder y siervo de MAIM Casa de Oración a consagrar sus talentos, tiempo y vida a una obediencia radical, rechazando toda apariencia de piedad carente de poder transformador.',
+    oracion_ministracion: 'Señor soberano y Padre de gracia, quebranta en nosotros toda autosuficiencia y formalismo religioso vacío. Aviva en nuestros corazones una fe ardiente que se traduzca en amor sacrificado, obras de justicia y perseverancia santa. Que cada líder de MAIM sea un modelo vivo de tu evangelio, para la sola gloria de tu santo nombre. Amén.',
+  },
+};
+
 const RAW_ESPECIALIZADO: Record<Exclude<ModalidadId, 'general'>, object> = {
+  bosquejo: { bosquejo: BOSQUEJO },
   grupos: { grupos: GRUPOS },
   jovenes: { jovenes: JOVENES },
   ninos: { ninos: NINOS },
