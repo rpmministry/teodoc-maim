@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync, unlinkSync, readdirSync, statSync } from 'node:fs';
 import { resolve, join } from 'node:path';
+import { tmpdir } from 'node:os';
 import type { ModalidadId } from './tipos.ts';
 
 export type TipoFuenteCanonica = 'url' | 'archivo_audio' | 'archivo_video' | 'documento' | 'texto';
@@ -38,17 +39,21 @@ export interface RegistroContenidoCanonico {
   analisisCheados?: Partial<Record<ModalidadId, unknown>>;
 }
 
-const DIRECTORIO_CANONICO = resolve(process.cwd(), 'tmp', 'canonical');
-
 // TTL por defecto: 24 horas (ajustable por variable de entorno)
 const TTL_HORAS_POR_DEFECTO = Number(process.env.CANONICAL_TTL_HOURS) || 24;
 export const TTL_CANONICO_MS = TTL_HORAS_POR_DEFECTO * 60 * 60 * 1000;
 
 function asegurarDirectorio(): string {
-  if (!existsSync(DIRECTORIO_CANONICO)) {
-    mkdirSync(DIRECTORIO_CANONICO, { recursive: true });
+  const base = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME ? tmpdir() : resolve(process.cwd(), 'tmp');
+  const dir = join(base, 'canonical');
+  if (!existsSync(dir)) {
+    try {
+      mkdirSync(dir, { recursive: true });
+    } catch (err) {
+      console.warn('[CanonicalStore] Directorio protegido o no creable:', err);
+    }
   }
-  return DIRECTORIO_CANONICO;
+  return dir;
 }
 
 // Almacén en memoria para acceso ultra-rápido (<1ms) durante la vida del proceso

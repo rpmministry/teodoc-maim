@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, unlinkSync, readdirSync, statSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { tmpdir } from 'node:os';
 
 export type EstadoTrabajo =
   | 'iniciado'
@@ -44,21 +45,22 @@ export interface TrabajoMultimedia {
   actualizadoEn: number;
 }
 
-const DIRECTORIO_STAGING = resolve(process.cwd(), 'tmp', 'multimedia');
-if (!existsSync(DIRECTORIO_STAGING)) {
-  mkdirSync(DIRECTORIO_STAGING, { recursive: true });
+export function obtenerDirectorioStaging(): string {
+  const base = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME ? tmpdir() : resolve(process.cwd(), 'tmp');
+  const dir = join(base, 'multimedia');
+  if (!existsSync(dir)) {
+    try {
+      mkdirSync(dir, { recursive: true });
+    } catch (err) {
+      console.warn('[Multimedia] Directorio staging protegido o no creable:', err);
+    }
+  }
+  return dir;
 }
 
 // Almacén en memoria de trabajos activos
 const trabajos = new Map<string, TrabajoMultimedia>();
 const TTL_TRABAJOS_MS = 30 * 60 * 1000; // 30 minutos
-
-export function obtenerDirectorioStaging(): string {
-  if (!existsSync(DIRECTORIO_STAGING)) {
-    mkdirSync(DIRECTORIO_STAGING, { recursive: true });
-  }
-  return DIRECTORIO_STAGING;
-}
 
 export function crearTrabajo(
   tipo: 'extraer_audio' | 'descargar_video',
@@ -139,9 +141,10 @@ export function limpiarTrabajosExpirados(): void {
 
   // Limpieza física preventiva de archivos huérfanos en tmp/multimedia
   try {
-    const archivos = readdirSync(DIRECTORIO_STAGING);
+    const stagingDir = obtenerDirectorioStaging();
+    const archivos = readdirSync(stagingDir);
     for (const archivo of archivos) {
-      const ruta = join(DIRECTORIO_STAGING, archivo);
+      const ruta = join(stagingDir, archivo);
       const stat = statSync(ruta);
       if (ahora - stat.mtimeMs > TTL_TRABAJOS_MS) {
         try {

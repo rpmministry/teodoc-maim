@@ -258,6 +258,50 @@ export default function FormularioAnalisis({
     void adquirirPantallaActiva();
 
     try {
+      // 1. ATRACTOR DE ALTA VELOCIDAD PARA YOUTUBE:
+      // Si la operación es extraer audio y la URL es de YouTube, consultar primero /api/youtube.
+      // Obtiene la transcripción oficial verificada en menos de 2 segundos sin descargas pesadas
+      // ni dependencias de ffmpeg/yt-dlp en el servidor cloud (Vercel).
+      if (operacion === 'extraer_audio' && (urlLimpia.includes('youtube.com') || urlLimpia.includes('youtu.be'))) {
+        setMensajeOperacion('Obteniendo transcripción directa del mensaje...');
+        setProgresoOperacion(35);
+
+        try {
+          const ytRes = await fetch('/api/youtube', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: urlLimpia }),
+          });
+          const ytData = await ytRes.json().catch(() => null);
+
+          if (ytRes.ok && ytData?.ok && ytData?.text && ytData.text.trim().length >= 100) {
+            setProgresoOperacion(85);
+            setMensajeOperacion('¡Transcripción obtenida con éxito!');
+            const textoTranscrito = ytData.text.trim();
+            onCambio({ texto: textoTranscrito });
+            guardarTranscripcionPendiente(textoTranscrito);
+
+            const tituloFinal = metadatosVideo?.titulo || ytData.meta?.title || valores.titulo;
+            if (tituloFinal && !valores.titulo) {
+              onCambio({ titulo: tituloFinal });
+            }
+
+            setMensajeOperacion('Iniciando análisis ministerial...');
+            setProgresoOperacion(100);
+            setProcesandoOperacion(null);
+
+            if (onAnalizarConTexto) {
+              onAnalizarConTexto(textoTranscrito, tituloFinal);
+            } else {
+              onAnalizar();
+            }
+            return;
+          }
+        } catch (ytErr) {
+          console.warn('[YouTube Direct] Fallo al consultar transcripción directa, intentando con multimedia pipeline:', ytErr);
+        }
+      }
+
       const res = await fetch('/api/multimedia/process', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
