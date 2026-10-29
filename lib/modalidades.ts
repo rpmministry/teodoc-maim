@@ -22,11 +22,11 @@ export const MODALIDADES: Modalidad[] = [
   },
   {
     id: 'bosquejo',
-    nombre: 'Bosquejo ministerial',
-    nombreCorto: 'Bosquejo',
-    descripcion: 'Bosquejo homilético y pedagógico de alto nivel ministerial, listo para imprimir o entregar al liderazgo de MAIM.',
+    nombre: 'Liderazgo',
+    nombreCorto: 'Liderazgo',
+    descripcion: 'Enseñanza y bosquejo homilético de alto nivel ministerial para el liderazgo de MAIM, en grandes bloques de texto y rigor doctrinal.',
     publico: 'Pastores, predicadores y liderazgo ministerial de MAIM',
-    archivoPdf: 'teodoc-maim-bosquejo-ministerial.pdf',
+    archivoPdf: 'teodoc-maim-liderazgo.pdf',
     icono: 'bosquejo',
   },
   {

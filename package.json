@@ -26,8 +26,12 @@
     "test:resiliencia": "node scripts/verificar-resiliencia.mts",
     "test:identidad": "node scripts/verificar-identidad.mts",
     "test:biblioteca": "node scripts/verificar-biblioteca.mts",
+    "test:multimedia": "node scripts/verificar-multimedia-documentos.mts",
+    "test:canonica": "node scripts/verificar-transcripcion-canonica.mts",
+    "test:modelos-liderazgo": "node scripts/verificar-modelos-editoriales-liderazgo.mts",
+    "test:espera": "node scripts/verificar-experiencia-espera.mts",
     "biblia:buscar": "node scripts/buscar-biblia.mts",
-    "verificar": "npm run test:logica && npm run test:modalidades && npm run test:biblia && npm run test:biblia-rvc && npm run test:pdf && npm run test:word && npm run test:entrega && npm run test:seguridad && npm run test:resiliencia && npm run test:identidad && npm run test:biblioteca"
+    "verificar": "npm run test:logica && npm run test:modalidades && npm run test:biblia && npm run test:biblia-rvc && npm run test:pdf && npm run test:word && npm run test:entrega && npm run test:seguridad && npm run test:resiliencia && npm run test:identidad && npm run test:biblioteca && npm run test:multimedia && npm run test:canonica && npm run test:modelos-liderazgo && npm run test:espera"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

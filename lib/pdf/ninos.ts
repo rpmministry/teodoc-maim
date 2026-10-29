@@ -1,7 +1,6 @@
 import type { ClaseNinos, MetadatosPredica, PredicaAnalisis } from '../tipos.ts';
 import { obtenerRangoEdad } from '../modalidades.ts';
 import { DocumentoPDF, fechaDocumento, type RecursosPdf } from './base.ts';
-import { NOTA_VERIFICACION } from '../referencias.ts';
 import { fuentePredica, metadatosDocumento, referenciasUnicas } from './comunes.ts';
 
 export function construirPdfNinos(
@@ -113,7 +112,6 @@ export function construirPdfNinos(
     'No se sugiere ningún material peligroso, dinámica humillante ni mensaje que genere miedo o culpa innecesaria. Verifica los materiales y adapta las actividades a las necesidades y edades de los niños. La clase debe acompañarse de supervisión de un adulto responsable.',
     { tamano: 9, color: [122, 102, 98] },
   );
-  d.parrafo(NOTA_VERIFICACION, { tamano: 8.5, color: [122, 102, 98] });
 
   return d.finalizar('Clase infantil');
 }

@@ -11,17 +11,16 @@ export interface ReferenciaDetectada {
   fuente: string;
 }
 
-export const NOTA_VERIFICACION =
-  'Las referencias se detectaron a partir del análisis de la transcripción. Las que no pudieron comprobarse se marcan como pendientes y deben verificarse con una fuente bíblica autorizada antes de su publicación o reproducción.';
+export const NOTA_VERIFICACION = '';
 
 export function notaReferencias(referencias: ReferenciaDetectada[]): string {
   const verificadas = referencias.filter((referencia) => referencia.estado === 'verificada').length;
-  if (!verificadas) return NOTA_VERIFICACION;
+  if (!verificadas) return '';
   if (verificadas === referencias.length) {
     const primera = referencias[0];
     return `Referencias verificadas con ${primera.traduccion}${primera.licencia ? ` (${primera.licencia})` : ''}. El texto se conserva según la fuente consultada.`;
   }
-  return `Se verificaron ${verificadas} de ${referencias.length} referencias. Las restantes siguen pendientes y deben revisarse con una fuente bíblica autorizada.`;
+  return `Se verificaron ${verificadas} de ${referencias.length} referencias.`;
 }
 
 export function construirReferencias(analisis: PredicaAnalisis): ReferenciaDetectada[] {

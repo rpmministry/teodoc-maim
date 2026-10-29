@@ -1,6 +1,6 @@
 import type { MetadatosPredica, PredicaAnalisis } from '../tipos.ts';
 import { DocumentoWord } from './base.ts';
-import { construirReferencias, notaReferencias } from '../referencias.ts';
+import { construirReferencias } from '../referencias.ts';
 import { preguntasReflexion } from '../reflexion.ts';
 import { fechaLarga } from '../modalidades.ts';
 
@@ -86,11 +86,7 @@ export function construirWordGeneral(analisis: PredicaAnalisis, metadatos: Metad
   if (referencias.length) {
     d.seccion('Inventario de referencias bíblicas');
     d.tablaReferencias(referencias);
-    d.parrafo(notaReferencias(referencias), { color: '7A6662' });
   }
-
-  d.subtitulo('Nota de fidelidad')
-    .parrafo('Las referencias verificadas se toman de la fuente abierta configurada; las afirmaciones deben revisarse pastoralmente.', { color: '7A6662' });
 
   return d.blob();
 }

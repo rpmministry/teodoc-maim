@@ -1,6 +1,5 @@
 import type { MetadatosPredica, PlanDevocional, PredicaAnalisis } from '../tipos.ts';
 import { DocumentoWord } from './base.ts';
-import { NOTA_VERIFICACION } from '../referencias.ts';
 import { fechaLarga } from '../modalidades.ts';
 
 export function construirWordDevocionales(analisis: PredicaAnalisis, plan: PlanDevocional, metadatos: MetadatosPredica): Promise<Blob> {
@@ -39,7 +38,5 @@ export function construirWordDevocionales(analisis: PredicaAnalisis, plan: PlanD
   d.seccion('Cierre del itinerario').parrafo(
     'Al terminar los siete días, vuelve a leer la idea central y anota lo que cambió en tu comprensión. Comparte tu aprendizaje con tu familia o grupo y da gracias a Dios por su Palabra.',
   );
-  d.parrafo('Las referencias se detectaron a partir de la predicación. Su texto debe verificarse con una traducción autorizada antes de reproducirlo.', { color: '7A6662' });
-  d.parrafo(NOTA_VERIFICACION, { color: '7A6662' });
   return d.blob();
 }

@@ -37,9 +37,21 @@ yarn-error.log*
 .env*
 !.env.example
 
+# python venv
+/.venv/
+/venv/
+__pycache__/
+
 # vercel
 .vercel
 
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# binaries
+/bin/*.exe
+/bin/ffmpeg*
+/bin/ffprobe*
+/bin/yt-dlp*
+*.exe

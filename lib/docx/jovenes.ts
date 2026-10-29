@@ -1,6 +1,5 @@
 import type { EstudioJovenes, MetadatosPredica, PredicaAnalisis } from '../tipos.ts';
 import { DocumentoWord } from './base.ts';
-import { NOTA_VERIFICACION } from '../referencias.ts';
 import { fechaLarga } from '../modalidades.ts';
 
 export function construirWordJovenes(analisis: PredicaAnalisis, datos: EstudioJovenes, metadatos: MetadatosPredica): Promise<Blob> {
@@ -48,6 +47,6 @@ export function construirWordJovenes(analisis: PredicaAnalisis, datos: EstudioJo
   d.seccion('Nota de cuidado').parrafo(
     'No fuerces a nadie a compartir experiencias personales. Trata los temas sensibles con respeto y deriva a un adulto de confianza o a un profesional cuando sea necesario. Los casos son hipotéticos y no representan a personas reales.',
     { color: '7A6662' },
-  ).parrafo(NOTA_VERIFICACION, { color: '7A6662' });
+  );
   return d.blob();
 }

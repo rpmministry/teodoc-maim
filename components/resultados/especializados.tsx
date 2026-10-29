@@ -1,6 +1,6 @@
 'use client';
 
-import type { ClaseNinos, EstudioBosquejo, EstudioGrupos, EstudioJovenes, PlanDevocional, ResultadoAnalisis } from '@/lib/tipos';
+import type { ApartadoLiderazgo, ClaseNinos, EstudioBosquejo, EstudioGrupos, EstudioJovenes, PlanDevocional, ResultadoAnalisis } from '@/lib/tipos';
 import { obtenerRangoEdad } from '@/lib/modalidades';
 import { Bloque, Caja, Chips, Cita, Dato, Lista, SeccionResultado, SinContenido } from './ui';
 
@@ -18,224 +18,182 @@ function Referencias({ analisis }: { analisis: ResultadoAnalisis }) {
 }
 
 // =============================================================================
-// MODALIDAD 1: BOSQUEJO MINISTERIAL Y HOMILÉTICO (Liderazgo MAIM)
+// MODALIDAD 1: LIDERAZGO MAIM (Enseñanza Bíblica y Bosquejo Oficial)
 // =============================================================================
 export function ResultadoBosquejo({ analisis, datos }: { analisis: ResultadoAnalisis; datos: EstudioBosquejo }) {
+  const apartados: ApartadoLiderazgo[] =
+    datos.apartados && datos.apartados.length > 0
+      ? datos.apartados
+      : (datos.puntos_principales || []).map((p, idx): ApartadoLiderazgo => ({
+          seccion: p.romano || String.fromCharCode(65 + idx),
+          titulo: p.titulo,
+          cita: p.cita,
+          texto_cita: p.texto_cita,
+          contenido: [p.exposicion, ...(p.subpuntos || []).map((s) => `${s.titulo}: ${s.desarrollo}`)].filter(Boolean).join('\n\n'),
+        }));
+
+  const pasajeCabecera =
+    datos.epigrafe_biblico && (datos.epigrafe_biblico.cita || datos.epigrafe_biblico.texto)
+      ? datos.epigrafe_biblico
+      : datos.texto_base && (datos.texto_base.cita || datos.texto_base.texto)
+        ? datos.texto_base
+        : analisis.texto_biblico_principal;
+
+  const intro =
+    datos.introduccion_editorial ||
+    (typeof datos.introduccion === 'string' ? datos.introduccion : '') ||
+    [datos.introduccion?.gancho, datos.introduccion?.contexto, datos.introduccion?.transicion].filter(Boolean).join('\n\n');
+
+  const conclusion =
+    datos.conclusion_editorial ||
+    (typeof datos.conclusion === 'string' ? datos.conclusion : '') ||
+    [datos.conclusion?.recapitulacion, datos.conclusion?.climax].filter(Boolean).join('\n\n') ||
+    datos.desafio_final?.llamado;
+
   return (
-    <div className="space-y-6">
-      {/* 01. FUNDAMENTO HOMILÉTICO Y DOCTRINAL */}
-      <SeccionResultado numero="01" titulo="Fundamento homilético y doctrinal">
-        <div className="rounded-[14px] border border-[var(--linea)] bg-white p-5 shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--linea)] pb-3">
-            <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--coralOscuro)]">
-              Bosquejo Homilético Oficial
-            </span>
-            <span className="rounded-full bg-[#fbf2e6] px-3 py-1 text-[10px] font-semibold text-[var(--tinta)]">
-              Liderazgo MAIM
-            </span>
-          </div>
-          <h3 className="mt-3 text-[20px] font-bold text-[var(--tinta)]">{datos.titulo || analisis.titulo}</h3>
-          {datos.tema_central && (
-            <p className="mt-1 text-[13px] text-[var(--texto)]">
-              <strong className="font-semibold text-[var(--tinta)]">Tema central:</strong> {datos.tema_central}
-            </p>
-          )}
-          {datos.proposito_general && (
-            <p className="mt-2 text-[13px] leading-relaxed text-[var(--texto)]">
-              <strong className="font-semibold text-[var(--tinta)]">Propósito ministerial:</strong> {datos.proposito_general}
-            </p>
-          )}
+    <div className="mx-auto max-w-4xl space-y-7">
+      {/* Cabecera Editorial del Documento */}
+      <div className="rounded-[18px] border border-[#ebd8cb] bg-gradient-to-b from-white to-[#fdfaf5] p-6 shadow-sm sm:p-8">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#f0e4d7] pb-3">
+          <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--coralOscuro)]">
+            Documento Editorial Ministerial
+          </span>
+          <span className="rounded-full bg-[#fbf2e6] px-3 py-1 text-[11px] font-semibold text-[var(--tinta)]">
+            Liderazgo MAIM
+          </span>
         </div>
 
-        {datos.tesis && (
-          <div className="mt-4">
-            <Caja tono="coral" etiqueta="Tesis / Proposición Homilética">{datos.tesis}</Caja>
+        <h2 className="mt-4 text-[22px] font-bold leading-tight text-[var(--tinta)] sm:text-[28px]">
+          {datos.titulo || analisis.titulo}
+        </h2>
+
+        {pasajeCabecera && (pasajeCabecera.cita || pasajeCabecera.texto) && (
+          <div className="mt-5">
+            <Cita versiculo={pasajeCabecera} />
           </div>
         )}
 
-        {datos.fundamento_doctrinal && (
-          <div className="mt-4 rounded-[12px] border border-[var(--linea)] bg-white p-4">
-            <p className="text-[10.5px] font-bold uppercase tracking-[0.1em] text-[var(--tinta)]">Fundamento Doctrinal</p>
-            <p className="mt-2 text-[13px] leading-relaxed text-[var(--texto)]">{datos.fundamento_doctrinal}</p>
-          </div>
-        )}
-
-        <div className="mt-4 grid gap-3 sm:grid-cols-3">
-          <div className="rounded-[12px] bg-[#fbf2e6] p-4">
-            <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--coralOscuro)]">Objetivo Cognitivo</p>
-            <p className="mt-1.5 text-[12.5px] leading-relaxed text-[var(--texto)]">{datos.objetivos?.cognitivo || 'Asimilar con claridad el fundamento doctrinal de la enseñanza.'}</p>
-          </div>
-          <div className="rounded-[12px] bg-[#fbf2e6] p-4">
-            <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--coralOscuro)]">Objetivo Afectivo</p>
-            <p className="mt-1.5 text-[12.5px] leading-relaxed text-[var(--texto)]">{datos.objetivos?.afectivo || 'Despertar convicción profunda y respuesta del corazón.'}</p>
-          </div>
-          <div className="rounded-[12px] bg-[#fbf2e6] p-4">
-            <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--coralOscuro)]">Objetivo Volitivo</p>
-            <p className="mt-1.5 text-[12.5px] leading-relaxed text-[var(--texto)]">{datos.objetivos?.volitivo || 'Llevar a una acción concreta y obediencia ministerial.'}</p>
-          </div>
-        </div>
-
-        <div className="mt-5">
-          <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--coralOscuro)]">Texto bíblico base</p>
-          <Cita versiculo={datos.texto_base?.cita ? datos.texto_base : analisis.texto_biblico_principal} />
-        </div>
-
-        {datos.introduccion && (
-          <div className="mt-5 space-y-3">
-            <p className="text-[10.5px] font-bold uppercase tracking-[0.1em] text-[var(--tinta)]">Introducción homilética</p>
-            {datos.introduccion.gancho && (
-              <div className="rounded-[12px] border border-[var(--linea)] bg-[#fbf7ee] p-4">
-                <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--coralOscuro)]">I. Gancho y Necesidad Humana</p>
-                <p className="mt-2 text-[13px] leading-relaxed text-[var(--texto)]">{datos.introduccion.gancho}</p>
-              </div>
-            )}
-            {datos.introduccion.contexto && (
-              <div className="rounded-[12px] border border-[var(--linea)] bg-white p-4">
-                <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--muted)]">II. Contexto Histórico-Literario</p>
-                <p className="mt-2 text-[13px] leading-relaxed text-[var(--texto)]">{datos.introduccion.contexto}</p>
-              </div>
-            )}
-            {datos.introduccion.transicion && (
-              <div className="rounded-[10px] border-l-[3px] border-[var(--coralOscuro)] bg-[#fdf1e8] p-3 text-[12.5px] italic text-[var(--texto)]">
-                <span className="font-semibold text-[var(--coralOscuro)]">Transición al cuerpo del mensaje: </span>
-                {datos.introduccion.transicion}
-              </div>
-            )}
-          </div>
-        )}
-      </SeccionResultado>
-
-      {/* 02. CUERPO Y DESARROLLO HOMILÉTICO */}
-      <SeccionResultado numero="02" titulo="Cuerpo y desarrollo homilético">
-        {!datos.puntos_principales || datos.puntos_principales.length === 0 ? (
-          <SinContenido mensaje="No se estructuraron puntos principales en el bosquejo." />
-        ) : (
-          <div className="space-y-6">
-            {datos.puntos_principales.map((punto, idx) => (
-              <article key={`${punto.romano}-${idx}`} className="rounded-[16px] border border-[var(--linea)] bg-white p-5 shadow-sm sm:p-6">
-                <div className="flex items-start gap-3.5 border-b border-[#f0e4d7] pb-4">
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--coralOscuro)] text-[13px] font-bold text-white shadow-sm">
-                    {punto.romano || `P${idx + 1}`}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h4 className="text-[16px] font-bold text-[var(--tinta)]">{punto.titulo}</h4>
-                      {punto.cita && (
-                        <span className="rounded-full bg-[#fbf2e6] px-2.5 py-0.5 text-[10.5px] font-bold text-[var(--coralOscuro)]">
-                          {punto.cita}
-                        </span>
-                      )}
-                    </div>
-                    {punto.texto_cita && (
-                      <p className="mt-1.5 text-[12.5px] italic text-[var(--muted)]">&ldquo;{punto.texto_cita}&rdquo;</p>
-                    )}
-                  </div>
-                </div>
-
-                {punto.exposicion && (
-                  <div className="mt-4">
-                    <p className="text-[13.5px] leading-[1.8] text-[var(--texto)]">{punto.exposicion}</p>
-                  </div>
-                )}
-
-                {punto.subpuntos?.length > 0 && (
-                  <div className="mt-5 space-y-3 pl-2 sm:pl-4">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--muted)]">Subpuntos Argumentados</p>
-                    {punto.subpuntos.map((sub, sIdx) => (
-                      <div key={`${sub.letra}-${sIdx}`} className="rounded-[10px] border-l-2 border-[var(--coral)] bg-[#fbf5ed] p-3.5">
-                        <div className="flex items-baseline gap-2">
-                          <span className="font-bold text-[var(--coralOscuro)]">{sub.letra}.</span>
-                          <h5 className="text-[13.5px] font-semibold text-[var(--tinta)]">{sub.titulo}</h5>
-                        </div>
-                        {sub.desarrollo && <p className="mt-1.5 text-[12.5px] leading-relaxed text-[var(--texto)]">{sub.desarrollo}</p>}
-                        {sub.detalles && sub.detalles.length > 0 && (
-                          <ul className="mt-2 list-disc pl-5 text-[12px] leading-relaxed text-[var(--muted)]">
-                            {sub.detalles.map((det, dIdx) => (
-                              <li key={dIdx}>{det}</li>
-                            ))}
-                          </ul>
-                        )}
-                        {sub.pasajes_apoyo && sub.pasajes_apoyo.length > 0 && (
-                          <div className="mt-2 flex flex-wrap gap-1.5">
-                            {sub.pasajes_apoyo.map((ref, rIdx) => (
-                              <span key={rIdx} className="rounded bg-white px-2 py-0.5 text-[10px] font-medium text-[var(--coralOscuro)] border border-[#ebd8cb]">
-                                {ref}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {punto.ilustracion && (
-                  <div className="mt-4 rounded-[10px] bg-[#fbf2e6] p-3 text-[12px] leading-relaxed text-[var(--texto)]">
-                    <strong className="text-[var(--coralOscuro)]">Ilustración / Metáfora:</strong> {punto.ilustracion}
-                  </div>
-                )}
-
-                {punto.transicion && (
-                  <div className="mt-4 text-[12px] italic text-[var(--muted)]">
-                    <span className="font-semibold text-[var(--coralOscuro)]">Transición: </span>
-                    {punto.transicion}
-                  </div>
-                )}
-              </article>
+        {intro && (
+          <div className="mt-5 space-y-3 border-t border-[#f0e4d7]/70 pt-4">
+            {intro.split(/\n+/).map((parrafo, i) => (
+              <p key={i} className="text-[14.5px] leading-[1.85] text-[var(--texto)] sm:text-[15px]">
+                {parrafo}
+              </p>
             ))}
           </div>
         )}
-      </SeccionResultado>
+      </div>
 
-      {/* 03. CIERRE, APLICACIÓN Y MINISTRACIÓN PASTORAL */}
-      <SeccionResultado numero="03" titulo="Cierre, aplicación y ministración pastoral">
-        <div className="space-y-4">
-          {datos.conclusion?.recapitulacion && (
-            <div className="rounded-[12px] border border-[var(--linea)] bg-white p-4">
-              <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--muted)]">Recapitulación sintética</p>
-              <p className="mt-1.5 text-[13px] leading-relaxed text-[var(--texto)]">{datos.conclusion.recapitulacion}</p>
-            </div>
-          )}
-          {datos.conclusion?.climax && (
-            <div className="rounded-[12px] border border-[#f0c3b8] bg-[#fff6f2] p-4">
-              <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--coralOscuro)]">Clímax del mensaje</p>
-              <p className="mt-1.5 text-[13.5px] font-medium leading-relaxed text-[var(--tinta)]">{datos.conclusion.climax}</p>
-            </div>
-          )}
-
-          {datos.aplicacion_liderazgo?.length > 0 && (
-            <div className="rounded-[14px] border border-[#ebd5c5] bg-[#fffaf5] p-5">
-              <h4 className="mb-3 text-[12px] font-bold uppercase tracking-[0.1em] text-[var(--coralOscuro)]">
-                Directrices pastorales para el liderazgo de MAIM
-              </h4>
-              <div className="space-y-2.5">
-                {datos.aplicacion_liderazgo.map((item, idx) => (
-                  <div key={idx} className="flex items-start gap-3 rounded-[10px] border border-[#f0ded3] bg-white p-3.5">
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--coralOscuro)] text-[10px] font-bold text-white">
-                      {idx + 1}
+      {/* Apartados principales del estudio */}
+      <div className="space-y-6">
+        {apartados.length === 0 ? (
+          <SinContenido mensaje="No se estructuraron apartados principales en la enseñanza de liderazgo." />
+        ) : (
+          apartados.map((apartado, idx) => (
+            <article
+              key={`${apartado.seccion || idx}-${apartado.titulo}`}
+              className="rounded-[18px] border border-[#ebd8cb] bg-white p-6 shadow-sm sm:p-8"
+            >
+              <div className="flex items-start gap-3.5 border-b border-[#f0e4d7] pb-4">
+                {apartado.seccion && (
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--coralOscuro)] text-[14px] font-bold text-white shadow-sm">
+                    {apartado.seccion}
+                  </span>
+                )}
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-[18px] font-bold text-[var(--tinta)] sm:text-[20px]">
+                    {apartado.titulo}
+                  </h3>
+                  {apartado.cita && (
+                    <span className="mt-1 inline-block text-[12px] font-semibold text-[var(--coralOscuro)]">
+                      {apartado.cita}
                     </span>
-                    <p className="text-[12.5px] leading-relaxed text-[var(--texto)]">{item}</p>
-                  </div>
-                ))}
+                  )}
+                </div>
               </div>
-            </div>
-          )}
 
-          {datos.desafio_final?.llamado && (
-            <Caja tono="coral" etiqueta="Llamado y desafío volitivo">
-              {datos.desafio_final.llamado}
-            </Caja>
-          )}
+              {apartado.texto_cita && (
+                <div className="mt-4">
+                  <Cita versiculo={{ cita: apartado.cita || '', texto: apartado.texto_cita }} />
+                </div>
+              )}
+
+              {/* Desarrollo completo en prosa continua */}
+              {apartado.contenido && (
+                <div className="mt-5 space-y-4">
+                  {apartado.contenido.split(/\n+/).map((parrafo, pIdx) => (
+                    <p key={pIdx} className="text-[14.5px] leading-[1.85] text-[var(--texto)] sm:text-[15px]">
+                      {parrafo}
+                    </p>
+                  ))}
+                </div>
+              )}
+
+              {/* Subsecciones temáticas cuando existen agrupaciones */}
+              {apartado.subsecciones && apartado.subsecciones.length > 0 && (
+                <div className="mt-6 space-y-5 border-t border-[#f0e4d7] pt-5">
+                  {apartado.subsecciones.map((sub, sIdx) => (
+                    <div key={sIdx} className="space-y-2.5">
+                      <h4 className="text-[14.5px] font-bold uppercase tracking-wide text-[var(--tinta)]">
+                        {sub.titulo}
+                      </h4>
+                      {sub.contenido.split(/\n+/).map((sp, spIdx) => (
+                        <p key={spIdx} className="text-[14px] leading-[1.8] text-[var(--texto)] sm:text-[14.5px]">
+                          {sp}
+                        </p>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Término original presentado con sobriedad */}
+              {apartado.termino_clave?.termino && (
+                <div className="mt-5 rounded-[12px] border border-[#ebd8cb] bg-[#fbf7ee] p-4 text-[13px] leading-relaxed text-[var(--texto)]">
+                  <strong className="font-semibold text-[var(--coralOscuro)]">Término en lengua original: </strong>
+                  <span className="font-bold text-[var(--tinta)]">{apartado.termino_clave.termino}</span> —{' '}
+                  {apartado.termino_clave.significado}. {apartado.termino_clave.aplicacion}
+                </div>
+              )}
+
+              {/* Aplicación pastoral integrada */}
+              {apartado.aplicacion_pastoral && (
+                <div className="mt-4 rounded-[10px] bg-[#fdf2e8] p-3.5 text-[13px] leading-relaxed text-[var(--texto)]">
+                  <strong className="font-semibold text-[var(--coralOscuro)]">Directriz ministerial: </strong>
+                  {apartado.aplicacion_pastoral}
+                </div>
+              )}
+            </article>
+          ))
+        )}
+      </div>
+
+      {/* Conclusión y exhortación ministerial */}
+      {conclusion && (
+        <article className="rounded-[18px] border border-[#ebd8cb] bg-gradient-to-b from-[#fffcf8] to-white p-6 shadow-sm sm:p-8">
+          <h3 className="border-b border-[#f0e4d7] pb-3 text-[18px] font-bold uppercase tracking-wide text-[var(--coralOscuro)] sm:text-[20px]">
+            Conclusión y Exhortación Ministerial
+          </h3>
+          <div className="mt-5 space-y-4">
+            {conclusion.split(/\n+/).map((parrafo, cIdx) => (
+              <p key={cIdx} className="text-[14.5px] leading-[1.85] text-[var(--texto)] sm:text-[15px]">
+                {parrafo}
+              </p>
+            ))}
+          </div>
 
           {datos.desafio_final?.oracion_ministracion && (
-            <div className="mt-4">
-              <Caja etiqueta="Oración pastoral de ministración y consagración">
+            <div className="mt-6 rounded-[12px] border border-[#ebd8cb] bg-[#fbf7ee] p-4 sm:p-5">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-[var(--coralOscuro)]">
+                Oración de consagración ministerial
+              </p>
+              <p className="mt-2 text-[14px] italic leading-relaxed text-[var(--tinta)]">
                 {datos.desafio_final.oracion_ministracion}
-              </Caja>
+              </p>
             </div>
           )}
-        </div>
-      </SeccionResultado>
+        </article>
+      )}
 
       <Referencias analisis={analisis} />
     </div>
@@ -248,8 +206,8 @@ export function ResultadoBosquejo({ analisis, datos }: { analisis: ResultadoAnal
 export function ResultadoGrupos({ analisis, datos }: { analisis: ResultadoAnalisis; datos: EstudioGrupos }) {
   return (
     <div className="space-y-6">
-      {/* 01. FUNDAMENTO Y PREPARACIÓN DEL ENCUENTRO */}
-      <SeccionResultado numero="01" titulo="Fundamento y preparación del encuentro">
+      {/* 01. PREPARACIÓN DEL ENCUENTRO */}
+      <SeccionResultado numero="01" titulo="Preparación del encuentro">
         {datos.objetivo ? (
           <Caja etiqueta="Objetivo espiritual del encuentro">{datos.objetivo}</Caja>
         ) : (
@@ -294,8 +252,8 @@ export function ResultadoGrupos({ analisis, datos }: { analisis: ResultadoAnalis
         )}
       </SeccionResultado>
 
-      {/* 02. DIÁLOGO BÍBLICO Y DINÁMICA DE GRUPO */}
-      <SeccionResultado numero="02" titulo="Diálogo bíblico y dinámica de grupo">
+      {/* 02. DIÁLOGO Y DINÁMICA DE GRUPO */}
+      <SeccionResultado numero="02" titulo="Diálogo y dinámica de grupo">
         <div className="space-y-4">
           {datos.preguntas_inicio.length > 0 && (
             <Bloque titulo="Para comenzar (Conexión)">
@@ -336,8 +294,8 @@ export function ResultadoGrupos({ analisis, datos }: { analisis: ResultadoAnalis
         </div>
       </SeccionResultado>
 
-      {/* 03. CIERRE, COMPROMISO Y PASTORAL */}
-      <SeccionResultado numero="03" titulo="Cierre, compromiso y pastoral">
+      {/* 03. CIERRE Y COMPROMISO */}
+      <SeccionResultado numero="03" titulo="Cierre y compromiso">
         <div className="space-y-4">
           {datos.aplicaciones.length > 0 && (
             <Bloque titulo="Aplicaciones prácticas cotidianas">
@@ -385,8 +343,8 @@ export function ResultadoGrupos({ analisis, datos }: { analisis: ResultadoAnalis
 export function ResultadoJovenes({ analisis, datos }: { analisis: ResultadoAnalisis; datos: EstudioJovenes }) {
   return (
     <div className="space-y-6">
-      {/* 01. FUNDAMENTO Y CONCEPTOS CLAVE */}
-      <SeccionResultado numero="01" titulo="Fundamento y conceptos clave">
+      {/* 01. OBJETIVO Y CONCEPTOS CLAVE */}
+      <SeccionResultado numero="01" titulo="Objetivo y conceptos clave">
         {datos.objetivo ? (
           <Caja etiqueta="Objetivo del encuentro juvenil">{datos.objetivo}</Caja>
         ) : (
@@ -421,8 +379,8 @@ export function ResultadoJovenes({ analisis, datos }: { analisis: ResultadoAnali
         )}
       </SeccionResultado>
 
-      {/* 02. REFLEXIÓN, DIÁLOGO Y CASOS PRÁCTICOS */}
-      <SeccionResultado numero="02" titulo="Reflexión, diálogo y casos prácticos">
+      {/* 02. REFLEXIÓN Y CONVERSACIÓN */}
+      <SeccionResultado numero="02" titulo="Reflexión y conversación">
         <div className="space-y-4">
           {datos.preguntas_reflexion.length > 0 && (
             <Bloque titulo="Reflexión individual (Introspección)">
@@ -465,8 +423,8 @@ export function ResultadoJovenes({ analisis, datos }: { analisis: ResultadoAnali
         </div>
       </SeccionResultado>
 
-      {/* 03. APLICACIÓN COTIDIANA, DESAFÍO Y CONSAGRACIÓN */}
-      <SeccionResultado numero="03" titulo="Aplicación cotidiana, desafío y consagración">
+      {/* 03. APLICACIÓN Y DESAFÍO */}
+      <SeccionResultado numero="03" titulo="Aplicación y desafío">
         <div className="space-y-4">
           {datos.aplicaciones.length > 0 && (
             <Bloque titulo="Aplicaciones prácticas para la vida diaria">
@@ -513,8 +471,8 @@ export function ResultadoNinos({ analisis, datos }: { analisis: ResultadoAnalisi
   const edad = obtenerRangoEdad(analisis.metadatos.rangoEdad);
   return (
     <div className="space-y-6">
-      {/* 01. FUNDAMENTO PEDAGÓGICO Y VERSÍCULO CLAVE */}
-      <SeccionResultado numero="01" titulo="Fundamento pedagógico y versículo clave">
+      {/* 01. VERSÍCULO Y DATOS DE LA CLASE */}
+      <SeccionResultado numero="01" titulo="Versículo y datos de la clase">
         <dl className="grid gap-4 rounded-[12px] bg-[#fbf2e6] p-4 sm:grid-cols-3">
           <Dato etiqueta="Rango de edad" valor={edad} />
           <Dato etiqueta="Duración aproximada" valor={datos.duracion_aproximada} />
@@ -535,8 +493,8 @@ export function ResultadoNinos({ analisis, datos }: { analisis: ResultadoAnalisi
         </div>
       </SeccionResultado>
 
-      {/* 02. RELATO BÍBLICO Y COMPRENSIÓN INTERACTIVA */}
-      <SeccionResultado numero="02" titulo="Relato bíblico y comprensión interactiva">
+      {/* 02. RELATO BÍBLICO Y PREGUNTAS */}
+      <SeccionResultado numero="02" titulo="Relato bíblico y preguntas">
         {datos.relato.length === 0 ? (
           <SinContenido mensaje="No se generó un relato adaptado para los niños." />
         ) : (
@@ -562,8 +520,8 @@ export function ResultadoNinos({ analisis, datos }: { analisis: ResultadoAnalisi
         )}
       </SeccionResultado>
 
-      {/* 03. ACTIVIDADES PRÁCTICAS, VIDA FAMILIAR Y CIERRE */}
-      <SeccionResultado numero="03" titulo="Actividades prácticas, vida familiar y cierre">
+      {/* 03. ACTIVIDADES PRÁCTICAS Y CIERRE */}
+      <SeccionResultado numero="03" titulo="Actividades prácticas y cierre">
         <div className="space-y-4">
           {datos.actividad.titulo && (
             <div className="rounded-[12px] border border-[var(--linea)] bg-white p-4">
@@ -644,8 +602,8 @@ export function ResultadoNinos({ analisis, datos }: { analisis: ResultadoAnalisi
 export function ResultadoDevocionales({ analisis, datos }: { analisis: ResultadoAnalisis; datos: PlanDevocional }) {
   return (
     <div className="space-y-6">
-      {/* 01. FUNDAMENTO Y PROPÓSITO DEL ITINERARIO DEVOCIONAL */}
-      <SeccionResultado numero="01" titulo="Fundamento y propósito del itinerario devocional">
+      {/* 01. PROPÓSITO DEL PLAN DEVOCIONAL */}
+      <SeccionResultado numero="01" titulo="Propósito del plan devocional">
         {datos.introduccion && (
           <p className="text-[13.5px] leading-relaxed text-[var(--texto)]">{datos.introduccion}</p>
         )}
@@ -664,8 +622,8 @@ export function ResultadoDevocionales({ analisis, datos }: { analisis: Resultado
         )}
       </SeccionResultado>
 
-      {/* 02. ITINERARIO DE SIETE DÍAS DE COMUNIÓN Y REFLEXIÓN */}
-      <SeccionResultado numero="02" titulo="Itinerario de siete días de comunión y reflexión">
+      {/* 02. PLAN DEVOCIONAL DE 7 DÍAS */}
+      <SeccionResultado numero="02" titulo="Plan devocional de 7 días">
         <div className="space-y-6">
           {datos.dias.map((dia, indice) => (
             <article key={`${dia.dia}-${indice}`} className="rounded-[16px] border border-[var(--linea)] bg-white p-5 shadow-sm sm:p-6">
@@ -742,8 +700,8 @@ export function ResultadoDevocionales({ analisis, datos }: { analisis: Resultado
         </div>
       </SeccionResultado>
 
-      {/* 03. CIERRE Y PERSEVERANCIA EN LA PALABRA */}
-      <SeccionResultado numero="03" titulo="Cierre y perseverancia en la Palabra">
+      {/* 03. CIERRE Y REFLEXIÓN FINAL */}
+      <SeccionResultado numero="03" titulo="Cierre y reflexión final">
         <div className="rounded-[14px] border border-[var(--linea)] bg-white p-5">
           <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--coralOscuro)]">Perseverancia en la comunión diaria</p>
           <p className="mt-2 text-[13px] leading-relaxed text-[var(--texto)]">
@@ -756,3 +714,5 @@ export function ResultadoDevocionales({ analisis, datos }: { analisis: Resultado
     </div>
   );
 }
+
+export { ResultadoBosquejo as ResultadoLiderazgo };

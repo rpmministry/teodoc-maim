@@ -1,7 +1,5 @@
-import type { EstudioBosquejo, MetadatosPredica, PredicaAnalisis } from '../tipos.ts';
+import type { ApartadoLiderazgo, EstudioBosquejo, MetadatosPredica, PredicaAnalisis } from '../tipos.ts';
 import { DocumentoWord } from './base.ts';
-import { NOTA_VERIFICACION } from '../referencias.ts';
-import { fechaLarga } from '../modalidades.ts';
 
 export function construirWordBosquejo(
   analisis: PredicaAnalisis,
@@ -11,111 +9,121 @@ export function construirWordBosquejo(
   const d = new DocumentoWord(
     metadatos,
     datos.titulo || analisis.titulo,
-    'Bosquejo ministerial y homilético',
-    'Bosquejo expositivo y ministerial estructurado para la predicación, enseñanza y dirección pastoral.',
+    'Liderazgo MAIM · Documento Editorial Ministerial',
+    'Documento editorial de formación doctrinal, estudio expositivo y aplicación pastoral para el liderazgo de MAIM.',
   );
 
-  d.seccion('Datos de la enseñanza y fundamento doctrinal')
-    .parrafo(`Título: ${datos.titulo || analisis.titulo}`)
-    .parrafo(metadatos.predicador ? `Predicador o expositor: ${metadatos.predicador}` : 'Predicador o expositor: no proporcionado.')
-    .parrafo(metadatos.fecha ? `Fecha de la prédica: ${fechaLarga(metadatos.fecha)}` : 'Fecha de la prédica: no proporcionada.')
-    .parrafo(`Tema central: ${datos.tema_central || analisis.tema_principal || 'No definido.'}`)
-    .parrafo(`Propósito general: ${datos.proposito_general || analisis.proposito || 'No definido.'}`);
+  // Pasaje bíblico de cabecera / Epígrafe
+  const pasajeCabecera =
+    datos.epigrafe_biblico && (datos.epigrafe_biblico.cita || datos.epigrafe_biblico.texto)
+      ? datos.epigrafe_biblico
+      : datos.texto_base && (datos.texto_base.cita || datos.texto_base.texto)
+        ? datos.texto_base
+        : analisis.texto_biblico_principal;
 
-  if (datos.tesis) d.caja('Tesis / Idea central', datos.tesis);
-  if (datos.fundamento_doctrinal) d.caja('Fundamento doctrinal', datos.fundamento_doctrinal);
-
-  if (datos.objetivos) {
-    d.seccion('Objetivos de aprendizaje y ministración');
-    if (datos.objetivos.cognitivo) d.parrafo(`• Cognitivo (Saber): ${datos.objetivos.cognitivo}`);
-    if (datos.objetivos.afectivo) d.parrafo(`• Afectivo (Sentir): ${datos.objetivos.afectivo}`);
-    if (datos.objetivos.volitivo) d.parrafo(`• Volitivo (Hacer): ${datos.objetivos.volitivo}`);
+  if (pasajeCabecera && (pasajeCabecera.cita || pasajeCabecera.texto)) {
+    d.cita(pasajeCabecera);
   }
 
-  const textoBase = (datos.texto_base && (datos.texto_base.cita || datos.texto_base.texto))
-    ? datos.texto_base
-    : analisis.texto_biblico_principal;
-  if (textoBase.cita || textoBase.texto) {
-    d.seccion('Texto bíblico base');
-    d.cita(textoBase);
-  }
+  // Introducción editorial integrada
+  const intro =
+    datos.introduccion_editorial ||
+    (typeof datos.introduccion === 'string' ? datos.introduccion : '') ||
+    [datos.introduccion?.gancho, datos.introduccion?.contexto, datos.introduccion?.transicion]
+      .filter(Boolean)
+      .join('\n\n');
 
-  if (datos.introduccion) {
-    d.seccion('Introducción homilética');
-    if (datos.introduccion.gancho) {
-      d.subtitulo('Gancho / Captación de atención');
-      d.parrafo(datos.introduccion.gancho);
-    }
-    if (datos.introduccion.contexto) {
-      d.subtitulo('Contexto bíblico e histórico');
-      d.parrafo(datos.introduccion.contexto);
-    }
-    if (datos.introduccion.transicion) {
-      d.caja('Transición hacia el cuerpo del mensaje', datos.introduccion.transicion);
+  if (intro) {
+    const parrafosIntro = intro
+      .split(/\n+/)
+      .map((p) => p.trim())
+      .filter(Boolean);
+    for (const p of parrafosIntro) {
+      d.parrafo(p);
     }
   }
 
-  if (datos.puntos_principales?.length) {
-    d.seccion('Cuerpo y desarrollo homilético');
-    datos.puntos_principales.forEach((punto, idx) => {
-      const romano = punto.romano || `PUNTO ${idx + 1}`;
-      d.subtitulo(`${romano}. ${punto.titulo}${punto.cita ? ` (${punto.cita})` : ''}`);
-      if (punto.texto_cita) {
-        d.cita({ cita: punto.cita, texto: punto.texto_cita });
+  // Apartados principales
+  const apartados: ApartadoLiderazgo[] =
+    datos.apartados && datos.apartados.length > 0
+      ? datos.apartados
+      : (datos.puntos_principales || []).map((p, idx): ApartadoLiderazgo => ({
+          seccion: p.romano || String.fromCharCode(65 + idx),
+          titulo: p.titulo,
+          cita: p.cita,
+          texto_cita: p.texto_cita,
+          contenido: [p.exposicion, ...(p.subpuntos || []).map((s) => `${s.titulo}: ${s.desarrollo}`)]
+            .filter(Boolean)
+            .join('\n\n'),
+        }));
+
+  if (apartados.length > 0) {
+    apartados.forEach((apartado) => {
+      const prefijo = apartado.seccion ? `${apartado.seccion}. ` : '';
+      d.seccion(`${prefijo}${apartado.titulo}`);
+
+      if (apartado.texto_cita) {
+        d.cita({ cita: apartado.cita || '', texto: apartado.texto_cita });
       }
-      if (punto.exposicion) {
-        d.parrafo(punto.exposicion);
+
+      if (apartado.contenido) {
+        const parrafos = apartado.contenido
+          .split(/\n+/)
+          .map((p) => p.trim())
+          .filter(Boolean);
+        for (const p of parrafos) {
+          d.parrafo(p);
+        }
       }
-      if (punto.subpuntos?.length) {
-        punto.subpuntos.forEach((sub) => {
-          const letra = sub.letra || '•';
-          d.parrafo(`${letra}. ${sub.titulo}`, { negrita: true });
-          if (sub.desarrollo) d.parrafo(sub.desarrollo);
-          if (sub.detalles?.length) d.lista(sub.detalles);
-          if (sub.pasajes_apoyo?.length) {
-            d.parrafo(`Pasajes bíblicos de apoyo: ${sub.pasajes_apoyo.join(', ')}`, { cursiva: true, color: '7A6662' });
+
+      if (apartado.subsecciones?.length) {
+        apartado.subsecciones.forEach((sub) => {
+          d.subtitulo(sub.titulo);
+          const subParrafos = sub.contenido
+            .split(/\n+/)
+            .map((p) => p.trim())
+            .filter(Boolean);
+          for (const sp of subParrafos) {
+            d.parrafo(sp);
           }
         });
       }
-      if (punto.ilustracion) {
-        d.caja(`Ilustración / Metáfora (${romano})`, punto.ilustracion);
+
+      if (apartado.termino_clave?.termino) {
+        d.parrafo(
+          `Término original: ${apartado.termino_clave.termino} — ${apartado.termino_clave.significado}. Aplicación ministerial: ${apartado.termino_clave.aplicacion}`,
+          { cursiva: true, color: '7A6662' },
+        );
       }
-      if (punto.transicion) {
-        d.parrafo(`Transición: ${punto.transicion}`, { cursiva: true, color: '7A6662' });
+
+      if (apartado.aplicacion_pastoral) {
+        d.parrafo(apartado.aplicacion_pastoral, { cursiva: true });
       }
     });
   }
 
-  if (datos.conclusion) {
-    d.seccion('Conclusión');
-    if (datos.conclusion.recapitulacion) {
-      d.subtitulo('Recapitulación');
-      d.parrafo(datos.conclusion.recapitulacion);
-    }
-    if (datos.conclusion.climax) {
-      d.caja('Clímax espiritual y llamado', datos.conclusion.climax);
+  // Conclusión ministerial
+  const conclusion =
+    datos.conclusion_editorial ||
+    (typeof datos.conclusion === 'string' ? datos.conclusion : '') ||
+    [datos.conclusion?.recapitulacion, datos.conclusion?.climax].filter(Boolean).join('\n\n') ||
+    datos.desafio_final?.llamado;
+
+  if (conclusion) {
+    d.seccion('CONCLUSIÓN Y EXHORTACIÓN MINISTERIAL');
+    const parrafosConc = conclusion
+      .split(/\n+/)
+      .map((p) => p.trim())
+      .filter(Boolean);
+    for (const pc of parrafosConc) {
+      d.parrafo(pc);
     }
   }
 
-  if (datos.aplicacion_liderazgo?.length) {
-    d.seccion('Aplicación pastoral para el liderazgo de MAIM');
-    d.lista(datos.aplicacion_liderazgo, true);
+  if (datos.desafio_final?.oracion_ministracion) {
+    d.subtitulo('Oración de consagración ministerial');
+    d.parrafo(datos.desafio_final.oracion_ministracion, { cursiva: true });
   }
-
-  if (datos.desafio_final) {
-    d.seccion('Desafío final y ministración');
-    if (datos.desafio_final.llamado) {
-      d.parrafo(datos.desafio_final.llamado);
-    }
-    if (datos.desafio_final.oracion_ministracion) {
-      d.caja('Oración de ministración pastoral', datos.desafio_final.oracion_ministracion);
-    }
-  }
-
-  d.seccion('Nota de fidelidad pastoral').parrafo(
-    'Este bosquejo ministerial ha sido estructurado en fidelidad estricta al contenido de la enseñanza recibida, sin añadir doctrinas ajenas. Todo el contenido es una guía para el liderazgo de MAIM Casa de Oración.',
-    { color: '7A6662' },
-  ).parrafo(NOTA_VERIFICACION, { color: '7A6662' });
 
   return d.blob();
 }

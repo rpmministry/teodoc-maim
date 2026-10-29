@@ -36,7 +36,7 @@ comprobar('La interfaz ofrece las seis modalidades y el campo de predicador', ()
 comprobar('Cada modalidad tiene un PDF descargable con su nombre exacto', () => {
   const esperados = [
     'teodoc-maim-analisis-general.pdf',
-    'teodoc-maim-bosquejo-ministerial.pdf',
+    'teodoc-maim-liderazgo.pdf',
     'teodoc-maim-grupos-pequenos.pdf',
     'teodoc-maim-jovenes.pdf',
     'teodoc-maim-clase-infantil.pdf',
@@ -82,7 +82,7 @@ comprobar('El PDF general mantiene el análisis completo y el especializado sus 
   for (const seccion of ['Idea central y propósito', 'Fundamento bíblico', 'Desarrollo del mensaje', 'Enseñanzas principales', 'Aplicación práctica', 'Conclusión del estudio', 'Oración']) {
     assert.ok(general.includes(seccion), `Falta la sección general ${seccion}`);
   }
-  assert.ok(bosquejo.includes('Fundamento homilético y doctrinal') && bosquejo.includes('Aplicación pastoral para el liderazgo MAIM'));
+  assert.ok(bosquejo.includes('DOCUMENTO EDITORIAL DE FORMACIÓN MINISTERIAL') || bosquejo.includes('Liderazgo MAIM'));
   assert.ok(grupos.includes('Agenda del encuentro') && grupos.includes('Orientaciones para el líder'));
   assert.ok(jovenes.includes('Dinámica participativa') && jovenes.includes('Guía para el líder juvenil'));
   assert.ok(ninos.includes('El relato bíblico') && ninos.includes('Guía para el maestro'));

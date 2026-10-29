@@ -26,7 +26,8 @@ const ACTIVIDAD = {
 export const REGLAS_CALIDAD_MODALIDAD = `REGLAS INNEGOCIABLES DE FIDELIDAD, CERO ALUCINACIÓN Y MÁXIMA PROFUNDIDAD:
 - Trabaja única y exclusivamente con lo que sostienen la transcripción y el contenido de la prédica. Prohibido inventar versículos, citas, autores, hechos, biografías, cargos ni doctrina ajena.
 - Cero Alucinación: Todo el desarrollo debe extraerse de la enseñanza recibida. Si algo no se dijo en la prédica, no lo supongas ni lo añadas como si el expositor lo hubiera enseñado.
-- Desarrollo Extenso y Riguroso: Cada apartado debe redactarse en prosa sustancial, con párrafos bien estructurados, analíticos y argumentados. NUNCA respondas con frases cortas, viñetas telegráficas ni resúmenes superficiales.
+- Desarrollo Extenso y Riguroso: Cada apartado debe redactarse en prosa sustancial, con párrafos bien estructurados, analíticos y argumentados (mínimo de 150 a 350 palabras por bloque temático). NUNCA respondas con frases cortas, viñetas telegráficas ni resúmenes superficiales.
+- Menos Divisiones, Textos Continuos: Agrupa las ideas que pertenecen a una misma enseñanza en párrafos largos y coherentes. Explica las conexiones entre conceptos, pasajes bíblicos y aplicaciones sin fragmentar el documento en micro-bloques repetitivos.
 - Distingue con claridad el texto bíblico, la explicación y la aplicación. No reconstruyas versículos de memoria: cita solo lo mencionado en el mensaje.
 - Redacta en español formal, pastoral, reverente y de alto nivel editorial.
 
@@ -36,65 +37,76 @@ ESTILO MAIM — PRIMERA PERSONA Y VOZ DIRECTA:
 - PROHIBIDO usar expresiones como «el orador dice», «el predicador explica», «el expositor menciona» o «durante el mensaje se señaló». Presenta las verdades de forma directa e interiorizada.
 - La primera persona es una herramienta de presentación, no una autorización para modificar la doctrina ni los versículos bíblicos.`;
 
-export const REGLAS_BOSQUEJO = `DISEÑO DEL BOSQUEJO MINISTERIAL ESTILO MAIM — ENTREGABLE PARA EL LIDERAZGO:
+export const REGLAS_LIDERAZGO = `PRODUCCIÓN DE DOCUMENTOS DE FORMACIÓN MINISTERIAL PARA EL LIDERAZGO MAIM:
 
-Eres un teólogo y homileta de alto nivel al servicio del liderazgo de MAIM. Tu bosquejo debe leerse como los documentos de enseñanza que el liderazgo de MAIM produce: profundos, bíblicamente sólidos, pastoralmente cercanos y redactados en primera persona.
+Eres un teólogo y editor ministerial de alto nivel al servicio directo del liderazgo de MAIM Casa de Oración. Tu misión es transformar las prédicas y enseñanzas en verdaderos documentos editoriales de formación ministerial: completos, profundos, educativos, fluidos, profesionales y fáciles de estudiar, destinados a pastores y líderes.
 
-PASO 1 — DETECTA EL ESTILO DE LA PRÉDICA:
-Antes de generar el bosquejo, determina cuál de estos dos estilos representa mejor la naturaleza del mensaje:
+NO GENERES RESÚMENES AUTOMÁTICOS, FORMULARIOS, FICHAS CON CAMPOS INDEPENDIENTES NI ESQUEMAS FRAGMENTADOS.
+Genera un verdadero documento de formación ministerial, cuidadosamente redactado y organizado, como un capítulo de un libro de enseñanza o un tratado pastoral que un líder pueda leer, estudiar, comprender, conservar y compartir.
 
-ESTILO A — TEMÁTICO Y DE ENSEÑANZA BÍBLICA: La prédica desarrolla apartados teológicos organizados, con profundidad doctrinal, contrastes conceptuales (ej. EN vs SOBRE, bautismo vs salvación), términos griegos/hebreos, conexiones tipológicas o progresión argumental estructurada. Ejemplo de redacción: «El Espíritu Santo está EN nosotros para salvación, pero viene SOBRE nosotros para santidad y ministerio. Esta distinción es fundamental: no puedo confundir la experiencia de la regeneración con el poder del bautismo del Espíritu».
+ANÁLISIS DE LOS DOS MODELOS EDITORIALES DE REFERENCIA DE MAIM:
 
-ESTILO B — VIVENCIAL, EXHORTATIVO E INSPIRACIONAL: La prédica parte de un versículo o conflicto central, avanza con ideas directas y cercanas, contiene preguntas que examinen la vida, y culmina en una exhortación que impulsa a responder. Ejemplo de redacción: «Si el Señor me dice que me conviene que Él se vaya, significa que hay algo en el Espíritu Santo que todavía no comprendo. El problema no es que Él no esté presente; el problema es que yo lo apago. Y cuando lo apago, aparece la peor versión de mí mismo».
+1. MODELO A / ESTILO A — TEMÁTICO Y DE ENSEÑANZA BÍBLICA (Ref: "Activando un Pentecostés del Espíritu en Nuestras Vidas"):
+   - Título central claro que expresa el núcleo del mensaje.
+   - Organización temática que muestra el desarrollo progresivo de la enseñanza.
+   - Pocos apartados principales (ej: "A. EL DERRAMAMIENTO DEL ESPÍRITU", "B. EL BAUTISMO DEL ESPÍRITU SANTO", "C. UN VERDADERO PENTECOSTÉS").
+   - Explicaciones completas y profundas que desarrollan cada concepto en párrafos sustanciales.
+   - Pasajes bíblicos citados íntegramente y vinculados directamente con las verdades que sustentan.
+   - Explicación de términos bíblicos en lengua original (ej. KOINONIA, BAPTÍZO) y tipología (Fiestas de Primavera y Otoño).
+   - Desarrollo de las implicaciones espirituales y ministeriales integradas en la lectura.
+   - Conclusión coherente con el propósito de la enseñanza.
 
-Si la prédica combina elementos de ambos, integra los dos estilos sin perder la coherencia.
+2. MODELO B / ESTILO B — VIVENCIAL, EXHORTATIVO E INSPIRADOR (Ref: "El Desbordamiento del Espíritu Santo"):
+   - Idea central o conflicto espiritual que conduce al desarrollo del mensaje (ej. Juan 16:7: "Os conviene que yo me vaya...").
+   - Explicación cercana, directa, reflexiva y comprensible en prosa continua.
+   - Secuencia natural de reflexiones que conectan la Palabra con la vida cristiana real.
+   - Uso de pasajes bíblicos (Efesios 5:18, 1 Corintios 2:9-10, Mateo 9:38) para profundizar.
+   - Contrastes, preguntas y términos de impacto espiritual (ej. EKBALO / EKBÁLO: enviar o expulsar con ímpetu santo sin retorno).
+   - Progresión hacia una comprensión espiritual más profunda.
+   - Cierre apasionado que conserva la fuerza e intención ministerial ("Gastemos nuestras vidas hasta ver al Espíritu Santo llenando cristianos e impulsando a hombres a la voluntad de Dios.").
 
-PASO 2 — REDACCIÓN EN PRIMERA PERSONA ESTILO MAIM:
-- Redacta las enseñanzas en primera persona, como si el lector las interiorizara: «reconozco», «necesito», «comprendo», «estoy llamado a», «debo examinar».
-- Usa primera persona plural para enseñanzas dirigidas a la iglesia: «necesitamos», «estamos llamados», «debemos perseverar juntos».
-- PROHIBIDO usar «el orador dice», «el predicador explica», «el expositor señala» o similares. La verdad se presenta directamente.
-- Conserva intactos el texto y la referencia de los versículos bíblicos. Solo las explicaciones y las aplicaciones se redactan en primera persona.
+3. INTEGRACIÓN DE AMBOS MODELOS:
+   - No apliques una plantilla rígida. Analiza cada prédica y adopta la forma editorial más adecuada (doctrinal-temática, vivencial-continua o una combinación orgánica de ambas).
 
-PASO 3 — ESTRUCTURA DEL BOSQUEJO:
-El bosquejo debe incluir:
+EL DOCUMENTO DEBE SER COMPLETO, NO UN RESUMEN — GRANDES BLOQUES DE TEXTO CONTINUOS:
+- No reduzcas el mensaje para hacerlo más corto; elimina las divisiones innecesarias y desarrolla las ideas de forma completa. GRANDES BLOQUES DE TEXTO CONTINUOS de prosa analítica y formativa.
+- Cada apartado debe responder a: qué enseña, qué significa en contexto, cómo se conectan las ideas, qué Escrituras lo sostienen y qué implicaciones ministeriales se desprenden. Todo integrado con naturalidad en la redacción, NUNCA como una lista de preguntas con respuestas separadas.
+- Párrafos de prosa sustancial (de 180 a 500+ palabras por bloque temático), sin párrafos telegráficos ni viñetas aisladas.
 
-- "titulo": Título fiel al mensaje. Conserva el título original cuando esté disponible.
-- "tema_central": Tema teológico principal del mensaje, expresado con precisión.
-- "proposito_general": Propósito espiritual y pastoral de la enseñanza.
-- "objetivos":
-  * "cognitivo": Qué verdades debo asimilar y comprender a través de este mensaje.
-  * "afectivo": Qué convicción espiritual o actitud del corazón debe producir en mí.
-  * "volitivo": Qué debo hacer, decidir o cambiar como resultado de escuchar este mensaje.
-- "tesis": La idea central del mensaje en una sola oración directa y contundente, redactada en primera persona cuando sea apropiado.
-- "fundamento_doctrinal": Párrafo sólido que explica el sustento bíblico y teológico de la enseñanza, fiel al 100% al contenido de la prédica.
-- "texto_base": Pasaje bíblico principal con cita y texto.
-- "introduccion":
-  * "gancho": Párrafo que capta la atención conectando con la necesidad espiritual o el conflicto central que plantea la prédica. Redactado en primera persona cuando corresponda.
-  * "contexto": Contexto bíblico, histórico o tipológico del pasaje principal, según la enseñanza.
-  * "transicion": Oración que lleva del planteamiento al desarrollo del mensaje.
-- "puntos_principales": Los apartados reales del mensaje (entre 2 y 6). Para ESTILO A usa numeración romana (I, II, III); para ESTILO B permite más fluidez narrativa. Cada punto:
-  * "romano": "I", "II", "III", etc.
-  * "titulo": Declaración que resume la verdad del apartado — concisa, contundente y afirmativa.
-  * "cita": Referencia bíblica de apoyo del punto.
-  * "texto_cita": Texto del versículo, tal como aparece en la prédica.
-  * "exposicion": Desarrollo extenso en primera persona: explica la enseñanza, sus implicaciones, los contrastes doctrinales y las conexiones bíblicas. Mínimo 2 párrafos sólidos de 100 a 300 palabras.
-  * "subpuntos": Subapartados con "letra" (A, B, C), "titulo", "desarrollo" (párrafo argumentado en primera persona) y "detalles" (evidencias, citas o puntos adicionales).
-  * "ilustracion": Metáfora, analogía, contraste o ejemplo tomado de la prédica y explicado con profundidad.
-  * "transicion": Oración de enlace hacia el siguiente punto.
-- "conclusion":
-  * "recapitulacion": Síntesis de las verdades enseñadas, sin añadir doctrinas nuevas.
-  * "climax": Verdad culminante que confronta e impulsa al creyente a responder. Tono directo, urgente y esperanzador.
-- "aplicacion_liderazgo": 4 a 6 directrices pastorales y ministeriales para el liderazgo de MAIM, redactadas en primera persona plural y enfocadas en la intercesión, el pastoreo, las células y la vida congregacional.
-- "desafio_final":
-  * "llamado": Desafío espiritual concreto para la iglesia. Redactado con urgencia y esperanza, en primera persona.
-  * "oracion_ministracion": Oración ministerial completa para sellar la enseñanza. Solemne, íntima y pastoral.
+ELIMINA LA FRAGMENTACIÓN EXCESIVA (PRIORIDAD FUNDAMENTAL) — PROHIBIDO FRAGMENTAR EXCESIVAMENTE:
+- Estructura editorial continua: título principal claro, pasaje de cabecera o introducción integrada cuando aplique, un número reducido de apartados principales (2 a 4 grandes apartados determinados por las ideas reales de la prédica), subtítulos (subsecciones) únicamente cuando haya un cambio relevante de tema (ej: "FIESTAS DE PRIMAVERA", "FIESTAS DE OTOÑO"), y una conclusión ministerial final.
+- PROHIBIDO FRAGMENTAR EXCESIVAMENTE el texto en microsecciones, recuadros o esquemas rígidos.
+- PROHIBIDO INTRODUCIR AUTOMÁTICAMENTE:
+  * Objetivo general o específico (cognitivo, afectivo, volitivo).
+  * Fichas de campos independientes ("Idea central:", "Fundamento doctrinal:").
+  * Lecciones aprendidas en viñetas.
+  * Listas de aplicaciones prácticas separadas del texto.
+  * Resúmenes ejecutivos o cuestionarios didácticos artificiales.
+  Si una idea aporta valor, desarróllala de forma natural dentro de la prosa continua de los apartados.
 
-REGLAS DE CALIDAD PARA EL BOSQUEJO:
-- Cuando la prédica explique un término griego o hebreo (ej. KOINONIA, BAPTIZO, EKBALO), consérvalo, explícalo con claridad y desarrolla su relevancia para la enseñanza.
-- Cuando haya contrastes doctrinales en el mensaje (ej. EN nosotros vs SOBRE nosotros), preséntalos con precisión y desarrolla sus implicaciones en primera persona.
-- Cuando haya conexiones tipológicas o proféticas en el mensaje (ej. fiestas judías como sombra del NT), explícalas con profundidad fiel al contenido de la prédica.
-- No fuerces los apartados a ser exactamente 3 ni 5. Que el contenido real determine la cantidad.
-- No añadas «Objetivos», «Resumen ejecutivo» ni secciones que no surjan naturalmente del contenido.`;
+REDACCIÓN PROFESIONAL, NATURAL Y EN VOZ DIRECTA:
+- Español correcto, digno, pastoral, claro y formativo.
+- Primera persona singular para examen personal y reflexión («necesito comprender», «reconozco», «debo examinar mi vida»).
+- Primera persona plural cuando se refiera a la iglesia, ministerio o congregación («necesitamos», «estamos llamados», «debemos perseverar»).
+- PROHIBIDO usar expresiones distantes como «el orador dice», «el predicador explica», «durante la prédica se menciona». Desarrolla la verdad de forma directa.
+- Rigor bíblico absoluto: cita las Escrituras con fidelidad; nunca inventes versículos, biografías ni doctrinas ajenas.
+
+ESTRUCTURA DEL OBJETO JSON A GENERAR:
+- "titulo": Título ministerial editorial del documento (en mayúsculas o título formal).
+- "epigrafe_biblico": (Opcional) Objeto con "cita" y "texto" si la prédica abre con un pasaje central (ej. Juan 16:7).
+- "introduccion": (Opcional) Texto continuo introductorio si la prédica plantea una premisa inicial.
+- "apartados": Array de 2 a 5 grandes apartados editoriales:
+  * "seccion": Letra identificadora ("A", "B", "C"...) o número, o "" si es desarrollo fluido.
+  * "titulo": Título temático u orgánico del apartado.
+  * "cita": Pasaje bíblico principal del apartado (si aplica).
+  * "texto_cita": Texto íntegro del versículo citado.
+  * "contenido": Gran bloque editorial continuo (varios párrafos de prosa sólida, exégesis, términos originales y aplicación).
+  * "subsecciones": Array opcional de subsecciones cuando hay agrupaciones temáticas (cada una con "titulo" y "contenido").
+- "conclusion": Conclusión ministerial, clímax espiritual o exhortación final en prosa continua.
+
+Correspondencia homilética de compatibilidad: Los apartados representan los puntos_principales donde se desenvuelve la tesis y verdad central; la aplicacion_liderazgo fluye dentro de cada exposición para los líderes de MAIM; y la conclusión contiene el desafio_final de fe.`;
+
+export const REGLAS_BOSQUEJO = REGLAS_LIDERAZGO;
 
 export const REGLAS_GRUPOS = `DISEÑO DEL ESTUDIO PARA GRUPOS PEQUEÑOS, CÉLULAS Y FAMILIAS (ESTILO MAIM):
 Diseña una guía comunitaria y pastoral profunda, participativa y edificante, impregnada del ADN espiritual de MAIM (adoración viva, koinonía genuina, intercesión apasionada y discipulado en santidad).
@@ -209,6 +221,43 @@ export const REGLAS_POR_MODALIDAD: Record<Exclude<ModalidadId, 'general'>, strin
   devocionales: REGLAS_DEVOCIONALES,
 };
 
+const TERMINO_CLAVE = {
+  type: Type.OBJECT,
+  properties: {
+    termino: TEXTO,
+    significado: TEXTO,
+    aplicacion: TEXTO,
+  },
+  required: ['termino', 'significado', 'aplicacion'],
+};
+
+const SUBSECCION_LIDERAZGO = {
+  type: Type.OBJECT,
+  properties: {
+    titulo: TEXTO,
+    contenido: TEXTO,
+  },
+  required: ['titulo', 'contenido'],
+};
+
+const APARTADO_LIDERAZGO = {
+  type: Type.OBJECT,
+  properties: {
+    seccion: TEXTO,
+    titulo: TEXTO,
+    cita: TEXTO,
+    texto_cita: TEXTO,
+    contenido: TEXTO,
+    subsecciones: {
+      type: Type.ARRAY,
+      items: SUBSECCION_LIDERAZGO,
+    },
+    termino_clave: TERMINO_CLAVE,
+    aplicacion_pastoral: TEXTO,
+  },
+  required: ['titulo', 'contenido'],
+};
+
 const SUBPUNTO_BOSQUEJO = {
   type: Type.OBJECT,
   properties: {
@@ -249,40 +298,20 @@ const ESQUEMA_BOSQUEJO = {
           type: Type.OBJECT,
           properties: {
             titulo: TEXTO,
-            tema_central: TEXTO,
-            proposito_general: TEXTO,
-            objetivos: {
-              type: Type.OBJECT,
-              properties: {
-                cognitivo: TEXTO,
-                afectivo: TEXTO,
-                volitivo: TEXTO,
-              },
-              required: ['cognitivo', 'afectivo', 'volitivo'],
+            epigrafe_biblico: VERSICULO,
+            introduccion: TEXTO,
+            apartados: {
+              type: Type.ARRAY,
+              items: APARTADO_LIDERAZGO,
             },
+            conclusion: TEXTO,
+            tema_central: TEXTO,
             tesis: TEXTO,
             fundamento_doctrinal: TEXTO,
             texto_base: VERSICULO,
-            introduccion: {
-              type: Type.OBJECT,
-              properties: {
-                gancho: TEXTO,
-                contexto: TEXTO,
-                transicion: TEXTO,
-              },
-              required: ['gancho', 'contexto', 'transicion'],
-            },
             puntos_principales: {
               type: Type.ARRAY,
               items: PUNTO_BOSQUEJO,
-            },
-            conclusion: {
-              type: Type.OBJECT,
-              properties: {
-                recapitulacion: TEXTO,
-                climax: TEXTO,
-              },
-              required: ['recapitulacion', 'climax'],
             },
             aplicacion_liderazgo: LISTA_TEXTO,
             desafio_final: {
@@ -291,14 +320,9 @@ const ESQUEMA_BOSQUEJO = {
                 llamado: TEXTO,
                 oracion_ministracion: TEXTO,
               },
-              required: ['llamado', 'oracion_ministracion'],
             },
           },
-          required: [
-            'titulo', 'tema_central', 'proposito_general', 'objetivos', 'tesis',
-            'fundamento_doctrinal', 'texto_base', 'introduccion', 'puntos_principales',
-            'conclusion', 'aplicacion_liderazgo', 'desafio_final',
-          ],
+          required: ['titulo', 'apartados'],
         },
       },
       required: ['bosquejo'],

@@ -1,6 +1,5 @@
 import type { EstudioGrupos, MetadatosPredica, PredicaAnalisis } from '../tipos.ts';
 import { DocumentoWord } from './base.ts';
-import { NOTA_VERIFICACION } from '../referencias.ts';
 import { fechaLarga } from '../modalidades.ts';
 
 export function construirWordGrupos(analisis: PredicaAnalisis, datos: EstudioGrupos, metadatos: MetadatosPredica): Promise<Blob> {
@@ -47,6 +46,6 @@ export function construirWordGrupos(analisis: PredicaAnalisis, datos: EstudioGru
   d.seccion('Nota para el facilitador').parrafo(
     'Escucha antes de corregir, cuida la confidencialidad y no fuerces a nadie a compartir experiencias privadas. Este material debe revisarse pastoralmente antes de enseñarse.',
     { color: '7A6662' },
-  ).parrafo(NOTA_VERIFICACION, { color: '7A6662' });
+  );
   return d.blob();
 }

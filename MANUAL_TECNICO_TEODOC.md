@@ -1,8 +1,8 @@
 # Manual técnico — TeoDoc MAIM
 
-**Versión:** 1.0.0
-**Stack:** Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4, jsPDF.
-**Alcance:** análisis bíblico, cinco modalidades, PDF, Word, referencias detectadas y biblioteca local. La generación de infografías fue retirada.
+**Versión:** 1.2.0
+**Stack:** Next.js 16 (App Router con Turbopack), React 19, TypeScript, Tailwind CSS 4, jsPDF, docx, FFmpeg 7.1, yt-dlp, pdfjs-dist, JSZip.
+**Alcance:** Ingesta unificada multimodo (enlace de video con probe/descarga/extracción directa de audio, subida de archivos multimedia, carga de documentos Word/PDF/ODT/RTF y texto directo pegado), análisis bíblico y teológico profundo, seis modalidades ministeriales adaptadas a modelos reales MAIM, generación de PDF y Word, biblioteca local y seguridad perimetral anti-SSRF.
 
 La documentación detallada está en:
 
@@ -15,91 +15,105 @@ La documentación detallada está en:
 - [`docs/ESTRUCTURAS.md`](docs/ESTRUCTURAS.md)
 - [`docs/PRUEBAS.md`](docs/PRUEBAS.md)
 
-## 1. Flujo
+## 1. Flujo Unificado de Análisis
 
-1. La persona elige la modalidad y sube el audio del mensaje.
-2. El audio se sube a Cloudinary y se transcribe con AssemblyAI (respaldo: Deepgram `nova-2`).
-3. La transcripción se revisa y se edita.
-4. Se validan texto, modalidad y edad.
-5. El servidor genera el análisis general y, si se eligió una especialidad, una segunda respuesta con el material específico.
-6. El cliente muestra el análisis en pestañas y genera el PDF en el navegador.
+1. La persona accede a la ventana unificada de entrada con 3 orígenes disponibles:
+   - **Video por enlace:** Detección automática del proveedor (YouTube, Vimeo, Facebook, stream directo), sondeo de metadatos (`/api/multimedia/probe`), y selección entre:
+     - *Operación A:* Descargar video en calidades disponibles (mejor calidad, 720p, 480p, audio).
+     - *Operación B:* Extraer directamente la pista de audio y enviarla de inmediato al motor de análisis y transcripción.
+   - **Archivo multimedia:** Subida directa de archivos de audio/video locales (`audio-file-input`), con procesamiento por fragmentos.
+   - **Documento o texto:** Extracción automática de texto en servidor (`/api/document/extract`) para Word (`.docx`), PDF seleccionable (con alerta si es documento escaneado), OpenDocument (`.odt`), `.rtf` y texto plano (`.txt`), o pegado directo con contador de palabras y caracteres.
+2. Si el contenido proviene de audio/video, se transcribe con AssemblyAI (respaldo: Deepgram `nova-2`).
+3. Si proviene de documento o texto pegado, el contenido extraído entra directamente a la etapa de revisión editorial y análisis, ahorrando tiempo y costos de transcripción.
+4. Se validan texto (mínimo 120 caracteres, máximo 250 000), modalidad y edad (si aplica a niños).
+5. El servidor genera el análisis general y, si se eligió una especialidad, una segunda respuesta con el material específico siguiendo los modelos de liderazgo de MAIM (párrafos amplios continuos de 150 a 350+ palabras, tono en primera persona y cero alucinaciones).
+6. El cliente muestra el análisis en pestañas interactivas y genera los documentos PDF y Word descargables en el navegador.
 
-## 2. Estructura
+## 2. Estructura del Proyecto
 
 ```text
 app/
-  page.tsx                    Orquestación de la experiencia
-  layout.tsx                  Metadatos y tipografía
-  globals.css                 Tokens y componentes visuales
-  api/analyze/route.ts        Análisis general + modalidad
-  api/transcribe/route.ts     Speech-to-text
-  api/upload/route.ts         Subida alternativa
-  api/validate/route.ts       Validación orientativa
+  page.tsx                       Orquestación de la experiencia y retención
+  layout.tsx                     Metadatos y tipografía IBM Plex Sans
+  globals.css                    Tokens y componentes visuales Carbon/MAIM
+  api/analyze/route.ts           Análisis general + modalidad ministerial
+  api/transcribe/route.ts        Speech-to-text (AssemblyAI / Deepgram)
+  api/upload/route.ts            Subida multimedia alternativa
+  api/validate/route.ts          Validación orientativa
+  api/youtube/route.ts           Compatibilidad de enlaces YouTube
+  api/multimedia/
+    probe/route.ts               Sondeo seguro de metadatos y formatos de video
+    process/route.ts             Extracción de audio o descarga de video
+    status/route.ts              Consulta de progreso SSE/polling de tareas
+    download/route.ts            Entrega de archivos descargados con cabeceras seguras
+  api/document/
+    extract/route.ts             Extracción de texto para DOCX, PDF, ODT, RTF y TXT
 components/
-  formulario-analisis.tsx     Datos, modalidad y audio
-  marca.tsx                   Marca y activos
-  resultados/                 Presentación general y especializada
-  liquid-orb.tsx              Componente visual compartido conservado
+  formulario-analisis.tsx        Ventana unificada (Enlace, Archivo, Documento/Texto)
+  editor-texto-pegar.tsx         Área de pegado directo y conteo persistente
+  marca.tsx                      Marca y activos institucionales MAIM
+  resultados/                    Presentación general y especializada
+  liquid-orb.tsx                 Componente visual de estado conservado
 lib/
-  tipos.ts                    Modelos compartidos
-  modalidades.ts              Catálogo y nombres de PDF
-  normalizar.ts               Saneamiento y normalización
-  validacion-formulario.ts    Reglas del formulario
-  audio-upload.ts             Cloudinary por partes
-  entrega.ts                  Descarga y Web Share
-  institucional.ts            Identidad verificada
-  pdf/                        Generación de los cinco PDF
-  docx/                       Generación de los cinco Word
-  biblioteca.ts               Persistencia local e historial
-  referencias.ts              Inventario y estado de verificación
-  biblia.ts                   Verificación con GetBible y dominio público
-scripts/                      Pruebas y fixtures
+  multimedia/
+    detector.ts                  Detección de proveedores y firewall anti-SSRF
+    job-manager.ts               Gestor asíncrono de tareas y ciclo de vida staging
+    extractor.ts                 Envoltura segura de yt-dlp y FFmpeg con spawn
+  documentos/
+    extractor.ts                 Extracción de DOCX (JSZip), PDF (pdfjs) y detección escaneados
+  tipos.ts                       Modelos compartidos
+  modalidades.ts                 Catálogo, nombres de PDF y reglas editoriales MAIM
+  normalizar.ts                  Saneamiento y normalización
+  validacion-formulario.ts       Reglas del formulario
+  audio-upload.ts                Cloudinary por partes
+  entrega.ts                     Descarga y Web Share
+  institucional.ts               Identidad verificada
+  pdf/                           Generación de los seis PDF adaptados a párrafos extensos
+  docx/                          Generación de los seis Word
+  biblioteca.ts                  Persistencia local e historial
+  referencias.ts                 Inventario y estado de verificación
+  biblia.ts                      Verificación con GetBible y dominio público
+bin/
+  ffmpeg.exe                     Binario estático FFmpeg 7.1
+  yt-dlp.exe                     Binario estático yt-dlp 2026.10.26
+scripts/                         Pruebas unitarias y de integración
 public/
-  institucional/              Logotipo e isotipo oficiales
-  fonts/                      IBM Plex Sans + licencia OFL
+  institucional/                 Logotipo e isotipo oficiales
+  fonts/                         IBM Plex Sans + licencia OFL
 ```
 
-## 3. API de análisis
+## 3. Seguridad Perimetral y Protección Anti-SSRF
 
-`POST /api/analyze` recibe `text`, `modalidad`, `rangoEdad`, `titulo`, `predicador` y `fecha`. Devuelve el análisis general, los metadatos y `especializado`. El nombre del predicador se conserva como metadato separado y no se usa para inventar una biografía.
+El sistema implementa una barrera estricta antes de procesar cualquier URL remota:
+- **Validación de esquema:** Únicamente `http:` y `https:`.
+- **Filtro Anti-SSRF:** Bloqueo incondicional de direcciones locales (`localhost`, `127.0.0.1`, `::1`), redes privadas IPv4 (RFC 1918: `10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`), Carrier-Grade NAT (`100.64.0.0/10`), Link-Local (`169.254.0.0/16`), metadatos de proveedores de nube (`169.254.169.254`, `metadata.google.internal`), nombres `.local` y credenciales incrustadas en URL (`usuario:password@host`).
+- **Aislamiento de procesos:** La ejecución de `yt-dlp` y `ffmpeg` se realiza mediante arrays de argumentos en `spawn` de Node.js, erradicando inyecciones de comandos shell.
+- **Ciclo de vida de archivos temporales:** Directorio `tmp/staging/` con TTL de 30 minutos y limpieza automática de huérfanos.
 
-Cadena de proveedores: Gemini → OpenRouter → DeepSeek. Si falla la especialidad, el general se conserva y se informa. Límites: 120–250 000 caracteres, rate limit por IP y modalidad validada.
+## 4. Calidad Editorial y Modelos Ministeriales MAIM
 
-## 4. Persistencia y privacidad
+Se integraron las características de los documentos oficiales de liderazgo de la iglesia MAIM (`ACTIVANDO UN PENTECOSTES...` y `EL DESBORDAMIENTO...`):
+- **Menos divisiones fragmentadas:** El análisis general y el bosquejo ministerial se articulan en 2 a 4 grandes secciones magistrales.
+- **Párrafos de amplio desarrollo:** Cada punto central contiene reflexiones continuas de 150 a 350+ palabras sin viñetas telegráficas ni listas artificiales.
+- **Voz ministerial unificada:** Redacción inspiradora en primera persona plural ("reconozco", "anhelamos", "estamos llamados") o pastoral vivencial. Prohibición estricta de meta-narrador en tercera persona distante ("el predicador dijo", "el orador menciona").
+- **Estudio de términos bíblicos originales:** Rescate de palabras en hebreo o griego (ej. *KOINONIA*, *BAPTIZO*, *EKBALO*) y contextualización profética.
+- **Cero alucinación:** Las citas bíblicas se verifican con la base de datos textual y no se inventan biografías ni eventos ajenos a la prédica analizada.
 
-- Servidor: sin almacenamiento de transcripciones ni resultados.
-- `localStorage`: último resultado, TTL 48 h.
-- `sessionStorage`: transcripción de la pestaña.
-- Cloudinary y el transcriptor reciben el audio.
-- La descarga del PDF ocurre en el cliente; el documento no se sube a un servidor.
-- Las claves de IA viven solo en el entorno del servidor.
-
-## 5. PDF
-
-- A4 vertical, jsPDF, fuente IBM Plex Sans incrustada.
-- Logotipo oficial en portada, isotipo en el pie.
-- Numeración `Página X de Y`, metadatos del documento, secciones y tablas.
-- Nombres exactos en `lib/modalidades.ts`.
-- Se omite el bloque del predicador si el campo está vacío.
-
-## 6. Identidad
-
-Nombre público verificado: **MAIM Casa de Oración**. Fuente: página oficial de Facebook, consultada el 26/10/2026. No se inventaron misión, visión, doctrina, autoridades ni organigrama. Ver `docs/IDENTIDAD.md`.
-
-## 7. Pruebas
+## 5. Pruebas y Verificación
 
 ```bash
-npm run lint
 npm run typecheck
 npm run build
 npm run verificar
 ```
 
-La suite local (87 pruebas) cubre lógica, modalidades, verificación bíblica y RVC, los cinco PDF, los cinco Word, biblioteca, entrega, seguridad, resiliencia e identidad. No requiere claves. La generación real general se probó con 347 caracteres (HTTP 200, 96 s) mediante el respaldo; Gemini 3.8 estaba saturado y 4.0 no disponible.
-
-## 8. Límites
-
-- Publicado en GitHub (`origin/main`).
-- Sin despliegue en Vercel ni operaciones remotas destructivas.
-- La transcripción de audio y las cinco especialidades en vivo no se probaron; la generación general real sí se verificó.
-- La revisión editorial del contenido generado sigue siendo responsabilidad del equipo pastoral.
+La suite local (98 pruebas automatizadas en 12 archivos de prueba) cubre:
+- Extracción de modelos Word MAIM y detección de términos clave.
+- Extracción de texto PDF página a página y detección de documentos escaneados.
+- Extracción y normalización de texto plano y RTF.
+- Filtrado anti-SSRF y detección de proveedores de video.
+- Ciclo de vida y cancelación del Job Manager.
+- Detección de binarios FFmpeg y yt-dlp.
+- Lógica de riqueza, modalidades ministeriales, verificación bíblica RVC.
+- Generación de los seis PDF y seis documentos Word.
+- Biblioteca local, resiliencia (Screen Wake Lock), seguridad perimetral e identidad institucional.

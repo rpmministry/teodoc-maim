@@ -99,8 +99,8 @@ comprobar('Los DOCX incluyen portada, título, predicador y salto de página', (
 
 comprobar('Cada DOCX conserva la estructura propia de su especialidad', () => {
   const requeridas: Record<ModalidadId, string[]> = {
-    general: ['Ficha técnica', 'Idea central', 'Fundamento bíblico', 'Desarrollo completo', 'Inventario de referencias', 'Nota de fidelidad'],
-    bosquejo: ['Datos de la enseñanza y fundamento doctrinal', 'Objetivos de aprendizaje y ministración', 'Introducción homilética', 'Cuerpo y desarrollo homilético', 'Aplicación pastoral para el liderazgo de MAIM', 'Desafío final y ministración'],
+    general: ['Ficha técnica', 'Idea central', 'Fundamento bíblico', 'Desarrollo completo', 'Inventario de referencias'],
+    bosquejo: ['LIDERAZGO MAIM', 'La fe que transforma', 'CONCLUSIÓN Y EXHORTACIÓN MINISTERIAL'],
     grupos: ['Preparación del facilitador', 'Agenda de la reunión', 'Observación del texto', 'Actividad grupal', 'Compromiso de la semana', 'Nota para el facilitador'],
     jovenes: ['Ficha del encuentro', 'Conceptos teológicos', 'Casos prácticos', 'Dinámica participativa', 'Compromiso de la semana', 'Guía breve para el líder'],
     ninos: ['Ficha del maestro', 'Relato bíblico', 'Actividad central', 'Juego o dinámica', 'Aplicación para el niño', 'Salvaguardas infantiles'],

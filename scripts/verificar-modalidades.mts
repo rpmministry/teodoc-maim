@@ -34,7 +34,7 @@ function comprobar(nombre: string, fn: () => void) {
 const IDS: ModalidadId[] = ['general', 'bosquejo', 'grupos', 'jovenes', 'ninos', 'devocionales'];
 const NOMBRES_ESPERADOS: Record<ModalidadId, string> = {
   general: 'teodoc-maim-analisis-general.pdf',
-  bosquejo: 'teodoc-maim-bosquejo-ministerial.pdf',
+  bosquejo: 'teodoc-maim-liderazgo.pdf',
   grupos: 'teodoc-maim-grupos-pequenos.pdf',
   jovenes: 'teodoc-maim-jovenes.pdf',
   ninos: 'teodoc-maim-clase-infantil.pdf',

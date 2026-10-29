@@ -71,7 +71,7 @@ for (const modalidad of ['general', 'bosquejo', 'grupos', 'jovenes', 'ninos', 'd
 comprobar('Se generan los seis PDF con el nombre exacto solicitado', () => {
   assert.deepEqual(Object.keys(resultados).sort(), ['bosquejo', 'devocionales', 'general', 'grupos', 'jovenes', 'ninos'].sort());
   for (const modalidad of Object.keys(resultados) as ModalidadId[]) {
-    assert.equal(nombreArchivoPdf(modalidad), `teodoc-maim-${{ general: 'analisis-general', bosquejo: 'bosquejo-ministerial', grupos: 'grupos-pequenos', jovenes: 'jovenes', ninos: 'clase-infantil', devocionales: 'devocionales-7-dias' }[modalidad]}.pdf`);
+    assert.equal(nombreArchivoPdf(modalidad), `teodoc-maim-${{ general: 'analisis-general', bosquejo: 'liderazgo', grupos: 'grupos-pequenos', jovenes: 'jovenes', ninos: 'clase-infantil', devocionales: 'devocionales-7-dias' }[modalidad]}.pdf`);
   }
 });
 
@@ -109,7 +109,7 @@ comprobar('Los PDF preservan acentos y no contienen placeholders técnicos', () 
 comprobar('Cada PDF contiene las secciones distintivas de su modalidad', () => {
   const requeridos: Record<ModalidadId, string[]> = {
     general: ['Identificación del mensaje', 'Idea central y propósito', 'Fundamento bíblico', 'Desarrollo del mensaje', 'Enseñanzas principales', 'Aplicación práctica', 'Conclusión del estudio'],
-    bosquejo: ['Datos de la enseñanza', 'Fundamento homilético y doctrinal', 'Objetivos de aprendizaje y ministración', 'Cuerpo y desarrollo del mensaje', 'Aplicación pastoral para el liderazgo MAIM', 'Desafío final y ministración'],
+    bosquejo: ['DOCUMENTO EDITORIAL DE FORMACIÓN MINISTERIAL', 'La fe que transforma', 'CONCLUSIÓN Y EXHORTACIÓN MINISTERIAL'],
     grupos: ['Agenda del encuentro', 'Para comenzar', 'Comprender el texto', 'Actividad grupal', 'Compromiso de la semana', 'Orientaciones para el líder'],
     jovenes: ['Objetivo y tema del encuentro', 'Pasaje y conceptos fundamentales', 'Reflexión individual', 'Conversación grupal', 'Dinámica participativa', 'Desafío de la semana', 'Guía para el líder juvenil'],
     ninos: ['Datos de la clase', 'El versículo que aprenderemos', 'El relato bíblico', 'Actividad didáctica', 'Juego o dinámica', 'Lo que puedo vivir hoy', 'Guía para el maestro', 'Rango de edad'],

@@ -1,6 +1,5 @@
 import type { ClaseNinos, MetadatosPredica, PredicaAnalisis } from '../tipos.ts';
 import { DocumentoWord } from './base.ts';
-import { NOTA_VERIFICACION } from '../referencias.ts';
 import { fechaLarga, obtenerRangoEdad } from '../modalidades.ts';
 
 export function construirWordNinos(analisis: PredicaAnalisis, datos: ClaseNinos, metadatos: MetadatosPredica): Promise<Blob> {
@@ -52,6 +51,6 @@ export function construirWordNinos(analisis: PredicaAnalisis, datos: ClaseNinos,
   d.seccion('Salvaguardas infantiles').parrafo(
     'No se sugieren actividades peligrosas, costosas, humillantes ni mensajes que generen miedo o culpa desproporcionada. Verifica los materiales y adapta la clase a las capacidades de los niños. Un adulto responsable debe supervisar la actividad.',
     { color: '7A6662' },
-  ).parrafo(NOTA_VERIFICACION, { color: '7A6662' });
+  );
   return d.blob();
 }

@@ -1,6 +1,7 @@
 import type {
   ActividadConPasos,
   ActividadInfantil,
+  ApartadoLiderazgo,
   ClaseNinos,
   ConceptoJuvenil,
   ConceptoTeologico,
@@ -233,6 +234,41 @@ export function normalizarBosquejo(valor: unknown): EstudioBosquejo {
   const conc = registro(d.conclusion);
   const des = registro(d.desafio_final ?? d.desafioFinal);
 
+  // 1. Normalización de apartados principales (Editorial MAIM)
+  const rawApartados = Array.isArray(d.apartados) ? d.apartados : [];
+  const apartados: ApartadoLiderazgo[] = (rawApartados as unknown[])
+    .map((item: unknown, indice: number): ApartadoLiderazgo => {
+      const a = registro(item);
+      const tk = registro(a.termino_clave ?? a.terminoClave);
+      const rawSub = Array.isArray(a.subsecciones) ? a.subsecciones : [];
+      const subsecciones = (rawSub as unknown[])
+        .map((sItem) => {
+          const s = registro(sItem);
+          return {
+            titulo: texto(s.titulo),
+            contenido: textoMultilinea(s.contenido ?? s.desarrollo),
+          };
+        })
+        .filter((s) => Boolean(s.titulo || s.contenido));
+
+      return {
+        seccion: texto(a.seccion) || (rawApartados.length > 1 ? String.fromCharCode(65 + indice) : ''),
+        titulo: texto(a.titulo),
+        cita: texto(a.cita),
+        texto_cita: texto(a.texto_cita ?? a.textoCita),
+        contenido: textoMultilinea(a.contenido ?? a.exposicion ?? a.desarrollo),
+        subsecciones: subsecciones.length > 0 ? subsecciones : undefined,
+        termino_clave: tk.termino ? {
+          termino: texto(tk.termino),
+          significado: texto(tk.significado),
+          aplicacion: texto(tk.aplicacion),
+        } : undefined,
+        aplicacion_pastoral: textoMultilinea(a.aplicacion_pastoral ?? a.aplicacionPastoral),
+      };
+    })
+    .filter((a: ApartadoLiderazgo) => Boolean(a.titulo || a.contenido));
+
+  // 2. Normalización de puntos principales homiléticos (compatibilidad hacia atrás)
   const rawPuntos = Array.isArray(d.puntos_principales)
     ? d.puntos_principales
     : Array.isArray(d.puntosPrincipales)
@@ -268,31 +304,86 @@ export function normalizarBosquejo(valor: unknown): EstudioBosquejo {
     })
     .filter((p: PuntoPrincipalBosquejo) => Boolean(p.titulo || p.exposicion));
 
+  // Síntesis bidireccional entre apartados y puntos principales
+  const apartadosFinales: ApartadoLiderazgo[] = apartados.length > 0
+    ? apartados
+    : puntos.map((p, idx) => ({
+        seccion: p.romano || String.fromCharCode(65 + idx),
+        titulo: p.titulo,
+        cita: p.cita || '',
+        texto_cita: p.texto_cita || '',
+        contenido: [p.exposicion, ...p.subpuntos.map((s) => `${s.titulo}: ${s.desarrollo}`)].filter(Boolean).join('\n\n'),
+        subsecciones: p.subpuntos.length > 0
+          ? p.subpuntos.map((s) => ({ titulo: s.titulo, contenido: s.desarrollo }))
+          : undefined,
+      }));
+
+  const puntosFinales: PuntoPrincipalBosquejo[] = puntos.length > 0
+    ? puntos
+    : apartadosFinales.map((a, idx) => ({
+        romano: a.seccion || NUMEROS_ROMANOS[idx] || `${idx + 1}`,
+        titulo: a.titulo,
+        cita: a.cita || '',
+        texto_cita: a.texto_cita || '',
+        exposicion: a.contenido,
+        subpuntos: a.subsecciones
+          ? a.subsecciones.map((sub, sIdx) => ({
+              letra: LETRAS_SUBPUNTOS[sIdx] || String.fromCharCode(65 + sIdx),
+              titulo: sub.titulo,
+              desarrollo: sub.contenido,
+            }))
+          : [],
+      }));
+
+  // Introducción editorial en prosa continua
+  const introEditorial = typeof d.introduccion === 'string'
+    ? textoMultilinea(d.introduccion)
+    : textoMultilinea(d.introduccion_editorial) ||
+      [textoMultilinea(intro.gancho), textoMultilinea(intro.contexto), textoMultilinea(intro.transicion)].filter(Boolean).join('\n\n');
+
+  // Conclusión editorial en prosa continua
+  const concEditorial = typeof d.conclusion === 'string'
+    ? textoMultilinea(d.conclusion)
+    : textoMultilinea(d.conclusion_editorial) ||
+      [textoMultilinea(conc.recapitulacion), textoMultilinea(conc.climax)].filter(Boolean).join('\n\n') ||
+      textoMultilinea(des.llamado);
+
+  const titulo = texto(d.titulo) || texto(d.tema_central) || 'Enseñanza para el Liderazgo';
+  const temaCentral = texto(d.tema_central ?? d.temaCentral ?? d.tema) || titulo;
+  const tesis = texto(d.tesis ?? d.proposicionHomiletica ?? d.idea_central ?? d.ideaCentral) ||
+    (apartadosFinales[0]?.contenido ? apartadosFinales[0].contenido.slice(0, 180) : temaCentral);
+
+  const epigrafeBiblico = versiculo(d.epigrafe_biblico ?? d.texto_base ?? d.textoBase);
+
   return {
-    titulo: texto(d.titulo),
-    tema_central: texto(d.tema_central ?? d.temaCentral ?? d.tema),
+    titulo,
+    epigrafe_biblico: epigrafeBiblico.cita || epigrafeBiblico.texto ? epigrafeBiblico : undefined,
+    introduccion_editorial: introEditorial || undefined,
+    apartados: apartadosFinales,
+    conclusion_editorial: concEditorial || undefined,
+    tema_central: temaCentral,
     proposito_general: texto(d.proposito_general ?? d.propositoGeneral ?? d.proposito),
     objetivos: {
       cognitivo: texto(obj.cognitivo),
       afectivo: texto(obj.afectivo),
       volitivo: texto(obj.volitivo),
     },
-    tesis: texto(d.tesis ?? d.proposicionHomiletica ?? d.idea_central ?? d.ideaCentral),
+    tesis,
     fundamento_doctrinal: textoMultilinea(d.fundamento_doctrinal ?? d.fundamentoDoctrinal ?? d.doctrina),
-    texto_base: versiculo(d.texto_base ?? d.textoBase),
+    texto_base: epigrafeBiblico,
     introduccion: {
       gancho: textoMultilinea(intro.gancho ?? intro.necesidad),
-      contexto: textoMultilinea(intro.contexto ?? intro.trasfondo),
+      contexto: textoMultilinea(intro.contexto ?? intro.trasfondo) || introEditorial,
       transicion: textoMultilinea(intro.transicion ?? intro.oracion_transicion),
     },
-    puntos_principales: puntos,
+    puntos_principales: puntosFinales,
     conclusion: {
-      recapitulacion: textoMultilinea(conc.recapitulacion ?? conc.resumen),
+      recapitulacion: textoMultilinea(conc.recapitulacion ?? conc.resumen) || concEditorial,
       climax: textoMultilinea(conc.climax ?? conc.conclusion),
     },
     aplicacion_liderazgo: listaTexto(d.aplicacion_liderazgo ?? d.aplicacionLiderazgo ?? d.aplicaciones, 12),
     desafio_final: {
-      llamado: textoMultilinea(des.llamado ?? des.desafio),
+      llamado: textoMultilinea(des.llamado ?? des.desafio) || concEditorial,
       oracion_ministracion: textoMultilinea(des.oracion_ministracion ?? des.oracionMinistracion ?? des.oracion),
     },
   };
@@ -467,7 +558,8 @@ export function especializadoTieneContenido(modalidad: ModalidadId, contenido: C
     case 'bosquejo': {
       const d = contenido.bosquejo;
       if (!d) return false;
-      return Boolean((d.titulo || d.tema_central) && d.tesis && d.puntos_principales.length >= 2);
+      const tieneApartados = (d.apartados && d.apartados.length >= 1) || (d.puntos_principales && d.puntos_principales.length >= 1);
+      return Boolean((d.titulo || d.tema_central) && tieneApartados);
     }
     case 'grupos': {
       const d = contenido.grupos;

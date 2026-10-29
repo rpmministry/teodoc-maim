@@ -1,6 +1,12 @@
 import { AssemblyAI } from 'assemblyai';
 import { NextRequest, NextResponse } from 'next/server';
 import { verificarRateLimit } from '@/lib/rate-limit';
+import {
+  calcularHuellaUrl,
+  obtenerContenidoCanonico,
+  guardarContenidoCanonico,
+  ejecutarConBloqueoCanonico,
+} from '@/lib/canonical-store';
 
 export const maxDuration = 300;
 export const dynamic = 'force-dynamic';
@@ -50,11 +56,29 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const body = (await req.json().catch(() => null)) as { audioUrl?: unknown } | null;
+    const body = (await req.json().catch(() => null)) as {
+      audioUrl?: unknown;
+      huella?: unknown;
+      urlOriginal?: unknown;
+    } | null;
     const audioUrl = typeof body?.audioUrl === 'string' ? body.audioUrl : '';
+    const huellaParam = typeof body?.huella === 'string' ? body.huella : '';
+    const urlOriginal = typeof body?.urlOriginal === 'string' ? body.urlOriginal : '';
 
     if (!audioUrl) {
       return NextResponse.json({ error: 'No se recibió la ruta del audio.' }, { status: 400 });
+    }
+
+    const huella = huellaParam || (urlOriginal ? calcularHuellaUrl(urlOriginal) : calcularHuellaUrl(audioUrl));
+    const registroExistente = obtenerContenidoCanonico(huella);
+    if (registroExistente && registroExistente.estado === 'completada' && registroExistente.texto) {
+      console.info(`[Transcripción] Reutilizando transcripción canónica (${registroExistente.palabras} palabras) para huella ${huella.slice(0, 8)}.`);
+      return NextResponse.json({
+        text: registroExistente.texto,
+        huella: registroExistente.huella,
+        cached: true,
+        proveedor: registroExistente.proveedor,
+      });
     }
 
     if (!esUrlAudioSegura(audioUrl)) {
@@ -73,6 +97,7 @@ export async function POST(req: NextRequest) {
     }
 
     let textoTranscrito = '';
+    let proveedorUsado = '';
     let falloDeepgram = '';
     let falloAssembly = '';
 
@@ -122,6 +147,7 @@ export async function POST(req: NextRequest) {
           const texto = alt?.paragraphs?.transcript || alt?.transcript || '';
           if (texto.trim()) {
             textoTranscrito = texto.trim();
+            proveedorUsado = 'deepgram';
             console.info(`[Transcripción] Exitosa con Deepgram (${textoTranscrito.length} caracteres)`);
             break;
           }
@@ -144,6 +170,7 @@ export async function POST(req: NextRequest) {
           const texto = (transcript.text || '').trim();
           if (texto) {
             textoTranscrito = texto;
+            proveedorUsado = 'assemblyai';
             console.info(`[Transcripción] Exitosa con AssemblyAI (${textoTranscrito.length} caracteres)`);
             break;
           }
@@ -162,7 +189,27 @@ export async function POST(req: NextRequest) {
       throw new Error('No se detectó voz clara en el audio o el archivo está vacío. Prueba con otro archivo o revisa el volumen.');
     }
 
-    return NextResponse.json({ text: textoTranscrito });
+    guardarContenidoCanonico({
+      huella,
+      tipo: 'archivo_audio',
+      fuente: urlOriginal || audioUrl,
+      estado: 'completada',
+      texto: textoTranscrito,
+      caracteres: textoTranscrito.length,
+      palabras: textoTranscrito.split(/\s+/).filter(Boolean).length,
+      idioma: 'es',
+      proveedor: proveedorUsado || 'desconocido',
+      creadoEn: Date.now(),
+      actualizadoEn: Date.now(),
+      expiraEn: 0,
+    });
+
+    return NextResponse.json({
+      text: textoTranscrito,
+      huella,
+      cached: false,
+      proveedor: proveedorUsado,
+    });
   } catch (error) {
     const mensaje = error instanceof Error ? error.message : 'Error al transcribir el audio.';
     console.error('[Transcripción] Error:', mensaje);

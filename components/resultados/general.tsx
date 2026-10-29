@@ -2,24 +2,23 @@
 
 import type { ResultadoAnalisis } from '@/lib/tipos';
 import { preguntasReflexion } from '@/lib/reflexion';
-import { construirReferencias, notaReferencias } from '@/lib/referencias';
+import { construirReferencias } from '@/lib/referencias';
 import { Caja, Cita, Lista } from './ui';
 
 export default function ResultadoGeneral({ analisis }: { analisis: ResultadoAnalisis }) {
   const preguntas = preguntasReflexion(analisis);
   const referencias = construirReferencias(analisis);
-  const notaVerificacion = notaReferencias(referencias);
 
   return (
     <article className="space-y-8 font-sans">
-      {/* 1. ENCABEZADO HOMILÉTICO Y FUNDAMENTO BÍBLICO */}
+      {/* 1. ENCABEZADO Y FUNDAMENTO BÍBLICO */}
       <header className="rounded-[16px] border border-[var(--linea)] bg-white p-6 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#f0ded3] pb-3">
           <span className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--coralOscuro)]">
             Bosquejo de Enseñanza Bíblica · MAIM
           </span>
           <span className="rounded-full bg-[#fbf2e6] px-3 py-1 text-[10px] font-semibold text-[var(--tinta)]">
-            Estilo Homilético Oficial
+            Enseñanza Bíblica Oficial
           </span>
         </div>
 
@@ -191,7 +190,7 @@ export default function ResultadoGeneral({ analisis }: { analisis: ResultadoAnal
         <footer className="border-t border-[var(--linea)] pt-4 text-[12px]">
           <details className="group cursor-pointer">
             <summary className="font-semibold text-[var(--muted)] transition hover:text-[var(--coralOscuro)]">
-              Inventario de referencias bíblicas ({referencias.length}) · {notaVerificacion}
+              Inventario de referencias bíblicas ({referencias.length})
             </summary>
             <div className="mt-3 overflow-hidden rounded-[10px] border border-[var(--linea)] bg-white">
               {referencias.map((ref) => (

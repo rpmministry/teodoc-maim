@@ -15,6 +15,8 @@ import { compartirArchivo, crearArchivo, descargarArchivo, puedeCompartirArchivo
 import { validarFormulario } from '@/lib/validacion-formulario';
 import { guardarDocumento, guardarPredicacionConGeneral, getPredicacion, leerBiblioteca, type PredicacionBiblioteca } from '@/lib/biblioteca';
 import type { ModalidadId } from '@/lib/tipos';
+import ProgresoAnalisis from '@/components/progreso-analisis';
+import { useTrackerAnalisis } from '@/lib/tracker-analisis';
 
 const FORMULARIO_INICIAL: ValoresFormulario = {
   titulo: '',
@@ -67,6 +69,47 @@ export default function Inicio() {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const inicioProgresoRef = useRef(0);
   const archivoUrlRef = useRef<string | null>(null);
+
+  const {
+    trabajo: trabajoActivo,
+    estaCargando: cargandoTracker,
+    reconectando,
+    minimizado,
+    setMinimizado,
+    iniciarTrabajo,
+    cancelarTrabajo,
+    descartarTrabajo,
+  } = useTrackerAnalisis({
+    onCompletado: (resultadoFinal) => {
+      guardarUltimoAnalisis(resultadoFinal);
+      const textoSermon = formulario.texto || textoPendiente || '';
+      if (textoSermon) {
+        guardarTranscripcionPendiente(textoSermon);
+        setTextoPendiente(textoSermon);
+        setBiblioteca(guardarPredicacionConGeneral(textoSermon, resultadoFinal.metadatos, resultadoFinal));
+      }
+      document.title = 'Análisis listo · TeoDoc MAIM';
+      void liberarPantallaActiva();
+
+      // Si está minimizado, actualizar el resultado de inmediato para que esté listo al abrir
+      if (minimizado) {
+        setResultado(resultadoFinal);
+        setPredicacionId(resultadoFinal.metadatos.fechaAnalisis);
+      } else {
+        // Si el diálogo modal está abierto, permitir que el usuario observe el 100% completado
+        // y transición suave automática tras 1.6s (o instantánea al pulsar "Ver documento completado")
+        setTimeout(() => {
+          setResultado(resultadoFinal);
+          setPredicacionId(resultadoFinal.metadatos.fechaAnalisis);
+        }, 1600);
+      }
+    },
+    onError: (mensajeError) => {
+      setErrorServicio(mensajeError);
+      document.title = TITULO_BASE;
+      void liberarPantallaActiva();
+    },
+  });
 
   const detenerProgreso = () => {
     if (timerRef.current) {
@@ -232,10 +275,11 @@ export default function Inicio() {
     }
   };
 
-  const analizar = async (opciones: { texto?: string; forzar?: boolean; reintento?: boolean } = {}) => {
-    if (cargando) return;
+  const analizar = async (opciones: { texto?: string; titulo?: string; forzar?: boolean; reintento?: boolean } = {}) => {
+    if (cargando || cargandoTracker) return;
     const texto = (opciones.texto ?? formulario.texto).trim();
-    const validacion = validarFormulario({ ...formulario, texto });
+    const titulo = opciones.titulo ?? formulario.titulo;
+    const validacion = validarFormulario({ ...formulario, texto, titulo });
     if (!validacion.valido) {
       setErrores(validacion.errores);
       setErrorServicio(null);
@@ -246,12 +290,10 @@ export default function Inicio() {
     setErrores([]);
     setErrorServicio(null);
     setAdvertenciaValidacion(null);
-    if (opciones.texto && opciones.texto !== formulario.texto) {
-      setFormulario((valor) => ({ ...valor, texto }));
+    if ((opciones.texto && opciones.texto !== formulario.texto) || (opciones.titulo && opciones.titulo !== formulario.titulo)) {
+      setFormulario((valor) => ({ ...valor, texto, titulo: titulo || valor.titulo }));
     }
     if (!opciones.reintento) setResultado(null);
-    setCargando(true);
-    iniciarProgreso(10);
     void adquirirPantallaActiva();
     document.title = 'Generando análisis… · TeoDoc MAIM';
 
@@ -274,9 +316,6 @@ export default function Inicio() {
                 ? 'El contenido no parece una enseñanza cristiana analizable. Puedes continuar si consideras que es un mensaje válido.'
                 : 'La transcripción parece demasiado corta o incompleta para un análisis responsable. Puedes añadir más contenido o continuar bajo tu criterio.';
               setAdvertenciaValidacion(motivo);
-              detenerProgreso();
-              setCargando(false);
-              setProgreso(0);
               void liberarPantallaActiva();
               document.title = TITULO_BASE;
               return;
@@ -285,87 +324,18 @@ export default function Inicio() {
         } catch {}
       }
 
-      setProgreso(42);
-      const controller = new AbortController();
-      const timeout = window.setTimeout(() => controller.abort(), 295_000);
-      let respuesta: Response;
-      try {
-        respuesta = await fetch('/api/analyze', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            text: texto,
-            modalidad: formulario.modalidad,
-            rangoEdad: formulario.modalidad === 'ninos' ? formulario.rangoEdad : undefined,
-            titulo: normalizarTituloProporcionado(formulario.titulo),
-            predicador: normalizarPredicador(formulario.predicador),
-            fecha: formulario.fecha,
-          }),
-          signal: controller.signal,
-        });
-      } catch (error) {
-        if ((error as { name?: string })?.name === 'AbortError') {
-          throw new Error('El análisis tardó más de lo permitido. Puedes reintentar con la transcripción ya cargada.');
-        }
-        throw error;
-      } finally {
-        window.clearTimeout(timeout);
-      }
-
-      const data = await respuesta.json().catch(() => null);
-      if (!respuesta.ok) {
-        if (respuesta.status === 429) throw new Error('Hay demasiadas solicitudes en este momento. Espera un minuto y vuelve a intentarlo.');
-        if (respuesta.status === 413) throw new Error('La transcripción supera el tamaño permitido. Reduce el texto antes de continuar.');
-        if (respuesta.status === 400 && data?.error) throw new Error(data.error);
-        if (data?.error === 'busy' || respuesta.status === 503) {
-          throw new Error('No se pudo completar el análisis porque el servicio está ocupado. Verifica la configuración de los proveedores de IA o intenta de nuevo más tarde.');
-        }
-        throw new Error(data?.error || 'No se pudo completar el análisis. Intenta de nuevo.');
-      }
-      if (!data || typeof data !== 'object') throw new Error('El servidor devolvió una respuesta vacía. Intenta de nuevo.');
-
-      detenerProgreso();
-      setProgreso(98);
-      const metadatos = normalizarMetadatos({
+      await iniciarTrabajo({
+        text: texto,
         modalidad: formulario.modalidad,
         rangoEdad: formulario.modalidad === 'ninos' ? formulario.rangoEdad : undefined,
+        titulo: normalizarTituloProporcionado(titulo),
         predicador: normalizarPredicador(formulario.predicador),
-        titulo: normalizarTituloProporcionado(formulario.titulo),
         fecha: formulario.fecha,
-        fechaAnalisis: (data.metadatos as { fechaAnalisis?: string } | undefined)?.fechaAnalisis,
       });
-      const normalizado = normalizarRespuesta(data, metadatos);
-      const tituloFinal = normalizarTituloProporcionado(formulario.titulo);
-      if (tituloFinal) normalizado.titulo = tituloFinal;
-      normalizado.metadatos = {
-        ...normalizado.metadatos,
-        ...metadatos,
-        tituloProporcionado: tituloFinal || undefined,
-      };
-
-      guardarUltimoAnalisis(normalizado);
-      guardarTranscripcionPendiente(texto);
-      setTextoPendiente(texto);
-      setBiblioteca(guardarPredicacionConGeneral(texto, normalizado.metadatos, normalizado));
-      setPredicacionId(normalizado.metadatos.fechaAnalisis);
-      setResultado(normalizado);
-      setProgreso(100);
-      setCargando(false);
-      document.title = TITULO_BASE;
-      if (document.hidden) {
-        document.title = 'Análisis listo · TeoDoc MAIM';
-        try { navigator.vibrate?.([100, 50, 100]); } catch {}
-      }
-      window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (error) {
-      detenerProgreso();
-      setProgreso(0);
       setTextoPendiente(texto);
-      setErrorServicio(error instanceof Error ? error.message : 'No se pudo completar el análisis. Intenta de nuevo.');
-      setCargando(false);
+      setErrorServicio(error instanceof Error ? error.message : 'No se pudo iniciar el análisis. Intenta de nuevo.');
       document.title = TITULO_BASE;
-    } finally {
-      detenerProgreso();
       void liberarPantallaActiva();
     }
   };
@@ -373,6 +343,7 @@ export default function Inicio() {
   const nuevoAnalisis = () => {
     limpiarUltimoAnalisis();
     limpiarTranscripcionPendiente();
+    descartarTrabajo();
     void liberarPantallaActiva();
     setResultado(null);
     setErrores([]);
@@ -481,6 +452,7 @@ export default function Inicio() {
           titulo: predicacion.titulo,
           predicador: predicacion.predicador,
           fecha: predicacion.fecha,
+          analisisGeneralPrevio: predicacion.documentos?.general || undefined,
         }),
         signal: controller.signal,
       });
@@ -674,10 +646,10 @@ export default function Inicio() {
                 De la prédica al <span className="text-[var(--coralOscuro)]">estudio que transforma.</span>
               </h1>
               <p className="mx-auto mt-6 max-w-xl text-[15px] leading-relaxed text-[var(--texto)] sm:text-[16px]">
-                Sube el audio de una prédica, elige cómo la vas a enseñar y recibe un análisis fiel con su PDF listo para compartir.
+                Introduce una prédica desde un enlace de video, archivo multimedia, documento Word/PDF o texto directo. Elige cómo la vas a enseñar y recibe un análisis fiel con sus documentos en PDF y Word listos para compartir.
               </p>
               <div className="mt-7 flex flex-wrap justify-center gap-2">
-                {['Análisis general', 'Grupos pequeños', 'Jóvenes', 'Niños', 'Devocionales de 7 días'].map((etiqueta) => (
+                {['Análisis general', 'Liderazgo', 'Grupos pequeños', 'Jóvenes', 'Niños', 'Devocionales de 7 días'].map((etiqueta) => (
                   <span key={etiqueta} className="rounded-full border border-[#e1c9bb] bg-white/60 px-3 py-1.5 text-[10.5px] font-semibold text-[var(--texto)]">{etiqueta}</span>
                 ))}
               </div>
@@ -689,13 +661,32 @@ export default function Inicio() {
               </div>
               <p className="mt-4 flex items-center justify-center gap-1.5 text-[11px] text-[var(--muted)]">
                 <IconoCheck className="h-3.5 w-3.5 text-[var(--coralOscuro)]" />
-                Sin inventar biografías, citas ni doctrina. El contenido se basa en la transcripción.
+                Sin inventar biografías, citas ni doctrina. El contenido se basa fielmente en la prédica o documento original.
               </p>
             </div>
           </section>
         )}
 
-        <section id="crear" className="contenedor scroll-mt-24 pb-12">
+        <section id="crear" className="contenedor scroll-mt-24 pb-12 w-full max-w-full overflow-hidden">
+          {/* Indicador de progreso y gestor de espera en segundo plano */}
+          {trabajoActivo && (
+            <ProgresoAnalisis
+              trabajo={trabajoActivo}
+              reconectando={reconectando}
+              minimizado={minimizado}
+              onMinimizar={setMinimizado}
+              onCancelar={cancelarTrabajo}
+              onVerResultado={() => {
+                if (trabajoActivo.resultado) {
+                  setResultado(trabajoActivo.resultado);
+                  setPredicacionId(trabajoActivo.resultado.metadatos.fechaAnalisis);
+                  setMinimizado(false);
+                  descartarTrabajo();
+                  window.setTimeout(() => document.getElementById('crear')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+                }
+              }}
+            />
+          )}
 
           {errorServicio && (
             <div className="mb-5 rounded-[12px] border border-[#e8b4b8] bg-[#fff4f4] px-4 py-3.5" role="alert">
@@ -720,7 +711,7 @@ export default function Inicio() {
           )}
 
           {resultado ? (
-            <div className="animar-entrada">
+            <div className="animar-entrada w-full max-w-full overflow-hidden">
               <PanelResultados
                 resultado={resultado}
                 descargando={descargando}
@@ -753,7 +744,8 @@ export default function Inicio() {
               onCambio={cambiarFormulario}
               onArchivo={(archivo) => void procesarAudio(archivo)}
               onAnalizar={() => void analizar()}
-              cargando={cargando}
+              onAnalizarConTexto={(textoExtraido, tituloSugerido) => void analizar({ texto: textoExtraido, titulo: tituloSugerido })}
+              cargando={cargando || cargandoTracker}
               estadoAudio={estadoAudio}
               errores={errores}
             />
@@ -786,15 +778,15 @@ export default function Inicio() {
             <div className="flex flex-wrap items-end justify-between gap-4">
               <div>
                 <p className="text-[10.5px] font-bold uppercase tracking-[0.16em] text-[var(--coralOscuro)]">Cómo funciona</p>
-                <h2 className="mt-2 text-[28px] font-semibold tracking-[-0.03em] text-[var(--tinta)]">Del audio al material, sin atajos.</h2>
+                <h2 className="mt-2 text-[28px] font-semibold tracking-[-0.03em] text-[var(--tinta)]">De la prédica al material ministerial, sin atajos.</h2>
               </div>
-              <p className="max-w-md text-[12px] leading-relaxed text-[var(--muted)]">Cada etapa conserva la trazabilidad del contenido. No se generan datos que la prédica no sostenga.</p>
+              <p className="max-w-md text-[12px] leading-relaxed text-[var(--muted)]">Cada etapa conserva la trazabilidad y fidelidad del mensaje. Procesa videos, audios, documentos o texto directo sin generar afirmaciones que la enseñanza no sostenga.</p>
             </div>
             <div className="mt-7 grid gap-4 md:grid-cols-3">
               {[
-                { numero: '01', titulo: 'Elige la modalidad', texto: 'Selecciona el material que necesitas: general, grupos, jóvenes, niños o devocionales.' },
-                { numero: '02', titulo: 'Sube el audio', texto: 'TeoDoc transcribe el mensaje automáticamente y lo usa como base del análisis.' },
-                { numero: '03', titulo: 'Descarga y enseña', texto: 'Obtén el PDF con portada institucional, contenido completo y numeración.' },
+                { numero: '01', titulo: 'Ingresa tu enseñanza', texto: 'Pega el enlace de un video (para descargarlo o extraer su audio), sube un archivo multimedia, carga un documento Word/PDF o pega el texto directamente.' },
+                { numero: '02', titulo: 'Elige la especialidad', texto: 'Selecciona la modalidad para tu ministerio: análisis general, enseñanza para liderazgo, grupos pequeños, jóvenes, niños o devocionales de 7 días.' },
+                { numero: '03', titulo: 'Descarga y ministra', texto: 'Obtén tus documentos en PDF y Word con diagramación institucional de MAIM Casa de Oración, referencias bíblicas verificadas y contenido listo para enseñar.' },
               ].map((paso) => (
                 <div key={paso.numero} className="rounded-[14px] bg-[var(--superficie)] p-5">
                   <span className="text-[11px] font-bold tracking-[0.1em] text-[var(--coralOscuro)]">{paso.numero}</span>

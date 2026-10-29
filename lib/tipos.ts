@@ -65,8 +65,30 @@ export interface MetadatosPredica {
 }
 
 // ---------------------------------------------------------------------------
-// Modalidad: Bosquejo Ministerial (Liderazgo MAIM)
+// Modalidad: Liderazgo MAIM (Documento Editorial Ministerial de Alta Calidad)
 // ---------------------------------------------------------------------------
+
+export interface TerminoClaveOriginal {
+  termino: string; // ej. "KOINONIA", "BAPTÍZO", "EKBÁLO"
+  significado: string; // definición del original griego o hebreo
+  aplicacion: string; // trascendencia y revelación para el mensaje
+}
+
+export interface SubseccionLiderazgo {
+  titulo: string;
+  contenido: string;
+}
+
+export interface ApartadoLiderazgo {
+  seccion?: string; // "A", "B", "C"... o "" si no aplica
+  titulo: string; // Título contundente del gran bloque
+  cita?: string; // Pasaje bíblico del apartado
+  texto_cita?: string; // Texto del versículo o pasaje
+  contenido: string; // Gran bloque continuo (180 a 500+ palabras) con exégesis y aplicación
+  subsecciones?: SubseccionLiderazgo[]; // Subapartados cuando hay cambio temático relevante
+  termino_clave?: TerminoClaveOriginal;
+  aplicacion_pastoral?: string;
+}
 
 export interface SubpuntoBosquejo {
   letra: string; // "A", "B", "C"...
@@ -111,18 +133,26 @@ export interface DesafioFinalBosquejo {
 
 export interface EstudioBosquejo {
   titulo: string;
-  tema_central: string;
-  proposito_general: string;
-  objetivos: ObjetivosBosquejo;
-  tesis: string; // Proposición homilética / Idea central en una sola oración clara
-  fundamento_doctrinal: string; // Síntesis doctrinal explícitamente fundamentada en la enseñanza
-  texto_base: Versiculo;
-  introduccion: IntroduccionBosquejo;
-  puntos_principales: PuntoPrincipalBosquejo[];
-  conclusion: ConclusionBosquejo;
-  aplicacion_liderazgo: string[]; // Puntos de aplicación práctica y pastoral para el liderazgo de MAIM
-  desafio_final: DesafioFinalBosquejo;
+  epigrafe_biblico?: Versiculo; // Pasaje bíblico de apertura si el mensaje abre con uno (ej. Juan 16:7)
+  introduccion_editorial?: string; // Introducción integrada en prosa cuando la prédica lo requiere
+  apartados?: ApartadoLiderazgo[]; // Grandes apartados temáticos u orgánicos del mensaje
+  conclusion_editorial?: string; // Conclusión ministerial, clímax espiritual o exhortación final en prosa continua
+  // Campos de compatibilidad histórica:
+  tema_central?: string;
+  proposito_general?: string;
+  objetivos?: ObjetivosBosquejo;
+  tesis?: string; // Proposición homilética / Idea central
+  fundamento_doctrinal?: string; // Síntesis doctrinal explícitamente fundamentada
+  texto_base?: Versiculo;
+  introduccion?: IntroduccionBosquejo;
+  puntos_principales?: PuntoPrincipalBosquejo[];
+  conclusion?: ConclusionBosquejo;
+  aplicacion_liderazgo?: string[]; // Puntos de aplicación práctica y pastoral
+  desafio_final?: DesafioFinalBosquejo;
 }
+
+export type EstudioLiderazgo = EstudioBosquejo;
+export type PuntoPrincipalLiderazgo = PuntoPrincipalBosquejo;
 
 export interface AgendaGrupo {
   momento: string;
@@ -247,6 +277,7 @@ export interface ResultadoAnalisis extends PredicaAnalisis {
   metadatos: MetadatosPredica;
   especializado: ContenidoEspecializado;
   advertenciaEspecializado?: string;
+  huellaCanonica?: string;
 }
 
 export interface EntradaAnalisis {
