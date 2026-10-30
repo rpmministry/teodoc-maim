@@ -250,23 +250,23 @@ export default function FormularioAnalisis({
     }
   };
 
-  // --- Manejador: Ejecutar Operación A (Descargar Video) u Operación B (Extraer Audio) ---
-  const ejecutarOperacionVideo = async (operacion: 'descargar_video' | 'extraer_audio') => {
+  // --- Manejador: Ejecutar Extracción y Análisis de YouTube ---
+  const ejecutarOperacionVideo = async (operacion: 'extraer_audio' | 'descargar_video' = 'extraer_audio') => {
     const urlLimpia = normalizarUrl(urlVideo);
     if (!urlLimpia) return;
 
     const esFacebook = urlLimpia.includes('facebook.com') || urlLimpia.includes('fb.watch');
     if (esFacebook) {
       setErrorVideo(
-        'Facebook restringe la extracción y descarga directa en servidores en la nube. Para analizar esta prédica de Casa de Oración MAIM, por favor pega el enlace de YouTube de la transmisión (se analiza en segundos) o sube la grabación de audio (.mp3 / .m4a) en la pestaña "Archivo multimedia".'
+        'Facebook restringe la extracción directa en servidores en la nube. Para analizar esta prédica de Casa de Oración MAIM, por favor pega el enlace de YouTube de la transmisión (se analiza en segundos) o sube la grabación de audio (.mp3 / .m4a) en la pestaña "Archivo multimedia".'
       );
       setProcesandoOperacion(null);
       return;
     }
 
-    setProcesandoOperacion(operacion === 'descargar_video' ? 'descarga' : 'audio');
+    setProcesandoOperacion('audio');
     setProgresoOperacion(5);
-    setMensajeOperacion(operacion === 'descargar_video' ? 'Iniciando descarga de video...' : 'Extrayendo audio del video...');
+    setMensajeOperacion('Preparando extracción del mensaje...');
     setErrorVideo(null);
     setAvisoVideo(null);
     void adquirirPantallaActiva();
@@ -622,7 +622,7 @@ export default function FormularioAnalisis({
             }`}
           >
             <IconoVideo className="h-4 w-4 shrink-0" />
-            <span className="truncate">Video por enlace</span>
+            <span className="truncate">Enlace de YouTube</span>
           </button>
           <button
             type="button"
@@ -650,12 +650,15 @@ export default function FormularioAnalisis({
           </button>
         </div>
 
-        {/* --- PESTAÑA A: VIDEO MEDIANTE ENLACE --- */}
+        {/* --- PESTAÑA A: ENLACE DE YOUTUBE PARA ANÁLISIS --- */}
         {tabOrigen === 'enlace' && (
           <div className="rounded-[16px] border border-[#dfc7bb] bg-[#fbf5ed] p-4 sm:p-5 w-full max-w-full overflow-hidden">
             <label className="block w-full max-w-full">
-              <span className="mb-2 block text-[12.5px] font-semibold text-[var(--tinta)]">
-                Pega el enlace del video (YouTube, Vimeo, Facebook, enlace directo MP4/HLS)
+              <span className="mb-1 block text-[13px] font-semibold text-[var(--tinta)]">
+                Pega el enlace de la prédica en YouTube
+              </span>
+              <span className="mb-2.5 block text-[11.5px] text-[var(--muted)]">
+                TeoDoc MAIM extraerá la transcripción oficial en segundos para generar el estudio teológico y homilético completo.
               </span>
               <div className="flex flex-col gap-2 sm:flex-row w-full max-w-full">
                 <input
@@ -676,7 +679,7 @@ export default function FormularioAnalisis({
                     }
                   }}
                   onPaste={manejarPegadoUrl}
-                  placeholder="https://www.youtube.com/watch?v=... o https://vimeo.com/..."
+                  placeholder="https://www.youtube.com/watch?v=... o https://youtu.be/..."
                   disabled={Boolean(procesandoOperacion)}
                 />
                 <button
@@ -685,7 +688,7 @@ export default function FormularioAnalisis({
                   disabled={!urlVideo.trim() || explorandoVideo || Boolean(procesandoOperacion)}
                   className="btn-secundario shrink-0 justify-center w-full sm:w-auto"
                 >
-                  {explorandoVideo ? 'Explorando…' : 'Comprobar video'}
+                  {explorandoVideo ? 'Verificando…' : 'Comprobar enlace'}
                 </button>
               </div>
             </label>
@@ -766,53 +769,25 @@ export default function FormularioAnalisis({
                   </div>
                 )}
 
-                {/* Acciones del video: Operación A (Descargar) vs Operación B (Extraer Audio) */}
-                <div className="mt-4 flex flex-col gap-3 border-t border-[#f2e6dc] pt-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between w-full max-w-full">
-                  <div className="flex flex-wrap items-center gap-2 min-w-0">
-                    <label htmlFor="calidad-select" className="text-[11.5px] font-semibold text-[var(--muted)] shrink-0">
-                      Calidad de descarga:
-                    </label>
-                    <select
-                      id="calidad-select"
-                      className="rounded-[8px] border border-[#d8c4b8] bg-[#fbf5ed] px-2.5 py-1.5 text-[11.5px] font-medium text-[var(--tinta)] max-w-full"
-                      value={calidadSeleccionada}
-                      onChange={(e) => setCalidadSeleccionada(e.target.value)}
-                      disabled={Boolean(procesandoOperacion)}
-                    >
-                      {(metadatosVideo?.formatosDisponibles || [
-                        { id: 'best', resolucion: 'Mejor calidad disponible', extension: 'mp4' },
-                        { id: '720p', resolucion: '720p (HD)', extension: 'mp4' },
-                        { id: 'audio_mp3', resolucion: 'Solo audio', extension: 'mp3' },
-                      ]).map((f) => (
-                        <option key={f.id} value={f.id}>
-                          {f.resolucion} ({f.extension.toUpperCase()})
-                        </option>
-                      ))}
-                    </select>
+                {/* Acción de análisis directo de YouTube */}
+                <div className="mt-4 flex flex-col gap-3 border-t border-[#f2e6dc] pt-4 sm:flex-row sm:items-center sm:justify-between w-full max-w-full">
+                  <div className="text-[11.5px] text-[var(--muted)]">
+                    <span className="font-semibold text-[var(--tinta)]">Modo optimizado:</span> Extracción directa de transcripción y audio oficial para análisis teológico instantáneo.
                   </div>
 
-                  <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-                    <button
-                      type="button"
-                      onClick={() => void ejecutarOperacionVideo('descargar_video')}
-                      disabled={Boolean(procesandoOperacion) || explorandoVideo}
-                      className="btn-secundario text-[12px] py-2 px-3 gap-1.5 flex-1 sm:flex-initial justify-center"
-                    >
-                      <IconoDescarga className="h-3.5 w-3.5 shrink-0" />
-                      <span>Descargar video</span>
-                    </button>
+                  <div className="flex w-full sm:w-auto justify-end">
                     <button
                       type="button"
                       onClick={() => void ejecutarOperacionVideo('extraer_audio')}
                       disabled={Boolean(procesandoOperacion)}
-                      className="btn-primario text-[12px] py-2 px-3 gap-1.5 flex-1 sm:flex-initial justify-center"
+                      className="btn-primario text-[12.5px] py-2.5 px-4 gap-2 w-full sm:w-auto justify-center font-bold shadow-sm"
                     >
-                      <span>⚡ Extraer audio y analizar</span>
+                      <span>⚡ Transcribir y analizar prédica</span>
                     </button>
                   </div>
                 </div>
 
-                {/* Barra de progreso de la operación multimedia */}
+                {/* Barra de progreso de la extracción y transcripción */}
                 {procesandoOperacion && (
                   <div className="mt-4 border-t border-[#f2e6dc] pt-3">
                     <div className="flex items-center justify-between text-[11.5px] font-medium text-[var(--coralOscuro)] mb-1.5">
@@ -825,15 +800,6 @@ export default function FormularioAnalisis({
                         style={{ width: `${Math.max(5, progresoOperacion)}%` }}
                       />
                     </div>
-                  </div>
-                )}
-
-                {urlDescargaDirecta && (
-                  <div className="mt-3 flex items-center justify-between rounded-[10px] bg-[#e8f5e9] p-3 text-[12px] font-semibold text-[#276738]">
-                    <span>✓ Video listo para descargar en tu equipo</span>
-                    <a href={urlDescargaDirecta} download className="underline font-bold hover:text-[#1b4b27]">
-                      Descargar archivo
-                    </a>
                   </div>
                 )}
               </div>

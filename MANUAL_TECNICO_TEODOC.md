@@ -18,9 +18,7 @@ La documentación detallada está en:
 ## 1. Flujo Unificado de Análisis
 
 1. La persona accede a la ventana unificada de entrada con 3 orígenes disponibles:
-   - **Video por enlace:** Detección automática del proveedor (YouTube, Vimeo, Facebook, stream directo), sondeo de metadatos (`/api/multimedia/probe`), y selección entre:
-     - *Operación A:* Descargar video en calidades disponibles (mejor calidad, 720p, 480p, audio).
-     - *Operación B:* Extraer directamente la pista de audio y enviarla de inmediato al motor de análisis y transcripción.
+   - **Enlace de YouTube:** Detección de enlace de prédica en YouTube, sondeo instantáneo de metadatos (`/api/multimedia/probe`) y extracción de transcripción/audio oficial (`/api/youtube`) en 1.5 segundos sin descargas pesadas de video en Vercel Serverless, pasando directamente al análisis ministerial completo. Para otras fuentes (ej. Facebook), se orienta al uso del enlace de YouTube o a la carga del audio en la pestaña multimedia.
    - **Archivo multimedia:** Subida directa de archivos de audio/video locales (`audio-file-input`), con procesamiento por fragmentos.
    - **Documento o texto:** Extracción automática de texto en servidor (`/api/document/extract`) para Word (`.docx`), PDF seleccionable (con alerta si es documento escaneado), OpenDocument (`.odt`), `.rtf` y texto plano (`.txt`), o pegado directo con contador de palabras y caracteres.
 2. Si el contenido proviene de audio/video, se transcribe con AssemblyAI (respaldo: Deepgram `nova-2`).

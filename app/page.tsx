@@ -646,7 +646,7 @@ export default function Inicio() {
                 De la prédica al <span className="text-[var(--coralOscuro)]">estudio que transforma.</span>
               </h1>
               <p className="mx-auto mt-6 max-w-xl text-[15px] leading-relaxed text-[var(--texto)] sm:text-[16px]">
-                Introduce una prédica desde un enlace de video, archivo multimedia, documento Word/PDF o texto directo. Elige cómo la vas a enseñar y recibe un análisis fiel con sus documentos en PDF y Word listos para compartir.
+                Introduce una prédica desde un enlace de YouTube, archivo de audio, documento Word/PDF o texto directo. Elige cómo la vas a enseñar y recibe un análisis fiel con sus documentos en PDF y Word listos para compartir.
               </p>
               <div className="mt-7 flex flex-wrap justify-center gap-2">
                 {['Análisis general', 'Liderazgo', 'Grupos pequeños', 'Jóvenes', 'Niños', 'Devocionales de 7 días'].map((etiqueta) => (
@@ -784,7 +784,7 @@ export default function Inicio() {
             </div>
             <div className="mt-7 grid gap-4 md:grid-cols-3">
               {[
-                { numero: '01', titulo: 'Ingresa tu enseñanza', texto: 'Pega el enlace de un video (para descargarlo o extraer su audio), sube un archivo multimedia, carga un documento Word/PDF o pega el texto directamente.' },
+                { numero: '01', titulo: 'Ingresa tu enseñanza', texto: 'Pega el enlace de una prédica en YouTube para transcribirla y analizarla en segundos, sube un archivo de audio, carga un documento Word/PDF o pega las notas directamente.' },
                 { numero: '02', titulo: 'Elige la especialidad', texto: 'Selecciona la modalidad para tu ministerio: análisis general, enseñanza para liderazgo, grupos pequeños, jóvenes, niños o devocionales de 7 días.' },
                 { numero: '03', titulo: 'Descarga y ministra', texto: 'Obtén tus documentos en PDF y Word con diagramación institucional de MAIM Casa de Oración, referencias bíblicas verificadas y contenido listo para enseñar.' },
               ].map((paso) => (
