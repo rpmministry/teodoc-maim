@@ -791,6 +791,9 @@ export default function FormularioAnalisis({
                         type="button"
                         onClick={() => {
                           setErrorVideo(null);
+                          if (metadatosVideo?.titulo && !valores.titulo) {
+                            onCambio({ titulo: metadatosVideo.titulo });
+                          }
                           setTabOrigen('documento');
                         }}
                         className="rounded-full border border-[#e8b5b8] bg-white px-3.5 py-1.5 text-[11px] font-bold text-[#8f2830] hover:bg-[#fff0f0] transition"

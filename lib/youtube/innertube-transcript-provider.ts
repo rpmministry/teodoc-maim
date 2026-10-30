@@ -124,11 +124,88 @@ function parsearXmlSubtitulos(xml: string, _idioma?: string): TranscriptSegment[
 }
 
 /**
- * Proveedor nativo de alto rendimiento para YouTube basado en perfiles multi-cliente de InnerTube.
- * Prioriza el cliente oficial de iOS (inmune a bot-challenges y rate-limits en IPs de centros de datos de Vercel/AWS)
- * con respaldo automático a Android con sesión verificada.
- * No realiza scraping de HTML, no descarga video ni audio, y obtiene subtítulos
- * directos oficiales y metadatos (título y autor) en ~1-2 segundos.
+ * Servicio de rescate y contingencia externa anti-bloqueo para entornos en la nube (Vercel).
+ * Si los endpoints de Google bloquean temporalmente la IP del servidor con retos bot (429/LOGIN_REQUIRED),
+ * este servicio puente obtiene la transcripción oficial en texto limpio y la convierte a segmentos.
+ */
+async function fetchFromTranscriptProxy(videoId: string): Promise<TranscriptResult | null> {
+  try {
+    const targetUrl = encodeURIComponent(`https://www.youtube.com/watch?v=${videoId}`);
+    const res = await fetch(`https://getyoutubetranscript.com/api/transcript?url=${targetUrl}`, {
+      headers: {
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        Accept: 'application/json',
+      },
+      signal: AbortSignal.timeout(10_000),
+    });
+
+    if (!res.ok) return null;
+    const data = (await res.json().catch(() => null)) as {
+      success?: boolean;
+      transcript?: string;
+      language_code?: string;
+      video_metadata?: {
+        title?: string;
+        author_name?: string;
+      };
+    } | null;
+
+    if (data?.success && typeof data.transcript === 'string' && data.transcript.trim().length >= 50) {
+      const fullText = data.transcript.trim();
+      const chunks = fullText.split(/(?<=[.?!])\s+/);
+      const segments: TranscriptSegment[] = [];
+      let currentSec = 0;
+
+      for (const ch of chunks) {
+        const trimmed = ch.trim();
+        if (!trimmed) continue;
+        const words = trimmed.split(/\s+/).length;
+        const dur = Math.max(2, Math.round(words * 0.4));
+        segments.push({
+          text: trimmed,
+          start: currentSec,
+          duration: dur,
+        });
+        currentSec += dur;
+      }
+
+      let title = data.video_metadata?.title?.trim();
+      let author = data.video_metadata?.author_name?.trim();
+
+      if (!title || !author) {
+        const oembed = await fetchYouTubeOembed(videoId);
+        if (!title && oembed.title) title = oembed.title;
+        if (!author && oembed.author) author = oembed.author;
+      }
+
+      return {
+        text: fullText,
+        segments: segments.length > 0 ? segments : [{ text: fullText, start: 0, duration: 0 }],
+        meta: {
+          source: 'youtube',
+          videoId,
+          url: `https://www.youtube.com/watch?v=${videoId}`,
+          language: data.language_code || 'es',
+          generated: true,
+          title,
+          author,
+          providerName: 'innertube',
+          method: 'subtitulos',
+        },
+      };
+    }
+  } catch (err) {
+    console.warn('[InnerTube Proxy] Contingencia externa falló:', (err as Error)?.message);
+  }
+  return null;
+}
+
+/**
+ * Proveedor nativo de alto rendimiento para YouTube basado en perfiles multi-cliente de InnerTube
+ * y contingencia externa anti-bloqueo.
+ * Prioriza el cliente oficial de iOS (inmune a bot-challenges y rate-limits en IPs de centros de datos de Vercel/AWS),
+ * con respaldo automático a Android con sesión verificada y rescate transparente ante bloqueos de red.
  */
 export const innertubeTranscriptProvider: TranscriptProvider = {
   name: 'innertube',
@@ -316,9 +393,18 @@ export const innertubeTranscriptProvider: TranscriptProvider = {
           }
         }
 
+        // Si los perfiles directos de Google InnerTube fueron desafiados por IP de datacenter (429 / LOGIN_REQUIRED),
+        // recurrir inmediatamente al servicio proxy de contingencia para obtener la transcripción íntegra.
+        console.info(`[InnerTube] Activando servicio proxy de contingencia para video ${videoId}...`);
+        const resultadoProxy = await fetchFromTranscriptProxy(videoId);
+        if (resultadoProxy && resultadoProxy.text.length >= 50) {
+          console.info(`[InnerTube] Transcripción recuperada con éxito vía proxy de contingencia: ${resultadoProxy.text.length} caracteres.`);
+          return resultadoProxy;
+        }
+
         throw ultimoError || new TranscriptError('sin_subtitulos', 'No encontramos subtítulos utilizables en este video.');
       })(),
-      15_000,
+      20_000,
       'Tiempo de espera agotado al consultar YouTube.'
     );
   },
