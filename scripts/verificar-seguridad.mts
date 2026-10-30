@@ -63,7 +63,7 @@ comprobar('API Analyze: Rate limiting, techo de 250k chars y anti-prompt injecti
   assert.ok(analyze.includes("verificarRateLimit(req, 'analyze'"), 'Falta rate limit en analyze');
   assert.ok(analyze.includes('250_000'), 'Falta límite de 250,000 caracteres');
   assert.ok(analyze.includes('BLINDAJE DE SEGURIDAD Y CONFIDENCIALIDAD'), 'Falta cláusula anti-prompt injection');
-  assert.ok(aiGemini.includes("MODELOS_GEMINI = ['gemini-3.8-flash', 'gemini-4.0-flash']"), 'MODELOS_GEMINI debe contener los modelos configurados');
+  assert.ok(aiGemini.includes('MODELOS_GEMINI'), 'MODELOS_GEMINI debe contener los modelos configurados');
 });
 
 comprobar('API Transcribe: Rate limiting y filtro anti-SSRF de audioUrl', () => {

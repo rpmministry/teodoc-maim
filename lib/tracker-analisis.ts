@@ -86,6 +86,38 @@ export function enviarNotificacionNavegador(titulo: string, opciones?: Notificat
   } catch {}
 }
 
+/**
+ * Conector de reconexión SSE y fallback a sondeo HTTP periódico para trabajos prolongados.
+ */
+export function iniciarPollingFallback(jobId: string, onUpdate?: (data: any) => void): () => void {
+  const interval = setInterval(async () => {
+    try {
+      const res = await fetch(`/api/analyze/job?id=${jobId}`);
+      if (res.ok) {
+        const data = await res.json();
+        onUpdate?.(data);
+      }
+    } catch {}
+  }, 3000);
+  return () => clearInterval(interval);
+}
+
+export function conectarEventSourceJob(jobId: string, onUpdate?: (data: any) => void): EventSource | null {
+  if (typeof window === 'undefined' || !('EventSource' in window)) return null;
+  try {
+    const es = new EventSource(`/api/analyze/job/stream?id=${jobId}`);
+    es.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        onUpdate?.(data);
+      } catch {}
+    };
+    return es;
+  } catch {
+    return null;
+  }
+}
+
 export interface UseTrackerAnalisisProps {
   onCompletado?: (resultado: ResultadoAnalisis) => void;
   onError?: (mensaje: string) => void;

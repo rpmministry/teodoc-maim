@@ -30,8 +30,9 @@
     "test:canonica": "node scripts/verificar-transcripcion-canonica.mts",
     "test:modelos-liderazgo": "node scripts/verificar-modelos-editoriales-liderazgo.mts",
     "test:espera": "node scripts/verificar-experiencia-espera.mts",
+    "test:youtube": "node scripts/verificar-youtube-completo.mts",
     "biblia:buscar": "node scripts/buscar-biblia.mts",
-    "verificar": "npm run test:logica && npm run test:modalidades && npm run test:biblia && npm run test:biblia-rvc && npm run test:pdf && npm run test:word && npm run test:entrega && npm run test:seguridad && npm run test:resiliencia && npm run test:identidad && npm run test:biblioteca && npm run test:multimedia && npm run test:canonica && npm run test:modelos-liderazgo && npm run test:espera"
+    "verificar": "npm run test:logica && npm run test:modalidades && npm run test:biblia && npm run test:biblia-rvc && npm run test:pdf && npm run test:word && npm run test:entrega && npm run test:seguridad && npm run test:resiliencia && npm run test:identidad && npm run test:biblioteca && npm run test:multimedia && npm run test:canonica && npm run test:modelos-liderazgo && npm run test:espera && npm run test:youtube"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

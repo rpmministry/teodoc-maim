@@ -5,9 +5,9 @@ import {
   type TranscriptProvider,
   type TranscriptResult,
   type TranscriptSegment,
-} from './transcript-provider';
-import { parseVtt } from './vtt';
-import { fetchYouTubeOembed } from './oembed';
+} from './transcript-provider.ts';
+import { parseVtt } from './vtt.ts';
+import { fetchYouTubeOembed } from './oembed.ts';
 
 // Respaldo OPEN SOURCE auto-hospedable. Apunta a un servicio propio (por
 // ejemplo `youtube-transcript-api`, ver microservicios-externos/youtube-transcript-api) que no

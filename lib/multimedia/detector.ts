@@ -72,8 +72,17 @@ export function validarUrlMultimedia(rawUrl: string): ValidacionUrlResultado {
     limpia = matchDoble[1];
   }
 
-  // Si no se incluyó protocolo http:// o https://, agregarlo por defecto
-  if (!/^https?:\/\//i.test(limpia)) {
+  // Si incluye un protocolo explícito diferente a http o https, rechazar de inmediato
+  if (/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//i.test(limpia)) {
+    if (!/^https?:\/\//i.test(limpia)) {
+      return {
+        esValida: false,
+        proveedor: 'desconocido',
+        error: 'Solo se admiten enlaces mediante protocolo HTTP o HTTPS.',
+      };
+    }
+  } else {
+    // Si no se incluyó protocolo, agregarlo por defecto
     limpia = `https://${limpia}`;
   }
 

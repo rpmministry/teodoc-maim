@@ -13,8 +13,8 @@ import {
   type TranscriptProvider,
   type TranscriptResult,
   type TranscriptSegment,
-} from './transcript-provider';
-import { fetchYouTubeOembed } from './oembed';
+} from './transcript-provider.ts';
+import { fetchYouTubeOembed } from './oembed.ts';
 
 // Prioridad de idioma: español y sus variantes; luego el primer track disponible
 // (si el mensaje está en otro idioma, el análisis actual igual puede procesarlo).

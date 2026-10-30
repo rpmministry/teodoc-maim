@@ -5,8 +5,8 @@ import {
   type TranscriptProvider,
   type TranscriptResult,
   type TranscriptSegment,
-} from './transcript-provider';
-import { fetchYouTubeOembed } from './oembed';
+} from './transcript-provider.ts';
+import { fetchYouTubeOembed } from './oembed.ts';
 
 // Proveedor externo (Supadata). Corre desde su infraestructura, por lo que no
 // sufre los bloqueos de IP que YouTube aplica a proveedores cloud.

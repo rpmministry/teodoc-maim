@@ -111,12 +111,14 @@ export default function FormularioAnalisis({
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const timeoutExplorarRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const operacionAbortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     return () => {
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
       if (timeoutExplorarRef.current) clearTimeout(timeoutExplorarRef.current);
       if (abortControllerRef.current) abortControllerRef.current.abort();
+      if (operacionAbortRef.current) operacionAbortRef.current.abort();
     };
   }, []);
 
@@ -250,6 +252,20 @@ export default function FormularioAnalisis({
     }
   };
 
+  // --- Cancelar Operación Multimedia ---
+  const cancelarOperacionVideo = () => {
+    if (operacionAbortRef.current) {
+      operacionAbortRef.current.abort();
+    }
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+    }
+    setProcesandoOperacion(null);
+    setProgresoOperacion(0);
+    setMensajeOperacion('');
+    void liberarPantallaActiva();
+  };
+
   // --- Manejador: Ejecutar Extracción y Análisis de YouTube ---
   const ejecutarOperacionVideo = async (operacion: 'extraer_audio' | 'descargar_video' = 'extraer_audio') => {
     const urlLimpia = normalizarUrl(urlVideo);
@@ -272,30 +288,69 @@ export default function FormularioAnalisis({
     void adquirirPantallaActiva();
 
     try {
-      // 1. ATRACTOR DE ALTA VELOCIDAD PARA YOUTUBE:
-      // Si la operación es extraer audio y la URL es de YouTube, consultar primero /api/youtube.
-      // Obtiene la transcripción oficial verificada en menos de 2 segundos sin descargas pesadas
-      // ni dependencias de ffmpeg/yt-dlp en el servidor cloud (Vercel).
+      // 1. PIPELINE DE ALTA VELOCIDAD Y RESILIENCIA PARA YOUTUBE:
+      // Admite subtítulos instantáneos (~1.5s) y extracción directa de audio con transcripción IA (Deepgram Nova-2).
+      // Funciona 100% en Next.js/Vercel sin binarios de sistema.
       if (operacion === 'extraer_audio' && (urlLimpia.includes('youtube.com') || urlLimpia.includes('youtu.be'))) {
-        setMensajeOperacion('Conectando con la prédica en YouTube...');
-        setProgresoOperacion(20);
+        setMensajeOperacion('Conectando con YouTube y verificando permisos...');
+        setProgresoOperacion(15);
 
-        const tickerProgreso = setInterval(() => {
-          setProgresoOperacion((ant) => (ant < 80 ? ant + 12 : ant));
-        }, 300);
+        operacionAbortRef.current = new AbortController();
+        const signal = operacionAbortRef.current.signal;
 
         try {
           const ytRes = await fetch('/api/youtube', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ url: urlLimpia }),
+            headers: {
+              'Content-Type': 'application/json',
+              Accept: 'text/event-stream, application/json',
+            },
+            body: JSON.stringify({ url: urlLimpia, stream: true }),
+            signal,
           });
-          const ytData = await ytRes.json().catch(() => null);
-          clearInterval(tickerProgreso);
 
-          if (ytRes.ok && ytData?.ok && ytData?.text && ytData.text.trim().length >= 100) {
-            setProgresoOperacion(90);
-            setMensajeOperacion('¡Transcripción obtenida con éxito!');
+          let ytData: any = null;
+
+          if (ytRes.headers.get('content-type')?.includes('text/event-stream') && ytRes.body) {
+            const reader = ytRes.body.getReader();
+            const decoder = new TextDecoder();
+            let bufferLectura = '';
+
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              bufferLectura += decoder.decode(value, { stream: true });
+              const lineas = bufferLectura.split('\n');
+              bufferLectura = lineas.pop() || '';
+
+              for (const linea of lineas) {
+                const lineaLimpia = linea.trim();
+                if (lineaLimpia.startsWith('data: ')) {
+                  try {
+                    const evento = JSON.parse(lineaLimpia.slice(6));
+                    if (evento.progreso !== undefined) setProgresoOperacion(evento.progreso);
+                    if (evento.mensaje) setMensajeOperacion(evento.mensaje);
+                    if (evento.etapa === 'error') {
+                      throw new Error(evento.mensaje || evento.error || 'Error al procesar el video de YouTube.');
+                    }
+                    if (evento.etapa === 'completado' && evento.resultado) {
+                      ytData = evento.resultado;
+                    }
+                  } catch (parseErr: any) {
+                    if (parseErr.message && !parseErr.message.includes('JSON')) {
+                      throw parseErr;
+                    }
+                  }
+                }
+              }
+            }
+          } else {
+            ytData = await ytRes.json().catch(() => null);
+          }
+
+          if (ytData?.ok && ytData?.text && ytData.text.trim().length >= 50) {
+            setProgresoOperacion(100);
+            setMensajeOperacion('¡Transcripción completada con éxito!');
             const textoTranscrito = ytData.text.trim();
             onCambio({ texto: textoTranscrito });
             guardarTranscripcionPendiente(textoTranscrito);
@@ -306,8 +361,8 @@ export default function FormularioAnalisis({
             }
 
             setMensajeOperacion('Iniciando análisis ministerial...');
-            setProgresoOperacion(100);
             setProcesandoOperacion(null);
+            void liberarPantallaActiva();
 
             if (onAnalizarConTexto) {
               onAnalizarConTexto(textoTranscrito, tituloFinal);
@@ -318,15 +373,21 @@ export default function FormularioAnalisis({
           } else {
             throw new Error(
               ytData?.message ||
-              'No encontramos subtítulos automáticos en este video de YouTube. Te recomendamos subir la grabación de audio (.mp3 o .m4a) en la pestaña "Archivo multimedia" para transcribirlo con IA.'
+                'No encontramos transcripción utilizable para este video. Te recomendamos subir la grabación de audio (.mp3 o .m4a) en la pestaña "Archivo multimedia" o pegar el texto directamente.',
             );
           }
-        } catch (ytErr) {
-          clearInterval(tickerProgreso);
+        } catch (ytErr: any) {
+          if (ytErr?.name === 'AbortError') {
+            setProcesandoOperacion(null);
+            setProgresoOperacion(0);
+            setMensajeOperacion('');
+            void liberarPantallaActiva();
+            return;
+          }
           setErrorVideo(
             ytErr instanceof Error
               ? ytErr.message
-              : 'No pudimos obtener la transcripción de este video. Puedes probar subiendo el audio directamente en la pestaña "Archivo multimedia".'
+              : 'No pudimos obtener la transcripción de este video. Puedes probar subiendo el audio directamente en la pestaña "Archivo multimedia".',
           );
           setProcesandoOperacion(null);
           void liberarPantallaActiva();
@@ -823,9 +884,18 @@ export default function FormularioAnalisis({
                 {/* Barra de progreso de la extracción y transcripción */}
                 {procesandoOperacion && (
                   <div className="mt-4 border-t border-[#f2e6dc] pt-3">
-                    <div className="flex items-center justify-between text-[11.5px] font-medium text-[var(--coralOscuro)] mb-1.5">
-                      <span>{mensajeOperacion}</span>
-                      <span>{progresoOperacion}%</span>
+                    <div className="flex items-center justify-between text-[11.5px] font-medium text-[var(--coralOscuro)] mb-1.5 gap-2">
+                      <span className="truncate">{mensajeOperacion}</span>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span>{progresoOperacion}%</span>
+                        <button
+                          type="button"
+                          onClick={cancelarOperacionVideo}
+                          className="text-[11px] font-semibold text-[#8c4a27] hover:text-[#b34015] underline cursor-pointer"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
                     </div>
                     <div className="h-2 overflow-hidden rounded-full bg-[#f0e3d5]">
                       <div

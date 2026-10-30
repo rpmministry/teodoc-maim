@@ -4,7 +4,7 @@ import {
   type TranscriptResult,
   type TranscriptSegment,
   withTimeout,
-} from './transcript-provider';
+} from './transcript-provider.ts';
 
 const INNERTUBE_API_URL = 'https://www.youtube.com/youtubei/v1/player?prettyPrint=false';
 const INNERTUBE_CLIENT_VERSION = '20.10.38';
@@ -136,11 +136,13 @@ export const innertubeTranscriptProvider: TranscriptProvider = {
           throw new TranscriptError('desconocido', 'Respuesta vacía de YouTube.');
         }
 
-        if (data.playabilityStatus?.status === 'UNPLAYABLE' || data.videoDetails?.isPrivate) {
-          throw new TranscriptError(
-            'video_no_disponible',
-            data.playabilityStatus?.reason || 'Este video no está disponible o es privado.'
-          );
+        const playStatus = data.playabilityStatus?.status;
+        if ((playStatus && playStatus !== 'OK') || data.videoDetails?.isPrivate) {
+          const reason = data.playabilityStatus?.reason || 'Este video no está disponible o es privado.';
+          if (playStatus === 'LOGIN_REQUIRED') {
+            throw new TranscriptError('video_no_disponible', 'Este video requiere inicio de sesión, es privado o tiene restricción de edad.');
+          }
+          throw new TranscriptError('video_no_disponible', reason);
         }
 
         const captionTracks = data.captions?.playerCaptionsTracklistRenderer?.captionTracks;
@@ -215,6 +217,7 @@ export const innertubeTranscriptProvider: TranscriptProvider = {
             title,
             author,
             providerName: 'innertube',
+            method: 'subtitulos',
           },
         };
       })(),

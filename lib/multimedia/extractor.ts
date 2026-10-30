@@ -2,8 +2,8 @@ import { spawn } from 'node:child_process';
 import { existsSync, statSync, readdirSync } from 'node:fs';
 import { resolve, join } from 'node:path';
 import { obtenerDirectorioStaging, type MetadatosVideoInfo } from './job-manager.ts';
-import { extractYouTubeVideoId } from '../youtube/extract-video-id';
-import { fetchYouTubeOembed } from '../youtube/oembed';
+import { extractYouTubeVideoId } from '../youtube/extract-video-id.ts';
+import { fetchYouTubeOembed } from '../youtube/oembed.ts';
 
 const NAVEGADOR_USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
