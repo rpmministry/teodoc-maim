@@ -771,6 +771,16 @@ export default function FormularioAnalisis({
                         type="button"
                         onClick={() => {
                           setErrorVideo(null);
+                          void ejecutarOperacionVideo('extraer_audio');
+                        }}
+                        className="rounded-full bg-[#8f2830] px-3.5 py-1.5 text-[11px] font-bold text-white hover:bg-[#7a2128] transition shadow-xs"
+                      >
+                        🔄 Reintentar extracción
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setErrorVideo(null);
                           setTabOrigen('archivo');
                         }}
                         className="rounded-full bg-[#fde8e8] px-3.5 py-1.5 text-[11px] font-bold text-[#8f2830] hover:bg-[#fad0d0] transition"

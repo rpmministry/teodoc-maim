@@ -6,10 +6,55 @@ import {
   withTimeout,
 } from './transcript-provider.ts';
 import { getYouTubeVisitorData } from './visitor-data.ts';
+import { fetchYouTubeOembed } from './oembed.ts';
 
 const INNERTUBE_API_URL = 'https://www.youtube.com/youtubei/v1/player?prettyPrint=false';
-const INNERTUBE_CLIENT_VERSION = '20.10.38';
-const INNERTUBE_USER_AGENT = `com.google.android.youtube/${INNERTUBE_CLIENT_VERSION} (Linux; U; Android 14)`;
+
+interface InnerTubeClientProfile {
+  name: string;
+  context: {
+    client: Record<string, unknown>;
+  };
+  userAgent: string;
+}
+
+const OBTENER_PERFILES_CLIENTE = (visitorData?: string): InnerTubeClientProfile[] => [
+  // 1. Cliente oficial iOS: inmune a comprobaciones de Play Integrity / DroidGuard y bloqueos 429 en centros de datos (Vercel/AWS).
+  {
+    name: 'IOS',
+    context: {
+      client: {
+        clientName: 'IOS',
+        clientVersion: '21.26.4',
+        deviceMake: 'Apple',
+        deviceModel: 'iPhone16,2',
+        userInterfaceTheme: 'USER_INTERFACE_THEME_DARK',
+        osName: 'iOS',
+        osVersion: '18.3.2.22D82',
+        timeZone: 'Europe/Madrid',
+        utcOffsetMinutes: 60,
+        hl: 'es',
+        gl: 'ES',
+      },
+    },
+    userAgent: 'com.google.ios.youtube/21.26.4 (iPhone16,2; U; CPU iOS 18_3_2 like Mac OS X;)',
+  },
+  // 2. Cliente oficial Android con visitorData de sesión rotativa
+  {
+    name: 'ANDROID',
+    context: {
+      client: {
+        clientName: 'ANDROID',
+        clientVersion: '20.10.38',
+        androidSdkVersion: 34,
+        hl: 'es',
+        gl: 'ES',
+        ...(visitorData ? { visitorData } : {}),
+      },
+    },
+    userAgent: 'com.google.android.youtube/20.10.38 (Linux; U; Android 14)',
+  },
+];
 
 function decodificarEntidades(texto: string): string {
   return texto
@@ -23,7 +68,7 @@ function decodificarEntidades(texto: string): string {
     .replace(/&#(\d+);/g, (_, dec) => String.fromCodePoint(parseInt(dec, 10)));
 }
 
-function parsearXmlSubtitulos(xml: string, idioma?: string): TranscriptSegment[] {
+function parsearXmlSubtitulos(xml: string, _idioma?: string): TranscriptSegment[] {
   const segmentos: TranscriptSegment[] = [];
 
   // Formato srv3: <p t="ms" d="ms"><s>palabra</s>...</p>
@@ -59,7 +104,7 @@ function parsearXmlSubtitulos(xml: string, idioma?: string): TranscriptSegment[]
 
   if (segmentos.length > 0) return segmentos;
 
-  // Formato clásico de respaldo: <text start="s" dur="s">contenido</text>
+  // Formato clásico: <text start="s" dur="s">contenido</text>
   const classicRegex = /<text\s+start="([^"]*)"\s+dur="([^"]*)"[^>]*>([\s\S]*?)<\/text>/g;
   while ((match = classicRegex.exec(xml)) !== null) {
     const startSec = parseFloat(match[1]);
@@ -79,7 +124,9 @@ function parsearXmlSubtitulos(xml: string, idioma?: string): TranscriptSegment[]
 }
 
 /**
- * Proveedor nativo de alto rendimiento para YouTube basado en InnerTube Android.
+ * Proveedor nativo de alto rendimiento para YouTube basado en perfiles multi-cliente de InnerTube.
+ * Prioriza el cliente oficial de iOS (inmune a bot-challenges y rate-limits en IPs de centros de datos de Vercel/AWS)
+ * con respaldo automático a Android con sesión verificada.
  * No realiza scraping de HTML, no descarga video ni audio, y obtiene subtítulos
  * directos oficiales y metadatos (título y autor) en ~1-2 segundos.
  */
@@ -90,152 +137,186 @@ export const innertubeTranscriptProvider: TranscriptProvider = {
     return withTimeout(
       (async () => {
         const visitorData = await getYouTubeVisitorData();
-        let resp: Response;
-        try {
-          resp = await fetch(INNERTUBE_API_URL, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'User-Agent': INNERTUBE_USER_AGENT,
-            },
-            body: JSON.stringify({
-              context: {
-                client: {
-                  clientName: 'ANDROID',
-                  clientVersion: INNERTUBE_CLIENT_VERSION,
-                  androidSdkVersion: 34,
-                  hl: 'es',
-                  gl: 'ES',
-                  ...(visitorData ? { visitorData } : {}),
+        const perfiles = OBTENER_PERFILES_CLIENTE(visitorData);
+
+        let ultimoError: TranscriptError | null = null;
+
+        for (const perfil of perfiles) {
+          try {
+            let resp: Response;
+            try {
+              resp = await fetch(INNERTUBE_API_URL, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'User-Agent': perfil.userAgent,
                 },
+                body: JSON.stringify({
+                  context: perfil.context,
+                  videoId,
+                }),
+              });
+            } catch (netErr) {
+              console.warn(`[InnerTube] Error de red en perfil ${perfil.name}:`, (netErr as Error)?.message);
+              ultimoError = new TranscriptError('desconocido', `Error de red al conectar con YouTube: ${(netErr as Error)?.message}`);
+              continue;
+            }
+
+            if (!resp.ok) {
+              if (resp.status === 429) {
+                console.warn(`[InnerTube] Perfil ${perfil.name} recibió HTTP 429. Probando siguiente perfil...`);
+                ultimoError = new TranscriptError('bloqueado', 'Límite de solicitudes alcanzado en YouTube.');
+                continue;
+              }
+              console.warn(`[InnerTube] Perfil ${perfil.name} devolvió HTTP ${resp.status}. Probando siguiente...`);
+              ultimoError = new TranscriptError('desconocido', `YouTube devolvió estado HTTP ${resp.status}`);
+              continue;
+            }
+
+            const data = (await resp.json().catch(() => null)) as {
+              videoDetails?: { title?: string; author?: string; isPrivate?: boolean };
+              playabilityStatus?: { status?: string; reason?: string };
+              captions?: {
+                playerCaptionsTracklistRenderer?: {
+                  captionTracks?: Array<{
+                    baseUrl: string;
+                    vssId?: string;
+                    languageCode?: string;
+                    kind?: string;
+                  }>;
+                };
+              };
+            } | null;
+
+            if (!data) {
+              ultimoError = new TranscriptError('desconocido', 'Respuesta vacía de YouTube.');
+              continue;
+            }
+
+            const playStatus = data.playabilityStatus?.status;
+            const reason = data.playabilityStatus?.reason || '';
+            const isPrivate = Boolean(data.videoDetails?.isPrivate) || /privado|private/i.test(reason);
+            const isUnavailable =
+              playStatus === 'ERROR' ||
+              /unavailable|no está disponible|no disponible|eliminado|removed|borrado|deleted|does not exist/i.test(reason);
+
+            // Si el video está eliminado o no existe en absoluto, no insistir en otros clientes
+            if (isPrivate || isUnavailable) {
+              throw new TranscriptError('video_no_disponible', reason || 'Este video no está disponible o es privado.');
+            }
+
+            if (playStatus === 'LOGIN_REQUIRED') {
+              console.warn(`[InnerTube] Perfil ${perfil.name} requiere login (${reason}). Probando siguiente perfil...`);
+              ultimoError = new TranscriptError('bloqueado', reason || 'YouTube requiere comprobación de acceso para este método.');
+              continue;
+            }
+
+            if (playStatus && playStatus !== 'OK') {
+              console.warn(`[InnerTube] Perfil ${perfil.name} playStatus: ${playStatus} (${reason}). Probando siguiente...`);
+              ultimoError = new TranscriptError('bloqueado', reason || 'YouTube no autorizó la consulta directa por este método.');
+              continue;
+            }
+
+            const captionTracks = data.captions?.playerCaptionsTracklistRenderer?.captionTracks;
+            if (!Array.isArray(captionTracks) || captionTracks.length === 0) {
+              console.warn(`[InnerTube] Perfil ${perfil.name} no devolvió pistas de subtítulos. Probando siguiente...`);
+              ultimoError = new TranscriptError(
+                'sin_subtitulos',
+                'No encontramos subtítulos automáticos en este video de YouTube.'
+              );
+              continue;
+            }
+
+            // Selección inteligente de pista:
+            // 1. Idiomas solicitados en opts o español por defecto
+            // 2. Primera pista disponible
+            const idiomasBuscados = opts?.languages && opts.languages.length > 0
+              ? opts.languages
+              : ['es', 'es-419', 'es-ES', 'es-MX', 'es-US'];
+
+            let selectedTrack = captionTracks.find((t) =>
+              idiomasBuscados.some((lang) => (t.languageCode || '').toLowerCase() === lang.toLowerCase())
+            );
+
+            if (!selectedTrack) {
+              selectedTrack = captionTracks.find((t) => (t.languageCode || '').toLowerCase().startsWith('es'));
+            }
+
+            if (!selectedTrack) {
+              selectedTrack = captionTracks[0];
+            }
+
+            if (!selectedTrack?.baseUrl) {
+              ultimoError = new TranscriptError('sin_transcripcion', 'La pista de subtítulos no tiene URL válida.');
+              continue;
+            }
+
+            let timedTextRes: Response;
+            try {
+              timedTextRes = await fetch(selectedTrack.baseUrl, {
+                headers: {
+                  'User-Agent': perfil.userAgent,
+                },
+              });
+            } catch (ttErr) {
+              console.warn(`[InnerTube] Error al descargar subtítulos con perfil ${perfil.name}:`, (ttErr as Error)?.message);
+              ultimoError = new TranscriptError('desconocido', `Error al descargar los subtítulos: ${(ttErr as Error)?.message}`);
+              continue;
+            }
+
+            if (!timedTextRes.ok) {
+              ultimoError = new TranscriptError('sin_subtitulos', `Error al obtener subtítulos (HTTP ${timedTextRes.status}).`);
+              continue;
+            }
+
+            const xml = await timedTextRes.text();
+            const segments = parsearXmlSubtitulos(xml, selectedTrack.languageCode);
+
+            const text = segments
+              .map((s) => s.text)
+              .join(' ')
+              .replace(/\s+/g, ' ')
+              .trim();
+
+            if (!text || text.length < 50) {
+              ultimoError = new TranscriptError('sin_subtitulos', 'La pista de subtítulos está vacía o es muy corta.');
+              continue;
+            }
+
+            let title = data.videoDetails?.title?.trim();
+            let author = data.videoDetails?.author?.trim();
+
+            // Respaldo de metadatos vía oEmbed si vienen vacíos
+            if (!title || !author) {
+              const oembed = await fetchYouTubeOembed(videoId);
+              if (!title && oembed.title) title = oembed.title;
+              if (!author && oembed.author) author = oembed.author;
+            }
+
+            return {
+              text,
+              segments,
+              meta: {
+                source: 'youtube',
+                videoId,
+                url: `https://www.youtube.com/watch?v=${videoId}`,
+                language: selectedTrack.languageCode || 'es',
+                generated: selectedTrack.kind === 'asr',
+                title,
+                author,
+                providerName: 'innertube',
+                method: 'subtitulos',
               },
-              videoId,
-            }),
-          });
-        } catch (netErr) {
-          throw new TranscriptError('desconocido', `Error de red al conectar con YouTube: ${(netErr as Error)?.message}`);
-        }
-
-        if (!resp.ok) {
-          if (resp.status === 429) {
-            throw new TranscriptError('bloqueado', 'Límite de solicitudes alcanzado en YouTube.');
-          }
-          throw new TranscriptError('desconocido', `YouTube devolvió estado HTTP ${resp.status}`);
-        }
-
-        const data = (await resp.json().catch(() => null)) as {
-          videoDetails?: { title?: string; author?: string; isPrivate?: boolean };
-          playabilityStatus?: { status?: string; reason?: string };
-          captions?: {
-            playerCaptionsTracklistRenderer?: {
-              captionTracks?: Array<{
-                baseUrl: string;
-                vssId?: string;
-                languageCode?: string;
-                kind?: string;
-              }>;
             };
-          };
-        } | null;
-
-        if (!data) {
-          throw new TranscriptError('desconocido', 'Respuesta vacía de YouTube.');
+          } catch (err) {
+            if (err instanceof TranscriptError && err.code === 'video_no_disponible') {
+              throw err;
+            }
+            ultimoError = err instanceof TranscriptError ? err : new TranscriptError('desconocido', (err as Error)?.message);
+          }
         }
 
-        const playStatus = data.playabilityStatus?.status;
-        const reason = data.playabilityStatus?.reason || '';
-        const isPrivate = Boolean(data.videoDetails?.isPrivate) || /privado|private/i.test(reason);
-        const isUnavailable =
-          playStatus === 'ERROR' ||
-          /unavailable|no está disponible|no disponible|eliminado|removed|borrado|deleted|does not exist/i.test(reason);
-
-        if (isPrivate || isUnavailable) {
-          throw new TranscriptError('video_no_disponible', reason || 'Este video no está disponible o es privado.');
-        }
-
-        if (playStatus === 'LOGIN_REQUIRED') {
-          throw new TranscriptError('bloqueado', reason || 'YouTube requiere comprobación de acceso para este método.');
-        }
-
-        if (playStatus && playStatus !== 'OK') {
-          throw new TranscriptError('bloqueado', reason || 'YouTube no autorizó la consulta directa por este método.');
-        }
-
-        const captionTracks = data.captions?.playerCaptionsTracklistRenderer?.captionTracks;
-        if (!Array.isArray(captionTracks) || captionTracks.length === 0) {
-          throw new TranscriptError(
-            'sin_subtitulos',
-            'No encontramos subtítulos automáticos en este video de YouTube.'
-          );
-        }
-
-        // Selección inteligente de pista:
-        // 1. Prioridad: español explícito ('es', 'es-419', 'es-ES', etc.)
-        // 2. Idiomas solicitados en opts
-        // 3. Primera pista disponible
-        const idiomasBuscados = opts?.languages && opts.languages.length > 0 ? opts.languages : ['es', 'es-419', 'es-ES', 'es-MX', 'es-US'];
-        let selectedTrack = captionTracks.find((t) =>
-          idiomasBuscados.some((lang) => (t.languageCode || '').toLowerCase() === lang.toLowerCase())
-        );
-
-        if (!selectedTrack) {
-          selectedTrack = captionTracks.find((t) => (t.languageCode || '').toLowerCase().startsWith('es'));
-        }
-
-        if (!selectedTrack) {
-          selectedTrack = captionTracks[0];
-        }
-
-        if (!selectedTrack?.baseUrl) {
-          throw new TranscriptError('sin_transcripcion', 'La pista de subtítulos no tiene URL válida.');
-        }
-
-        let timedTextRes: Response;
-        try {
-          timedTextRes = await fetch(selectedTrack.baseUrl, {
-            headers: {
-              'User-Agent': INNERTUBE_USER_AGENT,
-            },
-          });
-        } catch (ttErr) {
-          throw new TranscriptError('desconocido', `Error al descargar los subtítulos: ${(ttErr as Error)?.message}`);
-        }
-
-        if (!timedTextRes.ok) {
-          throw new TranscriptError('sin_subtitulos', `Error al obtener subtítulos (HTTP ${timedTextRes.status}).`);
-        }
-
-        const xml = await timedTextRes.text();
-        const segments = parsearXmlSubtitulos(xml, selectedTrack.languageCode);
-
-        const text = segments
-          .map((s) => s.text)
-          .join(' ')
-          .replace(/\s+/g, ' ')
-          .trim();
-
-        if (!text || text.length < 50) {
-          throw new TranscriptError('sin_subtitulos', 'La pista de subtítulos está vacía o es muy corta.');
-        }
-
-        const title = data.videoDetails?.title?.trim();
-        const author = data.videoDetails?.author?.trim();
-
-        return {
-          text,
-          segments,
-          meta: {
-            source: 'youtube',
-            videoId,
-            url: `https://www.youtube.com/watch?v=${videoId}`,
-            language: selectedTrack.languageCode || 'es',
-            generated: selectedTrack.kind === 'asr',
-            title,
-            author,
-            providerName: 'innertube',
-            method: 'subtitulos',
-          },
-        };
+        throw ultimoError || new TranscriptError('sin_subtitulos', 'No encontramos subtítulos utilizables en este video.');
       })(),
       15_000,
       'Tiempo de espera agotado al consultar YouTube.'
