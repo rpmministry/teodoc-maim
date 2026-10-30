@@ -244,8 +244,9 @@ export async function obtenerMetadatosVideo(url: string): Promise<MetadatosVideo
     return metadataYtDlp;
   } catch {
     // 3. Contingencia indestructible: si yt-dlp no está o falló, devolver metadatos listos
+    const esFb = url.includes('facebook.com') || url.includes('fb.watch');
     return {
-      titulo: 'Enlace multimedia listo para procesar',
+      titulo: esFb ? 'Video / Prédica de Facebook' : 'Video preparado para análisis',
       duracionSegundos: 0,
       duracionFormateada: 'Detectada al procesar',
       miniatura: videoId ? `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg` : undefined,

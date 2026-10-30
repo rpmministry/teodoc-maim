@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import type { ModalidadId, ResultadoAnalisis } from './tipos.ts';
 import type { EtapaAnalisisId, EstadoTrabajoAnalisis } from './analisis-progreso-tipos.ts';
+import { ETAPAS_ANALISIS, obtenerMensajeEtapa } from './analisis-progreso-tipos.ts';
+import { normalizarMetadatos, normalizarRespuesta } from './normalizar.ts';
 
 const CLAVE_STORAGE_TRABAJO = 'teodoc_trabajo_activo';
 
@@ -95,8 +97,8 @@ export function useTrackerAnalisis({ onCompletado, onError }: UseTrackerAnalisis
   const [reconectando, setReconectando] = useState(false);
   const [notificacionMostrada, setNotificacionMostrada] = useState(false);
 
-  const eventSourceRef = useRef<EventSource | null>(null);
-  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const tickerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const onCompletadoRef = useRef(onCompletado);
   const onErrorRef = useRef(onError);
 
@@ -104,13 +106,13 @@ export function useTrackerAnalisis({ onCompletado, onError }: UseTrackerAnalisis
   onErrorRef.current = onError;
 
   const cerrarConexiones = useCallback(() => {
-    if (eventSourceRef.current) {
-      eventSourceRef.current.close();
-      eventSourceRef.current = null;
+    if (tickerRef.current) {
+      clearInterval(tickerRef.current);
+      tickerRef.current = null;
     }
-    if (pollingRef.current) {
-      clearInterval(pollingRef.current);
-      pollingRef.current = null;
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
     }
   }, []);
 
@@ -119,7 +121,10 @@ export function useTrackerAnalisis({ onCompletado, onError }: UseTrackerAnalisis
     setReconectando(false);
 
     if (data.estado === 'completado') {
-      cerrarConexiones();
+      if (tickerRef.current) {
+        clearInterval(tickerRef.current);
+        tickerRef.current = null;
+      }
       limpiarTrabajoActivoLocal();
       if (data.resultado) {
         onCompletadoRef.current?.(data.resultado);
@@ -133,115 +138,23 @@ export function useTrackerAnalisis({ onCompletado, onError }: UseTrackerAnalisis
         }
       } catch {}
     } else if (data.estado === 'error' || data.estado === 'cancelado') {
-      cerrarConexiones();
+      if (tickerRef.current) {
+        clearInterval(tickerRef.current);
+        tickerRef.current = null;
+      }
       limpiarTrabajoActivoLocal();
       if (data.error) {
         onErrorRef.current?.(data.error);
       }
     }
-  }, [cerrarConexiones]);
+  }, []);
 
-  const iniciarPollingFallback = useCallback((jobId: string) => {
-    if (pollingRef.current) clearInterval(pollingRef.current);
-
-    const consultar = async () => {
-      try {
-        const res = await fetch(`/api/analyze/job?id=${encodeURIComponent(jobId)}`);
-        if (!res.ok) {
-          if (res.status === 404) {
-            // El trabajo no existe o expiró
-            cerrarConexiones();
-            limpiarTrabajoActivoLocal();
-            setTrabajo(null);
-          }
-          return;
-        }
-        const json = await res.json();
-        if (json?.trabajo) {
-          aplicarActualizacion(json.trabajo);
-        }
-      } catch {
-        setReconectando(true);
-      }
-    };
-
-    void consultar();
-    pollingRef.current = setInterval(consultar, 2500);
-  }, [aplicarActualizacion, cerrarConexiones]);
-
-  const suscribirATrabajo = useCallback((jobId: string, infoInicial?: Partial<SnapshotTrabajo>) => {
-    cerrarConexiones();
-
-    if (infoInicial) {
-      setTrabajo((prev) => ({
-        id: jobId,
-        modalidad: infoInicial.modalidad || 'general',
-        titulo: infoInicial.titulo || 'Estudio de la Palabra',
-        estado: infoInicial.estado || 'procesando',
-        etapaActual: infoInicial.etapaActual || 'validacion_preparacion',
-        etapasCompletadas: infoInicial.etapasCompletadas || [],
-        progreso: infoInicial.progreso ?? 10,
-        esEstimado: true,
-        mensaje: infoInicial.mensaje || 'Iniciando el análisis…',
-        tiempoTranscurridoSegundos: infoInicial.tiempoTranscurridoSegundos || 0,
-        tiempoEstimadoRestanteSegundos: infoInicial.tiempoEstimadoRestanteSegundos || 45,
-        ...prev,
-      }));
-    }
-
-    // Intentar SSE en primer lugar
-    if (typeof window !== 'undefined' && 'EventSource' in window) {
-      try {
-        const es = new EventSource(`/api/analyze/job/stream?id=${encodeURIComponent(jobId)}`);
-        eventSourceRef.current = es;
-
-        es.onmessage = (event) => {
-          try {
-            const data: SnapshotTrabajo = JSON.parse(event.data);
-            aplicarActualizacion(data);
-          } catch {}
-        };
-
-        es.onerror = () => {
-          // SSE falló o desconectó; activar fallback a polling
-          if (eventSourceRef.current) {
-            eventSourceRef.current.close();
-            eventSourceRef.current = null;
-          }
-          setReconectando(true);
-          iniciarPollingFallback(jobId);
-        };
-
-        return;
-      } catch {
-        // Fallback inmediato a polling si EventSource falla al instanciarse
-      }
-    }
-
-    iniciarPollingFallback(jobId);
-  }, [aplicarActualizacion, cerrarConexiones, iniciarPollingFallback]);
-
-  // Al montar el componente, recuperar trabajo activo si existe
+  // Cleanup on unmount
   useEffect(() => {
-    const activo = obtenerTrabajoActivoLocal();
-    if (activo && activo.id) {
-      const ahora = Date.now();
-      // Si el trabajo tiene menos de 45 minutos, reconectar
-      if (ahora - activo.inicio < 45 * 60 * 1000) {
-        suscribirATrabajo(activo.id, {
-          modalidad: activo.modalidad,
-          titulo: activo.titulo,
-          estado: 'procesando',
-        });
-      } else {
-        limpiarTrabajoActivoLocal();
-      }
-    }
-
     return () => {
       cerrarConexiones();
     };
-  }, [cerrarConexiones, suscribirATrabajo]);
+  }, [cerrarConexiones]);
 
   const iniciarTrabajo = useCallback(
     async (opciones: {
@@ -256,44 +169,188 @@ export function useTrackerAnalisis({ onCompletado, onError }: UseTrackerAnalisis
       cerrarConexiones();
       setNotificacionMostrada(false);
 
-      const res = await fetch('/api/analyze/job', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(opciones),
-      });
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
 
-      const data = await res.json().catch(() => null);
-      if (!res.ok || !data?.jobId) {
-        throw new Error(data?.error || 'No se pudo iniciar el trabajo de análisis.');
-      }
+      const jobId = `job_${Date.now()}`;
+      const inicio = Date.now();
+      const modalidad = opciones.modalidad || 'general';
+      const duracionEstimada = modalidad === 'general' ? 24 : 45;
 
-      const jobId = data.jobId as string;
-      const initialJob = data.trabajo as SnapshotTrabajo | undefined;
+      const snapshotInicial: SnapshotTrabajo = {
+        id: jobId,
+        modalidad,
+        titulo: opciones.titulo || 'Estudio de la Palabra',
+        estado: 'procesando',
+        etapaActual: 'validacion_preparacion',
+        etapasCompletadas: [],
+        progreso: 8,
+        esEstimado: true,
+        mensaje: obtenerMensajeEtapa(modalidad, 'validacion_preparacion'),
+        tiempoTranscurridoSegundos: 0,
+        tiempoEstimadoRestanteSegundos: duracionEstimada,
+      };
 
+      setTrabajo(snapshotInicial);
       guardarTrabajoActivoLocal({
         id: jobId,
-        modalidad: opciones.modalidad,
+        modalidad,
         titulo: opciones.titulo || 'Estudio de la Palabra',
-        inicio: Date.now(),
+        inicio,
       });
 
-      suscribirATrabajo(jobId, initialJob);
-      return initialJob || { id: jobId };
+      // Ticker local con calibración exacta de etapas y avance progresivo sin bloqueos
+      tickerRef.current = setInterval(() => {
+        const segundos = Math.max(1, Math.floor((Date.now() - inicio) / 1000));
+        let etapaActual: EtapaAnalisisId = 'validacion_preparacion';
+        let etapasCompletadas: EtapaAnalisisId[] = [];
+        let progreso = 8;
+
+        if (segundos < 3) {
+          etapaActual = 'validacion_preparacion';
+          etapasCompletadas = [];
+          progreso = Math.min(18, Math.round(8 + segundos * 3.3));
+        } else if (segundos < 7) {
+          etapaActual = 'contexto_biblico';
+          etapasCompletadas = ['validacion_preparacion'];
+          progreso = Math.min(30, Math.round(18 + (segundos - 3) * 3));
+        } else if (modalidad === 'general' || segundos < 22) {
+          etapaActual = 'analisis_general';
+          etapasCompletadas = ['validacion_preparacion', 'contexto_biblico'];
+          const base = 30;
+          const target = modalidad === 'general' ? 92 : 62;
+          const dur = modalidad === 'general' ? 18 : 15;
+          const fracc = Math.min(1, (segundos - 7) / dur);
+          progreso = Math.round(base + fracc * (target - base));
+        } else {
+          etapaActual = 'redaccion_especialidad';
+          etapasCompletadas = ['validacion_preparacion', 'contexto_biblico', 'analisis_general'];
+          const base = 62;
+          const target = 92;
+          const dur = 20;
+          const fracc = Math.min(1, (segundos - 22) / dur);
+          progreso = Math.round(base + fracc * (target - base));
+        }
+
+        // Progresión suave si el análisis requiere unos segundos extra
+        if (progreso >= 92) {
+          const extraSeg = Math.max(0, segundos - (modalidad === 'general' ? 25 : 42));
+          progreso = Math.min(97, 92 + Math.floor(extraSeg * 0.15));
+        }
+
+        const tiempoRestante = Math.max(3, duracionEstimada - segundos);
+
+        setTrabajo((prev) => {
+          if (!prev || prev.estado === 'completado' || prev.estado === 'error') return prev;
+          return {
+            ...prev,
+            etapaActual,
+            etapasCompletadas,
+            progreso,
+            mensaje: obtenerMensajeEtapa(modalidad, etapaActual),
+            tiempoTranscurridoSegundos: segundos,
+            tiempoEstimadoRestanteSegundos: tiempoRestante,
+          };
+        });
+      }, 1000);
+
+      // Iniciar llamada directa a /api/analyze con conexión activa en el servidor
+      (async () => {
+        try {
+          const res = await fetch('/api/analyze', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(opciones),
+            signal: controller.signal,
+          });
+
+          const data = await res.json().catch(() => null);
+
+          if (!res.ok) {
+            const motivo =
+              res.status === 503 || data?.error === 'busy'
+                ? 'El servicio de análisis teológico está ocupado en este momento. Por favor intenta de nuevo en unos instantes.'
+                : data?.error || 'No se pudo generar el análisis ministerial.';
+            throw new Error(motivo);
+          }
+
+          if (!data || typeof data !== 'object') {
+            throw new Error('El servidor devolvió una respuesta vacía o incompleta.');
+          }
+
+          if (tickerRef.current) {
+            clearInterval(tickerRef.current);
+            tickerRef.current = null;
+          }
+
+          const metadatos = normalizarMetadatos({
+            modalidad,
+            rangoEdad: opciones.rangoEdad as any,
+            titulo: opciones.titulo,
+            predicador: opciones.predicador,
+            fecha: opciones.fecha,
+            fechaAnalisis: new Date().toISOString(),
+          });
+
+          const normalizado = normalizarRespuesta(data, metadatos);
+          if (opciones.titulo) {
+            normalizado.titulo = opciones.titulo;
+            normalizado.metadatos.tituloProporcionado = opciones.titulo;
+          }
+
+          const snapshotFinal: SnapshotTrabajo = {
+            id: jobId,
+            modalidad,
+            titulo: normalizado.titulo || opciones.titulo || 'Estudio de la Palabra',
+            estado: 'completado',
+            etapaActual: 'verificacion_entrega',
+            etapasCompletadas: ETAPAS_ANALISIS.map((e) => e.id),
+            progreso: 100,
+            esEstimado: false,
+            mensaje: obtenerMensajeEtapa(modalidad, 'completado'),
+            tiempoTranscurridoSegundos: Math.floor((Date.now() - inicio) / 1000),
+            tiempoEstimadoRestanteSegundos: 0,
+            resultado: normalizado,
+          };
+
+          aplicarActualizacion(snapshotFinal);
+        } catch (err: unknown) {
+          if (controller.signal.aborted) return;
+          if (tickerRef.current) {
+            clearInterval(tickerRef.current);
+            tickerRef.current = null;
+          }
+
+          const msg = err instanceof Error ? err.message : 'Error inesperado al generar el análisis.';
+          const snapshotError: SnapshotTrabajo = {
+            id: jobId,
+            modalidad,
+            titulo: opciones.titulo || 'Estudio de la Palabra',
+            estado: 'error',
+            etapaActual: 'validacion_preparacion',
+            etapasCompletadas: [],
+            progreso: 0,
+            esEstimado: false,
+            mensaje: msg,
+            tiempoTranscurridoSegundos: Math.floor((Date.now() - inicio) / 1000),
+            tiempoEstimadoRestanteSegundos: 0,
+            error: msg,
+          };
+
+          aplicarActualizacion(snapshotError);
+        }
+      })();
+
+      return snapshotInicial;
     },
-    [cerrarConexiones, suscribirATrabajo],
+    [aplicarActualizacion, cerrarConexiones],
   );
 
   const cancelarTrabajo = useCallback(async () => {
-    if (!trabajo?.id) return;
-    try {
-      await fetch(`/api/analyze/job?id=${encodeURIComponent(trabajo.id)}`, {
-        method: 'DELETE',
-      });
-    } catch {}
     cerrarConexiones();
     limpiarTrabajoActivoLocal();
     setTrabajo(null);
-  }, [cerrarConexiones, trabajo?.id]);
+  }, [cerrarConexiones]);
 
   const descartarTrabajo = useCallback(() => {
     cerrarConexiones();

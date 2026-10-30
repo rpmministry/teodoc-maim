@@ -120,6 +120,24 @@ export function validarUrlMultimedia(rawUrl: string): ValidacionUrlResultado {
     proveedor = 'vimeo';
   } else if (host.includes('facebook.com') || host.includes('fb.watch')) {
     proveedor = 'facebook';
+
+    // Detección de perfil o página de Facebook sin video específico
+    const tieneIndicadorVideo =
+      host.includes('fb.watch') ||
+      path.includes('/videos/') ||
+      path.includes('/watch') ||
+      path.includes('/reel/') ||
+      path.includes('/live/') ||
+      parsed.searchParams.has('v');
+
+    if (!tieneIndicadorVideo && path.length > 1 && !path.startsWith('/watch')) {
+      return {
+        esValida: false,
+        proveedor: 'facebook',
+        error:
+          'El enlace introducido corresponde a la página o perfil de Facebook, no a un video en específico. Para analizar la prédica, abre el video y copia su enlace directo, o usa la transmisión oficial de YouTube.',
+      };
+    }
   } else if (host.includes('instagram.com')) {
     proveedor = 'instagram';
   } else if (host.includes('twitter.com') || host.includes('x.com')) {

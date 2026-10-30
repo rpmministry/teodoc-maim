@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { GoogleGenAI } from '@google/genai';
 
-export const MODELOS_GEMINI = ['gemini-3.8-flash', 'gemini-4.0-flash'];
-const MODELOS_EFECTIVOS = ['gemini-3.5-flash', 'gemini-3-flash-preview', ...MODELOS_GEMINI];
+export const MODELOS_GEMINI = ['gemini-3.5-flash', 'gemini-3.5-flash-lite', 'gemini-flash-latest', 'gemini-3-flash-preview'];
+const MODELOS_EFECTIVOS = ['gemini-3.5-flash', 'gemini-3.5-flash-lite', 'gemini-flash-latest', 'gemini-3-flash-preview'];
 
 export const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 

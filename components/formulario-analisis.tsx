@@ -186,7 +186,11 @@ export default function FormularioAnalisis({
       const data = await res.json().catch(() => null);
       if (data?.metadatos) {
         setMetadatosVideo(data.metadatos);
-        if (!valores.titulo && data.metadatos?.titulo && data.metadatos.titulo !== 'Enlace multimedia listo para procesar') {
+        const esTituloGenerico =
+          data.metadatos.titulo === 'Enlace multimedia listo para procesar' ||
+          data.metadatos.titulo.includes('Video preparado') ||
+          data.metadatos.titulo.includes('Video / Prédica');
+        if (!valores.titulo && data.metadatos?.titulo && !esTituloGenerico) {
           onCambio({ titulo: data.metadatos.titulo });
         }
       } else {
@@ -250,6 +254,16 @@ export default function FormularioAnalisis({
   const ejecutarOperacionVideo = async (operacion: 'descargar_video' | 'extraer_audio') => {
     const urlLimpia = normalizarUrl(urlVideo);
     if (!urlLimpia) return;
+
+    const esFacebook = urlLimpia.includes('facebook.com') || urlLimpia.includes('fb.watch');
+    if (esFacebook) {
+      setErrorVideo(
+        'Facebook restringe la extracción y descarga directa en servidores en la nube. Para analizar esta prédica de Casa de Oración MAIM, por favor pega el enlace de YouTube de la transmisión (se analiza en segundos) o sube la grabación de audio (.mp3 / .m4a) en la pestaña "Archivo multimedia".'
+      );
+      setProcesandoOperacion(null);
+      return;
+    }
+
     setProcesandoOperacion(operacion === 'descargar_video' ? 'descarga' : 'audio');
     setProgresoOperacion(5);
     setMensajeOperacion(operacion === 'descargar_video' ? 'Iniciando descarga de video...' : 'Extrayendo audio del video...');
@@ -296,9 +310,21 @@ export default function FormularioAnalisis({
               onAnalizar();
             }
             return;
+          } else {
+            throw new Error(
+              ytData?.message ||
+              'No encontramos subtítulos automáticos en este video de YouTube. Te recomendamos subir el audio (.mp3 o .m4a) en la pestaña "Archivo multimedia" para transcribirlo con IA.'
+            );
           }
         } catch (ytErr) {
-          console.warn('[YouTube Direct] Fallo al consultar transcripción directa, intentando con multimedia pipeline:', ytErr);
+          setErrorVideo(
+            ytErr instanceof Error
+              ? ytErr.message
+              : 'No pudimos obtener la transcripción de este video. Puedes probar subiendo el audio directamente en la pestaña "Archivo multimedia".'
+          );
+          setProcesandoOperacion(null);
+          void liberarPantallaActiva();
+          return;
         }
       }
 
@@ -702,6 +728,41 @@ export default function FormularioAnalisis({
                     <span className="break-words">
                       Enlace preparado: <strong className="text-[var(--tinta)]">{urlVideo.trim()}</strong>
                     </span>
+                  </div>
+                )}
+
+                {/* Aviso y opciones de acción para videos de Facebook */}
+                {(urlVideo.includes('facebook.com') || urlVideo.includes('fb.watch') || metadatosVideo?.titulo?.includes('Facebook')) && (
+                  <div className="mt-3 rounded-[12px] border border-[#f3d2a2] bg-[#fffbf2] p-3.5 text-[12px] text-[#7a4812]">
+                    <div className="flex items-start gap-2.5">
+                      <span className="text-[16px] shrink-0">💡</span>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-bold text-[#63380b]">Prédica de Facebook (Casa de Oración MAIM)</p>
+                        <p className="mt-1 leading-relaxed text-[#7a4812]">
+                          Meta restringe la extracción y descarga directa de video en servidores cloud. Para generar el análisis teológico de esta prédica de MAIM, dispones de dos opciones inmediatas:
+                        </p>
+                        <div className="mt-2.5 flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setUrlVideo('');
+                              setErrorVideo(null);
+                              setMetadatosVideo(null);
+                            }}
+                            className="rounded-full bg-[#fdeece] px-3 py-1 text-[11px] font-bold text-[#63380b] hover:bg-[#fadfa8] transition"
+                          >
+                            ▶ Pegar enlace de YouTube (Recomendado)
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setTabOrigen('archivo')}
+                            className="rounded-full border border-[#e8c68c] bg-white px-3 py-1 text-[11px] font-bold text-[#63380b] hover:bg-[#fbf5ed] transition"
+                          >
+                            🎙️ Subir archivo de audio (.mp3 / .m4a)
+                          </button>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 )}
 

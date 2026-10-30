@@ -24,6 +24,26 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, error: validacion.error }, { status: 400 });
     }
 
+    // Respuesta inmediata para enlaces de Facebook
+    if (validacion.proveedor === 'facebook') {
+      return NextResponse.json({
+        ok: true,
+        proveedor: 'facebook',
+        url: validacion.urlLimpia || url,
+        aviso:
+          'Facebook restringe la extracción y descarga directa de audio en la nube. Te recomendamos usar el enlace de YouTube de esta prédica de MAIM (se analiza en segundos) o subir la grabación de audio (.mp3) en la pestaña "Archivo multimedia".',
+        metadatos: {
+          titulo: 'Prédica / Video de Facebook (Casa de Oración MAIM)',
+          duracionSegundos: 0,
+          duracionFormateada: 'Detectada al procesar',
+          formatosDisponibles: [
+            { id: 'best', resolucion: 'Mejor calidad disponible', extension: 'mp4' },
+            { id: 'audio_mp3', resolucion: 'Solo audio', extension: 'mp3', esSoloAudio: true },
+          ],
+        },
+      });
+    }
+
     try {
       const metadatos = await obtenerMetadatosVideo(validacion.urlLimpia || url);
       return NextResponse.json({
@@ -42,7 +62,7 @@ export async function POST(req: NextRequest) {
         url: validacion.urlLimpia || url,
         aviso: msg,
         metadatos: {
-          titulo: 'Enlace multimedia listo para procesar',
+          titulo: 'Video preparado para análisis',
           duracionSegundos: 0,
           duracionFormateada: 'Detectada al procesar',
           formatosDisponibles: [
