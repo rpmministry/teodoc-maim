@@ -277,8 +277,12 @@ export default function FormularioAnalisis({
       // Obtiene la transcripción oficial verificada en menos de 2 segundos sin descargas pesadas
       // ni dependencias de ffmpeg/yt-dlp en el servidor cloud (Vercel).
       if (operacion === 'extraer_audio' && (urlLimpia.includes('youtube.com') || urlLimpia.includes('youtu.be'))) {
-        setMensajeOperacion('Obteniendo transcripción directa del mensaje...');
-        setProgresoOperacion(35);
+        setMensajeOperacion('Conectando con la prédica en YouTube...');
+        setProgresoOperacion(20);
+
+        const tickerProgreso = setInterval(() => {
+          setProgresoOperacion((ant) => (ant < 80 ? ant + 12 : ant));
+        }, 300);
 
         try {
           const ytRes = await fetch('/api/youtube', {
@@ -287,15 +291,16 @@ export default function FormularioAnalisis({
             body: JSON.stringify({ url: urlLimpia }),
           });
           const ytData = await ytRes.json().catch(() => null);
+          clearInterval(tickerProgreso);
 
           if (ytRes.ok && ytData?.ok && ytData?.text && ytData.text.trim().length >= 100) {
-            setProgresoOperacion(85);
+            setProgresoOperacion(90);
             setMensajeOperacion('¡Transcripción obtenida con éxito!');
             const textoTranscrito = ytData.text.trim();
             onCambio({ texto: textoTranscrito });
             guardarTranscripcionPendiente(textoTranscrito);
 
-            const tituloFinal = metadatosVideo?.titulo || ytData.meta?.title || valores.titulo;
+            const tituloFinal = ytData.meta?.title || metadatosVideo?.titulo || valores.titulo;
             if (tituloFinal && !valores.titulo) {
               onCambio({ titulo: tituloFinal });
             }
@@ -313,10 +318,11 @@ export default function FormularioAnalisis({
           } else {
             throw new Error(
               ytData?.message ||
-              'No encontramos subtítulos automáticos en este video de YouTube. Te recomendamos subir el audio (.mp3 o .m4a) en la pestaña "Archivo multimedia" para transcribirlo con IA.'
+              'No encontramos subtítulos automáticos en este video de YouTube. Te recomendamos subir la grabación de audio (.mp3 o .m4a) en la pestaña "Archivo multimedia" para transcribirlo con IA.'
             );
           }
         } catch (ytErr) {
+          clearInterval(tickerProgreso);
           setErrorVideo(
             ytErr instanceof Error
               ? ytErr.message
@@ -694,8 +700,35 @@ export default function FormularioAnalisis({
             </label>
 
             {errorVideo && (
-              <div className="mt-3 rounded-[10px] bg-[#fff2f2] p-3 text-[11.5px] font-medium text-[#8f2830] break-words" role="alert">
-                <p>{errorVideo}</p>
+              <div className="mt-3 rounded-[12px] border border-[#f3c2c5] bg-[#fff5f5] p-4 text-[12px] text-[#7a252c] shadow-xs" role="alert">
+                <div className="flex items-start gap-2.5">
+                  <span className="text-[16px] shrink-0">⚠️</span>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold text-[#8f2830]">{errorVideo}</p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setErrorVideo(null);
+                          setTabOrigen('archivo');
+                        }}
+                        className="rounded-full bg-[#fde8e8] px-3.5 py-1.5 text-[11px] font-bold text-[#8f2830] hover:bg-[#fad0d0] transition"
+                      >
+                        🎙️ Subir audio (.mp3 / .m4a)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setErrorVideo(null);
+                          setTabOrigen('documento');
+                        }}
+                        className="rounded-full border border-[#e8b5b8] bg-white px-3.5 py-1.5 text-[11px] font-bold text-[#8f2830] hover:bg-[#fff0f0] transition"
+                      >
+                        📄 Pegar texto o notas
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
 

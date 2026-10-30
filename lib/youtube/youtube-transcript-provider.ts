@@ -27,11 +27,13 @@ const YT_HEADERS: Record<string, string> = {
   'Accept-Language': 'es-ES,es;q=0.9,en;q=0.6',
 };
 
-const ytFetch: typeof fetch = (input, init) =>
-  fetch(input, {
+const ytFetch: typeof fetch = (input, init) => {
+  const existingHeaders = (init?.headers as Record<string, string> | undefined) || {};
+  return fetch(input, {
     ...init,
-    headers: { ...(init?.headers as Record<string, string> | undefined), ...YT_HEADERS },
+    headers: { ...YT_HEADERS, ...existingHeaders },
   });
+};
 
 function mapError(err: unknown): TranscriptError {
   const msg = String((err as { message?: string })?.message || '');

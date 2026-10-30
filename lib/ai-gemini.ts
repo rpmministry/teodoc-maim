@@ -1,8 +1,21 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { GoogleGenAI } from '@google/genai';
 
-export const MODELOS_GEMINI = ['gemini-3.5-flash', 'gemini-3.5-flash-lite', 'gemini-flash-latest', 'gemini-3-flash-preview'];
-const MODELOS_EFECTIVOS = ['gemini-3.5-flash', 'gemini-3.5-flash-lite', 'gemini-flash-latest', 'gemini-3-flash-preview'];
+export const MODELOS_GEMINI = [
+  'gemini-3.5-flash-lite',
+  'gemini-flash-lite-latest',
+  'gemini-3.1-flash-lite',
+  'gemini-flash-latest',
+  'gemini-3.5-flash',
+];
+
+const MODELOS_EFECTIVOS = [
+  'gemini-3.5-flash-lite',
+  'gemini-flash-lite-latest',
+  'gemini-3.1-flash-lite',
+  'gemini-flash-latest',
+  'gemini-3.5-flash',
+];
 
 export const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -146,6 +159,10 @@ export async function generarJsonConGemini(opts: OpcionesGemini): Promise<any | 
       } catch (err: any) {
         const msg = err?.message || '';
         opts.onError?.(modelo, msg);
+        // Si la cuota de peticiones del día para este modelo está agotada, pasar de inmediato al siguiente modelo
+        if (msg.includes('RESOURCE_EXHAUSTED') || msg.includes('Quota exceeded') || msg.includes('limit: 20')) {
+          break;
+        }
         if ((msg.includes('429') || msg.includes('503')) && i === 0) {
           await delay(opts.retryDelayMs ?? 1200);
           continue;

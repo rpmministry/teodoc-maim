@@ -49,6 +49,7 @@ export default function ProgresoAnalisis({
 
   const porcentaje = Math.max(4, Math.min(100, Math.round(trabajo.progreso)));
   const esCompletado = trabajo.estado === 'completado';
+  const esError = trabajo.estado === 'error';
 
   // =========================================================================
   // VISTA MINIMIZADA (Píldora flotante compacta y no invasiva)
@@ -68,6 +69,10 @@ export default function ProgresoAnalisis({
           {esCompletado ? (
             <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#276738] text-white">
               <IconoCheck className="h-4 w-4" />
+            </span>
+          ) : esError ? (
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#8f2830] text-white text-[12px] font-bold">
+              !
             </span>
           ) : (
             <div className="relative flex h-7 w-7 items-center justify-center rounded-full bg-white/10 text-[11px] font-bold text-[#ffd8a8]">
@@ -204,17 +209,23 @@ export default function ProgresoAnalisis({
         </div>
 
         {/* Mensaje Contextual Dinámico (Psicología de la Espera) */}
-        <div className="mt-5 rounded-[14px] border border-[#ebd8cb] bg-[#faf4ec] p-4 text-[13px] leading-relaxed text-[var(--tinta)]">
+        <div className={`mt-5 rounded-[14px] border p-4 text-[13px] leading-relaxed ${
+          esError ? 'border-[#e8b4b8] bg-[#fff5f5] text-[#7a3036]' : 'border-[#ebd8cb] bg-[#faf4ec] text-[var(--tinta)]'
+        }`}>
           <div className="flex items-start gap-3">
-            <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--coralOscuro)] text-white">
-              <span className="h-2 w-2 animate-ping rounded-full bg-white opacity-80" />
+            <span className={`mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-white ${
+              esError ? 'bg-[#8f2830]' : 'bg-[var(--coralOscuro)]'
+            }`}>
+              {esError ? '!' : <span className="h-2 w-2 animate-ping rounded-full bg-white opacity-80" />}
             </span>
             <div className="min-w-0 flex-1">
-              <p className="font-medium text-[var(--tinta)]">
-                {trabajo.mensaje || 'Estamos profundizando en las enseñanzas de la prédica…'}
+              <p className="font-medium">
+                {trabajo.error || trabajo.mensaje || 'Estamos profundizando en las enseñanzas de la prédica…'}
               </p>
               <p className="mt-1 text-[11px] leading-relaxed text-[var(--muted)]">
-                {trabajo.tiempoTranscurridoSegundos > 90 && !esCompletado
+                {esError
+                  ? 'El proceso se detuvo. Puedes cerrar este aviso o intentar nuevamente.'
+                  : trabajo.tiempoTranscurridoSegundos > 90 && !esCompletado
                   ? 'El análisis continúa en proceso. El tiempo puede variar según la extensión, cantidad de Escrituras y densidad doctrinal del mensaje.'
                   : 'Puedes minimizar este panel para consultar la biblioteca o continuar usando TeoDoc MAIM mientras termina.'}
               </p>
@@ -286,7 +297,19 @@ export default function ProgresoAnalisis({
               </button>
             )}
 
-            {esCompletado ? (
+            {esError ? (
+              <div className="flex items-center gap-2">
+                {onCancelar && (
+                  <button
+                    type="button"
+                    onClick={onCancelar}
+                    className="btn-secundario px-4 py-2 text-[12px]"
+                  >
+                    Cerrar aviso
+                  </button>
+                )}
+              </div>
+            ) : esCompletado ? (
               <button
                 type="button"
                 onClick={onVerResultado}
