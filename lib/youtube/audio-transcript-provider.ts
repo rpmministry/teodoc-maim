@@ -6,6 +6,7 @@ import {
   type TranscriptSegment,
   withTimeout,
 } from './transcript-provider.ts';
+import { getYouTubeVisitorData } from './visitor-data.ts';
 
 const INNERTUBE_API_URL = 'https://www.youtube.com/youtubei/v1/player?prettyPrint=false';
 const INNERTUBE_CLIENT_VERSION = '20.10.38';
@@ -239,7 +240,8 @@ export const youtubeAudioTranscriptProvider: TranscriptProvider = {
           );
         }
 
-        // 1. Obtener información del reproductor InnerTube
+        // 1. Obtener información del reproductor InnerTube con sesión verificada
+        const visitorData = await getYouTubeVisitorData();
         let playerResp: Response;
         try {
           playerResp = await fetch(INNERTUBE_API_URL, {
@@ -253,6 +255,10 @@ export const youtubeAudioTranscriptProvider: TranscriptProvider = {
                 client: {
                   clientName: 'ANDROID',
                   clientVersion: INNERTUBE_CLIENT_VERSION,
+                  androidSdkVersion: 34,
+                  hl: 'es',
+                  gl: 'ES',
+                  ...(visitorData ? { visitorData } : {}),
                 },
               },
               videoId,
@@ -278,15 +284,22 @@ export const youtubeAudioTranscriptProvider: TranscriptProvider = {
         }
 
         const playStatus = data.playabilityStatus?.status;
+        const reason = data.playabilityStatus?.reason || '';
+        const isPrivate = Boolean(data.videoDetails?.isPrivate) || /privado|private/i.test(reason);
+        const isUnavailable =
+          playStatus === 'ERROR' ||
+          /unavailable|no está disponible|no disponible|eliminado|removed|borrado|deleted|does not exist/i.test(reason);
+
+        if (isPrivate || isUnavailable) {
+          throw new TranscriptError('video_no_disponible', reason || 'Este video no está disponible o es privado.');
+        }
+
+        if (playStatus === 'LOGIN_REQUIRED') {
+          throw new TranscriptError('bloqueado', reason || 'YouTube requiere comprobación de acceso para este método.');
+        }
+
         if (playStatus && playStatus !== 'OK') {
-          const reason = data.playabilityStatus?.reason || 'Este video no está disponible o es privado.';
-          if (playStatus === 'LOGIN_REQUIRED') {
-            throw new TranscriptError(
-              'video_no_disponible',
-              'Este video requiere inicio de sesión, es privado o tiene restricción de edad.',
-            );
-          }
-          throw new TranscriptError('video_no_disponible', reason);
+          throw new TranscriptError('bloqueado', reason || 'YouTube restringió el flujo de audio para este cliente.');
         }
 
         const formats = data.streamingData?.adaptiveFormats || [];

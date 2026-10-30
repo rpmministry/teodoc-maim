@@ -75,7 +75,7 @@ export function withTimeout<T>(promise: Promise<T>, ms: number, message = 'Tiemp
 // Errores "definitivos": no tiene sentido probar otro proveedor.
 // `sin_subtitulos` NO es definitivo: otro proveedor (p. ej. Supadata) puede
 // generar la transcripción con IA aunque este no encuentre subtítulos.
-const DEFINITIVE: TranscriptErrorCode[] = ['video_no_disponible', 'url_invalida'];
+const DEFINITIVE: TranscriptErrorCode[] = ['url_invalida'];
 
 /**
  * Encadena varios proveedores. Si el primero falla por un motivo transitorio

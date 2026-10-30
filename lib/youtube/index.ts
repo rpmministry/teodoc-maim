@@ -27,7 +27,9 @@ export function resolveTranscriptProvider(): TranscriptProvider {
     remote: () => (process.env.TRANSCRIPT_SERVICE_URL ? remoteTranscriptProvider : null),
   };
 
-  const order = (process.env.TRANSCRIPT_PROVIDER_ORDER || DEFAULT_ORDER.join(','))
+  const orderConfig = process.env.YOUTUBE_PROVIDER_ORDER || process.env.TRANSCRIPT_PROVIDER_ORDER;
+  const isAudioOrder = orderConfig?.includes('deepgram') || orderConfig?.includes('assemblyai');
+  const order = (orderConfig && !isAudioOrder ? orderConfig : DEFAULT_ORDER.join(','))
     .split(',')
     .map((name) => name.trim().toLowerCase())
     .filter(Boolean);

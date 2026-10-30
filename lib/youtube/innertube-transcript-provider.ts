@@ -5,6 +5,7 @@ import {
   type TranscriptSegment,
   withTimeout,
 } from './transcript-provider.ts';
+import { getYouTubeVisitorData } from './visitor-data.ts';
 
 const INNERTUBE_API_URL = 'https://www.youtube.com/youtubei/v1/player?prettyPrint=false';
 const INNERTUBE_CLIENT_VERSION = '20.10.38';
@@ -88,6 +89,7 @@ export const innertubeTranscriptProvider: TranscriptProvider = {
   async fetchTranscript(videoId: string, opts?: { languages?: string[] }): Promise<TranscriptResult> {
     return withTimeout(
       (async () => {
+        const visitorData = await getYouTubeVisitorData();
         let resp: Response;
         try {
           resp = await fetch(INNERTUBE_API_URL, {
@@ -101,6 +103,10 @@ export const innertubeTranscriptProvider: TranscriptProvider = {
                 client: {
                   clientName: 'ANDROID',
                   clientVersion: INNERTUBE_CLIENT_VERSION,
+                  androidSdkVersion: 34,
+                  hl: 'es',
+                  gl: 'ES',
+                  ...(visitorData ? { visitorData } : {}),
                 },
               },
               videoId,
@@ -137,12 +143,22 @@ export const innertubeTranscriptProvider: TranscriptProvider = {
         }
 
         const playStatus = data.playabilityStatus?.status;
-        if ((playStatus && playStatus !== 'OK') || data.videoDetails?.isPrivate) {
-          const reason = data.playabilityStatus?.reason || 'Este video no está disponible o es privado.';
-          if (playStatus === 'LOGIN_REQUIRED') {
-            throw new TranscriptError('video_no_disponible', 'Este video requiere inicio de sesión, es privado o tiene restricción de edad.');
-          }
-          throw new TranscriptError('video_no_disponible', reason);
+        const reason = data.playabilityStatus?.reason || '';
+        const isPrivate = Boolean(data.videoDetails?.isPrivate) || /privado|private/i.test(reason);
+        const isUnavailable =
+          playStatus === 'ERROR' ||
+          /unavailable|no está disponible|no disponible|eliminado|removed|borrado|deleted|does not exist/i.test(reason);
+
+        if (isPrivate || isUnavailable) {
+          throw new TranscriptError('video_no_disponible', reason || 'Este video no está disponible o es privado.');
+        }
+
+        if (playStatus === 'LOGIN_REQUIRED') {
+          throw new TranscriptError('bloqueado', reason || 'YouTube requiere comprobación de acceso para este método.');
+        }
+
+        if (playStatus && playStatus !== 'OK') {
+          throw new TranscriptError('bloqueado', reason || 'YouTube no autorizó la consulta directa por este método.');
         }
 
         const captionTracks = data.captions?.playerCaptionsTracklistRenderer?.captionTracks;
@@ -186,7 +202,7 @@ export const innertubeTranscriptProvider: TranscriptProvider = {
         }
 
         if (!timedTextRes.ok) {
-          throw new TranscriptError('sin_transcripcion', `Error al obtener subtítulos (HTTP ${timedTextRes.status}).`);
+          throw new TranscriptError('sin_subtitulos', `Error al obtener subtítulos (HTTP ${timedTextRes.status}).`);
         }
 
         const xml = await timedTextRes.text();
@@ -199,7 +215,7 @@ export const innertubeTranscriptProvider: TranscriptProvider = {
           .trim();
 
         if (!text || text.length < 50) {
-          throw new TranscriptError('sin_transcripcion', 'La transcripción obtenida está vacía o es muy corta.');
+          throw new TranscriptError('sin_subtitulos', 'La pista de subtítulos está vacía o es muy corta.');
         }
 
         const title = data.videoDetails?.title?.trim();
