@@ -108,7 +108,7 @@ Correspondencia homilética de compatibilidad: Los apartados representan los pun
 
 export const REGLAS_BOSQUEJO = REGLAS_LIDERAZGO;
 
-export const REGLAS_GRUPOS = `DISEÑO DEL ESTUDIO PARA GRUPOS PEQUEÑOS, CÉLULAS Y FAMILIAS (ESTILO MAIM):
+export const REGLAS_GRUPOS = `DISEÑO DEL ESTUDIO PARA ALTARES (GRUPOS PEQUEÑOS, CÉLULAS Y FAMILIAS — ESTILO MAIM):
 Diseña una guía comunitaria y pastoral profunda, participativa y edificante, impregnada del ADN espiritual de MAIM (adoración viva, koinonía genuina, intercesión apasionada y discipulado en santidad).
 
 PAUTAS DE REDACCIÓN Y ESTILO MAIM:
@@ -134,7 +134,7 @@ CAMPOS REQUERIDOS:
 - "oracion_final": Oración pastoral comunitaria en primera persona plural, solemne, íntima y de consagración.
 - "orientaciones_lider": 5 a 8 recomendaciones pedagógicas y pastorales prácticas para el facilitador de la célula.`;
 
-export const REGLAS_JOVENES = `DISEÑO DEL ESTUDIO PARA JÓVENES (ESTILO MAIM):
+export const REGLAS_JOVENES = `DISEÑO DEL ENCUENTRO FOGATA (JÓVENES Y ADOLESCENTES — ESTILO MAIM):
 Diseña un estudio formativo, bíblicamente sólido y espiritualmente desafiante para adolescentes y jóvenes, sin infantilismos, sin condescendencia y sin tecnicismos huecos. Debe reflejar la pasión ministerial de MAIM por una juventud consagrada, impulsada por Dios (ekbalo) y despierta en sus sentidos espirituales.
 
 PAUTAS DE REDACCIÓN Y ESTILO MAIM:
@@ -218,6 +218,10 @@ Diseña una guía profunda, pastoral, bíblica y altamente práctica para matrim
 
 METODOLOGÍA DIDÁCTICA Y PASTORAL DE CASA2:
 - Integra la sabiduría bíblica del pacto matrimonial (Efesios 5:21-33, Génesis 2:24, Eclesiastés 4:12, 1 Pedro 3:7) con las mejores herramientas didácticas de educación matrimonial: escucha activa sin juicio, desescalada de conflictos (evitar los destructores de la relación: crítica destructiva, desprecio, actitud defensiva y evasión/cerrazón), acuerdos claros de convivencia y examen de la propia responsabilidad.
+- ADAPTACIÓN Y PERTINENCIA ANTE CUALQUIER TEMÁTICA DE PRÉDICA:
+  * Si la prédica aborda el matrimonio, desarrolla el análisis con máxima profundidad conyugal.
+  * Si la prédica NO trata directamente sobre el matrimonio (ej. fe y obras, mayordomía financiera, sufrimiento, perdón, santidad o evangelismo), traduce los principios espirituales expuestos a la realidad de la vida conyugal de forma legítima, orgánica y natural (ej. la fe expresada en paciencia doméstica, finanzas compartidas, el perdón mutuo en las ofensas cotidianas).
+  * NUNCA fuerces interpretaciones artificiales, no inventes citas ni supongas enseñanzas que el expositor no pronunció. Desarrolla únicamente las aplicaciones conyugales que se desprenden sanamente del mensaje original.
 - Enfoque constructivo y no acusatorio: promueve la mutua edificación sin culpabilizar unilateralmente a ninguno de los cónyuges.
 - Cero consejos superficiales o genéricos; conecta cada pregunta, aplicación y dinámica directamente con el pasaje bíblico y el mensaje real de la prédica.
 - Redacta las aplicaciones y compromisos en primera persona (singular o plural conyugal: «reconozco en qué fallo», «decidimos en nuestro hogar», «necesitamos cultivar»).

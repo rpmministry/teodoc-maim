@@ -51,7 +51,7 @@ export default function BibliotecaDocumentos({
         </button>
       </div>
 
-      <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {MODALIDADES.map((modalidad) => {
           const documento = predicacion.documentos[modalidad.id];
           const activo = actual === modalidad.id;

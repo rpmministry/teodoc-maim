@@ -594,7 +594,7 @@ export default function FormularioAnalisis({
       <Seccion numero="2" titulo="Elige la modalidad" descripcion="El análisis general siempre se incluye.">
         <fieldset>
           <legend className="sr-only">Modalidad del análisis</legend>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {MODALIDADES.map((modalidad) => {
               const activa = valores.modalidad === modalidad.id;
               return (
