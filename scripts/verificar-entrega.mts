@@ -24,8 +24,8 @@ function comprobar(nombre: string, fn: () => void) {
   pruebas.push(`  ✓ ${nombre}`);
 }
 
-comprobar('La interfaz ofrece las seis modalidades y el campo de predicador', () => {
-  assert.equal(MODALIDADES.length, 6);
+comprobar('La interfaz ofrece las ocho modalidades y el campo de predicador', () => {
+  assert.equal(MODALIDADES.length, 8);
   assert.ok(form.includes('Predicador o expositor'), 'Falta el campo de predicador');
   assert.ok(form.includes('Título del mensaje'), 'Falta el campo de título');
   assert.ok(form.includes('Rango de edad de los niños'), 'Falta el selector de edad');
@@ -37,10 +37,12 @@ comprobar('Cada modalidad tiene un PDF descargable con su nombre exacto', () => 
   const esperados = [
     'teodoc-maim-analisis-general.pdf',
     'teodoc-maim-liderazgo.pdf',
-    'teodoc-maim-grupos-pequenos.pdf',
-    'teodoc-maim-jovenes.pdf',
+    'teodoc-maim-altares.pdf',
+    'teodoc-maim-fogata.pdf',
     'teodoc-maim-clase-infantil.pdf',
     'teodoc-maim-devocionales-7-dias.pdf',
+    'teodoc-maim-casa2.pdf',
+    'teodoc-maim-ayuno-del-novio.pdf',
   ];
   const nombres = MODALIDADES.map((m) => nombreArchivoPdf(m.id));
   assert.deepEqual(nombres, esperados);
@@ -53,8 +55,8 @@ comprobar('Cada modalidad tiene un PDF descargable con su nombre exacto', () => 
   assert.ok(page.includes("descargar('modalidad')"));
 });
 
-comprobar('Los seis constructores de PDF están conectados y tienen fallback seguro', () => {
-  for (const constructor of ['construirPdfGeneral', 'construirPdfBosquejo', 'construirPdfGrupos', 'construirPdfJovenes', 'construirPdfNinos', 'construirPdfDevocionales']) {
+comprobar('Los ocho constructores de PDF están conectados y tienen fallback seguro', () => {
+  for (const constructor of ['construirPdfGeneral', 'construirPdfBosquejo', 'construirPdfGrupos', 'construirPdfJovenes', 'construirPdfNinos', 'construirPdfDevocionales', 'construirPdfCasa2', 'construirPdfAyuno']) {
     assert.ok(pdfIndex.includes(constructor), `Falta ${constructor}`);
     assert.ok(existsSync(resolve(raiz, `lib/pdf/${constructor.replace('construirPdf', '').toLowerCase()}.ts`)), `Falta el archivo de ${constructor}`);
   }
@@ -79,15 +81,19 @@ comprobar('El PDF general mantiene el análisis completo y el especializado sus 
   const jovenes = leer('lib/pdf/jovenes.ts');
   const ninos = leer('lib/pdf/ninos.ts');
   const devocionales = leer('lib/pdf/devocionales.ts');
+  const casa2 = leer('lib/pdf/casa2.ts');
+  const ayuno = leer('lib/pdf/ayuno.ts');
   for (const seccion of ['Idea central y propósito', 'Fundamento bíblico', 'Desarrollo del mensaje', 'Enseñanzas principales', 'Aplicación práctica', 'Conclusión del estudio', 'Oración']) {
     assert.ok(general.includes(seccion), `Falta la sección general ${seccion}`);
   }
   assert.ok(bosquejo.includes('DOCUMENTO EDITORIAL DE FORMACIÓN MINISTERIAL') || bosquejo.includes('Liderazgo MAIM'));
-  assert.ok(grupos.includes('Agenda del encuentro') && grupos.includes('Orientaciones para el líder'));
-  assert.ok(jovenes.includes('Dinámica participativa') && jovenes.includes('Guía para el líder juvenil'));
+  assert.ok(grupos.includes('Altares') && grupos.includes('Agenda del encuentro'));
+  assert.ok(jovenes.includes('Fogata') && jovenes.includes('Dinámica participativa'));
   assert.ok(ninos.includes('El relato bíblico') && ninos.includes('Guía para el maestro'));
   assert.ok(devocionales.includes('plan.dias.forEach'));
   assert.ok(devocionales.includes('Jornada ${dia.dia} de ${plan.dias.length}'));
+  assert.ok(casa2.includes('Aplicación a la vida matrimonial') && casa2.includes('Fortalecimiento de la comunicación'));
+  assert.ok(ayuno.includes('Ayuno del Novio') && ayuno.includes('Jornada ${dia.dia} de 3'));
 });
 
 comprobar('La entrega funciona en escritorio e iOS sin navegar la pestaña', () => {
@@ -139,13 +145,13 @@ comprobar('La transcripción, el análisis y el audio compartido se conservan', 
   assert.ok(existsSync(resolve(raiz, 'components/liquid-orb.tsx')));
 });
 
-comprobar('La suite de pruebas cubre los cinco PDF y las modalidades', () => {
+comprobar('La suite de pruebas cubre los ocho PDF y las modalidades', () => {
   assert.ok(paquete.scripts['test:pdf'] === 'node scripts/verificar-pdf.mts');
   assert.ok(paquete.scripts['test:modalidades'] === 'node scripts/verificar-modalidades.mts');
   assert.ok(paquete.scripts['verificar'].includes('test:pdf'));
   assert.ok(paquete.scripts['verificar'].includes('test:modalidades'));
 });
 
-console.log('Verificación de entrega de las cinco modalidades y sus PDF');
+console.log('Verificación de entrega de las ocho modalidades y sus PDF');
 console.log(pruebas.join('\n'));
 console.log(`\n${pasadas} pruebas superadas.`);

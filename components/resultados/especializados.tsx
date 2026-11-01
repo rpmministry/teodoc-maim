@@ -1,6 +1,6 @@
 'use client';
 
-import type { ApartadoLiderazgo, ClaseNinos, EstudioBosquejo, EstudioGrupos, EstudioJovenes, PlanDevocional, ResultadoAnalisis } from '@/lib/tipos';
+import type { ApartadoLiderazgo, ClaseNinos, EstudioBosquejo, EstudioCasa2, EstudioGrupos, EstudioJovenes, PlanDevocional, ResultadoAnalisis } from '@/lib/tipos';
 import { obtenerRangoEdad } from '@/lib/modalidades';
 import { Bloque, Caja, Chips, Cita, Dato, Lista, SeccionResultado, SinContenido } from './ui';
 
@@ -201,7 +201,7 @@ export function ResultadoBosquejo({ analisis, datos }: { analisis: ResultadoAnal
 }
 
 // =============================================================================
-// MODALIDAD 2: GRUPOS PEQUEÑOS Y HOGARES
+// MODALIDAD 2: ALTARES (GRUPOS PEQUEÑOS Y HOGARES)
 // =============================================================================
 export function ResultadoGrupos({ analisis, datos }: { analisis: ResultadoAnalisis; datos: EstudioGrupos }) {
   return (
@@ -338,7 +338,7 @@ export function ResultadoGrupos({ analisis, datos }: { analisis: ResultadoAnalis
 }
 
 // =============================================================================
-// MODALIDAD 3: JÓVENES
+// MODALIDAD 3: FOGATA (JÓVENES)
 // =============================================================================
 export function ResultadoJovenes({ analisis, datos }: { analisis: ResultadoAnalisis; datos: EstudioJovenes }) {
   return (
@@ -706,6 +706,328 @@ export function ResultadoDevocionales({ analisis, datos }: { analisis: Resultado
           <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--coralOscuro)]">Perseverancia en la comunión diaria</p>
           <p className="mt-2 text-[13px] leading-relaxed text-[var(--texto)]">
             La Palabra de Dios recibida en estas jornadas no concluye con la lectura, sino que fructifica al ser guardada y practicada. Que cada verdad sembrada en tu corazón siga guiando tus decisiones, tu familia y tu servicio al Señor.
+          </p>
+        </div>
+      </SeccionResultado>
+
+      <Referencias analisis={analisis} />
+    </div>
+  );
+}
+
+// =============================================================================
+// MODALIDAD 6: CASA2 — ANÁLISIS ESPECIALIZADO PARA MATRIMONIOS
+// =============================================================================
+export function ResultadoCasa2({ analisis, datos }: { analisis: ResultadoAnalisis; datos: EstudioCasa2 }) {
+  const textoBase = datos.fundamento_biblico?.texto_base?.cita
+    ? datos.fundamento_biblico.texto_base
+    : analisis.texto_biblico_principal;
+
+  return (
+    <div className="space-y-6">
+      {/* 01. FUNDAMENTO BÍBLICO Y PROPÓSITO CONYUGAL */}
+      <SeccionResultado numero="01" titulo="Fundamento bíblico y propósito conyugal">
+        {datos.idea_central ? (
+          <Caja etiqueta="Idea central para el matrimonio">{datos.idea_central}</Caja>
+        ) : (
+          <SinContenido mensaje="No se definió una idea central conyugal." />
+        )}
+
+        <div className="mt-5">
+          <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--coralOscuro)]">
+            Pasaje bíblico y contexto para el hogar
+          </p>
+          {textoBase && (textoBase.cita || textoBase.texto) && <Cita versiculo={textoBase} />}
+          {datos.fundamento_biblico?.contexto_matrimonial && (
+            <p className="mt-3 text-[13px] leading-relaxed text-[var(--texto)]">
+              {datos.fundamento_biblico.contexto_matrimonial}
+            </p>
+          )}
+          {datos.fundamento_biblico?.textos_apoyo && datos.fundamento_biblico.textos_apoyo.length > 0 && (
+            <div className="mt-3 space-y-2">
+              <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--muted)]">
+                Pasajes bíblicos complementarios
+              </p>
+              {datos.fundamento_biblico.textos_apoyo.map((v, i) => (
+                <Cita key={`${v.cita}-${i}`} versiculo={v} />
+              ))}
+            </div>
+          )}
+        </div>
+
+        {datos.aplicacion_matrimonial?.length > 0 && (
+          <Bloque titulo="Aplicación a la vida matrimonial">
+            <Lista items={datos.aplicacion_matrimonial} />
+          </Bloque>
+        )}
+      </SeccionResultado>
+
+      {/* 02. FORTALECIMIENTO DE LA COMUNICACIÓN */}
+      <SeccionResultado numero="02" titulo="Fortalecimiento de la comunicación">
+        <div className="space-y-4">
+          {datos.comunicacion?.principios?.length > 0 && (
+            <Bloque titulo="Principios para el diálogo y la escucha activa">
+              <Lista items={datos.comunicacion.principios} />
+            </Bloque>
+          )}
+
+          {datos.comunicacion?.ejercicio_dialogo?.titulo && (
+            <div className="rounded-[12px] border border-[var(--linea)] bg-white p-4 sm:p-5">
+              <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--coralOscuro)]">
+                Ejercicio práctico de diálogo conyugal
+              </p>
+              <h4 className="mt-1 text-[14px] font-semibold text-[var(--tinta)]">
+                {datos.comunicacion.ejercicio_dialogo.titulo}
+              </h4>
+              {datos.comunicacion.ejercicio_dialogo.objetivo && (
+                <p className="mt-1 text-[12.5px] leading-relaxed text-[var(--texto)]">
+                  {datos.comunicacion.ejercicio_dialogo.objetivo}
+                </p>
+              )}
+              {datos.comunicacion.ejercicio_dialogo.pasos?.length > 0 && (
+                <div className="mt-3">
+                  <Lista items={datos.comunicacion.ejercicio_dialogo.pasos} numerada />
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </SeccionResultado>
+
+      {/* 03. REFLEXIÓN INDIVIDUAL Y EN PAREJA */}
+      <SeccionResultado numero="03" titulo="Preguntas de reflexión conyugal">
+        <div className="space-y-4">
+          {datos.reflexion_individual?.length > 0 && (
+            <Bloque titulo="Reflexión individual (Examen del propio corazón)">
+              <p className="mb-2 text-[12px] text-[var(--muted)]">
+                Preguntas para que cada cónyuge examine a solas su actitud, generosidad y compromiso:
+              </p>
+              <Lista items={datos.reflexion_individual} numerada />
+            </Bloque>
+          )}
+
+          {datos.reflexion_pareja?.length > 0 && (
+            <Bloque titulo="Conversación en pareja (Diálogo honesto y vulnerable)">
+              <p className="mb-2 text-[12px] text-[var(--muted)]">
+                Preguntas para dialogar juntos sin juzgar, buscando comprender la perspectiva del otro:
+              </p>
+              <Lista items={datos.reflexion_pareja} numerada />
+            </Bloque>
+          )}
+        </div>
+      </SeccionResultado>
+
+      {/* 04. SITUACIONES PRÁCTICAS Y ACTIVIDAD */}
+      <SeccionResultado numero="04" titulo="Situaciones cotidianas y dinámica conyugal">
+        <div className="space-y-4">
+          {datos.situaciones_practicas?.length > 0 && (
+            <div className="space-y-3">
+              <h4 className="text-[11px] font-bold uppercase tracking-[0.08em] text-[var(--coralOscuro)]">
+                Situaciones cotidianas del hogar
+              </h4>
+              {datos.situaciones_practicas.map((caso, idx) => (
+                <div key={idx} className="rounded-[11px] border border-[var(--linea)] bg-white p-4">
+                  <p className="mb-1 text-[9.5px] font-bold uppercase tracking-[0.1em] text-[var(--coralOscuro)]">
+                    Situación conyugal {idx + 1}
+                  </p>
+                  <p className="text-[12.5px] leading-relaxed text-[var(--texto)]">{caso}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {datos.actividad_juntos?.titulo && (
+            <div className="rounded-[12px] border border-[var(--linea)] bg-white p-4 sm:p-5">
+              <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--coralOscuro)]">
+                Actividad para realizar juntos
+              </p>
+              <h4 className="mt-1 text-[14px] font-semibold text-[var(--tinta)]">
+                {datos.actividad_juntos.titulo}
+              </h4>
+              {datos.actividad_juntos.objetivo && (
+                <p className="mt-1 text-[12.5px] leading-relaxed text-[var(--texto)]">
+                  {datos.actividad_juntos.objetivo}
+                </p>
+              )}
+              {datos.actividad_juntos.materiales && datos.actividad_juntos.materiales.length > 0 && (
+                <div className="mt-2.5">
+                  <Bloque titulo="Materiales">
+                    <Lista items={datos.actividad_juntos.materiales} />
+                  </Bloque>
+                </div>
+              )}
+              {datos.actividad_juntos.pasos?.length > 0 && (
+                <div className="mt-3">
+                  <Lista items={datos.actividad_juntos.pasos} numerada />
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </SeccionResultado>
+
+      {/* 05. COMPROMISOS, ORACIÓN Y CONCLUSIÓN */}
+      <SeccionResultado numero="05" titulo="Compromisos conyugales y oración">
+        <div className="space-y-4">
+          {datos.compromisos?.length > 0 && (
+            <Bloque titulo="Acuerdos y compromisos para esta semana">
+              <Lista items={datos.compromisos} />
+            </Bloque>
+          )}
+
+          {datos.oracion_pareja && (
+            <div className="mt-4">
+              <Caja tono="coral" etiqueta="Oración guiada para orar juntos tomados de la mano">
+                {datos.oracion_pareja}
+              </Caja>
+            </div>
+          )}
+
+          {datos.conclusion && (
+            <div className="mt-5 rounded-[12px] border border-[var(--linea)] bg-white p-5">
+              <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--coralOscuro)]">
+                Conclusión y aplicación pastoral
+              </p>
+              <p className="mt-2 text-[13px] leading-relaxed text-[var(--texto)]">{datos.conclusion}</p>
+            </div>
+          )}
+
+          {datos.salvaguarda_pastoral && (
+            <div className="mt-4 rounded-[10px] border border-[#e8c9a5] bg-[#fff8eb] px-4 py-3 text-[11.5px] leading-relaxed text-[#6f4b22]">
+              <strong className="block font-semibold">Cuidado y salvaguarda pastoral:</strong>
+              {datos.salvaguarda_pastoral}
+            </div>
+          )}
+        </div>
+      </SeccionResultado>
+
+      <Referencias analisis={analisis} />
+    </div>
+  );
+}
+
+// =============================================================================
+// MODALIDAD 7: AYUNO DEL NOVIO (3 Días)
+// =============================================================================
+export function ResultadoAyuno({ analisis, datos }: { analisis: ResultadoAnalisis; datos: PlanDevocional }) {
+  const jornadas = datos.dias.slice(0, 3);
+
+  return (
+    <div className="space-y-6">
+      {/* 01. PROPÓSITO DEL AYUNO DEL NOVIO */}
+      <SeccionResultado numero="01" titulo="Propósito del Ayuno del Novio">
+        {datos.introduccion && (
+          <p className="text-[13.5px] leading-relaxed text-[var(--texto)]">{datos.introduccion}</p>
+        )}
+        {datos.proposito && (
+          <div className="mt-4">
+            <Caja etiqueta="Propósito espiritual del ayuno">{datos.proposito}</Caja>
+          </div>
+        )}
+        <div className="mt-4 rounded-[10px] border border-[var(--linea)] bg-white px-4 py-3 text-[12px] leading-relaxed text-[var(--muted)]">
+          Itinerario de tres jornadas de consagración espiritual: humillación y arrepentimiento (Día 1), hambre por Su Presencia (Día 2) y rompimiento y unción (Día 3).
+        </div>
+        {jornadas.length < 3 && (
+          <div className="mt-4 rounded-[10px] border border-[#e8c9a5] bg-[#fff8eb] px-4 py-3 text-[12px] leading-relaxed text-[#6f4b22]">
+            Este plan contiene {jornadas.length} de las 3 jornadas previstas. El contenido disponible no permitió completar las restantes sin inventar.
+          </div>
+        )}
+      </SeccionResultado>
+
+      {/* 02. JORNADAS DEL AYUNO DEL NOVIO */}
+      <SeccionResultado numero="02" titulo="Jornadas devocionales de 3 días de Ayuno del Novio">
+        <div className="space-y-6">
+          {jornadas.map((dia, indice) => (
+            <article key={`${dia.dia}-${indice}`} className="rounded-[16px] border border-[var(--linea)] bg-white p-5 shadow-sm sm:p-6">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#f0e4d7] pb-3">
+                <div className="flex items-center gap-2.5">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--coralOscuro)] text-[11px] font-bold text-white">
+                    {dia.dia}
+                  </span>
+                  <h4 className="text-[15px] font-bold text-[var(--tinta)]">
+                    {dia.titulo || `Jornada ${dia.dia}`}
+                  </h4>
+                </div>
+                {dia.tema && (
+                  <span className="rounded-full bg-[#fbf2e6] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--coralOscuro)]">
+                    {dia.tema}
+                  </span>
+                )}
+              </div>
+
+              <div className="mt-4">
+                <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--muted)]">Lectura bíblica principal</p>
+                <Cita versiculo={dia.lectura_principal} />
+              </div>
+
+              {dia.lecturas_complementarias.length > 0 && (
+                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                  {dia.lecturas_complementarias.map((v, i) => (
+                    <Cita key={`${v.cita}-${i}`} versiculo={v} />
+                  ))}
+                </div>
+              )}
+
+              {dia.contexto && (
+                <Bloque titulo="Contexto bíblico de la jornada">
+                  <p className="text-[13px] leading-relaxed text-[var(--texto)]">{dia.contexto}</p>
+                </Bloque>
+              )}
+
+              {dia.reflexion && (
+                <Bloque titulo="Reflexión para el ayuno">
+                  <div className="space-y-2">
+                    {dia.reflexion.split(/\n+/).map((parrafo, i) => (
+                      <p key={i} className="text-[13.5px] leading-relaxed text-[var(--texto)]">
+                        {parrafo}
+                      </p>
+                    ))}
+                  </div>
+                </Bloque>
+              )}
+
+              {dia.ensenanza_central && (
+                <div className="mt-4">
+                  <Caja etiqueta="Enseñanza central de la jornada">{dia.ensenanza_central}</Caja>
+                </div>
+              )}
+
+              {dia.pregunta_introspeccion && (
+                <div className="mt-4">
+                  <Caja tono="coral" etiqueta="Examen del alma en el ayuno">{dia.pregunta_introspeccion}</Caja>
+                </div>
+              )}
+
+              {dia.aplicacion && (
+                <Bloque titulo="Aplicación espiritual">
+                  <p className="text-[13px] leading-relaxed text-[var(--texto)]">{dia.aplicacion}</p>
+                </Bloque>
+              )}
+
+              {dia.accion && (
+                <div className="mt-4 rounded-[10px] border border-[#ebd8cb] bg-[#fffaf5] p-3 text-[12.5px] text-[var(--texto)]">
+                  <strong className="text-[var(--coralOscuro)]">Disciplina y clamor de la jornada:</strong> {dia.accion}
+                </div>
+              )}
+
+              {dia.oracion && (
+                <div className="mt-4">
+                  <Caja etiqueta="Oración guiada de clamor y entrega">{dia.oracion}</Caja>
+                </div>
+              )}
+            </article>
+          ))}
+        </div>
+      </SeccionResultado>
+
+      {/* 03. CULMINACIÓN DEL AYUNO */}
+      <SeccionResultado numero="03" titulo="Culminación del Ayuno del Novio">
+        <div className="rounded-[14px] border border-[var(--linea)] bg-white p-5">
+          <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--coralOscuro)]">
+            Consagración y vida en el Espíritu
+          </p>
+          <p className="mt-2 text-[13px] leading-relaxed text-[var(--texto)]">
+            Al culminar las tres jornadas del Ayuno del Novio, renueva tu consagración ante el Señor. Que la unción, el quebrantamiento y la revelación recibidas se traduzcan en una vida llena del Espíritu Santo y de testimonio constante.
           </p>
         </div>
       </SeccionResultado>

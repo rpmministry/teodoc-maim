@@ -57,7 +57,9 @@ function comprobar(nombre: string, fn: () => void) {
 
 const resultados: Record<ModalidadId, InspeccionPdf> = {} as Record<ModalidadId, InspeccionPdf>;
 
-for (const modalidad of ['general', 'bosquejo', 'grupos', 'jovenes', 'ninos', 'devocionales'] as ModalidadId[]) {
+const todasModalidades: ModalidadId[] = ['general', 'bosquejo', 'grupos', 'jovenes', 'ninos', 'devocionales', 'casa2', 'ayuno'];
+
+for (const modalidad of todasModalidades) {
   const analisis = crearResultadoDemo(modalidad);
   const metadatos = modalidad === 'general' ? { ...metadatosDemo('general'), modalidad: 'general' as const } : metadatosDemo(modalidad);
   const blob = modalidad === 'general'
@@ -68,15 +70,34 @@ for (const modalidad of ['general', 'bosquejo', 'grupos', 'jovenes', 'ninos', 'd
   resultados[modalidad] = await inspeccionar(blob);
 }
 
-comprobar('Se generan los seis PDF con el nombre exacto solicitado', () => {
-  assert.deepEqual(Object.keys(resultados).sort(), ['bosquejo', 'devocionales', 'general', 'grupos', 'jovenes', 'ninos'].sort());
+comprobar('Se generan los ocho PDF con el nombre exacto solicitado', () => {
+  assert.deepEqual(Object.keys(resultados).sort(), [...todasModalidades].sort());
+  const mapaSufijos: Record<ModalidadId, string> = {
+    general: 'analisis-general',
+    bosquejo: 'liderazgo',
+    grupos: 'altares',
+    jovenes: 'fogata',
+    ninos: 'clase-infantil',
+    devocionales: 'devocionales-7-dias',
+    casa2: 'casa2',
+    ayuno: 'ayuno-del-novio',
+  };
   for (const modalidad of Object.keys(resultados) as ModalidadId[]) {
-    assert.equal(nombreArchivoPdf(modalidad), `teodoc-maim-${{ general: 'analisis-general', bosquejo: 'liderazgo', grupos: 'grupos-pequenos', jovenes: 'jovenes', ninos: 'clase-infantil', devocionales: 'devocionales-7-dias' }[modalidad]}.pdf`);
+    assert.equal(nombreArchivoPdf(modalidad), `teodoc-maim-${mapaSufijos[modalidad]}.pdf`);
   }
 });
 
 comprobar('Todos los PDF son multipágina y superan el tamaño mínimo con fuentes incrustadas', () => {
-  const minimos: Record<ModalidadId, number> = { general: 2, bosquejo: 2, grupos: 3, jovenes: 3, ninos: 3, devocionales: 8 };
+  const minimos: Record<ModalidadId, number> = {
+    general: 2,
+    bosquejo: 2,
+    grupos: 3,
+    jovenes: 3,
+    ninos: 3,
+    devocionales: 8,
+    casa2: 3,
+    ayuno: 4,
+  };
   for (const modalidad of Object.keys(resultados) as ModalidadId[]) {
     const pdf = resultados[modalidad];
     assert.ok(pdf.paginas >= minimos[modalidad], `${modalidad}: ${pdf.paginas} páginas`);
@@ -114,6 +135,8 @@ comprobar('Cada PDF contiene las secciones distintivas de su modalidad', () => {
     jovenes: ['Objetivo y tema del encuentro', 'Pasaje y conceptos fundamentales', 'Reflexión individual', 'Conversación grupal', 'Dinámica participativa', 'Desafío de la semana', 'Guía para el líder juvenil'],
     ninos: ['Datos de la clase', 'El versículo que aprenderemos', 'El relato bíblico', 'Actividad didáctica', 'Juego o dinámica', 'Lo que puedo vivir hoy', 'Guía para el maestro', 'Rango de edad'],
     devocionales: ['Introducción', 'CÓMO USAR ESTE PLAN', 'Una fe que escucha', 'Una fe que responde', 'Una fe que sigue'],
+    casa2: ['Casa2', 'Fundamento bíblico', 'Aplicación a la vida matrimonial', 'Fortalecimiento de la comunicación', 'Compromisos matrimoniales y oración'],
+    ayuno: ['Ayuno del Novio', 'Humillación y examen del corazón', 'Hambre por Su Presencia', 'Rompimiento y consagración total'],
   };
   for (const modalidad of Object.keys(requeridos) as ModalidadId[]) {
     for (const seccion of requeridos[modalidad]) {
@@ -135,6 +158,13 @@ comprobar('El plan devocional conserva las siete jornadas completas', () => {
   for (let dia = 1; dia <= 7; dia++) assert.match(texto, new RegExp(`D[IÍ]A\\s+${dia}`), `Falta el día ${dia}`);
   assert.ok(texto.includes('Una fe que sigue'), 'Falta la jornada final');
   assert.ok(texto.includes('Comparte tu compromiso'), 'Falta la acción de la jornada final');
+});
+
+comprobar('El Ayuno del Novio conserva exactamente tres jornadas completas', () => {
+  const texto = resultados.ayuno.texto;
+  for (let dia = 1; dia <= 3; dia++) assert.match(texto, new RegExp(`D[IÍ]A\\s+${dia}`), `Falta el día ${dia}`);
+  assert.ok(texto.includes('Rompimiento y consagración total'), 'Falta la jornada final de ayuno');
+  assert.ok(!texto.includes('DÍA 4') && !texto.includes('Día 4'), 'No deben aparecer más de tres jornadas en el ayuno');
 });
 
 comprobar('La clase infantil respeta el rango de edad seleccionado', () => {

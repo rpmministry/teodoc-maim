@@ -9,11 +9,11 @@ export function construirPdfJovenes(
   recursos: RecursosPdf,
 ): Blob {
   const meta = metadatosDocumento(analisis, metadatos);
-  const d = new DocumentoPDF(meta, 'Jóvenes', recursos);
+  const d = new DocumentoPDF(meta, 'Fogata', recursos);
   d.portada({
-    etiqueta: 'Estudio para jóvenes',
+    etiqueta: 'Fogata',
     titulo: analisis.titulo,
-    descripcion: 'Encuentro bíblico participativo para adolescentes y jóvenes, con reflexión, conversación y acción.',
+    descripcion: 'Encuentro bíblico participativo de Fogata para adolescentes y jóvenes, con reflexión, conversación y acción.',
     fechaDocumento: fechaDocumento(meta),
   });
 
@@ -106,5 +106,5 @@ export function construirPdfJovenes(
     { tamano: 9, color: [122, 102, 98] },
   );
 
-  return d.finalizar('Jóvenes');
+  return d.finalizar('Fogata');
 }

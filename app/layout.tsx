@@ -14,11 +14,11 @@ export const metadata: Metadata = {
     default: 'TeoDoc MAIM — Análisis bíblico y materiales de estudio',
     template: '%s · TeoDoc MAIM',
   },
-  description: 'Transforma la transcripción de una prédica en un análisis bíblico y en materiales listos para grupos pequeños, jóvenes, niños y devocionales de siete días.',
+  description: 'Transforma la transcripción de una prédica en un análisis bíblico y en materiales listos para altares, fogata, niños, devocionales de siete días, matrimonios (Casa2) y ayuno del novio.',
   applicationName: 'TeoDoc MAIM',
   openGraph: {
     title: 'TeoDoc MAIM — Análisis bíblico y materiales de estudio',
-    description: 'De la prédica al estudio que transforma. Cinco modalidades, PDF listo para imprimir y fidelidad al contenido real.',
+    description: 'De la prédica al estudio que transforma. Ocho especialidades ministeriales, PDF y Word listos para imprimir y fidelidad al contenido real.',
     locale: 'es_CO',
     type: 'website',
     images: [{ url: '/institucional/maim-portada.jpg', width: 505, height: 350, alt: 'MAIM Casa de Oración' }],

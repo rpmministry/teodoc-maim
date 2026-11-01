@@ -57,7 +57,7 @@ function comprobar(nombre: string, fn: () => void) {
   pruebas.push(`  ✓ ${nombre}`);
 }
 
-const modalidades: ModalidadId[] = ['general', 'bosquejo', 'grupos', 'jovenes', 'ninos', 'devocionales'];
+const modalidades: ModalidadId[] = ['general', 'bosquejo', 'grupos', 'jovenes', 'ninos', 'devocionales', 'casa2', 'ayuno'];
 const resultados = {} as Record<ModalidadId, InspeccionWord>;
 
 for (const modalidad of modalidades) {
@@ -71,7 +71,7 @@ for (const modalidad of modalidades) {
   resultados[modalidad] = await inspeccionar(blob);
 }
 
-comprobar('Se generan los seis documentos Word con nombre exacto', () => {
+comprobar('Se generan los ocho documentos Word con nombre exacto', () => {
   for (const modalidad of modalidades) {
     const nombre = nombreArchivoWord(modalidad);
     assert.match(nombre, /^teodoc-maim-[a-z0-9-]+\.docx$/);
@@ -105,6 +105,24 @@ comprobar('Cada DOCX conserva la estructura propia de su especialidad', () => {
     jovenes: ['Ficha del encuentro', 'Conceptos teológicos', 'Casos prácticos', 'Dinámica participativa', 'Compromiso de la semana', 'Guía breve para el líder'],
     ninos: ['Ficha del maestro', 'Relato bíblico', 'Actividad central', 'Juego o dinámica', 'Aplicación para el niño', 'Salvaguardas infantiles'],
     devocionales: ['Introducción general', 'Día 1', 'Día 7', 'Oración sugerida', 'Cierre del itinerario'],
+    casa2: [
+      'Ficha técnica y fundamento matrimonial',
+      'Aplicación a la vida matrimonial',
+      'Fortalecimiento de la comunicación conyugal',
+      'Preguntas de reflexión e introspección',
+      'Situaciones prácticas del matrimonio',
+      'Actividad para realizar juntos',
+      'Compromisos matrimoniales y oración',
+      'Conclusión y salvaguarda pastoral',
+    ],
+    ayuno: [
+      'Propósito espiritual del Ayuno del Novio',
+      'Jornada 1',
+      'Jornada 2',
+      'Jornada 3',
+      'Oración guiada',
+      'Culminación del Ayuno del Novio',
+    ],
   };
   for (const modalidad of modalidades) {
     const texto = textoPlano(resultados[modalidad].xml);
@@ -120,7 +138,7 @@ comprobar('Los DOCX conservan acentos y no contienen marcadores técnicos', () =
     assert.ok(texto.includes('Oración') || texto.includes('oración'), `${modalidad}: faltan acentos`);
     assert.ok(!texto.includes('undefined'), `${modalidad}: contiene undefined`);
     assert.ok(!texto.includes('null'), `${modalidad}: contiene null`);
-    assert.ok(!texto.includes('�'), `${modalidad}: contiene carácter de reemplazo`);
+    assert.ok(!texto.includes('\uFFFD'), `${modalidad}: contiene carácter de reemplazo`);
   }
 });
 
@@ -129,6 +147,13 @@ comprobar('El plan devocional contiene siete jornadas en Word', () => {
   for (let dia = 1; dia <= 7; dia++) assert.ok(texto.includes(`Día ${dia}`), `Falta Día ${dia}`);
 });
 
-console.log('Verificación funcional de los seis documentos Word');
+comprobar('El Ayuno del Novio contiene exactamente tres jornadas en Word', () => {
+  const texto = textoPlano(resultados.ayuno.xml);
+  for (let dia = 1; dia <= 3; dia++) assert.ok(texto.includes(`Jornada ${dia}`), `Falta Jornada ${dia}`);
+  assert.ok(!texto.includes('Jornada 4'), 'No debe contener Jornada 4 en Ayuno del Novio');
+  assert.ok(!texto.includes('Día 4'), 'No debe contener Día 4 en Ayuno del Novio');
+});
+
+console.log('Verificación funcional de los ocho documentos Word');
 console.log(pruebas.join('\n'));
 console.log(`\n${pasadas} pruebas superadas. Archivos en tmp/docx/.`);

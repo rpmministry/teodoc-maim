@@ -5,6 +5,8 @@ import { construirPdfGeneral } from './general.ts';
 import { construirPdfGrupos } from './grupos.ts';
 import { construirPdfJovenes } from './jovenes.ts';
 import { construirPdfNinos } from './ninos.ts';
+import { construirPdfCasa2 } from './casa2.ts';
+import { construirPdfAyuno } from './ayuno.ts';
 import type { RecursosPdf } from './base.ts';
 
 export type { RecursosPdf } from './base.ts';
@@ -15,6 +17,8 @@ export { construirPdfGrupos } from './grupos.ts';
 export { construirPdfJovenes } from './jovenes.ts';
 export { construirPdfNinos } from './ninos.ts';
 export { construirPdfDevocionales } from './devocionales.ts';
+export { construirPdfCasa2 } from './casa2.ts';
+export { construirPdfAyuno } from './ayuno.ts';
 
 export interface SolicitudPdf {
   analisis: ResultadoAnalisis;
@@ -35,10 +39,10 @@ export function construirPdfModalidad({ analisis, metadatos, recursos = {} }: So
       if (!especializado.bosquejo) throw new Error('El bosquejo ministerial no está disponible.');
       return construirPdfBosquejo(analisis, especializado.bosquejo, metadatos, recursos);
     case 'grupos':
-      if (!especializado.grupos) throw new Error('El estudio para grupos no está disponible.');
+      if (!especializado.grupos) throw new Error('El estudio para Altares no está disponible.');
       return construirPdfGrupos(analisis, especializado.grupos, metadatos, recursos);
     case 'jovenes':
-      if (!especializado.jovenes) throw new Error('El estudio para jóvenes no está disponible.');
+      if (!especializado.jovenes) throw new Error('El estudio para Fogata no está disponible.');
       return construirPdfJovenes(analisis, especializado.jovenes, metadatos, recursos);
     case 'ninos':
       if (!especializado.ninos) throw new Error('La clase infantil no está disponible.');
@@ -46,6 +50,12 @@ export function construirPdfModalidad({ analisis, metadatos, recursos = {} }: So
     case 'devocionales':
       if (!especializado.devocionales) throw new Error('El plan devocional no está disponible.');
       return construirPdfDevocionales(analisis, especializado.devocionales, metadatos, recursos);
+    case 'casa2':
+      if (!especializado.casa2) throw new Error('El análisis conyugal Casa2 no está disponible.');
+      return construirPdfCasa2(analisis, especializado.casa2, metadatos, recursos);
+    case 'ayuno':
+      if (!especializado.ayuno) throw new Error('El plan del Ayuno del Novio no está disponible.');
+      return construirPdfAyuno(analisis, especializado.ayuno, metadatos, recursos);
     default:
       return construirPdfGeneral(analisis, metadatos, recursos);
   }

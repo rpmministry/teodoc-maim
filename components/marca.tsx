@@ -68,6 +68,19 @@ export function IconoModalidad({ tipo, className = 'h-5 w-5' }: { tipo: Modalida
           <path d="M15.5 13.5v5M13 16h5" />
         </>
       )}
+      {tipo === 'casa2' && (
+        <>
+          <path d="M3 10.5 12 3l9 7.5v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+          <path d="M12 16.5c-1.5-1.5-3-2.3-3-3.5a1.8 1.8 0 0 1 3-1.3 1.8 1.8 0 0 1 3 1.3c0 1.2-1.5 2-3 3.5Z" />
+        </>
+      )}
+      {tipo === 'ayuno' && (
+        <>
+          <path d="M12 2c.8 1.5 2 3.2 2 5a2 2 0 1 1-4 0c0-1.8 1.2-3.5 2-5Z" />
+          <path d="M5 12h14l-1.5 8H6.5L5 12Z" />
+          <path d="M4 12h16M7 20h10" />
+        </>
+      )}
     </svg>
   );
 }

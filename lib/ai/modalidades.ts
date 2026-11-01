@@ -213,12 +213,75 @@ CADA DÍA INCLUYE OBLIGATORIAMENTE:
 - "accion": Acto o compromiso espiritual específico a realizar durante la jornada.
 - "oracion": Oración devocional guiada, íntima, reverente y de entrega personal a Dios.`;
 
+export const REGLAS_CASA2 = `DISEÑO DEL ANÁLISIS ESPECIALIZADO PARA MATRIMONIOS — CASA2 (ESTILO MAIM):
+Diseña una guía profunda, pastoral, bíblica y altamente práctica para matrimonios a partir de la enseñanza expuesta. El objetivo no es resumir la prédica, sino traducir sus principios espirituales y teológicos en orientación conyugal, fortalecimiento de la comunicación, sanidad relacional, acuerdos duraderos e intimidad espiritual entre esposos.
+
+METODOLOGÍA DIDÁCTICA Y PASTORAL DE CASA2:
+- Integra la sabiduría bíblica del pacto matrimonial (Efesios 5:21-33, Génesis 2:24, Eclesiastés 4:12, 1 Pedro 3:7) con las mejores herramientas didácticas de educación matrimonial: escucha activa sin juicio, desescalada de conflictos (evitar los destructores de la relación: crítica destructiva, desprecio, actitud defensiva y evasión/cerrazón), acuerdos claros de convivencia y examen de la propia responsabilidad.
+- Enfoque constructivo y no acusatorio: promueve la mutua edificación sin culpabilizar unilateralmente a ninguno de los cónyuges.
+- Cero consejos superficiales o genéricos; conecta cada pregunta, aplicación y dinámica directamente con el pasaje bíblico y el mensaje real de la prédica.
+- Redacta las aplicaciones y compromisos en primera persona (singular o plural conyugal: «reconozco en qué fallo», «decidimos en nuestro hogar», «necesitamos cultivar»).
+- Salvaguarda pastoral clara: este material es de edificación espiritual y formativa conyugal; no sustituye la terapia profesional, médica ni consejería especializada en casos de crisis severa o violencia.
+
+CAMPOS REQUERIDOS EN EL OBJETO JSON:
+- "titulo_tema": Identificación del mensaje y su articulación específica con la vida matrimonial.
+- "idea_central": Proposición central de la prédica trasladada a la salud y madurez del matrimonio.
+- "fundamento_biblico": Objeto con:
+  * "texto_base": Versículo bíblico principal (cita y texto) utilizado en el mensaje.
+  * "contexto_matrimonial": Explicación exegética responsable de cómo este fundamento bíblico ilumina el pacto matrimonial y la convivencia conyugal.
+  * "textos_apoyo": Array de 1 a 3 versículos bíblicos de apoyo (cita y texto) relacionados.
+- "aplicacion_matrimonial": 3 a 5 aplicaciones prácticas concretas a la vida diaria de los esposos (economía, crianza, servicio, vida devocional, perdón).
+- "comunicacion": Objeto con:
+  * "principios": 3 a 5 principios prácticos para mejorar la escucha atenta, la empatía, el tono de voz y la comprensión mutua derivados del mensaje.
+  * "ejercicio_dialogo": Ejercicio estructurado de diálogo íntimo entre esposos con "titulo", "objetivo" y "pasos" secuenciales (tiempos para escuchar sin interrumpir, validar emociones y responder con gracia).
+- "reflexion_individual": 4 a 6 preguntas de introspección profunda para que cada cónyuge examine a solas su propia actitud, egoísmo, orgullo o falta de entrega.
+- "reflexion_pareja": 4 a 6 preguntas para conversar juntos con vulnerabilidad, honestidad y amor, permitiendo compartir perspectivas y sanar heridas.
+- "situaciones_practicas": 2 a 4 casos o situaciones cotidianas representativas derivadas del tema (dilemas de tiempo, prioridades, temperamento) con orientación bíblica constructiva para resolverlos.
+- "actividad_juntos": Dinámica o ejercicio práctico para realizar en pareja con "titulo", "objetivo", "materiales" (opcional) y "pasos" claros para llevar la enseñanza a la acción.
+- "compromisos": 3 a 5 acuerdos y compromisos concretos y medibles que ambos asumen ante Dios para la semana.
+- "oracion_pareja": Guía de oración conyugal para orar juntos tomados de la mano, con reverencia, perdón y consagración de su hogar.
+- "conclusion": Síntesis formativa, clímax espiritual y bendición pastoral para continuar creciendo juntos en Dios.
+- "salvaguarda_pastoral": Nota pastoral recordando con madurez que este análisis complementa el discipulado y no sustituye la atención especializada cuando se requiera.`;
+
+export const REGLAS_AYUNO = `DISEÑO DEL PLAN DE AYUNO DEL NOVIO — TRES JORNADAS (ESTILO MAIM):
+Diseña un itinerario de EXACTAMENTE TRES (3) JORNADAS de consagración espiritual, humillación, búsqueda ferviente y adoración ante el Señor, inspirado en Mateo 9:15 («los días vendrán cuando el novio les será quitado, y entonces ayunarán») y fundamentado rigurosamente en la enseñanza expuesta.
+
+PROGRESIÓN ESPIRITUAL OBLIGATORIA DE LAS 3 JORNADAS:
+- Día 1: Humillación, quebrantamiento y arrepentimiento sincero (revisar el corazón, confesar y despojarse de todo peso).
+- Día 2: Hambre por Su Presencia e intimidad con el Novio (búsqueda profunda de Cristo, intercesión y llenura del Espíritu Santo).
+- Día 3: Rompimiento espiritual, unción, consagración y alineamiento con la misión divina (fe victoriosa, autoridad y entrega total).
+
+PAUTAS DE REDACCIÓN Y ESTILO MAIM:
+- El itinerario consta de exactamente TRES (3) jornadas consecutivas y conectadas (días 1, 2 y 3). PROHIBIDO generar más o menos de 3 días.
+- Redacta la "reflexion", la "ensenanza_central", la "aplicacion" y la "oracion" en primera persona de fe («Hoy me humillo delante de Ti», «Reconozco mi necesidad», «Decido buscar Tu rostro»).
+- Cada reflexión debe ser extensa, sustanciosa y ardiente en espíritu (2 a 3 párrafos profundos), vinculando el ayuno y la Palabra con el despertar espiritual.
+- Conserva el texto bíblico y sus referencias fielmente. Cero alucinación de versículos.
+
+CAMPOS REQUERIDOS:
+- "introduccion": Introducción espiritual convocando a la congregación a las tres jornadas de ayuno y clamor.
+- "proposito": Propósito espiritual central del Ayuno del Novio según la prédica.
+- "dias": Array de exactamente 3 jornadas (con número entero dia: 1, 2, 3), cada una con:
+  * "dia": 1, 2 o 3.
+  * "titulo": Título evocador y ministerial de la jornada.
+  * "tema": Tema espiritual específico del día.
+  * "lectura_principal": Pasaje bíblico principal con "cita" y "texto".
+  * "lecturas_complementarias": 1 a 3 pasajes bíblicos con "cita" y "texto".
+  * "contexto": Contexto bíblico del pasaje para el tiempo de ayuno.
+  * "reflexion": Reflexión devocional extensa y profunda (2 a 3 párrafos) en primera persona.
+  * "ensenanza_central": Verdad doctrinal principal a retener y meditar.
+  * "pregunta_introspeccion": Pregunta penetrante para el examen del alma durante el ayuno.
+  * "aplicacion": Aplicación espiritual y personal para la jornada.
+  * "accion": Disciplina espiritual o acción práctica concreta de ayuno, intercesión o restitución.
+  * "oracion": Oración guiada ardiente, íntima y de entrega total a Dios.`;
+
 export const REGLAS_POR_MODALIDAD: Record<Exclude<ModalidadId, 'general'>, string> = {
   bosquejo: REGLAS_BOSQUEJO,
   grupos: REGLAS_GRUPOS,
   jovenes: REGLAS_JOVENES,
   ninos: REGLAS_NINOS,
   devocionales: REGLAS_DEVOCIONALES,
+  casa2: REGLAS_CASA2,
+  ayuno: REGLAS_AYUNO,
 };
 
 const TERMINO_CLAVE = {
@@ -528,12 +591,152 @@ const ESQUEMA_DEVOCIONALES = {
   required: ['especializado'],
 };
 
+const ESQUEMA_CASA2 = {
+  type: Type.OBJECT,
+  properties: {
+    especializado: {
+      type: Type.OBJECT,
+      properties: {
+        casa2: {
+          type: Type.OBJECT,
+          properties: {
+            titulo_tema: TEXTO,
+            idea_central: TEXTO,
+            fundamento_biblico: {
+              type: Type.OBJECT,
+              properties: {
+                texto_base: VERSICULO,
+                contexto_matrimonial: TEXTO,
+                textos_apoyo: {
+                  type: Type.ARRAY,
+                  items: VERSICULO,
+                },
+              },
+              required: ['texto_base', 'contexto_matrimonial'],
+            },
+            aplicacion_matrimonial: LISTA_TEXTO,
+            comunicacion: {
+              type: Type.OBJECT,
+              properties: {
+                principios: LISTA_TEXTO,
+                ejercicio_dialogo: {
+                  type: Type.OBJECT,
+                  properties: {
+                    titulo: TEXTO,
+                    objetivo: TEXTO,
+                    pasos: LISTA_TEXTO,
+                  },
+                  required: ['titulo', 'objetivo', 'pasos'],
+                },
+              },
+              required: ['principios', 'ejercicio_dialogo'],
+            },
+            reflexion_individual: LISTA_TEXTO,
+            reflexion_pareja: LISTA_TEXTO,
+            situaciones_practicas: LISTA_TEXTO,
+            actividad_juntos: {
+              type: Type.OBJECT,
+              properties: {
+                titulo: TEXTO,
+                objetivo: TEXTO,
+                materiales: LISTA_TEXTO,
+                pasos: LISTA_TEXTO,
+              },
+              required: ['titulo', 'objetivo', 'pasos'],
+            },
+            compromisos: LISTA_TEXTO,
+            oracion_pareja: TEXTO,
+            conclusion: TEXTO,
+            salvaguarda_pastoral: TEXTO,
+          },
+          required: [
+            'titulo_tema',
+            'idea_central',
+            'fundamento_biblico',
+            'aplicacion_matrimonial',
+            'comunicacion',
+            'reflexion_individual',
+            'reflexion_pareja',
+            'situaciones_practicas',
+            'actividad_juntos',
+            'compromisos',
+            'oracion_pareja',
+            'conclusion',
+          ],
+        },
+      },
+      required: ['casa2'],
+    },
+  },
+  required: ['especializado'],
+};
+
+const ESQUEMA_AYUNO = {
+  type: Type.OBJECT,
+  properties: {
+    especializado: {
+      type: Type.OBJECT,
+      properties: {
+        ayuno: {
+          type: Type.OBJECT,
+          properties: {
+            introduccion: TEXTO,
+            proposito: TEXTO,
+            dias: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  dia: { type: Type.INTEGER },
+                  titulo: TEXTO,
+                  tema: TEXTO,
+                  lectura_principal: VERSICULO,
+                  lecturas_complementarias: {
+                    type: Type.ARRAY,
+                    items: VERSICULO,
+                  },
+                  contexto: TEXTO,
+                  reflexion: TEXTO,
+                  ensenanza_central: TEXTO,
+                  pregunta_introspeccion: TEXTO,
+                  aplicacion: TEXTO,
+                  accion: TEXTO,
+                  oracion: TEXTO,
+                },
+                required: [
+                  'dia',
+                  'titulo',
+                  'tema',
+                  'lectura_principal',
+                  'lecturas_complementarias',
+                  'contexto',
+                  'reflexion',
+                  'ensenanza_central',
+                  'pregunta_introspeccion',
+                  'aplicacion',
+                  'accion',
+                  'oracion',
+                ],
+              },
+            },
+          },
+          required: ['introduccion', 'proposito', 'dias'],
+        },
+      },
+      required: ['ayuno'],
+    },
+  },
+  required: ['especializado'],
+};
+
 export const ESQUEMAS_POR_MODALIDAD: Record<Exclude<ModalidadId, 'general'>, unknown> = {
   bosquejo: ESQUEMA_BOSQUEJO,
   grupos: ESQUEMA_GRUPOS,
   jovenes: ESQUEMA_JOVENES,
   ninos: ESQUEMA_NINOS,
   devocionales: ESQUEMA_DEVOCIONALES,
+  casa2: ESQUEMA_CASA2,
+  ayuno: ESQUEMA_AYUNO,
 };
 
 export function construirPromptEspecializado(modalidad: Exclude<ModalidadId, 'general'>, rangoEdad?: string): string {

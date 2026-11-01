@@ -7,7 +7,7 @@ export interface Modalidad {
   descripcion: string;
   publico: string;
   archivoPdf: string;
-  icono: 'libro' | 'bosquejo' | 'grupo' | 'jovenes' | 'ninos' | 'devocional';
+  icono: 'libro' | 'bosquejo' | 'grupo' | 'jovenes' | 'ninos' | 'devocional' | 'casa2' | 'ayuno';
 }
 
 export const MODALIDADES: Modalidad[] = [
@@ -31,20 +31,20 @@ export const MODALIDADES: Modalidad[] = [
   },
   {
     id: 'grupos',
-    nombre: 'Grupos pequeños, células y familias',
-    nombreCorto: 'Grupos pequeños',
-    descripcion: 'Guía participativa con agenda, preguntas, actividad, compromiso y oración para dirigir un encuentro en casa.',
-    publico: 'Líderes de células, grupos pequeños y familias',
-    archivoPdf: 'teodoc-maim-grupos-pequenos.pdf',
+    nombre: 'Altares',
+    nombreCorto: 'Altares',
+    descripcion: 'Guía participativa con agenda, preguntas, actividad, compromiso y oración para dirigir un encuentro en casa o célula.',
+    publico: 'Líderes de células, altares familiares y hogares',
+    archivoPdf: 'teodoc-maim-altares.pdf',
     icono: 'grupo',
   },
   {
     id: 'jovenes',
-    nombre: 'Jóvenes',
-    nombreCorto: 'Jóvenes',
+    nombre: 'Fogata',
+    nombreCorto: 'Fogata',
     descripcion: 'Encuentro con lenguaje claro, preguntas de reflexión, casos prácticos y una dinámica participativa.',
     publico: 'Adolescentes, jóvenes y líderes juveniles',
-    archivoPdf: 'teodoc-maim-jovenes.pdf',
+    archivoPdf: 'teodoc-maim-fogata.pdf',
     icono: 'jovenes',
   },
   {
@@ -64,6 +64,24 @@ export const MODALIDADES: Modalidad[] = [
     publico: 'Creyentes y familias que desean meditar durante la semana',
     archivoPdf: 'teodoc-maim-devocionales-7-dias.pdf',
     icono: 'devocional',
+  },
+  {
+    id: 'casa2',
+    nombre: 'Casa2 — Matrimonios',
+    nombreCorto: 'Casa2',
+    descripcion: 'Análisis especializado para matrimonios: comunicación conyugal, acuerdos, reflexión en pareja y dinámicas prácticas.',
+    publico: 'Matrimonios, parejas y líderes de pastoral familiar',
+    archivoPdf: 'teodoc-maim-casa2.pdf',
+    icono: 'casa2',
+  },
+  {
+    id: 'ayuno',
+    nombre: 'Ayuno del Novio',
+    nombreCorto: 'Ayuno del Novio',
+    descripcion: 'Itinerario de tres jornadas devocionales de humillación, búsqueda ferviente, consagración y adoración.',
+    publico: 'Creyentes y congregación convocados al ayuno y la intercesión',
+    archivoPdf: 'teodoc-maim-ayuno-del-novio.pdf',
+    icono: 'ayuno',
   },
 ];
 

@@ -31,18 +31,20 @@ function comprobar(nombre: string, fn: () => void) {
   pruebas.push(`  ✓ ${nombre}`);
 }
 
-const IDS: ModalidadId[] = ['general', 'bosquejo', 'grupos', 'jovenes', 'ninos', 'devocionales'];
+const IDS: ModalidadId[] = ['general', 'bosquejo', 'grupos', 'jovenes', 'ninos', 'devocionales', 'casa2', 'ayuno'];
 const NOMBRES_ESPERADOS: Record<ModalidadId, string> = {
   general: 'teodoc-maim-analisis-general.pdf',
   bosquejo: 'teodoc-maim-liderazgo.pdf',
-  grupos: 'teodoc-maim-grupos-pequenos.pdf',
-  jovenes: 'teodoc-maim-jovenes.pdf',
+  grupos: 'teodoc-maim-altares.pdf',
+  jovenes: 'teodoc-maim-fogata.pdf',
   ninos: 'teodoc-maim-clase-infantil.pdf',
   devocionales: 'teodoc-maim-devocionales-7-dias.pdf',
+  casa2: 'teodoc-maim-casa2.pdf',
+  ayuno: 'teodoc-maim-ayuno-del-novio.pdf',
 };
 
-comprobar('Existen exactamente seis modalidades con los identificadores requeridos', () => {
-  assert.equal(MODALIDADES.length, 6);
+comprobar('Existen exactamente ocho especialidades con los identificadores requeridos', () => {
+  assert.equal(MODALIDADES.length, 8);
   assert.deepEqual(MODALIDADES.map((m) => m.id).sort(), [...IDS].sort());
   for (const modalidad of MODALIDADES) {
     assert.ok(modalidad.nombre.length > 3, `Nombre vacío en ${modalidad.id}`);
@@ -60,7 +62,7 @@ comprobar('Cada modalidad tiene un nombre de PDF único y exacto', () => {
     assert.ok(!nombres.has(nombre), `Nombre duplicado: ${nombre}`);
     nombres.add(nombre);
   }
-  assert.equal(nombres.size, 6);
+  assert.equal(nombres.size, 8);
 });
 
 comprobar('La modalidad de niños exige edad y ofrece tres rangos', () => {
@@ -96,7 +98,7 @@ comprobar('La fecha se valida y se presenta en español', () => {
   assert.match(fechaLarga('2026-10-18'), /18 de octubre de 2026/);
 });
 
-comprobar('Las seis modalidades normalizan contenido completo y utilizable', () => {
+comprobar('Las ocho especialidades normalizan contenido completo y utilizable', () => {
   for (const modalidad of IDS) {
     const resultado = crearResultadoDemo(modalidad);
     assert.equal(resultado.metadatos.modalidad, modalidad);
@@ -109,6 +111,8 @@ comprobar('Las seis modalidades normalizan contenido completo y utilizable', () 
     if (modalidad === 'jovenes') assert.equal(resultado.especializado.jovenes?.casos_practicos.length, 3);
     if (modalidad === 'ninos') assert.equal(resultado.especializado.ninos?.relato.length, 4);
     if (modalidad === 'devocionales') assert.equal(resultado.especializado.devocionales?.dias.length, 7);
+    if (modalidad === 'casa2') assert.ok((resultado.especializado.casa2?.compromisos.length || 0) >= 2);
+    if (modalidad === 'ayuno') assert.equal(resultado.especializado.ayuno?.dias.length, 3);
   }
 });
 
@@ -160,6 +164,8 @@ comprobar('Las reglas de cada modalidad exigen sus secciones distintivas', () =>
     jovenes: ['dinamica', 'preguntas_grupales', 'casos_practicos', 'desafio_semanal'],
     ninos: ['relato', 'actividad', 'juego', 'recomendaciones_maestro'],
     devocionales: ['siete', 'lectura_principal', 'pregunta_introspeccion', 'oracion'],
+    casa2: ['comunicacion', 'reflexion_individual', 'reflexion_pareja', 'compromisos', 'oracion_pareja'],
+    ayuno: ['tres', 'lectura_principal', 'pregunta_introspeccion', 'oracion'],
   };
   for (const [modalidad, terminos] of Object.entries(claves)) {
     const reglas = REGLAS_POR_MODALIDAD[modalidad as Exclude<ModalidadId, 'general'>];

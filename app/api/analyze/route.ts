@@ -542,6 +542,12 @@ export async function POST(req: NextRequest) {
         advertencia = `Se generaron ${dias} de 7 jornadas porque el contenido disponible no permitió sostener más sin inventar. Revisa el material antes de usarlo.`;
       }
     }
+    if (modalidad === 'ayuno') {
+      const dias = especializado.ayuno?.dias.length || 0;
+      if (dias < 3) {
+        advertencia = `Se generaron ${dias} de 3 jornadas porque el contenido disponible no permitió sostener más sin inventar. Revisa el material antes de usarlo.`;
+      }
+    }
 
     const respuestaEspecializada = {
       ...analisisGeneral,

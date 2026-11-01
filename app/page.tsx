@@ -649,7 +649,7 @@ export default function Inicio() {
                 Introduce una prédica desde un enlace de YouTube, archivo de audio, documento Word/PDF o texto directo. Elige cómo la vas a enseñar y recibe un análisis fiel con sus documentos en PDF y Word listos para compartir.
               </p>
               <div className="mt-7 flex flex-wrap justify-center gap-2">
-                {['Análisis general', 'Liderazgo', 'Grupos pequeños', 'Jóvenes', 'Niños', 'Devocionales de 7 días'].map((etiqueta) => (
+                {['Análisis general', 'Liderazgo', 'Altares', 'Fogata', 'Niños', 'Devocionales de 7 días', 'Casa2', 'Ayuno del Novio'].map((etiqueta) => (
                   <span key={etiqueta} className="rounded-full border border-[#e1c9bb] bg-white/60 px-3 py-1.5 text-[10.5px] font-semibold text-[var(--texto)]">{etiqueta}</span>
                 ))}
               </div>
@@ -785,7 +785,7 @@ export default function Inicio() {
             <div className="mt-7 grid gap-4 md:grid-cols-3">
               {[
                 { numero: '01', titulo: 'Ingresa tu enseñanza', texto: 'Pega el enlace de una prédica en YouTube para transcribirla y analizarla en segundos, sube un archivo de audio, carga un documento Word/PDF o pega las notas directamente.' },
-                { numero: '02', titulo: 'Elige la especialidad', texto: 'Selecciona la modalidad para tu ministerio: análisis general, enseñanza para liderazgo, grupos pequeños, jóvenes, niños o devocionales de 7 días.' },
+                { numero: '02', titulo: 'Elige la especialidad', texto: 'Selecciona la modalidad para tu ministerio: análisis general, enseñanza para liderazgo, altares, fogata, niños, devocionales de 7 días, casa2 o ayuno del novio.' },
                 { numero: '03', titulo: 'Descarga y ministra', texto: 'Obtén tus documentos en PDF y Word con diagramación institucional de MAIM Casa de Oración, referencias bíblicas verificadas y contenido listo para enseñar.' },
               ].map((paso) => (
                 <div key={paso.numero} className="rounded-[14px] bg-[var(--superficie)] p-5">

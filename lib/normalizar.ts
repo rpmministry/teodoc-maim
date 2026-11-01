@@ -10,6 +10,7 @@ import type {
   DinamicaJuvenil,
   Ensenanza,
   EstudioBosquejo,
+  EstudioCasa2,
   EstudioGrupos,
   EstudioJovenes,
   JuegoInfantil,
@@ -534,6 +535,80 @@ export function normalizarDevocionales(valor: unknown): PlanDevocional {
   };
 }
 
+export function normalizarCasa2(valor: unknown): EstudioCasa2 {
+  const d = registro(valor);
+  const fb = registro(d.fundamento_biblico ?? d.fundamentoBiblico);
+  const com = registro(d.comunicacion);
+  const ej = registro(com.ejercicio_dialogo ?? com.ejercicioDialogo);
+  const act = registro(d.actividad_juntos ?? d.actividadJuntos ?? d.actividad);
+
+  return {
+    titulo_tema: texto(d.titulo_tema ?? d.tituloTema ?? d.titulo),
+    idea_central: texto(d.idea_central ?? d.ideaCentral),
+    fundamento_biblico: {
+      texto_base: versiculo(fb.texto_base ?? fb.textoBase),
+      contexto_matrimonial: textoMultilinea(fb.contexto_matrimonial ?? fb.contextoMatrimonial),
+      textos_apoyo: listaVersiculos(fb.textos_apoyo ?? fb.textosApoyo, 4),
+    },
+    aplicacion_matrimonial: listaTexto(d.aplicacion_matrimonial ?? d.aplicacionMatrimonial ?? d.aplicaciones, 8),
+    comunicacion: {
+      principios: listaTexto(com.principios, 8),
+      ejercicio_dialogo: {
+        titulo: texto(ej.titulo),
+        objetivo: texto(ej.objetivo),
+        pasos: pasos(ej.pasos, 10),
+      },
+    },
+    reflexion_individual: listaTexto(d.reflexion_individual ?? d.reflexionIndividual, 8),
+    reflexion_pareja: listaTexto(d.reflexion_pareja ?? d.reflexionPareja, 8),
+    situaciones_practicas: listaMultilinea(d.situaciones_practicas ?? d.situacionesPracticas, 6),
+    actividad_juntos: {
+      titulo: texto(act.titulo),
+      objetivo: texto(act.objetivo),
+      materiales: listaTexto(act.materiales, 6),
+      pasos: pasos(act.pasos, 10),
+    },
+    compromisos: listaTexto(d.compromisos, 8),
+    oracion_pareja: textoMultilinea(d.oracion_pareja ?? d.oracionPareja ?? d.oracion),
+    conclusion: textoMultilinea(d.conclusion),
+    salvaguarda_pastoral: texto(d.salvaguarda_pastoral ?? d.salvaguardaPastoral),
+  };
+}
+
+export function normalizarAyuno(valor: unknown): PlanDevocional {
+  const d = registro(valor);
+  const dias: DevocionalDia[] = Array.isArray(d.dias)
+    ? d.dias
+        .map((item, indice) => {
+          const dia = registro(item);
+          const numero = Number(dia.dia);
+          return {
+            dia: Number.isFinite(numero) && numero > 0 ? Math.floor(numero) : indice + 1,
+            titulo: texto(dia.titulo),
+            tema: texto(dia.tema),
+            lectura_principal: versiculo(dia.lectura_principal ?? dia.lecturaPrincipal),
+            lecturas_complementarias: listaVersiculos(dia.lecturas_complementarias ?? dia.lecturasComplementarias, 6),
+            contexto: textoMultilinea(dia.contexto),
+            reflexion: textoMultilinea(dia.reflexion),
+            ensenanza_central: textoMultilinea(dia.ensenanza_central ?? dia.ensenanzaCentral),
+            pregunta_introspeccion: texto(dia.pregunta_introspeccion ?? dia.preguntaIntrospeccion),
+            aplicacion: textoMultilinea(dia.aplicacion),
+            accion: textoMultilinea(dia.accion),
+            oracion: textoMultilinea(dia.oracion),
+          };
+        })
+        .filter((dia) => dia.titulo || dia.reflexion || dia.ensenanza_central)
+        .sort((a, b) => a.dia - b.dia)
+        .slice(0, 3)
+        .map((dia, indice) => ({ ...dia, dia: indice + 1 }))
+    : [];
+  return {
+    introduccion: textoMultilinea(d.introduccion),
+    proposito: textoMultilinea(d.proposito),
+    dias,
+  };
+}
+
 export function normalizarEspecializado(modalidad: ModalidadId, valor: unknown): ContenidoEspecializado {
   const crudo = registro(valor);
   const datos = registro(crudo.especializado ?? crudo);
@@ -548,6 +623,10 @@ export function normalizarEspecializado(modalidad: ModalidadId, valor: unknown):
       return { ninos: normalizarNinos(datos.ninos ?? datos) };
     case 'devocionales':
       return { devocionales: normalizarDevocionales(datos.devocionales ?? datos) };
+    case 'casa2':
+      return { casa2: normalizarCasa2(datos.casa2 ?? datos) };
+    case 'ayuno':
+      return { ayuno: normalizarAyuno(datos.ayuno ?? datos) };
     default:
       return {};
   }
@@ -592,6 +671,22 @@ export function especializadoTieneContenido(modalidad: ModalidadId, contenido: C
     }
     case 'devocionales': {
       const d = contenido.devocionales;
+      return Boolean(d && d.dias.length > 0 && d.dias.every((dia) => dia.lectura_principal.cita && dia.reflexion && dia.aplicacion && dia.oracion));
+    }
+    case 'casa2': {
+      const d = contenido.casa2;
+      if (!d) return false;
+      const preguntas = d.reflexion_individual.length + d.reflexion_pareja.length;
+      return Boolean(
+        d.titulo_tema && d.idea_central && d.fundamento_biblico?.texto_base?.cita &&
+        d.aplicacion_matrimonial.length >= 2 && d.comunicacion?.principios.length >= 2 &&
+        d.comunicacion?.ejercicio_dialogo?.pasos.length >= 2 && preguntas >= 4 &&
+        d.actividad_juntos?.pasos.length >= 2 && d.compromisos.length >= 2 && d.oracion_pareja &&
+        d.conclusion,
+      );
+    }
+    case 'ayuno': {
+      const d = contenido.ayuno;
       return Boolean(d && d.dias.length > 0 && d.dias.every((dia) => dia.lectura_principal.cita && dia.reflexion && dia.aplicacion && dia.oracion));
     }
     default:

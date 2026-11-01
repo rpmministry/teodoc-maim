@@ -1,4 +1,4 @@
-import type { EstudioBosquejo, MetadatosPredica, ModalidadId, ResultadoAnalisis } from '../../lib/tipos.ts';
+import type { EstudioBosquejo, EstudioCasa2, MetadatosPredica, ModalidadId, PlanDevocional, ResultadoAnalisis } from '../../lib/tipos.ts';
 import { normalizarAnalisisGeneral, normalizarEspecializado } from '../../lib/normalizar.ts';
 
 export const TEXTO_DEMO = `Hoy quiero hablarles de una fe que no se queda en las palabras. Santiago, en el capítulo dos, versículo diecisiete, nos dice que la fe, si no tiene obras, es muerta en sí misma. No se trata de ganar la salvación con esfuerzo humano, sino de demostrar con la vida que realmente confiamos en Dios. La fe bíblica comienza cuando escuchamos su Palabra con un corazón dispuesto. Después, esa fe se vuelve obediencia concreta en la casa, en el trabajo y en la manera en que tratamos a los demás. También se vuelve perseverancia cuando las circunstancias no cambian. Abraham creyó a Dios y su fe se expresó en obediencia. Rahab confió y actuó conforme a esa confianza. Nosotros estamos llamados a vivir una fe que escuche, que obedezca y que espere en las promesas de Dios. Que esta semana podamos identificar una acción concreta en la que nuestra fe se haga visible.`;
@@ -358,12 +358,165 @@ const BOSQUEJO: EstudioBosquejo = {
   },
 };
 
+const CASA2: EstudioCasa2 = {
+  titulo_tema: 'La fe que transforma el matrimonio',
+  idea_central: 'La fe verdadera en el hogar no se queda en discursos afectivos: se traduce en servicio mutuo, paciencia activa y una comunicación llena de gracia sustentada por Cristo.',
+  fundamento_biblico: {
+    texto_base: {
+      cita: 'Santiago 2:17',
+      texto: 'Así también la fe, si no tiene obras, es muerta en sí misma.',
+    },
+    contexto_matrimonial: 'Santiago escribe a creyentes dispersos para recordarles que la confesión de fe debe validarse en la convivencia. En el pacto conyugal, decir que amamos a Dios mientras tratamos con aspereza o desprecio al cónyuge contradice la fe. La gracia divina nos capacita para amar con hechos concretos en la intimidad del hogar.',
+    textos_apoyo: [
+      {
+        cita: 'Efesios 4:32',
+        texto: 'Antes sed benignos unos con otros, misericordiosos, perdonándoos unos a otros, como Dios también os perdonó a vosotros en Cristo.',
+      },
+      {
+        cita: 'Eclesiastés 4:12',
+        texto: 'Y si alguno prevaleciere contra uno, dos le resistirán; y cordón de tres dobleces no se rompe pronto.',
+      },
+    ],
+  },
+  aplicacion_matrimonial: [
+    'Traducir la fe en actos diarios de servicio no remunerado ni exigido en el hogar.',
+    'Sustituir las recriminaciones pasadas por acuerdos presentes de mejora mutua.',
+    'Edificar un altar devocional compartido antes de dar por concluida la jornada.',
+    'Manejar las finanzas familiares con total transparencia y sentido de mayordomía compartida.',
+  ],
+  comunicacion: {
+    principios: [
+      'Escucha activa sin preparar la defensa mientras el otro habla (Santiago 1:19).',
+      'Desescalar el conflicto evitando la crítica destructiva y el desprecio conyugal.',
+      'Validar el sentir del cónyuge antes de intentar corregir o resolver la logística.',
+      'Hablar con mansedumbre, cuidando el tono y el momento oportuno para dialogar.',
+    ],
+    ejercicio_dialogo: {
+      titulo: 'Diez minutos de escucha sin defensa',
+      objetivo: 'Brindar un espacio de vulnerabilidad donde cada cónyuge comparta una necesidad sin ser interrumpido ni juzgado.',
+      pasos: [
+        'Apaguen dispositivos electrónicos y busquen un lugar tranquilo a solas.',
+        'El primer cónyuge comparte durante cuatro minutos: «En qué momento de esta semana sentí que nuestra fe se tradujo en amor y en qué área sentí desconexión».',
+        'El segundo cónyuge escucha en silencio, sin justificarse, y al terminar resume: «Lo que te escuché decir y entender es...».',
+        'Inviertan los roles por otros cuatro minutos con la misma actitud de gracia.',
+        'Cierren con dos minutos tomados de la mano, agradeciendo a Dios por el corazón del otro.',
+      ],
+    },
+  },
+  reflexion_individual: [
+    '¿En qué momentos actúo como si mi cónyuge tuviera que ganarse mi afecto, en lugar de amarlo por gracia?',
+    '¿Qué queja recurrente tengo hacia mi cónyuge que en realidad refleja una falta de paciencia u orgullo en mi propio corazón?',
+    '¿Cómo se hace visible mi confianza en Dios cuando enfrentamos desacuerdos financieros o familiares?',
+    '¿Estoy buscando tener la razón en las discusiones o estoy buscando edificar la unidad conyugal?',
+  ],
+  reflexion_pareja: [
+    '¿Qué hábito cotidiano en nuestra casa evidencia que Cristo es el centro de nuestro matrimonio?',
+    '¿En qué área de nuestra relación sentimos que nos cuesta más ponernos de acuerdo y cómo podemos abordarla con humildad?',
+    '¿Cómo podemos responder juntos en fe cuando las presiones externas o el cansancio amenazan nuestra paciencia?',
+    '¿Qué palabra o gesto de aprecio necesitamos escuchar con mayor frecuencia de parte del otro?',
+  ],
+  situaciones_practicas: [
+    'Uno de los esposos llega agotado y distante del trabajo; el otro esperaba ayuda inmediata con las tareas del hogar. En lugar de reaccionar con reproches o indiferencia, acuerdan un margen de 15 minutos de descanso previo para luego coordinarse en equipo con una actitud colaborativa.',
+    'Surge un gasto imprevisto que genera tensión en el presupuesto del mes. En vez de culparse mutuamente por gastos anteriores, se sientan con el presupuesto en mano, oran juntos por provisión y priorizan los compromisos esenciales como un solo equipo.',
+  ],
+  actividad_juntos: {
+    titulo: 'Pacto de tres dobleces para la semana',
+    objetivo: 'Identificar una necesidad prioritaria del hogar y definir un paso de servicio concreto que cada uno realizará en favor del otro.',
+    materiales: ['Una hoja de papel y un lápiz', 'Biblia'],
+    pasos: [
+      'Lean juntos Santiago 2:17 y Eclesiastés 4:12.',
+      'Cada cónyuge escribe en la hoja un servicio sencillo que bendeciría su semana.',
+      'Intercambien las hojas, lean lo que el otro escribió y asuman el compromiso con una sonrisa.',
+      'Coloquen la hoja en un lugar visible del dormitorio o la cocina.',
+      'Revisen juntos el cumplimiento el fin de semana con una cena o café especial.',
+    ],
+  },
+  compromisos: [
+    'No nos iremos a dormir con rencor ni palabras hirientes sin pedir perdón y orar juntos (Efesios 4:26).',
+    'Separaremos un tiempo semanal exclusivo de pareja para nutrir el romance y la complicidad.',
+    'Nos comunicaremos con respeto, eliminando los tonos sarcásticos y las indirectas.',
+    'Sostendremos una oración de cobertura diaria por nuestro hogar y nuestros hijos.',
+  ],
+  oracion_pareja: 'Padre celestial, te damos gracias por el don del matrimonio y por llamarnos a reflejar tu amor y fidelidad. Perdona nuestras faltas de paciencia, nuestro egoísmo y cuando permitimos que la rutina opaque tu gracia en nuestra convivencia. Te pedimos un corazón tierno para perdonar, oídos atentos para escuchar y manos dispuestas a servirnos el uno al otro. Sé Tú el cordón de tres dobleces que sostenga nuestro hogar. En el nombre de Jesús, amén.',
+  conclusion: 'El matrimonio que persevera en una fe viva experimenta el poder de la gracia en lo cotidiano. Cuando ambos cónyuges deciden amar sin condiciones y servir con alegría, el hogar se convierte en un refugio de paz y en un testimonio vivo del evangelio.',
+  salvaguarda_pastoral: 'Este análisis conyugal ha sido elaborado con propósitos pastorales y de edificación espiritual. No sustituye la atención profesional psicológica, médica o consejería especializada en situaciones de violencia o crisis severa.',
+};
+
+const AYUNO: PlanDevocional = {
+  introduccion: 'Convocatoria al Ayuno del Novio: tres jornadas de humillación, búsqueda ferviente, quebrantamiento y adoración para alinear el corazón con la presencia de Dios.',
+  proposito: 'Buscar el rostro de Dios con corazón limpio, experimentar rompimiento espiritual y renovar nuestra consagración personal y congregacional ante el Señor.',
+  dias: [
+    {
+      dia: 1,
+      titulo: 'Humillación y examen del corazón',
+      tema: 'Quebrantamiento sincero y despojo del pecado',
+      lectura_principal: {
+        cita: 'Joel 2:12-13',
+        texto: 'Por eso pues, ahora, dice Jehová, convertíos a mí con todo vuestro corazón, con ayuno y lloro y lamento. Rasgad vuestro corazón, y no vuestros vestidos.',
+      },
+      lecturas_complementarias: [
+        { cita: 'Salmos 51:17', texto: 'Los sacrificios de Dios son el espíritu quebrantado; al corazón contrito y humillado no despreciarás tú, oh Dios.' },
+        { cita: 'Santiago 4:8', texto: 'Acercaos a Dios, y él se acercará a vosotros. Pecadores, limpiad las manos; y vosotros los de doble ánimo, purificad vuestros corazones.' },
+      ],
+      contexto: 'El profeta Joel convoca a todo el pueblo a un ayuno solemne donde la prioridad no es la apariencia externa del rito, sino el quebranto interior y la conversión sincera hacia Dios.',
+      reflexion: 'El ayuno bíblico comienza desnudando el alma ante la santidad de Dios. No ayunamos para torcer el brazo del Señor ni para negociar con Él, sino para despojarnos del orgullo, de la tibieza y de las distracciones terrenales. Hoy reconozco que necesito una limpieza profunda en mis motivaciones y pensamientos.',
+      ensenanza_central: 'El verdadero ayuno inicia con un corazón contrito que reconoce su bancarrota espiritual sin la gracia de Cristo.',
+      pregunta_introspeccion: '¿Qué peso, pecado o actitud autosuficiente necesito confesar y entregar hoy al Señor?',
+      aplicacion: 'Dedica el primer día del ayuno a examinar tu conciencia en quietud, pidiendo al Espíritu Santo que revele cualquier área oculta que estorbe tu comunión.',
+      accion: 'Escribe en un papel las ataduras o hábitos que necesitas rendir y preséntalas en oración antes de comenzar el clamor.',
+      oracion: 'Señor Jesús, me presento hoy delante de tu presencia con corazón quebrantado. Limpia mi vida con tu sangre preciosa, arranca de mí toda dureza y purifica mis motivos. Que este ayuno sea grato delante de ti. Amén.',
+    },
+    {
+      dia: 2,
+      titulo: 'Hambre por Su Presencia',
+      tema: 'Intimidad y clamor con el Novio',
+      lectura_principal: {
+        cita: 'Mateo 9:15',
+        texto: 'Jesús les dijo: ¿Acaso pueden los que están de bodas tener luto entre tanto que el novio está con ellos? Pero vendrán días cuando el novio les será quitado, y entonces ayunarán.',
+      },
+      lecturas_complementarias: [
+        { cita: 'Salmos 63:1', texto: 'Dios, Dios mío eres tú; de madrugada te buscaré; mi alma tiene sed de ti, mi carne te anhela, en tierra seca y árida donde no hay aguas.' },
+        { cita: 'Juan 15:5', texto: 'Yo soy la vid, vosotros los pámpanos; el que permanece en mí, y yo en él, éste lleva mucho fruto; porque separados de mí nada podéis hacer.' },
+      ],
+      contexto: 'Jesús establece el sentido escatológico y relacional del ayuno neotestamentario: el anhelo apasionado de la Esposa (la Iglesia) por la comunión íntima con su Señor y Salvador.',
+      reflexion: 'En este segundo día de ayuno, el clamor se transforma de arrepentimiento en un hambre ardiente por Dios mismo. Mi alma no se sacia con el pan terrenal; mi verdadera necesidad es la gloria, la voz y el Espíritu del Novio celestial. Decido buscar Su rostro por encima de Sus dádivas.',
+      ensenanza_central: 'El ayuno cristiano es la expresión visible de un alma que prefiere a Cristo por sobre cualquier deleite terrenal.',
+      pregunta_introspeccion: '¿Amo la presencia de Dios más que las bendiciones materiales o ministeriales que Él me concede?',
+      aplicacion: 'Reemplaza el tiempo habitual de tus alimentos por momentos intensos de adoración, meditación en los Evangelios e intercesión.',
+      accion: 'Separa una vigilia breve de adoración en intimidad, adorando al Señor sin hacer peticiones personales durante los primeros 20 minutos.',
+      oracion: 'Amado Señor Jesús, mi alma tiene sed de ti como la tierra seca. Aviva en mí un amor apasionado y reverente por tu Persona. Lléname de tu Santo Espíritu y satisface mi corazón con tu presencia. Amén.',
+    },
+    {
+      dia: 3,
+      titulo: 'Rompimiento y consagración total',
+      tema: 'Unción, autoridad y envío ministerial',
+      lectura_principal: {
+        cita: 'Isaías 58:6',
+        texto: '¿No es más bien el ayuno que yo escogí, desatar las ligaduras de impiedad, soltar las cargas de opresión, y dejar ir libres a los quebrantados, y que rompáis todo yugo?',
+      },
+      lecturas_complementarias: [
+        { cita: 'Hechos 13:2-3', texto: 'Ministrando éstos al Señor, y ayunando, dijo el Espíritu Santo: Apartadme a Bernabé y a Saulo para la obra a que los he llamado.' },
+        { cita: 'Romanos 12:1', texto: 'Así que, hermanos, os ruego por las misericordias de Dios, que presentéis vuestros cuerpos en sacrificio vivo, santo, agradable a Dios.' },
+      ],
+      contexto: 'Isaías expone que el verdadero ayuno escogido por Dios desata cadenas de opresión y se traduce en justicia, misericordia y rompimiento espiritual para bendición del prójimo.',
+      reflexion: 'El ayuno culmina con una consagración renovada y un poder espiritual renovado para servir. Dios no nos quebranta para dejarnos caídos, sino para levantarnos llenos de Su Espíritu, listos para desatar ligaduras de impiedad y testificar con autoridad del reino de Dios.',
+      ensenanza_central: 'El ayuno desata la victoria de Dios y capacita al creyente para caminar en santidad, obediencia y testimonio con poder.',
+      pregunta_introspeccion: '¿Qué compromiso radical de servicio y consagración sellaré hoy delante del Señor?',
+      aplicacion: 'Sella este tiempo de ayuno asumiendo una responsabilidad concreta en tu congregación y llevando la misericordia de Dios a alguien necesitado.',
+      accion: 'Entrega tu cuerpo y dones en oración de pacto y realiza una acción concreta de bondad hacia alguien en necesidad esta misma semana.',
+      oracion: 'Señor Dios todopoderoso, gracias por estas jornadas de ayuno. Que el fuego de tu presencia arda en mi corazón. Te entrego mi vida, mi familia y mi servicio como ofrenda viva. Camina conmigo en victoria. En el nombre de Jesús, amén.',
+    },
+  ],
+};
+
 const RAW_ESPECIALIZADO: Record<Exclude<ModalidadId, 'general'>, object> = {
   bosquejo: { bosquejo: BOSQUEJO },
   grupos: { grupos: GRUPOS },
   jovenes: { jovenes: JOVENES },
   ninos: { ninos: NINOS },
   devocionales: { devocionales: DEVOCIONALES },
+  casa2: { casa2: CASA2 },
+  ayuno: { ayuno: AYUNO },
 };
 
 export function metadatosDemo(modalidad: ModalidadId): MetadatosPredica {

@@ -3,7 +3,7 @@ import { DocumentoWord } from './base.ts';
 import { fechaLarga } from '../modalidades.ts';
 
 export function construirWordGrupos(analisis: PredicaAnalisis, datos: EstudioGrupos, metadatos: MetadatosPredica): Promise<Blob> {
-  const d = new DocumentoWord(metadatos, analisis.titulo, 'Grupos pequeños, células y familias', 'Guía lista para dirigir un encuentro participativo.');
+  const d = new DocumentoWord(metadatos, analisis.titulo, 'Altares', 'Guía lista para dirigir un encuentro participativo en un altar familiar o célula.');
   d.seccion('Preparación del facilitador')
     .parrafo(`Título: ${analisis.titulo}`)
     .parrafo(metadatos.predicador ? `Predicador o expositor: ${metadatos.predicador}` : 'Predicador o expositor: no proporcionado.')

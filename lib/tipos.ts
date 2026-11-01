@@ -1,4 +1,4 @@
-export type ModalidadId = 'general' | 'bosquejo' | 'grupos' | 'jovenes' | 'ninos' | 'devocionales';
+export type ModalidadId = 'general' | 'bosquejo' | 'grupos' | 'jovenes' | 'ninos' | 'devocionales' | 'casa2' | 'ayuno';
 
 export type RangoEdad = '3-5' | '6-8' | '9-12';
 
@@ -265,12 +265,58 @@ export interface PlanDevocional {
   dias: DevocionalDia[];
 }
 
+// ---------------------------------------------------------------------------
+// Modalidad: Casa2 — Análisis especializado para matrimonios
+// ---------------------------------------------------------------------------
+
+export interface EjercicioDialogoMatrimonial {
+  titulo: string;
+  objetivo: string;
+  pasos: string[];
+}
+
+export interface ComunicacionMatrimonial {
+  principios: string[];
+  ejercicio_dialogo: EjercicioDialogoMatrimonial;
+}
+
+export interface ActividadPareja {
+  titulo: string;
+  objetivo: string;
+  materiales?: string[];
+  pasos: string[];
+}
+
+export interface FundamentoBiblicoMatrimonial {
+  texto_base: Versiculo;
+  contexto_matrimonial: string;
+  textos_apoyo?: Versiculo[];
+}
+
+export interface EstudioCasa2 {
+  titulo_tema: string;
+  idea_central: string;
+  fundamento_biblico: FundamentoBiblicoMatrimonial;
+  aplicacion_matrimonial: string[];
+  comunicacion: ComunicacionMatrimonial;
+  reflexion_individual: string[];
+  reflexion_pareja: string[];
+  situaciones_practicas: string[];
+  actividad_juntos: ActividadPareja;
+  compromisos: string[];
+  oracion_pareja: string;
+  conclusion: string;
+  salvaguarda_pastoral?: string;
+}
+
 export interface ContenidoEspecializado {
   bosquejo?: EstudioBosquejo;
   grupos?: EstudioGrupos;
   jovenes?: EstudioJovenes;
   ninos?: ClaseNinos;
   devocionales?: PlanDevocional;
+  casa2?: EstudioCasa2;
+  ayuno?: PlanDevocional;
 }
 
 export interface ResultadoAnalisis extends PredicaAnalisis {

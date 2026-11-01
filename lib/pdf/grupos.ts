@@ -9,11 +9,11 @@ export function construirPdfGrupos(
   recursos: RecursosPdf,
 ): Blob {
   const meta = metadatosDocumento(analisis, metadatos);
-  const d = new DocumentoPDF(meta, 'Grupos pequeños', recursos);
+  const d = new DocumentoPDF(meta, 'Altares', recursos);
   d.portada({
-    etiqueta: 'Grupos pequeños, células y familias',
+    etiqueta: 'Altares',
     titulo: analisis.titulo,
-    descripcion: 'Guía lista para dirigir un encuentro participativo en un hogar o grupo pequeño.',
+    descripcion: 'Guía lista para dirigir un encuentro participativo en un altar familiar o célula.',
     fechaDocumento: fechaDocumento(meta),
   });
 
@@ -112,5 +112,5 @@ export function construirPdfGrupos(
     { tamano: 9, color: [122, 102, 98] },
   );
 
-  return d.finalizar('Grupos pequeños');
+  return d.finalizar('Altares');
 }

@@ -6,7 +6,7 @@ import { fechaLarga, nombreArchivoPdf, nombreArchivoWord, obtenerModalidad, obte
 import { especializadoTieneContenido } from '@/lib/normalizar';
 import { IconoDescarga, IconoFlecha } from '../marca';
 import ResultadoGeneral from './general';
-import { ResultadoBosquejo, ResultadoDevocionales, ResultadoGrupos, ResultadoJovenes, ResultadoNinos } from './especializados';
+import { ResultadoAyuno, ResultadoBosquejo, ResultadoCasa2, ResultadoDevocionales, ResultadoGrupos, ResultadoJovenes, ResultadoNinos } from './especializados';
 
 interface Props {
   resultado: ResultadoAnalisis;
@@ -155,6 +155,12 @@ export default function PanelResultados({
               )}
               {resultado.metadatos.modalidad === 'devocionales' && resultado.especializado.devocionales && (
                 <ResultadoDevocionales analisis={resultado} datos={resultado.especializado.devocionales} />
+              )}
+              {resultado.metadatos.modalidad === 'casa2' && resultado.especializado.casa2 && (
+                <ResultadoCasa2 analisis={resultado} datos={resultado.especializado.casa2} />
+              )}
+              {resultado.metadatos.modalidad === 'ayuno' && resultado.especializado.ayuno && (
+                <ResultadoAyuno analisis={resultado} datos={resultado.especializado.ayuno} />
               )}
             </>
           ) : (
